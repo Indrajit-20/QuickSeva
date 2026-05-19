@@ -1,11 +1,28 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+
+const getInitials = (name) => {
+  if (!name) return "U";
+  const parts = String(name).trim().split(/\s+/).filter(Boolean);
+
+  if (parts.length === 1) return parts[0].slice(0, 1).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+};
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { user, logout } = useAuth();
+
+  const initials = useMemo(() => getInitials(user?.name), [user?.name]);
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
+  };
+
+  const handleLogout = () => {
+    logout();
+    setIsMenuOpen(false);
   };
 
   return (
@@ -27,15 +44,40 @@ const Navbar = () => {
             >
               Home
             </Link>
-            <Link
-              to="/login"
-              className="text-indigo-100 hover:text-red-400 font-semibold transition-colors duration-300"
-            >
-              Login
-            </Link>
-            <Link to="/register" className="btn btn-primary">
-              Register
-            </Link>
+
+            {user ? (
+              <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-3 bg-indigo-900/40 border border-indigo-500/30 rounded-full px-3 py-1.5">
+                  <div className="w-9 h-9 rounded-full bg-red-500/90 text-white flex items-center justify-center font-bold">
+                    {initials}
+                  </div>
+                  <div className="hidden lg:block">
+                    <span className="text-indigo-100 font-semibold max-w-[160px] truncate inline-block">
+                      {user.name || "User"}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleLogout}
+                  className="px-3 py-2 rounded bg-red-600 text-white font-semibold hover:bg-red-700 transition-colors"
+                >
+                  Logout
+                </button>
+              </div>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  className="text-indigo-100 hover:text-red-400 font-semibold transition-colors duration-300"
+                >
+                  Login
+                </Link>
+                <Link to="/register" className="btn btn-primary">
+                  Register
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -71,20 +113,45 @@ const Navbar = () => {
             >
               Home
             </Link>
-            <Link
-              to="/login"
-              onClick={() => setIsMenuOpen(false)}
-              className="block text-indigo-100 hover:text-red-400 font-semibold py-2 px-3 rounded-lg hover:bg-indigo-900 transition-colors"
-            >
-              Login
-            </Link>
-            <Link
-              to="/register"
-              onClick={() => setIsMenuOpen(false)}
-              className="block btn btn-primary w-full text-center"
-            >
-              Register
-            </Link>
+
+            {user ? (
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center space-x-3 bg-indigo-900/40 border border-indigo-500/30 rounded-xl px-3 py-2">
+                  <div className="w-9 h-9 rounded-full bg-red-500/90 text-white flex items-center justify-center font-bold">
+                    {initials}
+                  </div>
+                  <div>
+                    <div className="text-indigo-100 font-semibold">
+                      {user.name || "User"}
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleLogout}
+                  className="w-full px-3 py-2 rounded bg-red-600 text-white font-semibold hover:bg-red-700 transition-colors"
+                >
+                  Logout
+                </button>
+              </div>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="block text-indigo-100 hover:text-red-400 font-semibold py-2 px-3 rounded-lg hover:bg-indigo-900 transition-colors"
+                >
+                  Login
+                </Link>
+                <Link
+                  to="/register"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="block btn btn-primary w-full text-center"
+                >
+                  Register
+                </Link>
+              </>
+            )}
           </div>
         )}
       </div>
