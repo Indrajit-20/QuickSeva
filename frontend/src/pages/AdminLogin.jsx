@@ -5,7 +5,7 @@ const AdminLogin = () => {
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
-    email: "",
+    username: "",
     password: "",
   });
 
@@ -15,10 +15,9 @@ const AdminLogin = () => {
   const [successMessage, setSuccessMessage] = useState("");
 
   // Validation functions
-  const validateEmail = (email) => {
-    if (!email) return "Email is required";
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) return "Enter valid email";
+  const validateUsername = (username) => {
+    if (!username) return "Username is required";
+    if (username.length < 3) return "Username must be at least 3 characters";
     return null;
   };
 
@@ -39,11 +38,12 @@ const AdminLogin = () => {
     // Real-time validation
     if (touched[name]) {
       let error = null;
-      if (name === "email") {
-        error = validateEmail(value);
+      if (name === "username") {
+        error = validateUsername(value);
       } else if (name === "password") {
         error = validatePassword(value);
       }
+
       setErrors((prev) => ({
         ...prev,
         [name]: error,
@@ -60,8 +60,8 @@ const AdminLogin = () => {
     }));
 
     let error = null;
-    if (name === "email") {
-      error = validateEmail(value);
+    if (name === "username") {
+      error = validateUsername(value);
     } else if (name === "password") {
       error = validatePassword(value);
     }
@@ -79,16 +79,16 @@ const AdminLogin = () => {
     setErrors({});
 
     // Validate all fields
-    const emailError = validateEmail(formData.email);
+    const usernameError = validateUsername(formData.username);
     const passwordError = validatePassword(formData.password);
 
-    if (emailError || passwordError) {
+    if (usernameError || passwordError) {
       setErrors({
-        email: emailError,
+        username: usernameError,
         password: passwordError,
       });
       setTouched({
-        email: true,
+        username: true,
         password: true,
       });
       return;
@@ -101,11 +101,13 @@ const AdminLogin = () => {
       // In production, this should call your .NET backend:
       // POST /api/admin/login { email, password }
 
-      const ADMIN_EMAIL = "admin@quickseva.com";
+      // Frontend-only testing credentials (no backend yet)
+      // Default admin:
+      const ADMIN_USERNAME = "admin";
       const ADMIN_PASSWORD = "Admin@123";
 
       if (
-        formData.email === ADMIN_EMAIL &&
+        formData.username === ADMIN_USERNAME &&
         formData.password === ADMIN_PASSWORD
       ) {
         // Admin login successful
@@ -113,7 +115,8 @@ const AdminLogin = () => {
 
         localStorage.setItem("authToken", adminToken);
         localStorage.setItem("userRole", "admin");
-        localStorage.setItem("adminEmail", formData.email);
+        localStorage.setItem("adminUsername", formData.username);
+        localStorage.setItem("adminEmail", formData.username);
 
         setSuccessMessage("✓ Admin login successful! Redirecting...");
 
@@ -143,31 +146,31 @@ const AdminLogin = () => {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Email Field */}
+          {/* Username Field */}
           <div>
             <label
-              htmlFor="email"
+              htmlFor="username"
               className="block text-sm font-medium text-indigo-200 mb-2"
             >
-              Admin Email
+              Admin Username
             </label>
             <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
+              type="text"
+              id="username"
+              name="username"
+              value={formData.username}
               onChange={handleChange}
               onBlur={handleBlur}
               className={`w-full px-4 py-3 rounded-lg bg-indigo-800/50 border-2 text-white placeholder-indigo-300 focus:outline-none transition-all ${
-                touched.email && errors.email
+                touched.username && errors.username
                   ? "border-red-500 focus:border-red-500"
                   : "border-indigo-500/30 focus:border-indigo-400"
               }`}
-              placeholder="admin@quickseva.com"
+              placeholder="admin"
               disabled={loading}
             />
-            {touched.email && errors.email && (
-              <p className="text-red-400 text-sm mt-1">⚠️ {errors.email}</p>
+            {touched.username && errors.username && (
+              <p className="text-red-400 text-sm mt-1">⚠️ {errors.username}</p>
             )}
           </div>
 
@@ -236,10 +239,7 @@ const AdminLogin = () => {
             📋 Use these to test:
           </p>
           <p className="text-indigo-300 text-xs">
-            Email:{" "}
-            <span className="font-mono text-indigo-100">
-              admin@quickseva.com
-            </span>
+            Username: <span className="font-mono text-indigo-100">admin</span>
           </p>
           <p className="text-indigo-300 text-xs">
             Password:{" "}

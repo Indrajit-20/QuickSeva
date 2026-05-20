@@ -1,58 +1,42 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { useState } from "react";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminLogin from "./pages/AdminLogin";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
-
 import Register from "./pages/Register";
 import OtpVerification from "./pages/OtpVerification";
 import NotFound from "./pages/NotFound";
 import Unauthorized from "./pages/Unauthorized";
 
-// Example protected pages (create these when needed)
-// import AdminDashboard from "./pages/AdminDashboard";
-// import UserProfile from "./pages/UserProfile";
+function AppContent() {
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith("/admin");
 
-function App() {
   // TODO: Get userRole from localStorage or authentication context
-  // For now, set it to null. After login, store the user's role.
-  // Example: localStorage.setItem('userRole', 'user');
   const userRole = localStorage.getItem("userRole") || null;
 
   return (
     <AuthProvider>
-      <BrowserRouter>
-        {/* Navbar appears on every page */}
-        <Navbar />
+      {/* Show user navbar only on non-admin routes */}
+      {!isAdminRoute && <Navbar />}
 
-        {/* Routes render in the middle between Navbar and Footer */}
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/verify-otp" element={<OtpVerification />} />
-          <Route path="/unauthorized" element={<Unauthorized />} />
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/" element={<Home />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/verify-otp" element={<OtpVerification />} />
 
-          {/* EXAMPLE: Protected Routes (uncomment when pages are created) */}
-          {/* 
-        User-only route:
-        <Route
-          path="/profile"
-          element={
-            <ProtectedRoute
-              element={<UserProfile />}
-              allowedRoles={["user", "admin"]}
-              userRole={userRole}
-            />
-          }
-        />
-*/
-        //Admin-only route:
+        {/* Admin */}
+        <Route path="/admin/login" element={<AdminLogin />} />
+
+        <Route path="/unauthorized" element={<Unauthorized />} />
+
+        {/* Protected */}
         <Route
           path="/admin/dashboard"
           element={
@@ -63,29 +47,20 @@ function App() {
             />
           }
         />
-/*
-        Premium-user only route:
-        <Route
-          path="/premium"
-          element={
-            <ProtectedRoute
-              element={<PremiumContent />}
-              allowedRoles={["premium", "admin"]}
-              userRole={userRole}
-            />
-          }
-        />
-        */}
 
-          {/* Catch-all route for 404 - must be last */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        {/* Catch-all route for 404 - must be last */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
 
-        {/* Footer appears on every page */}
-        <Footer />
-      </BrowserRouter>
+      <Footer />
     </AuthProvider>
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AppContent />
+    </BrowserRouter>
+  );
+}

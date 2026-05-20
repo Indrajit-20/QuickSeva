@@ -1,13 +1,17 @@
 import React from "react";
 import { Link } from "react-router-dom";
 
+import Hero from "../components/Hero";
+
 const Home = () => {
   return (
-    <main className="min-h-screen bg-slate-50">
+    <main className="min-h-screen bg-brand-bg">
+      <Hero />
+
       {/* Hero Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          {/* Hero Text */}
+          {/* Hero */}
           <div className="space-y-6">
             <h1 className="text-5xl lg:text-6xl font-bold text-slate-900 leading-tight">
               Welcome to <span className="text-indigo-600">QuickSeva</span>
