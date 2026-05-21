@@ -74,6 +74,21 @@ const Home = () => {
         </div>
       </section>
 
+      {/* Services Near You */}
+      <section className="bg-indigo-950 py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="mb-8">
+            <h2 className="text-3xl font-bold text-white">
+              Services Near You
+            </h2>
+            <p className="text-indigo-200 mt-2">
+              Showing verified providers within 5km of your location — search by area or service type
+            </p>
+          </div>
+          <NearbyServices />
+        </div>
+      </section>
+
       {/* Features Section */}
       <section className="bg-indigo-950 py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -126,21 +141,6 @@ const Home = () => {
               </p>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* Services Near You */}
-      <section className="bg-indigo-950 py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mb-8">
-            <h2 className="text-3xl font-bold text-white">
-              Services Near You
-            </h2>
-            <p className="text-indigo-200 mt-2">
-              Showing verified providers within 5km of your location — search by area or service type
-            </p>
-          </div>
-          <NearbyServices />
         </div>
       </section>
 
