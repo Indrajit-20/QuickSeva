@@ -115,13 +115,14 @@ const AdminLogin = () => {
 
         localStorage.setItem("authToken", adminToken);
         localStorage.setItem("userRole", "admin");
+        localStorage.setItem("isAdminAuthenticated", "true");
         localStorage.setItem("adminUsername", formData.username);
         localStorage.setItem("adminEmail", formData.username);
 
         setSuccessMessage("✓ Admin login successful! Redirecting...");
 
         setTimeout(() => {
-          navigate("/admin/dashboard");
+          navigate("/admin/dashboard", { replace: true });
         }, 1500);
       } else {
         throw new Error("Invalid admin credentials");

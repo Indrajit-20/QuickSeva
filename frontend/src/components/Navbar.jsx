@@ -1,7 +1,18 @@
 import React, { useMemo, useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useNearbyLocation } from "./NearbyServices";
+
+const ALL_SERVICES = [
+  "Cleaning",
+  "Electrical",
+  "Plumbing",
+  "Carpentry",
+  "AC Repair",
+  "Pest Control",
+  "Home Painting",
+  "Appliance Repair",
+];
 
 const getInitials = (name) => {
   if (!name) return "U";
@@ -11,11 +22,98 @@ const getInitials = (name) => {
   return (parts[0][0] + parts[1][0]).toUpperCase();
 };
 
+function NavbarSearch({ className = "", onNavigate }) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+  const searchRef = useRef(null);
+  const navigate = useNavigate();
+
+  const suggestions = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return [];
+    return ALL_SERVICES.filter((service) =>
+      service.toLowerCase().includes(query),
+    ).slice(0, 5);
+  }, [searchQuery]);
+
+  const goToServices = (value = searchQuery) => {
+    const query = value.trim();
+    if (!query) return;
+    navigate(`/services?q=${encodeURIComponent(query)}`);
+    setIsOpen(false);
+    setSearchQuery("");
+    onNavigate?.();
+  };
+
+  useEffect(() => {
+    const onDocMouseDown = (e) => {
+      if (!searchRef.current) return;
+      if (searchRef.current.contains(e.target)) return;
+      setIsOpen(false);
+    };
+
+    document.addEventListener("mousedown", onDocMouseDown);
+    return () => document.removeEventListener("mousedown", onDocMouseDown);
+  }, []);
+
+  return (
+    <div ref={searchRef} className={`relative ${className}`}>
+      <div className="relative w-full">
+        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-indigo-200">
+          🔍
+        </span>
+        <input
+          value={searchQuery}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            setIsOpen(true);
+          }}
+          onFocus={() => setIsOpen(true)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") goToServices();
+          }}
+          placeholder="Search services (e.g. Plumber, AC Repair...)"
+          className="h-9 w-full rounded-full border border-indigo-500/30 bg-indigo-950/40 py-2 pl-9 pr-10 text-sm text-white placeholder-indigo-300 focus:outline-none"
+        />
+        <button
+          type="button"
+          onClick={() => goToServices()}
+          className="absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-xs text-indigo-100 hover:bg-indigo-800/60"
+          aria-label="Search services"
+        >
+          ↵
+        </button>
+      </div>
+
+      {isOpen && suggestions.length > 0 && (
+        <div
+          className="absolute left-0 right-0 top-full z-[1100] mt-2 overflow-hidden rounded-xl shadow-xl"
+          style={{
+            background: "#1e1b4b",
+            border: "1px solid rgba(99,102,241,0.3)",
+          }}
+        >
+          {suggestions.map((service) => (
+            <button
+              key={service}
+              type="button"
+              onClick={() => goToServices(service)}
+              className="block w-full px-3 py-2 text-left text-sm text-white hover:bg-indigo-800/60"
+            >
+              {service}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isPartnerOpen, setIsPartnerOpen] = useState(false);
   const partnerRef = useRef(null);
-  const { user, logout } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
   const { address, loading } = useNearbyLocation();
 
   const initials = useMemo(() => getInitials(user?.name), [user?.name]);
@@ -61,6 +159,8 @@ const Navbar = () => {
             </span>
           </div>
 
+          <NavbarSearch className="hidden sm:flex w-[280px]" />
+
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center space-x-6">
             <Link
@@ -69,6 +169,15 @@ const Navbar = () => {
             >
               Home
             </Link>
+
+            {isAuthenticated && (
+              <Link
+                to="/my-bookings"
+                className="text-indigo-100 hover:text-red-400 font-semibold transition-colors duration-300"
+              >
+                My Bookings
+              </Link>
+            )}
 
             {user ? (
               <div className="flex items-center space-x-3">
@@ -171,6 +280,11 @@ const Navbar = () => {
         {/* Mobile Menu */}
         {isMenuOpen && (
           <div className="md:hidden py-4 space-y-3 animate-fade-in-down">
+            <NavbarSearch
+              className="flex w-full"
+              onNavigate={() => setIsMenuOpen(false)}
+            />
+
             <Link
               to="/"
               onClick={() => setIsMenuOpen(false)}
@@ -178,6 +292,16 @@ const Navbar = () => {
             >
               Home
             </Link>
+
+            {isAuthenticated && (
+              <Link
+                to="/my-bookings"
+                onClick={() => setIsMenuOpen(false)}
+                className="block text-indigo-100 hover:text-red-400 font-semibold py-2 px-3 rounded-lg hover:bg-indigo-900 transition-colors"
+              >
+                My Bookings
+              </Link>
+            )}
 
             {user ? (
               <div className="space-y-3 pt-2">

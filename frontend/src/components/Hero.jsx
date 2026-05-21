@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import heroFallback from "../assets/hero.png";
 import { serviceCategories, serviceImages } from "../data/dummyData";
 import {
@@ -24,6 +25,8 @@ const iconMap = {
 };
 
 export default function Hero() {
+  const navigate = useNavigate();
+
   const handleImageError = (e) => {
     e.currentTarget.onerror = null;
     e.currentTarget.src = heroFallback;
@@ -48,9 +51,15 @@ export default function Hero() {
                 const Icon = iconMap[cat.iconName];
 
                 return (
-                  <div
+                  <button
+                    type="button"
                     key={cat.name}
-                    className="rounded-2xl border border-slate-100 bg-white shadow-sm p-4 flex items-center gap-3 hover:shadow-md hover:-translate-y-1 transition-all duration-300"
+                    onClick={() =>
+                      navigate(
+                        `/services?q=${encodeURIComponent(cat.name)}`,
+                      )
+                    }
+                    className="cursor-pointer rounded-2xl border border-slate-100 bg-white shadow-sm p-4 flex items-center gap-3 text-left hover:shadow-md hover:-translate-y-1 hover:scale-105 transition-transform duration-300"
                   >
                     <div className="h-11 w-11 rounded-2xl bg-emerald-50 flex items-center justify-center">
                       {Icon ? (
@@ -60,7 +69,7 @@ export default function Hero() {
                     <div className="text-sm font-semibold text-slate-900">
                       {cat.name}
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>

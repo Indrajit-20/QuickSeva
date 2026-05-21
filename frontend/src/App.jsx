@@ -17,6 +17,9 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import OtpVerification from "./pages/OtpVerification";
 import SellerRegister from "./pages/SellerRegister";
+import ServicesPage from "./pages/ServicesPage";
+import BookingPage from "./pages/BookingPage";
+import MyBookings from "./pages/MyBookings";
 import NotFound from "./pages/NotFound";
 import Unauthorized from "./pages/Unauthorized";
 import SellerLayout from "./layouts/SellerLayout";
@@ -24,6 +27,7 @@ import SellerDashboard from "./pages/seller/SellerDashboard";
 import SellerProfile from "./pages/seller/SellerProfile";
 import SellerServices from "./pages/seller/SellerServices";
 import SellerOrders from "./pages/seller/SellerOrders";
+import SellerPackages from "./pages/seller/SellerPackages";
 import SellerPublicProfile from "./pages/SellerPublicProfile";
 
 function SellerProtectedRoute() {
@@ -59,6 +63,9 @@ function AppContent() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/seller-register" element={<SellerRegister />} />
+        <Route path="/services" element={<ServicesPage />} />
+        <Route path="/book/:sellerId" element={<BookingPage />} />
+        <Route path="/my-bookings" element={<MyBookings />} />
         <Route path="/seller/:id" element={<SellerPublicProfile />} />
 
         <Route path="/verify-otp" element={<OtpVerification />} />
@@ -74,6 +81,7 @@ function AppContent() {
             <Route path="profile" element={<SellerProfile />} />
             <Route path="services" element={<SellerServices />} />
             <Route path="orders" element={<SellerOrders />} />
+            <Route path="packages" element={<SellerPackages />} />
           </Route>
         </Route>
 

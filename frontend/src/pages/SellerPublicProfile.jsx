@@ -54,7 +54,7 @@ function defaultServicesForSeller(seller) {
       days: "Mon-Sun",
     },
     {
-      name: `${base} - Premium`,
+      name: `${base} Deep Service`,
       description: "Full service with warranty",
       price: "₹599 onwards",
       duration: "2-3 hours",
@@ -166,6 +166,7 @@ export default function SellerPublicProfile() {
     typeof seller.lat === "number" && typeof seller.lng === "number"
       ? `https://www.google.com/maps/dir/?api=1&destination=${seller.lat},${seller.lng}`
       : "#";
+  const canShowDirectContact = Boolean(seller.isPremium);
 
   return (
     <div className="min-h-screen bg-[#0f0e1a] text-white p-4">
@@ -210,7 +211,12 @@ export default function SellerPublicProfile() {
               📍 <span className="text-white/90">{seller.address}</span>
             </div>
             <div className="text-sm text-indigo-200 flex items-center gap-2">
-              📞 <span className="text-white/90">{seller.phone}</span>
+              📞{" "}
+              <span className="text-white/90">
+                {canShowDirectContact
+                  ? seller.phone
+                  : "Contact details shared after booking confirmation"}
+              </span>
             </div>
           </div>
 
@@ -259,21 +265,37 @@ export default function SellerPublicProfile() {
         <div className="rounded-2xl border border-indigo-500/20 bg-indigo-950/30 p-5">
           <div className="text-lg font-extrabold mb-3">Contact</div>
 
-          <div className="grid gap-2 sm:grid-cols-2">
-            <a
-              href={callHref}
-              className="rounded-lg bg-green-600 hover:bg-green-700 px-4 py-3 text-center font-extrabold"
+          <div className="grid gap-2">
+            <button
+              type="button"
+              onClick={() => navigate(`/book/${seller.id}`)}
+              className="w-full py-3 rounded-xl font-bold text-white text-lg"
+              style={{ background: "linear-gradient(135deg, #6366f1, #4f46e5)" }}
             >
-              📞 Call Now
-            </a>
-            <a
-              href={whatsappHref}
-              target="_blank"
-              rel="noreferrer"
-              className="rounded-lg bg-[#22c55e] hover:bg-[#1f9a4e] px-4 py-3 text-center font-extrabold"
-            >
-              💬 WhatsApp
-            </a>
+              📅 Book This Service
+            </button>
+            {canShowDirectContact ? (
+              <div className="grid gap-2 sm:grid-cols-2">
+                <a
+                  href={callHref}
+                  className="rounded-lg bg-green-600 hover:bg-green-700 px-4 py-3 text-center font-extrabold"
+                >
+                  📞 Call Now
+                </a>
+                <a
+                  href={whatsappHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-lg bg-[#22c55e] hover:bg-[#1f9a4e] px-4 py-3 text-center font-extrabold"
+                >
+                  💬 WhatsApp
+                </a>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-indigo-500/20 bg-[#0b0a14] px-4 py-3 text-sm font-semibold text-indigo-200">
+                📞 Contact details shared after booking confirmation
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -13,8 +13,22 @@ import { Navigate } from "react-router-dom";
  * <Route path="/admin" element={<ProtectedRoute element={<AdminDashboard />} allowedRoles={['admin']} userRole={userRole} />} />
  */
 export default function ProtectedRoute({ element, allowedRoles, userRole }) {
+  const storedRole = userRole || localStorage.getItem("userRole");
+  const isAdminAuthenticated =
+    localStorage.getItem("isAdminAuthenticated") === "true";
+
+  if (allowedRoles.includes("admin")) {
+    if (storedRole === "admin" && isAdminAuthenticated) {
+      return element;
+    }
+
+    if (!storedRole || !isAdminAuthenticated) {
+      return <Navigate to="/admin/login" replace />;
+    }
+  }
+
   // Check if user role is in allowed roles array
-  if (allowedRoles.includes(userRole)) {
+  if (allowedRoles.includes(storedRole)) {
     return element;
   }
 

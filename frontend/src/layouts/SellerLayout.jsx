@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   BriefcaseBusiness,
   ClipboardList,
+  Crown,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -16,6 +17,7 @@ const navItems = [
   { label: "Profile", path: "/seller/profile", icon: User },
   { label: "My Services", path: "/seller/services", icon: BriefcaseBusiness },
   { label: "Orders", path: "/seller/orders", icon: ClipboardList },
+  { label: "Packages", path: "/seller/packages", icon: Crown },
 ];
 
 const getInitial = (name) => (name?.trim()?.[0] || "S").toUpperCase();

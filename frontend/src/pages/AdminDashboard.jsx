@@ -17,9 +17,11 @@ const AdminDashboard = () => {
   useEffect(() => {
     // Check if admin is logged in
     const userRole = localStorage.getItem("userRole");
+    const isAdminAuthenticated =
+      localStorage.getItem("isAdminAuthenticated") === "true";
     const adminEmail = localStorage.getItem("adminEmail");
 
-    if (userRole !== "admin") {
+    if (userRole !== "admin" || !isAdminAuthenticated) {
       navigate("/admin/login");
       return;
     }

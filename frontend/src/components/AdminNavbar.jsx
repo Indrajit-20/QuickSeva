@@ -7,6 +7,8 @@ const AdminNavbar = () => {
   const handleLogout = () => {
     localStorage.removeItem("authToken");
     localStorage.removeItem("userRole");
+    localStorage.removeItem("isAdminAuthenticated");
+    localStorage.removeItem("adminUsername");
     localStorage.removeItem("adminEmail");
     navigate("/");
   };
