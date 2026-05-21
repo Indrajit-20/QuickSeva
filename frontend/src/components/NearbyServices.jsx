@@ -121,33 +121,45 @@ const reverseGeocode = async (lat, lng) => {
 };
 
 export function useNearbyLocation() {
-  const [address, setAddress] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [address, setAddress] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!navigator.geolocation) return;
+    let cancelled = false;
+
+    if (!navigator.geolocation) {
+      setLoading(false);
+      return;
+    }
 
     setLoading(true);
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
+        if (cancelled) return;
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+
         try {
-          const nextAddress = await reverseGeocode(
-            pos.coords.latitude,
-            pos.coords.longitude,
-          );
-          setAddress(nextAddress || null);
+          const nextAddress = await reverseGeocode(lat, lng);
+          if (!cancelled) setAddress(nextAddress || "");
         } catch {
-          setAddress(null);
+          if (!cancelled) setAddress("");
         } finally {
-          setLoading(false);
+          if (!cancelled) setLoading(false);
         }
       },
       () => {
-        setAddress(null);
-        setLoading(false);
+        if (!cancelled) {
+          setAddress("");
+          setLoading(false);
+        }
       },
       { enableHighAccuracy: true, timeout: 10000 },
     );
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return { address, loading };
@@ -741,7 +753,7 @@ export default function NearbyServices({ initialSearch = "" }) {
                   href={`/book/${seller.id}`}
                   onClick={(e) => e.stopPropagation()}
                   className="block w-full rounded-lg py-1.5 text-center text-xs font-bold text-white transition-all"
-                  style={{
+                    style={{
                     background: "linear-gradient(135deg, #6366f1, #4f46e5)",
                   }}
                 >
