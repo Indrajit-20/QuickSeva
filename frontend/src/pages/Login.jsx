@@ -1,7 +1,7 @@
     import React, { useState, useCallback } from "react";
     import { Link, useNavigate } from "react-router-dom";
     import { useAuth } from "../context/AuthContext";
-    import { sendOTP, generateOTP, formatPhoneNumber } from "../utils/otpService";
+    import { sendOTP, formatPhoneNumber, verifyOTP } from "../utils/otpService";
 
     const Login = () => {
       const navigate = useNavigate();
@@ -30,7 +30,6 @@
       const [otpTouched, setOtpTouched] = useState(false);
       const [otpLoading, setOtpLoading] = useState(false);
       const [sessionId, setSessionId] = useState(null);
-      const [generatedOtp, setGeneratedOtp] = useState(null);
 
       // OTP Timer State (30 seconds)
       const [otpTimer, setOtpTimer] = useState(0);
@@ -112,15 +111,9 @@
         setMobileLoading(true);
 
         try {
-          // Generate OTP
-          const otp = generateOTP();
-          setGeneratedOtp(otp);
-
-          // Send OTP via SMS using real API
-          const result = await sendOTP(
-            formatPhoneNumber(mobileForm.mobileNumber),
-            otp
-          );
+          // Send OTP via SMS using real API. 2factor generates the OTP and
+          // returns a session ID that must be used for verification.
+          const result = await sendOTP(formatPhoneNumber(mobileForm.mobileNumber));
 
           if (result.status !== "success") {
             throw new Error(result.details || "Failed to send OTP");
@@ -195,10 +188,18 @@
         setOtpLoading(true);
 
         try {
-          // Verify OTP
-          // In production, this should be done on the backend
-          if (otpCode !== generatedOtp) {
-            throw new Error("Invalid OTP. Please try again.");
+          if (!sessionId) {
+            throw new Error("OTP session expired. Please resend OTP.");
+          }
+
+          const result = await verifyOTP(
+            formatPhoneNumber(mobileForm.mobileNumber),
+            sessionId,
+            otpCode
+          );
+
+          if (!result.verified) {
+            throw new Error(result.message || "Invalid OTP. Please try again.");
           }
 
           setMobileSuccess("✓ OTP Verified! Logging you in...");
@@ -232,15 +233,8 @@
         setMobileSuccess("");
 
         try {
-          // Generate new OTP
-          const newOtp = generateOTP();
-          setGeneratedOtp(newOtp);
-
           // Send new OTP via SMS
-          const result = await sendOTP(
-            formatPhoneNumber(mobileForm.mobileNumber),
-            newOtp
-          );
+          const result = await sendOTP(formatPhoneNumber(mobileForm.mobileNumber));
 
           if (result.status !== "success") {
             throw new Error(result.details || "Failed to resend OTP");

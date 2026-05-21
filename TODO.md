@@ -1,7 +1,8 @@
 # TODO
 
-- [ ] Add missing route for admin login in `frontend/src/App.jsx`
-  - Import `AdminLogin` from `./pages/AdminLogin`
-  - Add `<Route path="/admin/login" element={<AdminLogin />} />`
-- [ ] Re-run frontend and verify `http://localhost:5173/admin/login` loads the admin login form
-- [ ] Verify admin login redirect to `/admin/dashboard`
+- [x] Analyze Hero collage layout causing right-side cropping / invisibility.
+- [x] Update `frontend/src/components/Hero.jsx` to improve collage layout like urban company (wider right column on lg + better image positioning).
+
+- [ ] Ensure images display properly (prevent right-biased cropping by using `object-center` alignment and keeping `object-cover`).
+- [ ] Run frontend lint/build and visually verify Home page.
+- [ ] Provide final summary of changes.

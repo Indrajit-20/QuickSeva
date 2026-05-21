@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/otp-api/(.*)",
+      "destination": "https://2factor.in/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

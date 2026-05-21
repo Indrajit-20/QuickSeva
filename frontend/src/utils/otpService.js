@@ -9,13 +9,14 @@ const API_BASE_URL = "/otp-api/API/V1"; // Vite proxy endpoint
 /**
  * Send OTP to phone number
  * @param {string} phone - Phone number with country code (e.g., +91-XXXXXXXXXX)
- * @param {string} otp - OTP to send (6 digits)
  * @returns {Promise<{status: string, details: string, sessionId?: string}>}
  */
-export const sendOTP = async (phone, otp) => {
+export const sendOTP = async (phone) => {
   try {
-    // Build the URL using local Vite proxy
-    const url = `${API_BASE_URL}/${API_KEY}/SMS/${phone}/${otp}/anyhelp`;
+    // Correct send URL (server generates OTP/session)
+    // Your confirmed SEND endpoint pattern:
+    // https://2factor.in/API/V1/{apiKey}/SMS/{phone}/AUTOGEN/anyhelp
+    const url = `${API_BASE_URL}/${API_KEY}/SMS/${phone}/AUTOGEN/anyhelp`;
 
     console.log("📤 Sending OTP to:", phone);
     console.log("🔗 Using Vite proxy at:", url);
@@ -30,18 +31,20 @@ export const sendOTP = async (phone, otp) => {
     console.log("📥 Response from 2factor.in:", data);
 
     if (data.Status === "Success") {
-      console.log("✅ OTP sent successfully!");
       return {
         status: "success",
         details: data.Details,
-        sessionId: data.Details, // Session ID for verification
+        // session id for VERIFY is returned in Details
+        sessionId: data.Details,
       };
-    } else {
-      throw new Error(data.Details || "Failed to send OTP");
     }
+
+    return {
+      status: "error",
+      details: data.Details || "Failed to send OTP",
+    };
   } catch (error) {
     console.error("❌ Error sending OTP:", error);
-
     return {
       status: "error",
       details:
@@ -101,25 +104,40 @@ export const formatPhoneNumber = (phone) => {
  */
 export const verifyOTP = async (phone, sessionId, enteredOtp) => {
   try {
-    // Note: The 2factor.in API requires verification on the backend
-    // For now, we're doing a client-side verification
-    // In production, you should verify on your backend server
+    // Your confirmed VERIFY endpoint:
+    // https://2factor.in/API/V1/{apiKey}/SMS/VERIFY/{sessionId}/{otp}
+    const url = `${API_BASE_URL}/${API_KEY}/SMS/VERIFY/${sessionId}/${enteredOtp}`;
 
-    // Store the entered OTP in sessionStorage for backend verification
-    sessionStorage.setItem("verificationOtp", enteredOtp);
-    sessionStorage.setItem("sessionId", sessionId);
-    sessionStorage.setItem("verificationPhone", phone);
+    console.log("🔐 Verifying OTP...");
+    console.log("🔗 Using Vite proxy at:", url);
 
-    // Return success - backend will verify
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log("📥 Verify response from 2factor.in:", data);
+
+    if (data.Status === "Success") {
+      // Expected response like:
+      // {"Status":"Success","Details":"<sessionId>"}
+      return {
+        verified: true,
+        message: "OTP verified successfully",
+      };
+    }
+
     return {
-      verified: true,
-      message: "OTP submitted for verification",
+      verified: false,
+      message: data.Details || "Invalid OTP",
     };
   } catch (error) {
     console.error("Error verifying OTP:", error);
     return {
       verified: false,
-      message: error.message,
+      message: error.message || "Verification failed",
     };
   }
 };

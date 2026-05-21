@@ -30,8 +30,8 @@ const InputField = ({
         errors[name] && touched[name]
           ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
           : !errors[name] && touched[name] && formData[name]
-          ? "border-green-500/50 focus:ring-2 focus:ring-green-500/30 focus:border-green-500"
-          : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
+            ? "border-green-500/50 focus:ring-2 focus:ring-green-500/30 focus:border-green-500"
+            : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
       }`}
     />
     {errors[name] && touched[name] && (
@@ -47,8 +47,6 @@ const Register = () => {
     lastName: "",
     email: "",
     mobileNumber: "",
-    password: "",
-    confirmPassword: "",
   });
 
   const [errors, setErrors] = useState({});
@@ -73,17 +71,6 @@ const Register = () => {
     return null;
   };
 
-  // Password validation - simple and easy
-  const validatePassword = (password) => {
-    if (!password) return { error: "Password is required", strength: "none" };
-    if (password.length < 6)
-      return {
-        error: "Password must be at least 6 characters",
-        strength: "weak",
-      };
-    return { error: null, strength: "strong" };
-  };
-
   // Handle input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -103,20 +90,6 @@ const Register = () => {
     // Then validate using new form data
     if (touched[name]) {
       validateFieldWithData(name, sanitizedValue, newFormData);
-    }
-
-    // Revalidate confirm password when password changes
-    if (name === "password" && touched.confirmPassword) {
-      validateFieldWithData(
-        "confirmPassword",
-        newFormData.confirmPassword,
-        newFormData
-      );
-    }
-
-    if (name === "password") {
-      const validation = validatePassword(sanitizedValue);
-      setPasswordStrength(validation.strength);
     }
   };
 
@@ -138,15 +111,6 @@ const Register = () => {
         break;
       case "mobileNumber":
         error = validateMobile(value);
-        break;
-      case "password":
-        const passwordVal = validatePassword(value);
-        error = passwordVal.error;
-        break;
-      case "confirmPassword":
-        if (!value) error = "Confirm password is required";
-        else if (value !== currentFormData.password)
-          error = "Passwords do not match";
         break;
       default:
         break;
@@ -405,10 +369,10 @@ const Register = () => {
                   errors.mobileNumber && touched.mobileNumber
                     ? "border-danger focus:ring-danger"
                     : !errors.mobileNumber &&
-                      touched.mobileNumber &&
-                      formData.mobileNumber
-                    ? "border-success focus:ring-success"
-                    : "focus:border-primary"
+                        touched.mobileNumber &&
+                        formData.mobileNumber
+                      ? "border-success focus:ring-success"
+                      : "focus:border-primary"
                 }`}
               />
             </div>

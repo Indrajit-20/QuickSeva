@@ -1,4 +1,4 @@
-  // Dummy (frontend-only) data for the Hero section
+// Dummy (frontend-only) data for the Hero section
 
 export const serviceCategories = [
   { name: "AC Repair", iconName: "Snowflake" },
@@ -12,10 +12,11 @@ export const serviceCategories = [
 ];
 
 export const serviceImages = [
-  // Home services / interiors / happy moments (Unsplash)
-  "https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=1600&q=80",
-  "https://images.unsplash.com/photo-1581579185169-3a4b0bb9b3f4?auto=format&fit=crop&w=1600&q=80",
-  "https://images.unsplash.com/photo-1523413651479-597eb2da0ad6?auto=format&fit=crop&w=1600&q=80",
-  "https://images.unsplash.com/photo-1597760497873-3a0d7dbe3a2a?auto=format&fit=crop&w=1600&q=80",
-  "https://images.unsplash.com/photo-1554995207-c18c203602cb?auto=format&fit=crop&w=1600&q=80",
+  // Local hero collage images (served from frontend/public/images)
+    "/images/img.jpg",
+  "/images/315-carpet-cleaning-service-urban-solution-thumb.webp",
+  "/images/233-kitchen-cleaning.webp",
+  "/images/Urban-Company-cleaning-services-ad-hoc-cleaning-1.webp",
+
+  "/images/friendly-plumber-giving-a-thumbs-photo.webp",
 ];

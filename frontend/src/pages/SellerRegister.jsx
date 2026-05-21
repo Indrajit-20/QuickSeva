@@ -1,0 +1,365 @@
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import LocationPicker from "../components/LocationPicker";
+
+const SellerRegister = () => {
+  const navigate = useNavigate();
+
+  const [formData, setFormData] = useState({
+    businessName: "",
+    ownerName: "",
+    email: "",
+    mobileNumber: "",
+    // checkbox selection
+    services: [], // e.g. ["Cleaning"]
+    location: { lat: null, lng: null, address: "" },
+  });
+
+  const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+
+  const validateEmail = (email) => {
+    if (!email) return "Email is required";
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) return "Enter valid email";
+    return null;
+  };
+
+  const validateMobile = (mobile) => {
+    if (!mobile) return "Mobile number is required";
+    const digitsOnly = mobile.replace(/\D/g, "");
+    if (digitsOnly.length !== 10) return "Mobile number must be 10 digits";
+    return null;
+  };
+
+  const SERVICES = [
+    "Cleaning",
+    "Electrical",
+    "Plumbing",
+    "Carpentry",
+    "AC Repair",
+    "Pest Control",
+  ];
+
+  const validateForm = () => {
+    const nextErrors = {};
+
+    if (!formData.businessName || formData.businessName.length < 2)
+      nextErrors.businessName = "Business name is required";
+
+    if (!formData.ownerName || formData.ownerName.length < 2)
+      nextErrors.ownerName = "Owner name is required";
+
+    const emailError = validateEmail(formData.email);
+    if (emailError) nextErrors.email = emailError;
+
+    const mobileError = validateMobile(formData.mobileNumber);
+    if (mobileError) nextErrors.mobileNumber = mobileError;
+
+    if (!formData.services || formData.services.length === 0)
+      nextErrors.services = "Select at least one service";
+
+    if (!formData.location || formData.location.lat === null)
+      nextErrors.location = "Please pin your service location on the map";
+
+    setErrors(nextErrors);
+    setTouched({
+      businessName: true,
+      ownerName: true,
+      email: true,
+      mobileNumber: true,
+      services: true,
+      location: true,
+    });
+
+    return Object.keys(nextErrors).length === 0;
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+
+    const sanitizedValue =
+      name === "mobileNumber" ? value.replace(/\D/g, "").slice(0, 10) : value;
+
+    setFormData((prev) => ({ ...prev, [name]: sanitizedValue }));
+
+    if (touched[name]) {
+      // lightweight revalidation on blur/after touched
+      validateForm();
+    }
+  };
+
+  const handleBlur = (e) => {
+    const { name } = e.target;
+    setTouched((prev) => ({ ...prev, [name]: true }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSuccessMessage("");
+
+    if (!validateForm()) return;
+
+    if (formData.location?.lat === null) {
+      setErrors((prev) => ({
+        ...prev,
+        location: "Please pin your service location on the map",
+      }));
+      return;
+    }
+
+    // Save sellers list for buyer-side NearbyServices
+    const existing = JSON.parse(localStorage.getItem("sellers") || "[]");
+
+    const shortAddress = formData.location?.address || "";
+
+    // Store only one primary service (first selected) for simpler matching
+    const primaryService = Array.isArray(formData.services)
+      ? formData.services[0] || ""
+      : "";
+
+    const newSeller = {
+      id: Date.now(),
+      name: formData.businessName,
+      phone: formData.mobileNumber,
+      service: primaryService,
+      lat: formData.location.lat,
+      lng: formData.location.lng,
+      address: shortAddress,
+      registeredAt: new Date().toISOString(),
+    };
+
+    const next = Array.isArray(existing)
+      ? [...existing, newSeller]
+      : [newSeller];
+    localStorage.setItem("sellers", JSON.stringify(next));
+
+    // Keep existing key for OTP flow compatibility (if used elsewhere)
+    localStorage.setItem("registeredSeller", JSON.stringify({ ...formData }));
+
+    setIsLoading(true);
+    setTimeout(() => {
+      setIsLoading(false);
+      // OTP flow expects phoneNumber in location.state
+      navigate("/verify-otp", {
+        state: {
+          phoneNumber: formData.mobileNumber,
+          userName: formData.businessName,
+          otpRequestId: `seller-${Date.now()}`,
+        },
+      });
+    }, 300);
+  };
+
+  return (
+    <div className="min-h-screen bg-linear-to-br from-slate-900 via-indigo-950 to-black flex items-center justify-center p-4">
+      <div className="bg-indigo-900/40 backdrop-blur-md rounded-2xl shadow-2xl w-full max-w-md p-8 border border-indigo-500/30 red-accent-line">
+        <div className="text-center mb-6">
+          <h1 className="text-3xl font-bold text-white mb-2">
+            Become a Partner
+          </h1>
+          <p className="text-indigo-200 text-sm">Seller registration</p>
+        </div>
+
+        {successMessage && (
+          <div className="mb-4 p-3 bg-green-500/20 border border-green-500/50 rounded-lg">
+            <p className="text-green-200 text-xs flex items-center font-semibold">
+              <span className="mr-2">✓</span>
+              {successMessage}
+            </p>
+          </div>
+        )}
+
+        {errors.submit && (
+          <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg">
+            <p className="text-red-200 text-xs flex items-center">
+              <span className="mr-2">⚠</span>
+              {errors.submit}
+            </p>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-indigo-200 mb-2">
+              Business Name <span className="text-red-400">*</span>
+            </label>
+            <input
+              name="businessName"
+              value={formData.businessName}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              placeholder="QuickSeva Partner Pvt. Ltd"
+              className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${
+                errors.businessName && touched.businessName
+                  ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
+                  : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
+              }`}
+            />
+            {errors.businessName && touched.businessName && (
+              <p className="mt-1 text-xs text-red-300">
+                ⚠ {errors.businessName}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-indigo-200 mb-2">
+              Owner Name <span className="text-red-400">*</span>
+            </label>
+            <input
+              name="ownerName"
+              value={formData.ownerName}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              placeholder="John Doe"
+              className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${
+                errors.ownerName && touched.ownerName
+                  ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
+                  : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
+              }`}
+            />
+            {errors.ownerName && touched.ownerName && (
+              <p className="mt-1 text-xs text-red-300">⚠ {errors.ownerName}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-indigo-200 mb-2">
+              Email <span className="text-red-400">*</span>
+            </label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              placeholder="you@example.com"
+              className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${
+                errors.email && touched.email
+                  ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
+                  : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
+              }`}
+            />
+            {errors.email && touched.email && (
+              <p className="mt-1 text-xs text-red-300">⚠ {errors.email}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-indigo-200 mb-2">
+              Mobile Number <span className="text-red-400">*</span>
+            </label>
+            <input
+              type="tel"
+              name="mobileNumber"
+              value={formData.mobileNumber}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              placeholder="98765 43210"
+              maxLength={10}
+              className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${
+                errors.mobileNumber && touched.mobileNumber
+                  ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
+                  : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
+              }`}
+            />
+            {errors.mobileNumber && touched.mobileNumber && (
+              <p className="mt-1 text-xs text-red-300">
+                ⚠ {errors.mobileNumber}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-indigo-200 mb-2">
+              Your Service Location <span className="text-red-400">*</span>
+            </label>
+            <LocationPicker
+              onChange={({ lat, lng, address }) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  location: { lat, lng, address },
+                }))
+              }
+            />
+            {errors.location && (
+              <p className="mt-1 text-xs text-red-300">⚠ {errors.location}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-indigo-200 mb-2">
+              Type of services <span className="text-red-400">*</span>
+            </label>
+            <div className="space-y-2">
+              {SERVICES.map((service) => {
+                const checked = formData.services.includes(service);
+                return (
+                  <label
+                    key={service}
+                    className="flex items-start text-sm cursor-pointer select-none"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(e) => {
+                        const nextChecked = e.target.checked;
+                        setFormData((prev) => {
+                          const set = new Set(prev.services);
+                          if (nextChecked) set.add(service);
+                          else set.delete(service);
+                          return { ...prev, services: Array.from(set) };
+                        });
+                      }}
+                      onBlur={handleBlur}
+                      className="w-4 h-4 mt-0.5 text-indigo-600 rounded focus:ring-indigo-500 border-indigo-500/50 bg-indigo-950/40"
+                    />
+                    <span className="ml-2 text-indigo-200">{service}</span>
+                  </label>
+                );
+              })}
+            </div>
+            {errors.services && touched.services && (
+              <p className="mt-1 text-xs text-red-300">⚠ {errors.services}</p>
+            )}
+          </div>
+
+          <div className="flex items-start text-sm">
+            <input
+              type="checkbox"
+              id="sellerTerms"
+              required
+              className="w-4 h-4 text-indigo-600 rounded mt-0.5 focus:ring-indigo-500 border-indigo-500/50 bg-indigo-950/40"
+            />
+            <label htmlFor="sellerTerms" className="ml-2 text-indigo-200">
+              I agree to be contacted about partner onboarding
+            </label>
+          </div>
+
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full mt-2 px-4 py-2.5 rounded-lg font-semibold text-white bg-linear-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 hover:scale-[1.01] hover:shadow-lg active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+          >
+            {isLoading ? "Submitting..." : "Register as Partner"}
+          </button>
+
+          <p className="text-center text-indigo-200 text-sm">
+            Already registered?{" "}
+            <Link
+              to="/login"
+              className="font-bold text-red-400 hover:text-red-300 hover:underline"
+            >
+              Sign in
+            </Link>
+          </p>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+export default SellerRegister;

@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useNearbyLocation } from "./NearbyServices";
 
 const getInitials = (name) => {
   if (!name) return "U";
@@ -12,7 +13,10 @@ const getInitials = (name) => {
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isPartnerOpen, setIsPartnerOpen] = useState(false);
+  const partnerRef = useRef(null);
   const { user, logout } = useAuth();
+  const { address, loading } = useNearbyLocation();
 
   const initials = useMemo(() => getInitials(user?.name), [user?.name]);
 
@@ -23,7 +27,21 @@ const Navbar = () => {
   const handleLogout = () => {
     logout();
     setIsMenuOpen(false);
+    setIsPartnerOpen(false);
   };
+
+  useEffect(() => {
+    const onDocMouseDown = (e) => {
+      if (!isPartnerOpen) return;
+      const el = partnerRef.current;
+      if (!el) return;
+      if (el.contains(e.target)) return;
+      setIsPartnerOpen(false);
+    };
+
+    document.addEventListener("mousedown", onDocMouseDown);
+    return () => document.removeEventListener("mousedown", onDocMouseDown);
+  }, [isPartnerOpen]);
 
   return (
     <nav className="bg-indigo-950 shadow-lg border-b border-indigo-900">
@@ -35,6 +53,13 @@ const Navbar = () => {
               QuickSeva
             </span>
           </Link>
+
+          <div className="hidden sm:flex items-center gap-1 text-xs text-indigo-300 bg-indigo-950/50 px-3 py-1 rounded-full border border-indigo-500/20 max-w-[260px]">
+            <span>📍</span>
+            <span className="truncate">
+              {loading ? "Locating..." : address || "Allow location"}
+            </span>
+          </div>
 
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center space-x-6">
@@ -73,6 +98,46 @@ const Navbar = () => {
                 >
                   Login
                 </Link>
+                <div
+                  className="relative"
+                  ref={partnerRef}
+                  onMouseEnter={() => setIsPartnerOpen(true)}
+                >
+                  <button
+                    type="button"
+                    className="list-none cursor-pointer"
+                    onClick={() => setIsPartnerOpen(true)}
+                  >
+                    <span className="text-indigo-100 hover:text-red-400 font-semibold transition-colors duration-300">
+                      Become a partner
+                    </span>
+                  </button>
+
+                  {isPartnerOpen && (
+                    <div
+                      className="absolute right-0 mt-2 w-64 rounded-xl bg-indigo-950 border border-indigo-500/30 shadow-lg p-4"
+                      onMouseLeave={() => setIsPartnerOpen(false)}
+                    >
+                      <div className="text-indigo-100 font-semibold mb-2">
+                        Seller / Partner registration
+                      </div>
+                      <div className="text-indigo-200 text-sm leading-relaxed mb-3">
+                        Register, fill your details, and start onboarding with
+                        QuickSeva.
+                      </div>
+                      <Link
+                        to="/seller-register"
+                        onClick={() => {
+                          setIsMenuOpen(false);
+                          setIsPartnerOpen(false);
+                        }}
+                        className="block text-center bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-3 rounded-lg"
+                      >
+                        Register as Seller
+                      </Link>
+                    </div>
+                  )}
+                </div>
                 <Link to="/register" className="btn btn-primary">
                   Register
                 </Link>
@@ -143,6 +208,21 @@ const Navbar = () => {
                 >
                   Login
                 </Link>
+                <div className="rounded-xl border border-indigo-500/30 bg-indigo-950/30 p-3">
+                  <div className="text-indigo-100 font-semibold mb-1">
+                    Become a partner
+                  </div>
+                  <div className="text-indigo-200 text-xs leading-relaxed mb-2">
+                    Seller registration and onboarding form.
+                  </div>
+                  <Link
+                    to="/seller-register"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="block w-full text-center bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-3 rounded-lg"
+                  >
+                    Register as Seller
+                  </Link>
+                </div>
                 <Link
                   to="/register"
                   onClick={() => setIsMenuOpen(false)}

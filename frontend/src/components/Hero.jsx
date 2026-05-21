@@ -1,4 +1,5 @@
 import React from "react";
+import heroFallback from "../assets/hero.png";
 import { serviceCategories, serviceImages } from "../data/dummyData";
 import {
   Droplets,
@@ -23,10 +24,15 @@ const iconMap = {
 };
 
 export default function Hero() {
+  const handleImageError = (e) => {
+    e.currentTarget.onerror = null;
+    e.currentTarget.src = heroFallback;
+  };
+
   return (
     <section className="bg-brand-bg">
       <div className="mx-auto max-w-7xl px-6 lg:px-12 py-16">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.15fr] gap-10 lg:gap-14 items-center">
           {/* Left Column (Text & Services) */}
           <div>
             <h1 className="text-4xl sm:text-5xl font-bold text-slate-900 leading-tight">
@@ -61,62 +67,45 @@ export default function Hero() {
           </div>
 
           {/* Right Column (Bento Box Collage) */}
-          <div>
-            {/* 2x2 bento, but we place 5 images by letting the first image span both rows (bento feel) */}
+          <div className="min-w-0">
             <div className="grid grid-cols-2 grid-rows-2 gap-4">
-              {/* First image (large): spans both rows */}
+              {/* Use explicit aspect ratios so images don't get squeezed/cropped oddly */}
               <div className="col-span-1 row-span-2 overflow-hidden rounded-3xl shadow-sm">
                 <img
                   src={serviceImages[0]}
                   alt="Home services"
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover object-center"
+                  style={{ aspectRatio: "4 / 5" }}
                   loading="lazy"
-                  referrerPolicy="no-referrer"
+                  onError={handleImageError}
                 />
               </div>
 
-              {/* Remaining images fill the right column */}
               <div className="overflow-hidden rounded-3xl shadow-sm">
                 <img
                   src={serviceImages[1]}
                   alt="Happy customer"
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover object-center"
+                  style={{ aspectRatio: "1 / 1" }}
                   loading="lazy"
-                  referrerPolicy="no-referrer"
+                  onError={handleImageError}
                 />
               </div>
 
-              <div className="overflow-hidden rounded-3xl shadow-sm">
-                <img
-                  src={serviceImages[2]}
-                  alt="Professional work"
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                  referrerPolicy="no-referrer"
-                />
-              </div>
+           
 
-              {/* 4th image */}
               <div className="overflow-hidden rounded-3xl shadow-sm">
                 <img
                   src={serviceImages[3]}
                   alt="Home interior"
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover object-center"
+                  style={{ aspectRatio: "1 / 1" }}
                   loading="lazy"
-                  referrerPolicy="no-referrer"
+                  onError={handleImageError}
                 />
               </div>
 
-              {/* 5th image: overlay the 4th cell to keep 5 images visible */}
-              <div className="relative overflow-hidden rounded-3xl shadow-sm">
-                <img
-                  src={serviceImages[4]}
-                  alt="Service moment"
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                  referrerPolicy="no-referrer"
-                />
-              </div>
+             
             </div>
           </div>
         </div>

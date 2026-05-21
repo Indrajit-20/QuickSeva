@@ -1,12 +1,22 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import {
   sendOTP,
-  generateOTP,
   isValidOTP,
   formatPhoneNumber,
   verifyOTP,
 } from "../utils/otpService";
+
+const initialOtpRequests = new Map();
+
+const getInitialOtpRequest = (requestKey, phone) => {
+  if (!initialOtpRequests.has(requestKey)) {
+    initialOtpRequests.set(requestKey, sendOTP(phone));
+  }
+
+  return initialOtpRequests.get(requestKey);
+};
 
 /**
  * OTP Verification Component
@@ -21,18 +31,21 @@ import {
 const OtpVerification = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { loginWithPhone } = useAuth();
   const inputsRef = useRef([]);
 
   // Get phone number from location state
   const phoneNumber = location.state?.phoneNumber;
   const userName = location.state?.userName || "User";
+  const otpRequestId = location.state?.otpRequestId || phoneNumber;
 
   // OTP state
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
-  const [sessionId, setSessionId] = useState(null);
+  const sessionIdRef = useRef(null);
+  const [, setSessionId] = useState(null);
 
   // Timer states
   const [timeRemaining, setTimeRemaining] = useState(0);
@@ -54,6 +67,33 @@ const OtpVerification = () => {
 
     initializeTimerAndResendCount();
   }, [phoneNumber, navigate]);
+
+  // Send OTP on first load and save sessionId
+  useEffect(() => {
+    if (!phoneNumber) return;
+
+    const sendInitialOTP = async () => {
+      const formattedPhone = formatPhoneNumber(phoneNumber);
+      const requestKey = `${otpRequestId}:${formattedPhone}`;
+      const result = await getInitialOtpRequest(requestKey, formattedPhone);
+
+      if (result.status === "success") {
+        sessionIdRef.current = result.sessionId;
+        setSessionId(result.sessionId);
+        console.log("Initial sessionId saved:", sessionIdRef.current);
+
+        // Start timer
+        const expiryTime = Date.now() + 30 * 1000;
+        localStorage.setItem("otpTimerExpiry", expiryTime);
+        setTimeRemaining(30);
+        setTimerActive(true);
+      } else {
+        setError(result.details || "Failed to send OTP. Please try again.");
+      }
+    };
+
+    sendInitialOTP();
+  }, [otpRequestId, phoneNumber]);
 
   // Timer countdown effect
   useEffect(() => {
@@ -202,10 +242,21 @@ const OtpVerification = () => {
     setLoading(true);
 
     try {
+      if (!sessionIdRef.current) {
+        throw new Error("OTP is still being sent. Please wait a moment.");
+      }
+
       // Verify OTP with the API session
-      const result = await verifyOTP(phoneNumber, sessionId, otpCode);
+      const result = await verifyOTP(
+        phoneNumber,
+        sessionIdRef.current,
+        otpCode,
+      );
 
       if (result.verified) {
+        initialOtpRequests.delete(
+          `${otpRequestId}:${formatPhoneNumber(phoneNumber)}`,
+        );
         setSuccess("✓ OTP verified successfully!");
 
         // Clear localStorage timers
@@ -214,7 +265,8 @@ const OtpVerification = () => {
 
         // Redirect to dashboard after 1.5 seconds
         setTimeout(() => {
-          navigate("/dashboard", {
+          loginWithPhone(phoneNumber, userName);
+          navigate("/seller/dashboard", {
             state: { phone: phoneNumber, name: userName },
           });
         }, 1500);
@@ -239,7 +291,7 @@ const OtpVerification = () => {
     if (resendCount >= 3) {
       setResendLocked(true);
       setError(
-        "⚠️ Maximum resend attempts reached. Contact support for assistance."
+        "⚠️ Maximum resend attempts reached. Contact support for assistance.",
       );
       return;
     }
@@ -249,17 +301,25 @@ const OtpVerification = () => {
     setResendDisabled(true);
 
     try {
-      // Generate new OTP
-      const newOtp = generateOTP();
+      // Give proxy a moment on the FIRST send only (resendCount === 0)
+      if (resendCount === 0) {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+      }
 
       // Send OTP via SMS
-      const result = await sendOTP(formatPhoneNumber(phoneNumber), newOtp);
+      const result = await sendOTP(formatPhoneNumber(phoneNumber));
 
       if (result.status === "success") {
-        // Store session ID for verification
+        initialOtpRequests.delete(
+          `${otpRequestId}:${formatPhoneNumber(phoneNumber)}`,
+        );
+
+        // Store session ID for verification (useRef to avoid stale state)
+        sessionIdRef.current = result.sessionId;
         setSessionId(result.sessionId);
 
         // Increment resend count
+
         const newResendCount = resendCount + 1;
         setResendCount(newResendCount);
         localStorage.setItem("otpResendCount", newResendCount);
@@ -280,7 +340,7 @@ const OtpVerification = () => {
         setTimerActive(true);
 
         setSuccess(
-          `✓ New OTP sent to ${phoneNumber}! (${newResendCount}/3 resends used)`
+          `✓ New OTP sent to ${phoneNumber}! (${newResendCount}/3 resends used)`,
         );
       } else {
         setError(`Failed to resend OTP: ${result.details}`);
@@ -417,17 +477,17 @@ const OtpVerification = () => {
                 resendLocked
                   ? "border-red-300 bg-red-50 text-red-600 cursor-not-allowed"
                   : resendDisabled
-                  ? "border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed"
-                  : "border-emerald-600 bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
+                    ? "border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed"
+                    : "border-emerald-600 bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
               }`}
             >
               {resendLocked
                 ? "🔒 Resend Locked (Max attempts reached)"
                 : resendDisabled && timerActive
-                ? `Resend OTP (${formatTime(timeRemaining)})`
-                : resendDisabled
-                ? "Resend OTP"
-                : `Resend OTP (${resendCount}/3)`}
+                  ? `Resend OTP (${formatTime(timeRemaining)})`
+                  : resendDisabled
+                    ? "Resend OTP"
+                    : `Resend OTP (${resendCount}/3)`}
             </button>
 
             {/* Resend Count Info */}
