@@ -165,7 +165,12 @@ export function useNearbyLocation() {
   return { address, loading };
 }
 
-export default function NearbyServices({ initialSearch = "" }) {
+export default function NearbyServices({
+  initialSearch = "",
+  centerLat = null,
+  centerLon = null,
+  locationFilter = "",
+}) {
   const [buyerPos, setBuyerPos] = useState(null);
   const [geoError, setGeoError] = useState("");
   const [search, setSearch] = useState(initialSearch);
@@ -750,14 +755,14 @@ export default function NearbyServices({ initialSearch = "" }) {
                 )}
 
                 <a
-                  href={`/book/${seller.id}`}
+                  href={`/seller/${seller.id}`}
                   onClick={(e) => e.stopPropagation()}
                   className="block w-full rounded-lg py-1.5 text-center text-xs font-bold text-white transition-all"
-                    style={{
+                  style={{
                     background: "linear-gradient(135deg, #6366f1, #4f46e5)",
                   }}
                 >
-                  Book Now →
+                  View Details →
                 </a>
               </div>
             ))}

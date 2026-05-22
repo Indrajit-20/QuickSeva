@@ -1,7 +1,7 @@
-import React from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import heroFallback from "../assets/hero.png";
-import { serviceCategories, serviceImages } from "../data/dummyData";
+import { serviceImages } from "../data/dummyData";
 import {
   Wind,
   Droplets,
@@ -12,6 +12,11 @@ import {
   Bug,
   Wrench,
 } from "lucide-react";
+import {
+  ALL_SERVICE_SUGGESTIONS,
+  CATEGORIES,
+  serviceToCategory,
+} from "../data/servicesData";
 
 export default function Hero() {
   const navigate = useNavigate();
@@ -139,8 +144,218 @@ export default function Hero() {
               </div>
             </div>
           </div>
+
+          {/* Bark.com style search bar */}
+          {/* <div className="w-full max-w-3xl mx-auto mt-8 px-4">
+            <div className="text-lg font-bold text-slate-700 mb-3 text-center">
+              Or search for any service near you
+            </div>
+
+            <HeroSearchBar
+              navigate={navigate}
+              serviceToCategory={serviceToCategory}
+              allSuggestions={ALL_SERVICE_SUGGESTIONS}
+            />
+          </div> */}
         </div>
       </div>
     </section>
+  );
+}
+
+function HeroSearchBar({ navigate, serviceToCategory, allSuggestions }) {
+  const [serviceValue, setServiceValue] = useState("");
+  const [locationValue, setLocationValue] = useState("");
+  const [locationLoading, setLocationLoading] = useState(false);
+
+  const [locationSuggestions, setLocationSuggestions] = useState([]);
+  const [showServiceDrop, setShowServiceDrop] = useState(false);
+  const [showLocationDrop, setShowLocationDrop] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState(null);
+
+  const [serviceSuggestions, setServiceSuggestions] = useState([]);
+
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    const term = serviceValue.trim().toLowerCase();
+    if (!term) {
+      setServiceSuggestions([]);
+      return;
+    }
+    const filtered = allSuggestions
+      .filter((s) => s.toLowerCase().includes(term))
+      .slice(0, 7);
+    setServiceSuggestions(filtered);
+  }, [serviceValue, allSuggestions]);
+
+  const selectedCategories = useMemo(() => new Set(CATEGORIES), []);
+
+  useEffect(() => {
+    const onDocMouseDown = (e) => {
+      if (!containerRef.current) return;
+      if (containerRef.current.contains(e.target)) return;
+      setShowServiceDrop(false);
+      setShowLocationDrop(false);
+    };
+
+    document.addEventListener("mousedown", onDocMouseDown);
+    return () => document.removeEventListener("mousedown", onDocMouseDown);
+  }, []);
+
+  useEffect(() => {
+    if (!locationValue) {
+      setLocationSuggestions([]);
+      setShowLocationDrop(false);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      fetchLocations(locationValue);
+    }, 400);
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locationValue]);
+
+  const fetchLocations = async (query) => {
+    if (query.length < 3) return;
+    setLocationLoading(true);
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search` +
+          `?q=${encodeURIComponent(query)}` +
+          `&format=json&limit=5&countrycodes=in`,
+      );
+      const data = await res.json();
+      setLocationSuggestions(Array.isArray(data) ? data : []);
+      setShowLocationDrop(true);
+    } catch {
+      setLocationSuggestions([]);
+      setShowLocationDrop(false);
+    } finally {
+      setLocationLoading(false);
+    }
+  };
+
+  const handleSearch = () => {
+    const category = serviceToCategory[serviceValue] || serviceValue;
+    const lat = selectedLocation?.lat || "";
+    const lon = selectedLocation?.lon || "";
+
+    navigate(
+      `/services?category=${encodeURIComponent(category)}` +
+        `&location=${encodeURIComponent(locationValue || "")}` +
+        `&lat=${lat}&lon=${lon}&showMap=true`,
+    );
+  };
+
+  const onPickServiceItem = (item) => {
+    setServiceValue(item);
+    setShowServiceDrop(false);
+  };
+
+  const onPickLocationItem = (item) => {
+    setLocationValue(item.display_name);
+    setSelectedLocation({
+      display_name: item.display_name,
+      lat: item.lat,
+      lon: item.lon,
+    });
+    setShowLocationDrop(false);
+  };
+
+  return (
+    <div
+      className="flex gap-3 items-stretch bg-white rounded-2xl shadow-md border border-gray-200 p-2"
+      ref={containerRef}
+    >
+      <div className="flex-1 relative">
+        <input
+          value={serviceValue}
+          onChange={(e) => {
+            setServiceValue(e.target.value);
+            setShowServiceDrop(true);
+          }}
+          onFocus={() => setShowServiceDrop(true)}
+          placeholder="What service do you need?"
+          className="w-full px-4 py-2 text-sm outline-none rounded-xl"
+        />
+        {showServiceDrop && serviceSuggestions.length > 0 && (
+          <div className="absolute left-0 right-0 top-full z-50 mt-2 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+            {serviceSuggestions.map((item) => {
+              const isCategory = selectedCategories.has(item);
+              return (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => onPickServiceItem(item)}
+                  className="w-full flex justify-between items-center px-4 py-2.5 text-sm hover:bg-indigo-50 cursor-pointer text-left"
+                >
+                  <span className="flex items-center gap-2 min-w-0">
+                    <span className="flex-shrink-0">
+                      {isCategory ? "🏷️" : "🔧"}
+                    </span>
+                    <span className="truncate font-semibold text-slate-700">
+                      {item}
+                    </span>
+                  </span>
+                  {isCategory ? (
+                    <span className="bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded-full flex-shrink-0">
+                      Category
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div className="flex-1 relative border-l border-gray-200 pl-0.5">
+        <input
+          value={locationValue}
+          onChange={(e) => {
+            setLocationValue(e.target.value);
+            setShowLocationDrop(true);
+          }}
+          onFocus={() => setShowLocationDrop(true)}
+          placeholder="📍 Your area or city..."
+          className="w-full px-4 py-2 text-sm outline-none rounded-xl"
+        />
+
+        {showLocationDrop && locationSuggestions.length > 0 && (
+          <div className="absolute left-0 right-0 top-full z-50 mt-2 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+            {locationSuggestions.slice(0, 5).map((item) => (
+              <button
+                key={`${item.place_id}-${item.lat}-${item.lon}`}
+                type="button"
+                onClick={() => onPickLocationItem(item)}
+                className="w-full flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-indigo-50 cursor-pointer text-left"
+              >
+                <span>📍</span>
+                <span className="truncate text-slate-700">
+                  {item.display_name}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {locationLoading ? (
+          <div className="absolute left-4 top-full z-50 mt-2 text-xs text-slate-500">
+            Searching...
+          </div>
+        ) : null}
+      </div>
+
+      <button
+        type="button"
+        onClick={handleSearch}
+        className="bg-indigo-600 text-white px-6 py-2 rounded-xl font-bold text-sm hover:bg-indigo-700 transition whitespace-nowrap"
+      >
+        Find Pros →
+      </button>
+    </div>
   );
 }
