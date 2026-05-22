@@ -145,18 +145,7 @@ export default function Hero() {
             </div>
           </div>
 
-          {/* Bark.com style search bar */}
-          {/* <div className="w-full max-w-3xl mx-auto mt-8 px-4">
-            <div className="text-lg font-bold text-slate-700 mb-3 text-center">
-              Or search for any service near you
-            </div>
-
-            <HeroSearchBar
-              navigate={navigate}
-              serviceToCategory={serviceToCategory}
-              allSuggestions={ALL_SERVICE_SUGGESTIONS}
-            />
-          </div> */}
+          
         </div>
       </div>
     </section>

@@ -37,9 +37,9 @@ function NavbarSearch({ className = "", onNavigate }) {
   }, [searchQuery]);
 
   const goToServices = (value = searchQuery) => {
-    const query = value.trim();
-    if (!query) return;
-    navigate(`/services?q=${encodeURIComponent(query)}`);
+    const category = value.trim();
+    if (!category) return;
+    navigate(`/services?category=${encodeURIComponent(category)}`);
     setIsOpen(false);
     setSearchQuery("");
     onNavigate?.();

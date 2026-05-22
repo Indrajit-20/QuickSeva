@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
-import { categoriesData } from "../data/servicesData";
+import { categoriesData, categoryToKeywords } from "../data/servicesData";
 import NearbyServices from "../components/NearbyServices";
 
 const loadSellers = () => {
@@ -18,12 +18,14 @@ export default function ServicesPage() {
   const navigate = useNavigate();
 
   const categoryParam = searchParams.get("category");
+  const queryFromUrl = searchParams.get("q");
 
-  const [query, setQuery] = useState(searchParams.get("q") || "");
-  const [dropdownOpen, setDropdownOpen] = useState(false);
+  // Prefer `category` (navbar + chips). Fallback to legacy `q`.
+  const category = categoryParam || queryFromUrl || "";
+
+  const [query, setQuery] = useState(queryFromUrl || "");
   const [sellers, setSellers] = useState(() => loadSellers());
 
-  const searchRef = useRef(null);
   const mapRef = useRef(null);
 
   useEffect(() => {
@@ -31,49 +33,23 @@ export default function ServicesPage() {
     setSellers(loadSellers());
   }, [searchParams]);
 
-  useEffect(() => {
-    const onDocMouseDown = (e) => {
-      if (!searchRef.current) return;
-      if (searchRef.current.contains(e.target)) return;
-      setDropdownOpen(false);
-    };
-
-    document.addEventListener("mousedown", onDocMouseDown);
-    return () => document.removeEventListener("mousedown", onDocMouseDown);
-  }, []);
-
-  const categoriesFlatTitles = useMemo(() => {
-    // used only for search suggestions
-    return categoriesData.map((c) => c.title);
-  }, []);
-
-  const suggestions = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    if (!normalized) return [];
-    return categoriesFlatTitles
-      .filter((t) => t.toLowerCase().includes(normalized))
-      .slice(0, 5);
-  }, [query, categoriesFlatTitles]);
-
-  const updateQuery = (nextQuery) => {
-    navigate(
-      `/services?q=${encodeURIComponent(nextQuery)}${categoryParam ? `&category=${encodeURIComponent(categoryParam)}` : ""}`,
-    );
-  };
-
-  const handleSearchChange = (value) => {
-    setQuery(value);
-    setDropdownOpen(true);
-    updateQuery(value);
-  };
-
   const filteredCategory = useMemo(() => {
-    if (!categoryParam) return null;
-    return categoriesData.find((c) => c.title === categoryParam) || null;
-  }, [categoryParam]);
+    if (!category) return null;
+
+    const categoryLower = String(category).toLowerCase();
+
+    const matchedCat = categoriesData.find(
+      (cat) =>
+        cat.title.toLowerCase() === categoryLower ||
+        cat.title.toLowerCase().includes(categoryLower) ||
+        categoryLower.includes(cat.title.toLowerCase()),
+    );
+
+    return matchedCat || null;
+  }, [category]);
 
   const groupedResults = useMemo(() => {
-    // For "no category": group by headings.
+    // If category matches: show only that category's services.
     if (filteredCategory) {
       return [
         {
@@ -83,6 +59,7 @@ export default function ServicesPage() {
       ];
     }
 
+    // If category doesn't match (typed/unknown): show all categories.
     return categoriesData.map((cat) => ({
       heading: cat.title,
       services: cat.services,
@@ -101,7 +78,9 @@ export default function ServicesPage() {
     mapRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  const categoryParamLower = categoryParam ? categoryParam.toLowerCase() : "";
+  const activeCategory = category;
+
+  const categoryParamLower = category ? category.toLowerCase() : "";
 
   const categoryToServiceMap = {
     "Cleaning Essentials": ["cleaning"],
@@ -137,9 +116,10 @@ export default function ServicesPage() {
 
   const visibleSellers = useMemo(() => {
     const allSellers = sellers || [];
-    if (!selectedService || !categoryParam) return [];
+    if (!selectedService || !category) return [];
 
-    const selectedCategoryKeywords = mapKeywordsForCategory(categoryParam);
+    const selectedCategoryKeywords = mapKeywordsForCategory(category);
+
     const sellerService = (s) => String(s?.service || "").toLowerCase();
 
     return allSellers.filter((s) => {
@@ -154,15 +134,15 @@ export default function ServicesPage() {
       // fallback: includes category text
       return sService.includes(categoryParamLower);
     });
-  }, [sellers, selectedService, categoryParam, categoryParamLower]);
+  }, [sellers, selectedService, category, categoryParamLower]);
 
   const servicesCard = (service) => {
     return (
       <article
         key={service.id}
-        className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
+        className="rounded-2xl border border-gray-100 bg-white shadow-sm"
       >
-        <div className="h-40 overflow-hidden rounded-t-xl">
+        <div className="h-40 overflow-hidden rounded-t-2xl">
           <img
             src={service.image}
             alt={service.name}
@@ -171,29 +151,14 @@ export default function ServicesPage() {
           />
         </div>
 
-        <div className="pt-4">
-          <h3 className="text-lg font-black text-slate-900">{service.name}</h3>
-
-          <div className="mt-2 flex items-center gap-2 text-sm">
-            <span className="text-amber-400">★</span>
-            <span className="font-semibold text-amber-500">
-              {service.rating.toFixed(2)}
-            </span>
-          </div>
-
-          <div className="mt-3 flex items-baseline gap-3">
-            <div className="text-lg font-bold text-slate-900">
-              ₹{service.price}
-            </div>
-            <div className="text-sm font-semibold text-slate-400 line-through">
-              ₹{service.originalPrice}
-            </div>
-          </div>
-
+        <div className="p-3">
+          <h3 className="text-sm font-semibold text-slate-800">
+            {service.name}
+          </h3>
           <button
             type="button"
             onClick={() => setSelectedService(service)}
-            className="mt-4 w-full rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-indigo-700"
+            className="mt-3 w-full rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-indigo-700"
           >
             View Sellers →
           </button>
@@ -203,37 +168,43 @@ export default function ServicesPage() {
   };
 
   const sellerCard = (seller) => {
-    const callOrBookingText = seller?.isPremium
-      ? seller?.phone
-      : "Contact on booking";
+    const serviceType = seller?.service || "";
+    const isPremium = Boolean(seller?.isPremium);
 
     return (
       <article
         key={seller.id}
-        className="rounded-xl border-l-4 border-l-[#6366f1] bg-white p-5 shadow-sm"
+        className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm"
       >
-        <h3 className="text-lg font-black text-slate-900">🔧 {seller.name}</h3>
-        <p className="mt-2 text-sm font-semibold text-slate-700">
-          🛠 {seller.service}
-        </p>
-        <p className="mt-2 text-sm text-slate-600">📍 {seller.address}</p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-bold text-slate-900">{seller.name}</h3>
+            {isPremium ? (
+              <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-700">
+                ✓ Verified
+              </div>
+            ) : null}
+          </div>
+        </div>
 
-        <p className="mt-2 text-sm font-semibold text-slate-600">
-          ⭐ {seller.rating || "4.5"}
-        </p>
-
-        {seller.isPremium ? (
-          <div className="mt-3 inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
-            ✓ Premium
+        {serviceType ? (
+          <div className="mt-2 inline-flex rounded-full bg-emerald-50 px-3 py-0.5 text-xs font-semibold text-emerald-700">
+            {serviceType}
           </div>
         ) : null}
 
-        <p className="mt-3 text-sm text-slate-600">📞 {callOrBookingText}</p>
+        <p className="mt-2 text-sm text-slate-500">📍 {seller.address}</p>
+
+        {isPremium && seller.phone ? (
+          <p className="mt-1 text-sm font-semibold text-emerald-600">
+            📞 {seller.phone}
+          </p>
+        ) : null}
 
         <button
           type="button"
           onClick={() => navigate(`/seller/${seller.id}`)}
-          className="mt-5 inline-block rounded-lg bg-indigo-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-indigo-700"
+          className="mt-3 w-full border border-indigo-500 text-indigo-600 text-xs font-bold py-2 rounded-lg hover:bg-indigo-600 hover:text-white transition"
         >
           View Profile →
         </button>
@@ -245,53 +216,7 @@ export default function ServicesPage() {
     <main className="min-h-screen bg-gray-50">
       <section className="border-b border-indigo-100 bg-white py-10">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-6">
-            <p className="text-sm font-bold text-indigo-600">
-              QuickSeva Search
-            </p>
-            <h1 className="mt-1 text-4xl font-black text-slate-900">
-              Find trusted service providers
-            </h1>
-          </div>
-
-          <div ref={searchRef} className="relative">
-            <div className="relative">
-              <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                🔍
-              </span>
-              <input
-                value={query}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                onFocus={() => setDropdownOpen(true)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    updateQuery(query);
-                    setDropdownOpen(false);
-                  }
-                }}
-                placeholder="Search services (e.g. Cleaning Essentials...)"
-                className="w-full rounded-xl border border-indigo-200 bg-white py-3 pl-11 pr-4 text-base text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
-              />
-            </div>
-
-            {dropdownOpen && suggestions.length > 0 && (
-              <div className="absolute left-0 right-0 top-full z-[1000] mt-2 overflow-hidden rounded-xl border border-indigo-100 bg-white shadow-xl">
-                {suggestions.map((service) => (
-                  <button
-                    key={service}
-                    type="button"
-                    onClick={() => {
-                      updateQuery(service);
-                      setDropdownOpen(false);
-                    }}
-                    className="block w-full px-4 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700"
-                  >
-                    {service}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          {/* minimal header removed (kept filter chips + map section) */}
 
           {/* Filter chips (category titles) */}
           <div className="mt-5 flex flex-wrap gap-2">
@@ -299,7 +224,7 @@ export default function ServicesPage() {
               type="button"
               onClick={() => navigate("/services")}
               className={`rounded-full border px-4 py-2 text-sm font-bold transition ${
-                !categoryParam
+                !category
                   ? "border-indigo-600 bg-indigo-600 text-white"
                   : "border-indigo-300 bg-white text-indigo-700 hover:bg-indigo-50"
               }`}
@@ -307,7 +232,11 @@ export default function ServicesPage() {
               All
             </button>
             {categoriesData.map((cat) => {
-              const active = categoryParam === cat.title;
+              const chipLower = cat.title.toLowerCase();
+              const active =
+                chipLower === category.toLowerCase() ||
+                chipLower.includes(category.toLowerCase());
+
               return (
                 <button
                   key={cat.title}
@@ -332,29 +261,28 @@ export default function ServicesPage() {
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-xl font-bold text-slate-900">
-            {categoryParam
-              ? `Showing services for "${categoryParam}"`
-              : `Showing all services`}
-            {query ? ` (search: "${query}")` : ""}
-          </h2>
-
-          <button
-            type="button"
-            onClick={scrollToMap}
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-700"
-          >
-            📚 View on Map
-          </button>
+        <div className="mb-6">
+          {category ? (
+            <>
+              <div className="text-sm text-slate-400 mb-2">
+                <Link to="/">Home</Link> › <Link to="/services">Services</Link>{" "}
+                › {category}
+              </div>
+              <h1 className="text-2xl font-black text-slate-900">
+                {filteredCategory?.title || `Results for '${category}'`}
+              </h1>
+            </>
+          ) : (
+            <h1 className="text-2xl font-black text-slate-900">All Services</h1>
+          )}
         </div>
 
         {!selectedService ? (
-          categoryParam && !filteredCategory ? (
+          category && !filteredCategory ? (
             <div className="rounded-2xl border border-indigo-100 bg-white p-10 text-center shadow-sm">
               <div className="text-4xl">🔍</div>
               <h3 className="mt-3 text-2xl font-black text-slate-900">
-                No services found for "{categoryParam}"
+                No services found for "{category}"
               </h3>
               <p className="mt-2 text-slate-600">
                 Try selecting a different category.
@@ -364,7 +292,7 @@ export default function ServicesPage() {
             <div className="space-y-10">
               {groupedResults.map((group) => (
                 <div key={group.heading}>
-                  {!categoryParam && (
+                  {!category && (
                     <h3 className="mb-5 text-2xl font-black text-slate-900">
                       {group.heading}
                     </h3>
@@ -387,62 +315,23 @@ export default function ServicesPage() {
               ← Back to services
             </button>
 
-            <div className="rounded-2xl border border-indigo-100 bg-white p-5 shadow-sm">
-              <div className="flex flex-col md:flex-row gap-5">
-                <div className="h-48 md:h-40 w-full md:w-72 overflow-hidden rounded-xl">
-                  <img
-                    src={selectedService.image}
-                    alt={selectedService.name}
-                    className="h-full w-full object-cover"
-                    loading="lazy"
-                  />
-                </div>
-
-                <div className="flex-1">
-                  <h3 className="text-2xl font-black text-slate-900">
-                    {selectedService.name}
-                  </h3>
-
-                  <div className="mt-2 flex items-center gap-2 text-sm">
-                    <span className="text-amber-400">★</span>
-                    <span className="font-semibold text-amber-500">
-                      {selectedService.rating.toFixed(2)}
-                    </span>
-                  </div>
-
-                  <div className="mt-3 flex items-baseline gap-3">
-                    <div className="text-lg font-bold text-slate-900">
-                      ₹{selectedService.price}
-                    </div>
-                    <div className="text-sm font-semibold text-slate-400 line-through">
-                      ₹{selectedService.originalPrice}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             <div>
-              <h4 className="text-xl font-black text-slate-900">
-                Available Service Providers
+              <h4 className="text-xl font-bold text-slate-900 mb-4">
+                Providers for: {selectedService.name}
               </h4>
 
               {visibleSellers.length === 0 ? (
                 <div className="mt-4 rounded-2xl border border-indigo-100 bg-white p-8 text-center shadow-sm">
-                  <div className="text-4xl">🔎</div>
-                  <h3 className="mt-3 text-2xl font-black text-slate-900">
-                    No providers found for this service yet.
+                  <h3 className="text-2xl font-black text-slate-900">
+                    No providers available for {selectedService.name} yet.
                   </h3>
-                  <p className="mt-2 text-slate-600">
-                    Browse all providers to explore more options.
-                  </p>
 
                   <button
                     type="button"
                     onClick={() => navigate("/services")}
                     className="mt-6 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-indigo-700"
                   >
-                    Browse all providers
+                    Browse All
                   </button>
                 </div>
               ) : (
@@ -464,8 +353,8 @@ export default function ServicesPage() {
             </p>
           </div>
           <NearbyServices
-            key={categoryParam || query}
-            initialSearch={query || categoryParam || ""}
+            key={category || query}
+            initialSearch={query || category || ""}
           />
         </div>
       </section>
