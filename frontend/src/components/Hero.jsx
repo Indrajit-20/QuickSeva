@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import heroFallback from "../assets/hero.png";
 import { serviceCategories, serviceImages } from "../data/dummyData";
 import {
+  Wind,
   Droplets,
   Sparkles,
   Zap,
@@ -10,19 +11,7 @@ import {
   Hammer,
   Bug,
   Wrench,
-  Snowflake,
 } from "lucide-react";
-
-const iconMap = {
-  Snowflake,
-  Droplets,
-  Sparkles,
-  Zap,
-  Paintbrush,
-  Hammer,
-  Bug,
-  Wrench,
-};
 
 export default function Hero() {
   const navigate = useNavigate();
@@ -32,11 +21,53 @@ export default function Hero() {
     e.currentTarget.src = heroFallback;
   };
 
+  const services = [
+    {
+      name: "AC Repair",
+      icon: Wind,
+      category: "AC Repair",
+    },
+    {
+      name: "Plumbing",
+      icon: Droplets,
+      category: "Plumbing",
+    },
+    {
+      name: "Cleaning",
+      icon: Sparkles,
+      category: "Cleaning Essentials",
+    },
+    {
+      name: "Electrician",
+      icon: Zap,
+      category: "Electrician",
+    },
+    {
+      name: "Home Painting",
+      icon: Paintbrush,
+      category: "Home Painting",
+    },
+    {
+      name: "Carpentry",
+      icon: Hammer,
+      category: "Carpentry",
+    },
+    {
+      name: "Pest Control",
+      icon: Bug,
+      category: "Pest Control",
+    },
+    {
+      name: "Appliance Repair",
+      icon: Wrench,
+      category: "Appliance Repair & Service",
+    },
+  ];
+
   return (
     <section className="bg-brand-bg">
       <div className="mx-auto max-w-7xl px-6 lg:px-12 py-16">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.15fr] gap-10 lg:gap-14 items-center">
-          {/* Left Column (Text & Services) */}
           <div>
             <h1 className="text-4xl sm:text-5xl font-bold text-slate-900 leading-tight">
               Home services at your doorstep
@@ -46,39 +77,34 @@ export default function Hero() {
               get trusted pros at your home.
             </p>
 
-            <div className="mt-7 grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {serviceCategories.map((cat) => {
-                const Icon = iconMap[cat.iconName];
-
-                return (
-                  <button
-                    type="button"
-                    key={cat.name}
-                    onClick={() =>
-                      navigate(
-                        `/services?q=${encodeURIComponent(cat.name)}`,
-                      )
-                    }
-                    className="cursor-pointer rounded-2xl border border-slate-100 bg-white shadow-sm p-4 flex items-center gap-3 text-left hover:shadow-md hover:-translate-y-1 hover:scale-105 transition-transform duration-300"
-                  >
-                    <div className="h-11 w-11 rounded-2xl bg-emerald-50 flex items-center justify-center">
-                      {Icon ? (
-                        <Icon className="h-5 w-5 text-emerald-700" />
-                      ) : null}
-                    </div>
-                    <div className="text-sm font-semibold text-slate-900">
-                      {cat.name}
-                    </div>
-                  </button>
-                );
-              })}
+            <div className="mt-7 grid grid-cols-4 gap-4">
+              {services.map(({ name, icon: Icon, category }) => (
+                <button
+                  type="button"
+                  key={name}
+                  onClick={() =>
+                    navigate(
+                      `/services?category=${encodeURIComponent(category)}`,
+                    )
+                  }
+                  className="flex flex-col items-center p-4 bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md hover:border-emerald-200 hover:scale-105 transition duration-200 cursor-pointer"
+                >
+                  <div className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center mb-3">
+                    <Icon
+                      className="w-7 h-7 text-emerald-600"
+                      strokeWidth={1.5}
+                    />
+                  </div>
+                  <span className="text-sm font-semibold text-slate-700 text-center leading-tight">
+                    {name}
+                  </span>
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Right Column (Bento Box Collage) */}
           <div className="min-w-0">
             <div className="grid grid-cols-2 grid-rows-2 gap-4">
-              {/* Use explicit aspect ratios so images don't get squeezed/cropped oddly */}
               <div className="col-span-1 row-span-2 overflow-hidden rounded-3xl shadow-sm">
                 <img
                   src={serviceImages[0]}
@@ -101,8 +127,6 @@ export default function Hero() {
                 />
               </div>
 
-           
-
               <div className="overflow-hidden rounded-3xl shadow-sm">
                 <img
                   src={serviceImages[3]}
@@ -113,8 +137,6 @@ export default function Hero() {
                   onError={handleImageError}
                 />
               </div>
-
-             
             </div>
           </div>
         </div>

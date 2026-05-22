@@ -45,16 +45,35 @@ export default function UrbanServiceCategories() {
     navigate(`/services?category=${encodeURIComponent(catTitle)}`);
   };
 
+  const mostPopular = useMemo(() => {
+    const titles = ["Cleaning Essentials", "AC Repair", "Electrician"];
+
+    return titles
+      .map((t) => categories.find((c) => c.title === t))
+      .filter(Boolean)
+      .map((c) => ({
+        ...c,
+        services: (c.services || []).slice(0, 4),
+      }));
+  }, [categories]);
+
+  const mostBookedLabel = (
+    <span className="bg-emerald-100 text-emerald-700 text-xs font-bold px-2 py-0.5 rounded-full">
+      Most Booked
+    </span>
+  );
+
   return (
     <section className="bg-white">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10">
-        {categories.map((cat, idx) => (
+        {mostPopular.map((cat, idx) => (
           <div key={cat.title}>
             <div className="flex items-start justify-between gap-3 mb-4">
-              <div>
+              <div className="flex items-center gap-3 flex-wrap">
                 <h2 className="text-xl sm:text-2xl font-bold text-slate-900">
                   {cat.title}
                 </h2>
+                {idx === 0 ? mostBookedLabel : null}
               </div>
 
               <div className="flex items-center gap-3">
