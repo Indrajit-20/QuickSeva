@@ -3,14 +3,14 @@ import { Link } from "react-router-dom";
 
 import Hero from "../components/Hero";
 import NearbyServices from "../components/NearbyServices";
-import HomeBookingFlow from "../components/HomeBookingFlow";
+import UrbanServiceCategories from "../components/UrbanServiceCategories";
 
 const Home = () => {
   return (
     <main className="min-h-screen bg-brand-bg">
       <Hero />
 
-      <HomeBookingFlow />
+      <UrbanServiceCategories />
 
       {/* Services Near You */}
       <section className="bg-indigo-950 py-16">
