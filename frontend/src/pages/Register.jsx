@@ -71,6 +71,14 @@ const Register = () => {
     return null;
   };
 
+  // Password validation
+  const validatePassword = (password) => {
+    if (!password) return { error: "Password is required" };
+    if (password.length < 6)
+      return { error: "Password must be at least 6 characters" };
+    return { error: null };
+  };
+
   // Handle input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -231,6 +239,10 @@ const Register = () => {
     setSuccessMessage("");
 
     if (!validateForm()) {
+      setErrors((prev) => ({
+        ...prev,
+        submit: "Please fill all required information first.",
+      }));
       return;
     }
 

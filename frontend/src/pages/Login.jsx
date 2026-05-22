@@ -122,7 +122,7 @@
           // Store session ID for verification
           setSessionId(result.sessionId);
           setOtpSent(true);
-          setMobileSuccess("✓ OTP sent to your mobile number!");
+          setMobileSuccess("OTP sent to your mobile number!");
 
           // Start 30-second timer
           setOtpTimer(30);
@@ -202,7 +202,7 @@
             throw new Error(result.message || "Invalid OTP. Please try again.");
           }
 
-          setMobileSuccess("✓ OTP Verified! Logging you in...");
+          setMobileSuccess("OTP Verified! Logging you in...");
 
           // Extract user data if available
           const storedUser = localStorage.getItem("registeredUser");
@@ -243,7 +243,7 @@
           setSessionId(result.sessionId);
           setOtpTimer(30);
           setOtpTimerActive(true);
-          setMobileSuccess("✓ New OTP sent!");
+          setMobileSuccess(" New OTP sent!");
         } catch (err) {
           setMobileErrors({
             submit: err.message || "Failed to resend OTP. Please try again.",
@@ -349,12 +349,7 @@
                           <span>⚠️</span> {otpErrors}
                         </p>
                       )}
-                      {otpTimerActive && (
-                        <p className="mt-2 text-xs text-text-muted text-center">
-                          Resend OTP in{" "}
-                          <span className="font-bold text-accent">{otpTimer}s</span>
-                        </p>
-                      )}
+                     
                     </div>
                   )}
 
