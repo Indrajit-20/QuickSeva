@@ -20,7 +20,11 @@ import SellerRegister from "./pages/SellerRegister";
 import ServicesPage from "./pages/ServicesPage";
 import BookingPage from "./pages/BookingPage";
 import MyBookings from "./pages/MyBookings";
+import BookingHistory from "./pages/BookingHistory";
+import ProfilePage from "./pages/ProfilePage";
+
 import NotFound from "./pages/NotFound";
+
 import Unauthorized from "./pages/Unauthorized";
 import SellerLayout from "./layouts/SellerLayout";
 import SellerDashboard from "./pages/seller/SellerDashboard";
@@ -66,6 +70,8 @@ function AppContent() {
         <Route path="/services" element={<ServicesPage />} />
         <Route path="/book/:sellerId" element={<BookingPage />} />
         <Route path="/my-bookings" element={<MyBookings />} />
+        <Route path="/booking-history" element={<BookingHistory />} />
+        <Route path="/profile" element={<ProfilePage />} />
         <Route path="/seller/:id" element={<SellerPublicProfile />} />
 
         <Route path="/verify-otp" element={<OtpVerification />} />

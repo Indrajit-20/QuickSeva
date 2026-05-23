@@ -2,6 +2,7 @@ import React, { useMemo, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useNearbyLocation } from "./NearbyServices";
+import ProfileDropdown from "./ProfileDropdown";
 
 const ALL_SERVICES = [
   "Cleaning",
@@ -180,25 +181,7 @@ const Navbar = () => {
             )}
 
             {user ? (
-              <div className="flex items-center space-x-3">
-                <div className="flex items-center space-x-3 bg-indigo-900/40 border border-indigo-500/30 rounded-full px-3 py-1.5">
-                  <div className="w-9 h-9 rounded-full bg-red-500/90 text-white flex items-center justify-center font-bold">
-                    {initials}
-                  </div>
-                  <div className="hidden lg:block">
-                    <span className="text-indigo-100 font-semibold max-w-[160px] truncate inline-block">
-                      {user.name || "User"}
-                    </span>
-                  </div>
-                </div>
-
-                <button
-                  onClick={handleLogout}
-                  className="px-3 py-2 rounded bg-red-600 text-white font-semibold hover:bg-red-700 transition-colors"
-                >
-                  Logout
-                </button>
-              </div>
+              <ProfileDropdown user={user} onLogout={handleLogout} />
             ) : (
               <>
                 <Link
@@ -305,23 +288,9 @@ const Navbar = () => {
 
             {user ? (
               <div className="space-y-3 pt-2">
-                <div className="flex items-center space-x-3 bg-indigo-900/40 border border-indigo-500/30 rounded-xl px-3 py-2">
-                  <div className="w-9 h-9 rounded-full bg-red-500/90 text-white flex items-center justify-center font-bold">
-                    {initials}
-                  </div>
-                  <div>
-                    <div className="text-indigo-100 font-semibold">
-                      {user.name || "User"}
-                    </div>
-                  </div>
+                <div className="flex justify-center">
+                  <ProfileDropdown user={user} onLogout={handleLogout} />
                 </div>
-
-                <button
-                  onClick={handleLogout}
-                  className="w-full px-3 py-2 rounded bg-red-600 text-white font-semibold hover:bg-red-700 transition-colors"
-                >
-                  Logout
-                </button>
               </div>
             ) : (
               <>

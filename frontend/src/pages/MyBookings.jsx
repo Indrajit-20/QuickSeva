@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 
 const statusClasses = {
   pending: "border-amber-300 bg-amber-50 text-amber-700",
+  confirmed: "border-emerald-300 bg-emerald-50 text-emerald-700",
   completed: "border-emerald-300 bg-emerald-50 text-emerald-700",
   cancelled: "border-red-300 bg-red-50 text-red-700",
 };
@@ -103,7 +104,18 @@ export default function MyBookings() {
                           "border-slate-300 bg-slate-50 text-slate-700"
                         }`}
                       >
-                        {booking.status}
+                        {(booking.status || "pending").toLowerCase() ===
+                        "pending"
+                          ? "Pending"
+                          : (booking.status || "").toLowerCase() === "confirmed"
+                            ? "Confirmed"
+                            : (booking.status || "").toLowerCase() ===
+                                "completed"
+                              ? "Completed"
+                              : (booking.status || "").toLowerCase() ===
+                                  "cancelled"
+                                ? "Cancelled"
+                                : booking.status}
                       </span>
                     </div>
                     <p className="mt-3 text-base font-black text-indigo-700">
