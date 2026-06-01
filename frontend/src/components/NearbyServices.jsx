@@ -1,6 +1,15 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import {
+  deductContactView,
+  deductSearchImpression,
+  isWalletSufficient,
+  trackSearchImpression,
+} from "../utils/wallet";
+import { getPlanRank } from "../utils/premium";
+
 import {
   MapContainer,
   TileLayer,
@@ -49,6 +58,19 @@ const PREMIUM_ICON = L.divIcon({
   iconAnchor: [14, 28],
 });
 
+const GOLD_PIN_HTML =
+  "<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24' fill='none'>" +
+  "<path d='M12 21s7-5.3 7-12a7 7 0 1 0-14 0c0 6.7 7 12 7 12z' fill='#f59e0b' stroke='#92400e' stroke-width='1.5'/>" +
+  "<circle cx='12' cy='9' r='3.2' fill='#fde68a' stroke='#92400e' stroke-width='1.2'/>" +
+  "</svg>";
+
+const GOLD_ICON = L.divIcon({
+  className: "gold-service-pin",
+  html: GOLD_PIN_HTML,
+  iconSize: [32, 32],
+  iconAnchor: [16, 32],
+});
+
 const SERVICE_FILTERS = [
   "All",
   "Cleaning",
@@ -93,6 +115,23 @@ function MapClickHandler({ onMapClick }) {
     click: (e) => onMapClick?.(e.latlng),
   });
   return null;
+}
+
+function isSellerPackageActive(seller) {
+  if (!seller?.isPremium || !seller?.premiumExpiresAt) return false;
+  const expiresAt = new Date(seller.premiumExpiresAt);
+  return !Number.isNaN(expiresAt.getTime()) && expiresAt.getTime() > Date.now();
+}
+
+function getSellerPackageRank(seller) {
+  return isSellerPackageActive(seller) ? getPlanRank(seller.plan) : 0;
+}
+
+function getSellerPinIcon(seller) {
+  const rank = getSellerPackageRank(seller);
+  if (rank >= 3) return GOLD_ICON;
+  if (rank >= 2) return PREMIUM_ICON;
+  return GREEN_ICON;
 }
 
 const getShortAddress = (data) => {
@@ -180,10 +219,44 @@ export default function NearbyServices({
   const [geoLoading, setGeoLoading] = useState(false);
   const [selectedSellerId, setSelectedSellerId] = useState(null);
 
+  const clickedSellers = useRef(new Set());
+
   const [radiusKm, setRadiusKm] = useState(5);
+
   const [locationNotFoundMsg, setLocationNotFoundMsg] = useState("");
 
+  const deductedSellers = useRef(new Set());
+
+  const handlePremiumSellerClick = (seller) => {
+    // Do not deduct on card render / card click.
+    // Keep selection highlight behavior only.
+    if (seller?.id) setSelectedSellerId(seller.id);
+  };
+
+  const viewedContacts = useRef(new Set());
+  const [revealedContacts, setRevealedContacts] = useState(() => new Set());
+
+  const navigateToSeller = (seller) => {
+    // Keep existing behavior: just go to seller page for both premium and free.
+    window.location.href = `/seller/${seller.id}`;
+  };
+
+  const handleViewDetailsClick = (seller, e) => {
+    // Ensure this click is the ONLY trigger point for wallet deduction.
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+
+    // Deduction is handled only by the “View Contact” trigger now.
+    // Keep selection highlight + navigation.
+    if (seller?.id) {
+      setSelectedSellerId(seller.id);
+    }
+
+    navigateToSeller(seller);
+  };
+
   const gpsPosRef = useRef(null);
+
   const locationSearchRef = useRef(null);
 
   const nominatimSearch = async (q) => {
@@ -339,11 +412,15 @@ export default function NearbyServices({
       : withDistance;
 
     return filteredBySearch.sort((a, b) => {
-      if (a.isPremium && !b.isPremium) return -1;
-      if (!a.isPremium && b.isPremium) return 1;
+      const rankA = getSellerPackageRank(a);
+      const rankB = getSellerPackageRank(b);
+      if (rankA !== rankB) return rankB - rankA;
       return a.distanceKm - b.distanceKm;
     });
   }, [buyerPos, sellers, search, radiusKm]);
+
+  // Session guard for impressions; but impressions should not deduct on render anymore.
+  // (We keep this as a no-op until you confirm impression behavior. Deduction now occurs only on View Contact.)
 
   const handleLocationSubmit = (e) => {
     e.preventDefault();
@@ -577,105 +654,120 @@ export default function NearbyServices({
 
               {buyerPos && nearby.length > 0 && (
                 <MarkerClusterGroup chunkedLoading>
-                  {nearby.map((seller) => (
-                    <Marker
-                      key={seller.id}
-                      position={[seller.lat, seller.lng]}
-                      icon={seller.isPremium ? PREMIUM_ICON : GREEN_ICON}
-                      eventHandlers={{
-                        click: () => setSelectedSellerId(seller.id),
-                      }}
-                    >
-                      <Popup minWidth={220}>
-                        <div
-                          style={{ fontSize: 13, lineHeight: 1.35, padding: 4 }}
-                        >
-                          <div
-                            style={{
-                              fontWeight: 800,
-                              fontSize: 14,
-                              marginBottom: 4,
-                            }}
-                          >
-                            🔧 {seller.name}
-                          </div>
-                          <div
-                            style={{
-                              fontSize: 12,
-                              color: "#4b5563",
-                              marginBottom: 2,
-                            }}
-                          >
-                            🛠 {seller.service}
-                          </div>
-                          <div
-                            style={{
-                              fontSize: 12,
-                              color: "#4b5563",
-                              marginBottom: 2,
-                            }}
-                          >
-                            📍 {seller.address}
-                          </div>
-                          <div
-                            style={{
-                              fontSize: 12,
-                              color: "#16a34a",
-                              fontWeight: 700,
-                              marginBottom: 8,
-                            }}
-                          >
-                            📏 {Number(seller.distanceKm || 0).toFixed(1)} km
-                            away
-                          </div>
+                  {nearby.map((seller) => {
+                    const packageRank = getSellerPackageRank(seller);
 
-                          {seller.isPremium ? (
+                    if (packageRank > 0 && !isWalletSufficient()) {
+                      return null;
+                    }
+
+                    return (
+                      <Marker
+                        key={seller.id}
+                        position={[seller.lat, seller.lng]}
+                        icon={getSellerPinIcon(seller)}
+                        eventHandlers={{
+                          click: () => setSelectedSellerId(seller.id),
+                        }}
+                      >
+                        <Popup minWidth={220}>
+                          <div
+                            style={{
+                              fontSize: 13,
+                              lineHeight: 1.35,
+                              padding: 4,
+                            }}
+                          >
+                            <div
+                              style={{
+                                fontWeight: 800,
+                                fontSize: 14,
+                                marginBottom: 4,
+                              }}
+                            >
+                              🔧 {seller.name}
+                            </div>
+
+                            <div
+                              style={{
+                                fontSize: 12,
+                                color: "#4b5563",
+                                marginBottom: 2,
+                              }}
+                            >
+                              🛠 {seller.service}
+                            </div>
+
+                            <div
+                              style={{
+                                fontSize: 12,
+                                color: "#4b5563",
+                                marginBottom: 2,
+                              }}
+                            >
+                              📍 {seller.address}
+                            </div>
+
                             <div
                               style={{
                                 fontSize: 12,
                                 color: "#16a34a",
-                                marginBottom: 6,
+                                fontWeight: 700,
+                                marginBottom: 8,
                               }}
                             >
-                              📞 {seller.phone}
+                              📏 {Number(seller.distanceKm || 0).toFixed(1)} km
+                              away
                             </div>
-                          ) : (
-                            <div
-                              style={{
-                                fontSize: 11,
-                                color: "#9ca3af",
-                                marginBottom: 6,
-                                fontStyle: "italic",
-                              }}
-                            >
-                              📞 Contact available on booking
-                            </div>
-                          )}
 
-                          <a
-                            href={`/seller/${seller.id}`}
-                            style={{
-                              display: "block",
-                              width: "100%",
-                              padding: "6px 0",
-                              borderRadius: 6,
-                              background:
-                                "linear-gradient(135deg, #6366f1, #4f46e5)",
-                              color: "#fff",
-                              fontWeight: 700,
-                              fontSize: 12,
-                              border: "none",
-                              cursor: "pointer",
-                              textAlign: "center",
-                              textDecoration: "none",
-                            }}
-                          >
-                            View Profile &amp; Services →
-                          </a>
-                        </div>
-                      </Popup>
-                    </Marker>
-                  ))}
+                            {packageRank > 0 ? (
+                              <div
+                                style={{
+                                  fontSize: 12,
+                                  color: "#16a34a",
+                                  marginBottom: 6,
+                                }}
+                              >
+                                📞 {seller.phone}
+                              </div>
+                            ) : (
+                              <div
+                                style={{
+                                  fontSize: 11,
+                                  color: "#9ca3af",
+                                  marginBottom: 6,
+                                  fontStyle: "italic",
+                                }}
+                              >
+                                📞 Contact available on booking
+                              </div>
+                            )}
+
+                            <a
+                              href={`/seller/${seller.id}`}
+                              style={{
+                                display: "block",
+                                width: "100%",
+                                padding: "6px 0",
+                                borderRadius: 6,
+                                background:
+                                  "linear-gradient(135deg, #6366f1, #4f46e5)",
+                                color: "#fff",
+                                fontWeight: 700,
+                                fontSize: 12,
+                                border: "none",
+                                cursor: "pointer",
+                                textAlign: "center",
+                                textDecoration: "none",
+                              }}
+                            >
+                              View Profile &amp; Services →
+                            </a>
+                          </div>
+                        </Popup>
+                      </Marker>
+                    );
+                  })}
                 </MarkerClusterGroup>
               )}
             </MapContainer>
@@ -697,75 +789,153 @@ export default function NearbyServices({
               </div>
             )}
 
-            {nearby.map((seller) => (
-              <div
-                key={seller.id}
-                id={`seller-card-${seller.id}`}
-                onClick={() => setSelectedSellerId(seller.id)}
-                className="w-[280px] flex-shrink-0 cursor-pointer rounded-xl p-3 transition-all duration-200 lg:w-auto"
-                style={{
-                  background:
-                    selectedSellerId === seller.id
-                      ? "rgba(99,102,241,0.2)"
-                      : "rgba(99,102,241,0.07)",
-                  border:
-                    selectedSellerId === seller.id
-                      ? "1.5px solid #6366f1"
-                      : "1px solid rgba(99,102,241,0.2)",
-                  boxShadow:
-                    selectedSellerId === seller.id
-                      ? "0 0 0 2px rgba(99,102,241,0.25)"
-                      : "none",
-                }}
-              >
-                <div className="mb-2 flex items-center gap-2">
-                  <div
-                    className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
+            {nearby.map((seller) => {
+              const packageRank = getSellerPackageRank(seller);
+
+              if (packageRank > 0 && !isWalletSufficient()) {
+                return null;
+              }
+
+              return (
+                <div
+                  key={seller.id}
+                  id={`seller-card-${seller.id}`}
+                  onClick={() => handlePremiumSellerClick(seller)}
+                  className="w-[280px] flex-shrink-0 cursor-pointer rounded-xl p-3 transition-all duration-200 lg:w-auto"
+                  style={{
+                    background:
+                      selectedSellerId === seller.id
+                        ? "rgba(99,102,241,0.2)"
+                        : "rgba(99,102,241,0.07)",
+                    border:
+                      selectedSellerId === seller.id
+                        ? "1.5px solid #6366f1"
+                        : "1px solid rgba(99,102,241,0.2)",
+                    boxShadow:
+                      selectedSellerId === seller.id
+                        ? "0 0 0 2px rgba(99,102,241,0.25)"
+                        : "none",
+                  }}
+                >
+                  <div className="mb-2 flex items-center gap-2">
+                    <div
+                      className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
+                      style={{
+                        background: "linear-gradient(135deg, #6366f1, #4f46e5)",
+                      }}
+                    >
+                      {seller.name?.[0]?.toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-bold text-white">
+                        {seller.name}
+                      </div>
+                      <div className="text-xs text-indigo-300">
+                        {seller.service}
+                      </div>
+                    </div>
+                    <div className="ml-auto whitespace-nowrap text-xs font-bold text-green-400">
+                      {Number(seller.distanceKm || 0).toFixed(1)}km
+                    </div>
+                  </div>
+
+                  <div className="mb-2 truncate text-xs text-indigo-400">
+                    📍 {seller.address}
+                  </div>
+
+                  {packageRank > 0 && (
+                    <div
+                      className={`mb-2 rounded-lg border px-2 py-1 text-xs font-bold ${
+                        packageRank >= 3
+                          ? "border-amber-400/40 bg-amber-500/10 text-amber-200"
+                          : packageRank >= 2
+                            ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-200"
+                            : "border-indigo-400/30 bg-indigo-500/10 text-indigo-200"
+                      }`}
+                    >
+                      {packageRank >= 3
+                        ? "Gold badge"
+                        : packageRank >= 2
+                          ? "Highlighted pin"
+                          : "Top result"}
+                    </div>
+                  )}
+
+                  {packageRank > 0 ? (
+                    <div className="mb-2 text-xs text-green-400">
+                      {revealedContacts.has(seller.id) ? (
+                        <span>📞 {seller.phone}</span>
+                      ) : (
+                        <button
+                          type="button"
+                          className="rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-2 py-0.5 text-xs font-bold text-indigo-200 hover:bg-indigo-500/15"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+
+                            if (viewedContacts.current.has(seller.id)) {
+                              setRevealedContacts((prev) => {
+                                const next = new Set(prev);
+                                next.add(seller.id);
+                                return next;
+                              });
+                              return;
+                            }
+
+                            if (packageRank <= 0) return;
+
+                            // If wallet balance is 0, do not deduct; just show mask.
+                            if (
+                              Number(
+                                localStorage.getItem("sellerWallet")
+                                  ? JSON.parse(
+                                      localStorage.getItem("sellerWallet"),
+                                    ).balance
+                                  : 0,
+                              ) <= 0
+                            ) {
+                              // Keep UX consistent without changing existing layout.
+                              setRevealedContacts((prev) => {
+                                const next = new Set(prev);
+                                next.add(seller.id);
+                                return next;
+                              });
+                              viewedContacts.current.add(seller.id);
+                              return;
+                            }
+
+                            viewedContacts.current.add(seller.id);
+                            deductContactView(seller.id, seller.service);
+                            setRevealedContacts((prev) => {
+                              const next = new Set(prev);
+                              next.add(seller.id);
+                              return next;
+                            });
+                          }}
+                        >
+                          📞 View Contact
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="mb-2 text-xs text-indigo-400">
+                      📞 Contact available on booking
+                    </div>
+                  )}
+
+                  <a
+                    href={`/seller/${seller.id}`}
+                    onClick={(e) => handleViewDetailsClick(seller, e)}
+                    className="block w-full rounded-lg py-1.5 text-center text-xs font-bold text-white transition-all"
                     style={{
                       background: "linear-gradient(135deg, #6366f1, #4f46e5)",
                     }}
                   >
-                    {seller.name?.[0]?.toUpperCase()}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-bold text-white">
-                      {seller.name}
-                    </div>
-                    <div className="text-xs text-indigo-300">
-                      {seller.service}
-                    </div>
-                  </div>
-                  <div className="ml-auto whitespace-nowrap text-xs font-bold text-green-400">
-                    {Number(seller.distanceKm || 0).toFixed(1)}km
-                  </div>
+                    View Details →
+                  </a>
                 </div>
-
-                <div className="mb-2 truncate text-xs text-indigo-400">
-                  📍 {seller.address}
-                </div>
-
-                {seller.isPremium ? (
-                  <div className="mb-2 text-xs text-green-400">
-                    📞 {seller.phone}
-                  </div>
-                ) : (
-                  <div className="mb-2 text-xs text-indigo-400">
-                    📞 Contact available on booking
-                  </div>
-                )}
-
-                <a
-                  href={`/seller/${seller.id}`}
-                  onClick={(e) => e.stopPropagation()}
-                  className="block w-full rounded-lg py-1.5 text-center text-xs font-bold text-white transition-all"
-                  style={{
-                    background: "linear-gradient(135deg, #6366f1, #4f46e5)",
-                  }}
-                >
-                  View Details →
-                </a>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>

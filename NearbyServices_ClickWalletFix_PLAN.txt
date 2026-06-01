@@ -1,0 +1,94 @@
+Fix Plan (move ₹1 deduction from render → buyer click)
+Target file: frontend/src/components/NearbyServices.jsx
+
+
+Problem observed (from current code)
+- ₹1 is deducted during render/impression-like time:
+  - In both maps that render the premium sellers:
+    - MarkerClusterGroup: inside nearby.map(...)
+    - Right-side cards: inside nearby.map(...)
+  - The calls are guarded by deductedSellers.current (useRef Set), but they still happen as soon as the component renders premium sellers.
+- Result: balance drains just by browsing/re-rendering/scrolling/map clustering.
+
+
+Goal (as requested)
+- Deduct ₹1 only when buyer actually clicks a premium seller's service card.
+- No deduction just for “seeing” sellers.
+- Free sellers (isPremium === false) must never deduct.
+- If wallet balance is ₹0, premium sellers must be hidden (existing logic using isWalletSufficient should remain).
+
+
+Constraints
+- Only change NearbyServices.jsx
+- Do not change utils/wallet.js
+- Do not change other files
+- Do not change distance/search/filter logic and do not restructure UI/styling more than necessary.
+
+
+Concrete code changes (NearbyServices.jsx)
+
+Step 1 — Add a new click guard ref
+- At component top, near existing refs, keep deductedSellers but add a separate ref for click dedupe:
+  - const clickedSellers = useRef(new Set());
+
+Rationale:
+- Prevent multiple deductions when the user clicks the same seller multiple times (within the same NearbyServices session/component instance).
+
+Step 2 — Remove impression-based deductions
+- In both places where deductSearchImpression(...) is currently called during rendering, delete the blocks:
+  - In the marker render loop (MarkerClusterGroup -> nearby.map(...) when seller.isPremium):
+    - remove the sellerId/serviceName deduction block entirely
+  - In the right-side seller card render loop (nearby.map(...)):
+    - remove the sellerId/serviceName deduction block entirely
+
+After this, NearbyServices will only call isWalletSufficient() to decide visibility, but will not call deductSearchImpression() during render.
+
+Step 3 — Add click handler that performs deduction
+- Implement a handler inside NearbyServices.jsx, e.g.:
+  - const handlePremiumSellerClick = (seller) => { ... }
+- Logic inside handler:
+  - if (!seller?.isPremium) return (no deduction)
+  - if wallet is not sufficient (balance <= 0) then return or keep behavior consistent (your UI already hides when not sufficient, but defensive check is fine)
+  - if clickedSellers.current has seller.id: return
+  - else add seller.id to the set
+  - call deductSearchImpression(seller.id, seller.service)
+  - then trigger existing selection/navigation behavior:
+    - setSelectedSellerId(seller.id) (right now onClick is used for selection)
+    - marker click currently setsSelectedSellerId as well; decide whether you want deduction only from cards or also from map markers.
+
+IMPORTANT interpretation from your prompt:
+- “Only when a buyer actually clicks on a premium seller's service card”
+- So apply the click handler to the right-side card click.
+- Keep marker click unchanged (or optionally route it through the same handler if you consider marker click also a “click”; but to match your prompt precisely, restrict to the card click).
+
+Step 4 — Wire handler to the card click only
+- Replace current card onClick:
+  - onClick={() => setSelectedSellerId(seller.id)}
+- With:
+  - onClick={() => handlePremiumSellerClick(seller)}
+
+Step 5 — Keep visibility logic intact
+- Do NOT change this part:
+  - if (seller?.isPremium && !isWalletSufficient()) return null;
+- This ensures ₹0 balance immediately hides premium sellers.
+
+
+Expected new behavior
+- Scrolling/rendering will no longer drain the wallet.
+- ₹1 decreases only when buyer clicks a premium seller card (once per seller per component session due to clickedSellers guard).
+- Clicking the same seller multiple times in the same session results in only one deduction.
+- Non-premium sellers never deduct.
+
+
+Verification checklist (after applying changes)
+1) Set wallet balance to e.g. 50 and sellers include multiple premium sellers.
+2) Open NearbyServices and do NOT click any premium card:
+   - Expect no wallet transactions added.
+3) Click a premium seller card:
+   - Expect exactly 1 debit transaction and balance decrement by 1.
+4) Click the same premium card again:
+   - Expect no additional debit.
+5) When balance reaches 0:
+   - Premium sellers should disappear from UI immediately.
+6) Free sellers should remain visible and should not affect wallet.
+

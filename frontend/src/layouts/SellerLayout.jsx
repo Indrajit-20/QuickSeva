@@ -17,6 +17,7 @@ const navItems = [
   { label: "Profile", path: "/seller/profile", icon: User },
   { label: "My Services", path: "/seller/services", icon: BriefcaseBusiness },
   { label: "Orders", path: "/seller/orders", icon: ClipboardList },
+  { label: "Wallet", path: "/seller/wallet", icon: BriefcaseBusiness },
   { label: "Packages", path: "/seller/packages", icon: Crown },
 ];
 
@@ -50,9 +51,7 @@ function SellerSidebar({ user, onLogout, onNavigate }) {
         <div className="text-2xl font-black tracking-normal text-white">
           Quick<span className="text-indigo-300">Seva</span>
         </div>
-        <p className="mt-1 text-xs font-medium text-slate-400">
-          Seller Panel
-        </p>
+        <p className="mt-1 text-xs font-medium text-slate-400">Seller Panel</p>
       </div>
 
       <nav className="flex-1 space-y-2">

@@ -15,7 +15,8 @@ const TIME_SLOTS = [
   "6:00 PM",
 ];
 
-const tomorrow = () => new Date(Date.now() + 86400000).toISOString().split("T")[0];
+const tomorrow = () =>
+  new Date(Date.now() + 86400000).toISOString().split("T")[0];
 const thirtyDaysFromNow = () =>
   new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0];
 
@@ -87,12 +88,31 @@ export default function BookingPage() {
     e.preventDefault();
     if (!seller || !validate()) return;
 
+    // Try to resolve selected service price from whatever seller object has.
+    // (Different profiles store different shapes in localStorage.)
+    const selectedServiceObj =
+      (Array.isArray(seller?.services) &&
+        seller.services.find(
+          (s) => s?.name === formData.service || s?.title === formData.service,
+        )) ||
+      (Array.isArray(seller?.serviceList) &&
+        seller.serviceList.find((s) => s?.name === formData.service)) ||
+      null;
+
+    const selectedServicePrice =
+      Number(selectedServiceObj?.price ?? selectedServiceObj?.startingPrice) ||
+      0;
+
     const booking = {
       id: `BK${Date.now()}`,
       sellerId: seller.id,
       sellerName: seller.name,
       sellerService: seller.service,
       service: formData.service,
+      serviceDetail: formData.service,
+      amount: selectedServicePrice,
+      customerName: user?.name || user?.fullName || "",
+      customerPhone: formData.mobile || user?.phone || "",
       date: formData.date,
       timeSlot: formData.timeSlot,
       address: formData.address,
@@ -202,7 +222,10 @@ export default function BookingPage() {
           </div>
         </section>
 
-        <form onSubmit={handleSubmit} className="rounded-2xl bg-white p-6 shadow-sm">
+        <form
+          onSubmit={handleSubmit}
+          className="rounded-2xl bg-white p-6 shadow-sm"
+        >
           <h2 className="text-xl font-black text-slate-900">Book Service</h2>
 
           <div className="mt-5 space-y-5">

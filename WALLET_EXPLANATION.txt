@@ -1,0 +1,31 @@
+Seller Wallet System — ₹1 Deduction & Flow Trace (from current code)
+
+Files analyzed:
+- frontend/src/utils/wallet.js
+- frontend/src/components/NearbyServices.jsx
+
+
+1) When exactly is ₹1 deducted?
+✅ Deduction happens when a Premium seller is rendered inside NearbyServices.
+
+In NearbyServices.jsx, for each seller in the computed `nearby` list:
+- during rendering (both in the Leaflet markers and in the right-side seller cards), the code runs:
+  - if seller.isPremium:
+    - if sellerId hasn’t been deducted yet (guard):
+      - deductSearchImpression(sellerId, seller.service)
+
+Important: This is “impression-like” deduction at render time.
+- Not deducted on buyer click.
+- Not deducted on component page load globally independent of rendering.
+- Not deducted on every “search click”; instead it’s tied to premium sellers appearing during render.
+
+
+2) How does deductSearchImpression() work? (wallet.js)
+Function: deductSearchImpression(sellerId, serviceName)
+
+What triggers it:
+✅ Called from NearbyServices.jsx during render for Premium sellers.
+
+Step-by-step internal behavior:
+1. initWallet() is called.
+   - initWallet() ensures localStorage[

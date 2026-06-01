@@ -1,9 +1,4 @@
-import {
-  CheckCircle2,
-  ClipboardList,
-  Clock3,
-  IndianRupee,
-} from "lucide-react";
+import { CheckCircle2, ClipboardList, Clock3, IndianRupee } from "lucide-react";
 import {
   formatCurrency,
   loadArray,
@@ -17,7 +12,23 @@ const cardBase =
 
 export default function SellerDashboard() {
   const { user } = useAuth();
+
+  const sellerPremium = (() => {
+    try {
+      return JSON.parse(localStorage.getItem("sellerPremium") || "null");
+    } catch {
+      return null;
+    }
+  })();
+
+  const isExpiredPremium =
+    sellerPremium?.expiresAt && new Date(sellerPremium.expiresAt) <= new Date();
+  const expiredPlanName = sellerPremium?.plan
+    ? sellerPremium.plan.charAt(0).toUpperCase() + sellerPremium.plan.slice(1)
+    : "Premium";
+
   const orders = loadArray("sellerOrders", mockOrders);
+
   const completed = orders.filter((order) => order.status === "completed");
   const pending = orders.filter((order) => order.status === "pending");
   const earnings = completed.reduce(
@@ -67,6 +78,26 @@ export default function SellerDashboard() {
         </h1>
       </div>
 
+      {isExpiredPremium && (
+        <div className="rounded-xl border border-yellow-500/50 bg-yellow-500/10 p-4 text-sm text-yellow-100">
+          ⚠️ Your <strong>{expiredPlanName}</strong> plan expired on{" "}
+          {new Intl.DateTimeFormat("en-IN", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          }).format(new Date(sellerPremium.expiresAt))}
+          . Renew now to regain top placement.
+          <div className="mt-3">
+            <a
+              href="/seller/packages"
+              className="inline-flex items-center rounded-lg bg-yellow-500 px-4 py-2 text-xs font-bold text-[#1e1b4b] hover:bg-yellow-400"
+            >
+              Renew Plan →
+            </a>
+          </div>
+        </div>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat) => {
           const Icon = stat.icon;
@@ -77,9 +108,7 @@ export default function SellerDashboard() {
               >
                 <Icon size={22} />
               </div>
-              <div className="text-3xl font-black text-white">
-                {stat.value}
-              </div>
+              <div className="text-3xl font-black text-white">{stat.value}</div>
               <div className="mt-1 text-sm font-medium text-[#94a3b8]">
                 {stat.label}
               </div>

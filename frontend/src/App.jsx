@@ -6,6 +6,8 @@ import {
   Routes,
   useLocation,
 } from "react-router-dom";
+
+import { useEffect } from "react";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -13,6 +15,7 @@ import AdminLogin from "./pages/AdminLogin";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import Home from "./pages/Home";
+
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import OtpVerification from "./pages/OtpVerification";
@@ -25,6 +28,8 @@ import ProfilePage from "./pages/ProfilePage";
 
 import NotFound from "./pages/NotFound";
 
+import { cleanupExpiredPremium } from "./utils/premium";
+
 import Unauthorized from "./pages/Unauthorized";
 import SellerLayout from "./layouts/SellerLayout";
 import SellerDashboard from "./pages/seller/SellerDashboard";
@@ -32,6 +37,7 @@ import SellerProfile from "./pages/seller/SellerProfile";
 import SellerServices from "./pages/seller/SellerServices";
 import SellerOrders from "./pages/seller/SellerOrders";
 import SellerPackages from "./pages/seller/SellerPackages";
+import SellerWallet from "./pages/seller/SellerWallet";
 import SellerPublicProfile from "./pages/SellerPublicProfile";
 
 function SellerProtectedRoute() {
@@ -50,6 +56,11 @@ function SellerProtectedRoute() {
 
 function AppContent() {
   const location = useLocation();
+  // cleanup expired premium on app mount
+  useEffect(() => {
+    cleanupExpiredPremium();
+  }, []);
+
   const isAdminRoute = location.pathname.startsWith("/admin");
   const isSellerRoute = location.pathname.startsWith("/seller");
 
@@ -88,6 +99,7 @@ function AppContent() {
             <Route path="services" element={<SellerServices />} />
             <Route path="orders" element={<SellerOrders />} />
             <Route path="packages" element={<SellerPackages />} />
+            <Route path="wallet" element={<SellerWallet />} />
           </Route>
         </Route>
 
