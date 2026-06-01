@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -7,6 +7,8 @@ import {
   Wallet,
   X,
 } from "lucide-react";
+import { generateInvoice } from "../../utils/invoice";
+
 import { useAuth } from "../../context/AuthContext";
 import {
   cleanupExpiredPremium,
@@ -16,7 +18,9 @@ import {
   getUpgradedFeatures,
   isPremiumActive,
 } from "../../utils/premium";
-import { deductPackagePurchase, initWallet } from "../../utils/wallet";
+import { deductPackagePurchase } from "../../utils/wallet";
+import AddFundsModal from "../../components/AddFundsModal";
+import { useWallet } from "../../context/WalletContext";
 
 const plans = [
   {
@@ -111,8 +115,9 @@ function getSellerIdentity(user) {
 function getExpiryForPurchase(plan, activePremium, purchaseType) {
   if (purchaseType === "extend" && activePremium?.expiresAt) {
     const currentExpiry = new Date(activePremium.expiresAt).getTime();
-    return new Date(currentExpiry + plan.days * 24 * 60 * 60 * 1000)
-      .toISOString();
+    return new Date(
+      currentExpiry + plan.days * 24 * 60 * 60 * 1000,
+    ).toISOString();
   }
 
   return new Date(Date.now() + plan.days * 24 * 60 * 60 * 1000).toISOString();
@@ -211,17 +216,23 @@ function PlanActionCopy({ type, activePremium, selectedPlan }) {
 
 export default function SellerPackages() {
   const { user } = useAuth();
+  const { walletBalance, refreshWallet } = useWallet();
+
   const [premium, setPremium] = useState(readPremium);
-  const [wallet, setWallet] = useState(() => initWallet());
+
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [toast, setToast] = useState("");
   const [processing, setProcessing] = useState(false);
 
+  const [invoiceOpen, setInvoiceOpen] = useState(false);
+  const [invoice, setInvoice] = useState(null);
+  const [invoicePrinting, setInvoicePrinting] = useState(false);
+
   useEffect(() => {
     cleanupExpiredPremium();
     setPremium(readPremium());
-    setWallet(initWallet());
-  }, []);
+    refreshWallet();
+  }, [refreshWallet]);
 
   useEffect(() => {
     if (!toast) return undefined;
@@ -238,7 +249,23 @@ export default function SellerPackages() {
   const activePlan = plans.find((plan) => plan.id === activePremium?.plan);
   const remainingDays = getRemainingDays(activePremium?.expiresAt);
   const expiryLabel = formatDate(activePremium?.expiresAt);
-  const walletBalance = Number(wallet?.balance || 0);
+
+  const [addFundsOpen, setAddFundsOpen] = useState(false);
+  const [addFundsPrefill, setAddFundsPrefill] = useState(0);
+  const [resumeConfirmAfterTopUp, setResumeConfirmAfterTopUp] = useState(false);
+  const [topUpDonePulse, setTopUpDonePulse] = useState(0);
+
+  // Reusable modal flow state for adding wallet balance from this page
+  const [addFundsSuccessTick, setAddFundsSuccessTick] = useState(0);
+
+  const openAddFundsFromConfirmation = useCallback(() => {
+    if (!selectedPlan) return;
+    const shortfall = Math.max(1, selectedPlan.price - walletBalance);
+    setAddFundsPrefill(shortfall);
+    setResumeConfirmAfterTopUp(true);
+    setAddFundsOpen(true);
+    closeConfirmation();
+  }, [selectedPlan, walletBalance]);
 
   const purchasePreview = useMemo(() => {
     if (!selectedPlan) return null;
@@ -254,29 +281,78 @@ export default function SellerPackages() {
     };
   }, [activePremium, remainingDays, selectedPlan, walletBalance]);
 
-  const history = useMemo(
-    () => readArray(STORAGE_KEYS.premiumHistory),
-    [premium, wallet],
+  const [history, setHistory] = useState(() =>
+    readArray(STORAGE_KEYS.premiumHistory),
   );
+
+  useEffect(() => {
+    setHistory(readArray(STORAGE_KEYS.premiumHistory));
+  }, [premium]);
 
   const openConfirmation = (plan) => {
     setToast("");
     setSelectedPlan(plan);
   };
 
-  const closeConfirmation = () => {
+  const closeConfirmation = useCallback(() => {
     if (processing) return;
     setSelectedPlan(null);
+  }, [processing]);
+
+  const handleAddFundsSuccess = useCallback(() => {
+    refreshWallet();
+    if (resumeConfirmAfterTopUp && selectedPlan) {
+      setResumeConfirmAfterTopUp(false);
+      setAddFundsOpen(false);
+      // Reopen confirmation modal after wallet has been updated
+      setTimeout(() => {
+        setSelectedPlan(selectedPlan);
+      }, 100);
+    }
+  }, [resumeConfirmAfterTopUp, selectedPlan, refreshWallet]);
+
+  const openInvoice = (entry) => {
+    setInvoicePrinting(false);
+    const sellerIdentity = {
+      name: user?.name || "User",
+      phone: "8160977394",
+      purchasedAt: entry?.purchasedAt,
+    };
+
+    const planData = {
+      name: getPlanLabel(entry?.plan),
+      price: entry?.price,
+      days: plans.find((p) => p.id === entry?.plan)?.days || 0,
+      planId: entry?.plan,
+      id: entry?.plan,
+      expiresAt: entry?.expiresAt,
+    };
+
+    // generateInvoice persists invoice in localStorage and returns printable invoice object
+    const inv = generateInvoice(sellerIdentity, planData);
+
+    setInvoice(inv);
+    setInvoiceOpen(true);
   };
 
-  const handleConfirmPurchase = () => {
+  const closeInvoice = () => {
+    if (invoicePrinting) return;
+    setInvoiceOpen(false);
+    setInvoice(null);
+  };
+
+  const handleConfirmPurchase = useCallback(() => {
     if (!selectedPlan || !purchasePreview || processing) return;
+
+    // If wallet is insufficient, do not allow deduction flow here.
+    if (purchasePreview.balanceAfter < 0) return;
 
     setProcessing(true);
 
     const debit = deductPackagePurchase(selectedPlan);
     if (!debit.ok) {
-      setWallet(debit.wallet);
+      // Wallet state is managed by WalletContext (localStorage).
+      refreshWallet();
       setToast(
         debit.reason === "insufficient_balance"
           ? "Insufficient wallet balance. Please recharge your wallet."
@@ -294,7 +370,8 @@ export default function SellerPackages() {
       isPremium: true,
       type: purchasePreview.type,
       upgradeFrom:
-        purchasePreview.type === "upgrade" || purchasePreview.type === "downgrade"
+        purchasePreview.type === "upgrade" ||
+        purchasePreview.type === "downgrade"
           ? activePremium?.plan
           : null,
       upgradeTo: selectedPlan.id,
@@ -323,17 +400,20 @@ export default function SellerPackages() {
       STORAGE_KEYS.premiumHistory,
       JSON.stringify([historyEntry, ...history]),
     );
+    setHistory([historyEntry, ...history]);
 
-    setWallet(debit.wallet);
+    refreshWallet();
     setPremium(premiumData);
+
     setSelectedPlan(null);
     setProcessing(false);
     setToast(
-      `${selectedPlan.name} plan active until ${formatDate(
-        premiumData.expiresAt,
-      )}. Wallet balance updated to Rs ${debit.wallet.balance}.`,
+      `✅ ${selectedPlan.name} plan active until ${formatDate(premiumData.expiresAt)}. Wallet: Rs ${debit.wallet.balance}`,
     );
-  };
+  });
+
+  // Flag for UI: whether current wallet balance can cover selected plan price
+  const insufficient = purchasePreview?.balanceAfter < 0;
 
   return (
     <div className="animate-fade-in space-y-6">
@@ -377,9 +457,7 @@ export default function SellerPackages() {
       {activePremium && remainingDays <= 2 && (
         <div className="flex items-start gap-3 rounded-xl border border-amber-400/30 bg-amber-500/10 p-4 text-sm font-semibold text-amber-100">
           <AlertTriangle size={18} className="mt-0.5 flex-shrink-0" />
-          <span>
-            Your plan expires soon. Renew to keep your visibility.
-          </span>
+          <span>Your plan expires soon. Renew to keep your visibility.</span>
         </div>
       )}
 
@@ -508,12 +586,13 @@ export default function SellerPackages() {
                 <th className="py-3 pr-4">Type</th>
                 <th className="py-3 pr-4">Amount</th>
                 <th className="py-3">Expires</th>
+                <th className="py-3 pl-4">Invoice</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-indigo-500/10">
               {history.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-8 text-center text-slate-400">
+                  <td colSpan={6} className="py-8 text-center text-slate-400">
                     No package purchases yet
                   </td>
                 </tr>
@@ -529,6 +608,15 @@ export default function SellerPackages() {
                     <td className="py-4 pr-4 capitalize">{entry.type}</td>
                     <td className="py-4 pr-4 font-bold">-Rs {entry.price}</td>
                     <td className="py-4">{formatDate(entry.expiresAt)}</td>
+                    <td className="py-4 pl-4">
+                      <button
+                        type="button"
+                        onClick={() => openInvoice(entry)}
+                        className="rounded-lg border border-indigo-400/30 bg-indigo-500/10 px-3 py-1.5 text-xs font-bold text-indigo-200 transition hover:bg-indigo-500/20 hover:text-white"
+                      >
+                        Invoice
+                      </button>
+                    </td>
                   </tr>
                 ))
               )}
@@ -537,9 +625,169 @@ export default function SellerPackages() {
         </div>
       </section>
 
+      {invoiceOpen && invoice && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4"
+          role="dialog"
+          aria-modal="true"
+        >
+          <button
+            type="button"
+            aria-label="Close invoice"
+            className="fixed inset-0"
+            onClick={closeInvoice}
+          />
+
+          <div className="relative w-full max-w-2xl rounded-2xl border border-indigo-400/30 bg-[#1a1830] p-6 shadow-2xl">
+            <button
+              type="button"
+              onClick={closeInvoice}
+              disabled={invoicePrinting}
+              className="absolute right-4 top-4 rounded-lg bg-white/5 p-2 text-slate-300 hover:text-white disabled:opacity-50"
+              aria-label="Close invoice modal"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-indigo-300">Invoice</p>
+                <p className="mt-1 text-2xl font-black text-white">
+                  {invoice.id}
+                </p>
+                <p className="mt-1 text-sm text-slate-300">
+                  Invoice date:{" "}
+                  {formatDate(invoice.meta?.purchasedAt || invoice.meta?.date)}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setInvoicePrinting(true);
+                    window.print();
+                    window.setTimeout(() => setInvoicePrinting(false), 1000);
+                  }}
+                  className="rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2.5 text-sm font-bold text-white hover:from-indigo-500 hover:to-violet-500"
+                >
+                  Download / Print
+                </button>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-indigo-500/20 bg-white p-6 text-black">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="text-xl font-black">QuickSeva</div>
+                  <div className="text-sm text-slate-600">
+                    Premium Seller Invoice
+                  </div>
+                </div>
+                <div className="text-sm">
+                  <div className="font-semibold">Invoice No:</div>
+                  <div>{invoice.id}</div>
+                </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <div className="text-sm font-semibold text-slate-700">
+                    Seller
+                  </div>
+                  <div className="text-sm text-slate-600">
+                    {invoice.seller?.name || "User"} —{" "}
+                    {invoice.seller?.phone || "8160977394"}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-slate-700">
+                    Date
+                  </div>
+                  <div className="text-sm text-slate-600">
+                    {formatDate(
+                      invoice.meta?.purchasedAt || invoice.meta?.date,
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <div className="mb-2 text-sm font-semibold text-slate-700">
+                  Plan Details
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-600">Plan</span>
+                    <span className="font-semibold">{invoice.plan?.name}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-600">Type</span>
+                    <span className="font-semibold capitalize">
+                      {(
+                        invoice.plan?.type ||
+                        invoice.payment?.status ||
+                        "new"
+                      ).toString()}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-600">Amount</span>
+                    <span className="font-semibold">
+                      Rs {invoice.pricing?.subtotal}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-600">Expiry date</span>
+                    <span className="font-semibold">
+                      {formatDate(invoice.plan?.expiresAt)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 border-t border-slate-200 pt-4 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-600">GST (18%)</span>
+                  <span className="font-semibold">
+                    Rs {invoice.pricing?.gstAmount}
+                  </span>
+                </div>
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="font-semibold text-slate-800">Total</span>
+                  <span className="font-black">
+                    Rs {invoice.pricing?.grandTotal}
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-8 text-xs text-slate-500">
+                Payment method: {invoice.payment?.method || "UPI (Fake)"}
+              </div>
+            </div>
+
+            <div className="mt-4 flex justify-end">
+              <button
+                type="button"
+                onClick={closeInvoice}
+                className="rounded-lg border border-slate-600/50 bg-white/5 px-4 py-2.5 text-sm font-bold text-slate-200 hover:bg-white/10 disabled:opacity-50"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {selectedPlan && purchasePreview && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
           <div className="relative w-full max-w-md rounded-2xl border border-indigo-400/30 bg-[#1a1830] p-6 shadow-2xl">
+            {insufficient ? (
+              <div className="mt-4 rounded-xl border border-red-400/30 bg-red-500/10 p-4 text-sm font-semibold text-red-200">
+                Insufficient wallet balance. Please recharge your wallet.
+              </div>
+            ) : null}
+
             <button
               type="button"
               onClick={closeConfirmation}
@@ -552,7 +800,9 @@ export default function SellerPackages() {
 
             <div className="flex items-center gap-2 text-amber-300">
               <Crown size={18} />
-              <span className="text-sm font-bold">Confirm package purchase</span>
+              <span className="text-sm font-bold">
+                Confirm package purchase
+              </span>
             </div>
 
             <h2 className="mt-2 text-2xl font-black text-white">
@@ -570,7 +820,9 @@ export default function SellerPackages() {
             <div className="mt-4 space-y-3 rounded-xl bg-white/5 p-4 text-sm">
               <div className="flex items-center justify-between gap-4">
                 <span className="text-slate-300">Plan amount</span>
-                <span className="font-bold text-white">Rs {selectedPlan.price}</span>
+                <span className="font-bold text-white">
+                  Rs {selectedPlan.price}
+                </span>
               </div>
               <div className="flex items-center justify-between gap-4">
                 <span className="text-slate-300">Current wallet balance</span>
@@ -596,12 +848,6 @@ export default function SellerPackages() {
               </div>
             </div>
 
-            {purchasePreview.balanceAfter < 0 && (
-              <div className="mt-4 rounded-xl border border-red-400/30 bg-red-500/10 p-4 text-sm font-semibold text-red-200">
-                Insufficient wallet balance. Please recharge your wallet.
-              </div>
-            )}
-
             <div className="mt-5 grid grid-cols-2 gap-3">
               <button
                 type="button"
@@ -611,18 +857,44 @@ export default function SellerPackages() {
               >
                 Cancel
               </button>
-              <button
-                type="button"
-                onClick={handleConfirmPurchase}
-                disabled={processing || purchasePreview.balanceAfter < 0}
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2.5 text-sm font-bold text-white hover:from-indigo-500 hover:to-violet-500 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {processing && <Loader2 size={16} className="animate-spin" />}
-                Confirm
-              </button>
+
+              {insufficient ? (
+                <button
+                  type="button"
+                  onClick={openAddFundsFromConfirmation}
+                  disabled={processing}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#7c3aed] px-4 py-2.5 text-sm font-bold text-white hover:brightness-105 disabled:opacity-50"
+                >
+                  {processing && <Loader2 size={16} className="animate-spin" />}
+                  + Add Money to Wallet
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleConfirmPurchase}
+                  disabled={processing || purchasePreview.balanceAfter < 0}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2.5 text-sm font-bold text-white hover:from-indigo-500 hover:to-violet-500 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {processing && <Loader2 size={16} className="animate-spin" />}
+                  Confirm
+                </button>
+              )}
             </div>
           </div>
         </div>
+      )}
+
+      {addFundsOpen && (
+        <AddFundsModal
+          isOpen={addFundsOpen}
+          onClose={() => {
+            setAddFundsOpen(false);
+            setResumeConfirmAfterTopUp(false);
+          }}
+          prefillAmount={addFundsPrefill}
+          onSuccess={handleAddFundsSuccess}
+          key={addFundsSuccessTick}
+        />
       )}
     </div>
   );

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 const TIME_SLOTS = [
@@ -38,14 +38,16 @@ const readArray = (key) => {
 
 export default function BookingPage() {
   const { sellerId } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const selectedService = location.state?.selectedService || null;
   const sellers = readArray("sellers");
   const seller = sellers.find((s) => String(s.id) === String(sellerId));
   const [confirmedBooking, setConfirmedBooking] = useState(null);
   const [errors, setErrors] = useState({});
   const [formData, setFormData] = useState({
-    service: seller?.service || "",
+    service: selectedService?.name || seller?.service || "",
     date: "",
     timeSlot: "",
     address: "",
@@ -55,11 +57,19 @@ export default function BookingPage() {
 
   const serviceOptions = useMemo(() => {
     const values = [
+      selectedService?.name,
       seller?.service,
       ...(Array.isArray(seller?.services) ? seller.services : []),
     ].filter(Boolean);
     return Array.from(new Set(values));
-  }, [seller]);
+  }, [selectedService?.name, seller]);
+
+  const selectedServicePrice = useMemo(() => {
+    const rawPrice = selectedService?.price;
+    if (typeof rawPrice === "number") return rawPrice;
+    const numeric = Number(String(rawPrice || "").replace(/[^\d.]/g, ""));
+    return Number.isFinite(numeric) ? numeric : 0;
+  }, [selectedService?.price]);
 
   const avatarLetter = seller?.name?.trim()?.[0]?.toUpperCase() || "?";
 
@@ -91,6 +101,7 @@ export default function BookingPage() {
     // Try to resolve selected service price from whatever seller object has.
     // (Different profiles store different shapes in localStorage.)
     const selectedServiceObj =
+      selectedService ||
       (Array.isArray(seller?.services) &&
         seller.services.find(
           (s) => s?.name === formData.service || s?.title === formData.service,
@@ -99,7 +110,7 @@ export default function BookingPage() {
         seller.serviceList.find((s) => s?.name === formData.service)) ||
       null;
 
-    const selectedServicePrice =
+    const resolvedServicePrice =
       Number(selectedServiceObj?.price ?? selectedServiceObj?.startingPrice) ||
       0;
 
@@ -110,7 +121,8 @@ export default function BookingPage() {
       sellerService: seller.service,
       service: formData.service,
       serviceDetail: formData.service,
-      amount: selectedServicePrice,
+      amount: resolvedServicePrice,
+      selectedService,
       customerName: user?.name || user?.fullName || "",
       customerPhone: formData.mobile || user?.phone || "",
       date: formData.date,
@@ -221,6 +233,21 @@ export default function BookingPage() {
             </div>
           </div>
         </section>
+
+        {selectedService && (
+          <section className="rounded-2xl border border-indigo-200 bg-indigo-50 p-5 shadow-sm">
+            <p className="text-sm font-bold text-indigo-700">Selected service</p>
+            <h2 className="mt-1 text-xl font-black text-slate-900">
+              You are booking: {selectedService.name}
+              {selectedServicePrice ? ` - Rs ${selectedServicePrice}` : ""}
+            </h2>
+            {selectedService.description && (
+              <p className="mt-2 text-sm font-semibold text-slate-600">
+                {selectedService.description}
+              </p>
+            )}
+          </section>
+        )}
 
         <form
           onSubmit={handleSubmit}

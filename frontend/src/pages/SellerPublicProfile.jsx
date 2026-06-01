@@ -1,10 +1,19 @@
 import React, { useEffect, useMemo, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { MapContainer, TileLayer, Marker } from "react-leaflet";
+import { MapContainer, Marker, TileLayer } from "react-leaflet";
 import { useNavigate, useParams } from "react-router-dom";
+import {
+  ArrowLeft,
+  CalendarDays,
+  Clock,
+  IndianRupee,
+  MapPin,
+  MessageCircle,
+  Navigation,
+  Phone,
+} from "lucide-react";
 
-// Fix Leaflet marker icon URLs in this map component
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl:
@@ -13,21 +22,37 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
+function getDistanceKm(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * (Math.PI / 180)) *
+      Math.cos(lat2 * (Math.PI / 180)) *
+      Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function formatPrice(price) {
+  if (typeof price === "number") {
+    return `Rs ${price.toLocaleString("en-IN")} onwards`;
+  }
+  return price || "Price on request";
+}
+
+function normalizePhone(phone) {
+  return String(phone || "").replace(/\D/g, "");
+}
+
 function MiniMap({ lat, lng }) {
   if (typeof lat !== "number" || typeof lng !== "number") return null;
 
   return (
-    <div
-      style={{
-        height: 200,
-        width: "100%",
-        borderRadius: 12,
-        overflow: "hidden",
-      }}
-    >
+    <div className="h-56 overflow-hidden rounded-xl border border-indigo-500/20">
       <MapContainer
         center={[lat, lng]}
-        zoom={13}
+        zoom={14}
         dragging={false}
         zoomControl={false}
         scrollWheelZoom={false}
@@ -47,25 +72,28 @@ function defaultServicesForSeller(seller) {
   const base = seller?.service ? String(seller.service) : "Service";
   return [
     {
+      id: "standard",
       name: base,
-      description: `Professional ${base} at your doorstep`,
-      price: "₹299 onwards",
+      description: `Professional ${base.toLowerCase()} service at your doorstep.`,
+      price: 299,
       duration: "1-2 hours",
-      days: "Mon-Sun",
+      availability: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
     },
     {
+      id: "deep",
       name: `${base} Deep Service`,
-      description: "Full service with warranty",
-      price: "₹599 onwards",
+      description: "Detailed service with inspection, cleanup, and support.",
+      price: 599,
       duration: "2-3 hours",
-      days: "Mon-Sun",
+      availability: ["Mon", "Wed", "Fri", "Sun"],
     },
     {
+      id: "emergency",
       name: `Emergency ${base}`,
-      description: "24/7 emergency service",
-      price: "₹799 onwards",
+      description: "Fast-response visit for urgent service requirements.",
+      price: 799,
       duration: "On demand",
-      days: "Anytime",
+      availability: ["All days"],
     },
   ];
 }
@@ -73,6 +101,9 @@ function defaultServicesForSeller(seller) {
 export default function SellerPublicProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [selectedService, setSelectedService] = useState(null);
+  const [bookingError, setBookingError] = useState("");
+  const [distanceLabel, setDistanceLabel] = useState("");
 
   const sellers = useMemo(() => {
     try {
@@ -84,221 +115,282 @@ export default function SellerPublicProfile() {
     }
   }, []);
 
-  const seller = useMemo(() => {
-    return sellers.find((s) => String(s?.id) === String(id));
-  }, [sellers, id]);
+  const seller = useMemo(
+    () => sellers.find((s) => String(s?.id) === String(id)),
+    [sellers, id],
+  );
 
-  const services = useMemo(() => {
+  const savedServices = useMemo(() => {
     try {
+      if (Array.isArray(seller?.services) && seller.services.length > 0) {
+        return seller.services;
+      }
+
       const raw = localStorage.getItem("sellerServices");
       const arr = raw ? JSON.parse(raw) : [];
       if (!Array.isArray(arr)) return [];
-      return arr.filter((sv) => String(sv?.sellerId) === String(seller?.id));
+
+      return arr.filter(
+        (service) => String(service?.sellerId) === String(seller?.id),
+      );
     } catch {
       return [];
     }
-  }, [seller?.id]);
+  }, [seller]);
 
-  const effectiveServices =
-    services.length > 0 ? services : defaultServicesForSeller(seller);
+  const services = useMemo(() => {
+    const source =
+      savedServices.length > 0 ? savedServices : defaultServicesForSeller(seller);
 
-  const avatarLetter = useMemo(() => {
-    const name = seller?.name ? String(seller.name).trim() : "";
-    return name ? name[0].toUpperCase() : "?";
-  }, [seller?.name]);
-
-  const [distanceLabel, setDistanceLabel] = useState("");
+    return source.map((service, index) => ({
+      id: service.id || `${service.name}-${index}`,
+      name: service.name || service.title || seller?.service || "Service",
+      description:
+        service.description || "Professional service from a verified provider.",
+      price: service.price ?? service.startingPrice ?? "Price on request",
+      duration: service.duration || "1-2 hours",
+      availability: Array.isArray(service.availability)
+        ? service.availability
+        : service.days
+          ? [service.days]
+          : ["Mon-Sun"],
+    }));
+  }, [savedServices, seller]);
 
   useEffect(() => {
-    // Optional: compute approximate distance from current GPS to show label
-    const compute = async () => {
-      if (
-        !seller ||
-        typeof seller.lat !== "number" ||
-        typeof seller.lng !== "number"
-      )
-        return;
-      if (!navigator.geolocation) return;
+    if (
+      !seller ||
+      typeof seller.lat !== "number" ||
+      typeof seller.lng !== "number" ||
+      !navigator.geolocation
+    ) {
+      return undefined;
+    }
 
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const lat2 = pos.coords.latitude;
-          const lng2 = pos.coords.longitude;
-          const R = 6371;
-          const dLat = ((seller.lat - lat2) * Math.PI) / 180;
-          const dLng = ((seller.lng - lng2) * Math.PI) / 180;
-          const a =
-            Math.sin(dLat / 2) ** 2 +
-            Math.cos(lat2 * (Math.PI / 180)) *
-              Math.cos(seller.lat * (Math.PI / 180)) *
-              Math.sin(dLng / 2) ** 2;
-          const km = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-          setDistanceLabel(`${km.toFixed(1)} km from your location`);
-        },
-        () => {},
-        { enableHighAccuracy: true, timeout: 10000 },
-      );
-    };
-    compute();
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const km = getDistanceKm(
+          pos.coords.latitude,
+          pos.coords.longitude,
+          seller.lat,
+          seller.lng,
+        );
+        setDistanceLabel(`${km.toFixed(1)} km away`);
+      },
+      () => {},
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+
+    return undefined;
   }, [seller]);
 
   if (!seller) {
     return (
-      <div className="min-h-screen bg-[#0f0e1a] text-white p-4">
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="mb-4 rounded-lg border border-indigo-500/30 bg-indigo-950/40 px-4 py-2 text-sm font-bold text-indigo-100 hover:bg-indigo-900/60"
-        >
-          ← Back
-        </button>
-        <div className="max-w-xl mx-auto rounded-xl border border-indigo-500/20 bg-indigo-950/30 p-5">
-          <div className="text-lg font-bold">Seller not found</div>
+      <main className="min-h-screen bg-[#0d0d1a] px-4 py-10 text-white">
+        <div className="mx-auto max-w-xl rounded-2xl border border-indigo-500/20 bg-[#1a1a2e] p-6">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="mb-5 inline-flex items-center gap-2 rounded-lg border border-indigo-400/30 px-4 py-2 text-sm font-bold text-indigo-100 hover:bg-indigo-500/10"
+          >
+            <ArrowLeft size={16} />
+            Back
+          </button>
+          <h1 className="text-xl font-black">Seller not found</h1>
         </div>
-      </div>
+      </main>
     );
   }
 
-  const callHref = `tel:${seller.phone || ""}`;
-  const whatsappPhone = String(seller.phone || "").replace(/^0+/, "");
-  const whatsappHref = whatsappPhone ? `https://wa.me/91${whatsappPhone}` : "#";
+  const avatarLetter = seller.name?.trim()?.[0]?.toUpperCase() || "?";
+  const phoneDigits = normalizePhone(seller.phone);
+  const whatsappHref = phoneDigits
+    ? `https://wa.me/${phoneDigits.length === 10 ? `91${phoneDigits}` : phoneDigits}`
+    : "#";
   const directionsHref =
     typeof seller.lat === "number" && typeof seller.lng === "number"
       ? `https://www.google.com/maps/dir/?api=1&destination=${seller.lat},${seller.lng}`
       : "#";
-  const canShowDirectContact = Boolean(seller.isPremium);
+
+  const handleSelectService = (service) => {
+    setSelectedService(service);
+    setBookingError("");
+  };
+
+  const handleBook = () => {
+    if (!selectedService) {
+      setBookingError("Please select a service to continue");
+      return;
+    }
+
+    navigate(`/book/${seller.id}`, { state: { selectedService } });
+  };
 
   return (
-    <div className="min-h-screen bg-[#0f0e1a] text-white p-4">
-      <button
-        type="button"
-        onClick={() => navigate(-1)}
-        className="mb-4 rounded-lg border border-indigo-500/30 bg-indigo-950/40 px-4 py-2 text-sm font-bold text-indigo-100 hover:bg-indigo-900/60"
-      >
-        ← Back
-      </button>
+    <main className="min-h-screen bg-[#0d0d1a] px-4 py-8 text-white">
+      <div className="mx-auto max-w-6xl space-y-5">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center gap-2 rounded-lg border border-indigo-400/30 bg-[#1a1a2e] px-4 py-2 text-sm font-bold text-indigo-100 hover:bg-indigo-500/10"
+        >
+          <ArrowLeft size={16} />
+          Back
+        </button>
 
-      <div className="max-w-3xl mx-auto space-y-4">
-        <div className="rounded-2xl border border-indigo-500/20 bg-indigo-950/30 p-5">
-          <div className="flex gap-4 items-center">
-            <div
-              className="h-16 w-16 rounded-full flex items-center justify-center text-white font-extrabold text-2xl"
-              style={{
-                background: "linear-gradient(135deg, #6366f1, #4f46e5)",
-              }}
-            >
-              {avatarLetter}
-            </div>
-            <div className="min-w-0">
-              <div className="text-2xl font-extrabold text-white truncate">
-                {seller.name}
+        <section className="grid gap-5 lg:grid-cols-[1fr_380px]">
+          <div className="rounded-2xl border border-indigo-500/20 bg-[#1a1a2e] p-5 shadow-2xl shadow-black/20">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+              <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 text-3xl font-black">
+                {avatarLetter}
               </div>
-              <div className="mt-1">
-                <span className="inline-flex items-center rounded-full bg-green-500/15 text-green-300 px-3 py-1 text-xs font-bold">
-                  {seller.service}
+
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-3">
+                  <h1 className="truncate text-3xl font-black text-white">
+                    {seller.name}
+                  </h1>
+                  <span className="rounded-full border border-purple-400/30 bg-purple-500/10 px-3 py-1 text-xs font-black text-purple-200">
+                    {seller.service || "Service Provider"}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm font-semibold text-indigo-200">
+                  {distanceLabel || "Distance will appear after location access"}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <div className="flex items-start gap-3 rounded-xl border border-indigo-500/20 bg-[#0f1024] p-4">
+                <MapPin size={18} className="mt-0.5 text-purple-300" />
+                <span className="text-sm font-semibold text-slate-200">
+                  {seller.address || "Address not available"}
                 </span>
               </div>
-              {distanceLabel ? (
-                <div className="mt-2 text-sm text-indigo-200">
-                  📏 {distanceLabel}
-                </div>
-              ) : null}
+              <div className="flex items-start gap-3 rounded-xl border border-indigo-500/20 bg-[#0f1024] p-4">
+                <Phone size={18} className="mt-0.5 text-purple-300" />
+                <span className="text-sm font-semibold text-slate-200">
+                  {seller.phone || "Phone not available"}
+                </span>
+              </div>
             </div>
-          </div>
 
-          <div className="mt-4 grid gap-2 sm:grid-cols-2">
-            <div className="text-sm text-indigo-200 flex items-center gap-2">
-              📍 <span className="text-white/90">{seller.address}</span>
-            </div>
-            <div className="text-sm text-indigo-200 flex items-center gap-2">
-              📞{" "}
-              <span className="text-white/90">
-                {canShowDirectContact
-                  ? seller.phone
-                  : "Contact details shared after booking confirmation"}
-              </span>
-            </div>
-          </div>
-
-          <div className="mt-4">
-            <MiniMap lat={seller.lat} lng={seller.lng} />
-            <div className="mt-3 flex flex-col sm:flex-row gap-2">
+            <div className="mt-5">
+              <MiniMap lat={seller.lat} lng={seller.lng} />
               <a
                 href={directionsHref}
                 target="_blank"
                 rel="noreferrer"
-                className="w-full sm:w-auto rounded-lg bg-indigo-600 px-4 py-2 text-sm font-bold text-white hover:bg-indigo-700 text-center"
+                className="mt-3 inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-black text-white hover:bg-indigo-700"
               >
+                <Navigation size={17} />
                 Get Directions
               </a>
             </div>
           </div>
-        </div>
 
-        <div className="rounded-2xl border border-indigo-500/20 bg-indigo-950/30 p-5">
-          <div className="text-lg font-extrabold mb-3">Services Offered</div>
-
-          <div className="grid gap-3 md:grid-cols-2">
-            {effectiveServices.map((sv, idx) => (
-              <div
-                key={`${sv.name}-${idx}`}
-                className="rounded-xl border border-indigo-500/20 bg-[#0b0a14] p-4"
+          <aside className="rounded-2xl border border-indigo-500/20 bg-[#1a1a2e] p-5 shadow-2xl shadow-black/20">
+            <h2 className="text-xl font-black text-white">Contact / Action</h2>
+            <div className="mt-4 space-y-3">
+              <button
+                type="button"
+                onClick={handleBook}
+                className="w-full rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 px-4 py-3 text-base font-black text-white shadow-lg shadow-purple-950/40 hover:from-purple-500 hover:to-indigo-500"
               >
-                <div className="font-bold text-white">{sv.name}</div>
-                <div className="mt-1 text-sm text-indigo-200">
-                  {sv.description}
-                </div>
-                <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-                  <div className="text-indigo-200">💰 {sv.price}</div>
-                  <div className="text-indigo-200">⏱ {sv.duration}</div>
-                </div>
-                {sv.days ? (
-                  <div className="mt-2 text-sm text-indigo-200">
-                    📅 {sv.days}
-                  </div>
-                ) : null}
-              </div>
-            ))}
-          </div>
-        </div>
+                Book This Service
+              </button>
+              {bookingError && (
+                <p className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm font-bold text-red-200">
+                  {bookingError}
+                </p>
+              )}
 
-        <div className="rounded-2xl border border-indigo-500/20 bg-indigo-950/30 p-5">
-          <div className="text-lg font-extrabold mb-3">Contact</div>
-
-          <div className="grid gap-2">
-            <button
-              type="button"
-              onClick={() => navigate(`/book/${seller.id}`)}
-              className="w-full py-3 rounded-xl font-bold text-white text-lg"
-              style={{ background: "linear-gradient(135deg, #6366f1, #4f46e5)" }}
-            >
-              📅 Book This Service
-            </button>
-            {canShowDirectContact ? (
-              <div className="grid gap-2 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
                 <a
-                  href={callHref}
-                  className="rounded-lg bg-green-600 hover:bg-green-700 px-4 py-3 text-center font-extrabold"
+                  href={`tel:${seller.phone || ""}`}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 font-black text-emerald-200 hover:bg-emerald-500/20"
                 >
-                  📞 Call Now
+                  <Phone size={17} />
+                  Call Now
                 </a>
                 <a
                   href={whatsappHref}
                   target="_blank"
                   rel="noreferrer"
-                  className="rounded-lg bg-[#22c55e] hover:bg-[#1f9a4e] px-4 py-3 text-center font-extrabold"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-green-400/30 bg-green-500/10 px-4 py-3 font-black text-green-200 hover:bg-green-500/20"
                 >
-                  💬 WhatsApp
+                  <MessageCircle size={17} />
+                  WhatsApp
                 </a>
               </div>
-            ) : (
-              <div className="rounded-lg border border-indigo-500/20 bg-[#0b0a14] px-4 py-3 text-sm font-semibold text-indigo-200">
-                📞 Contact details shared after booking confirmation
-              </div>
+            </div>
+          </aside>
+        </section>
+
+        <section className="rounded-2xl border border-indigo-500/20 bg-[#1a1a2e] p-5 shadow-2xl shadow-black/20">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h2 className="text-2xl font-black text-white">
+              Services Offered
+            </h2>
+            {selectedService && (
+              <span className="rounded-full border border-purple-400/30 bg-purple-500/10 px-3 py-1 text-xs font-black text-purple-200">
+                Selected: {selectedService.name}
+              </span>
             )}
           </div>
-        </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            {services.map((service) => {
+              const active = selectedService?.id === service.id;
+              return (
+                <button
+                  key={service.id}
+                  type="button"
+                  onClick={() => handleSelectService(service)}
+                  className={`rounded-2xl border p-4 text-left transition ${
+                    active
+                      ? "border-purple-400 bg-purple-500/10 shadow-[0_0_0_3px_rgba(168,85,247,0.18)]"
+                      : "border-indigo-500/20 bg-[#0f1024] hover:border-indigo-400/50"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h3 className="text-lg font-black text-white">
+                        {service.name}
+                      </h3>
+                      <p className="mt-2 text-sm font-medium text-slate-300">
+                        {service.description}
+                      </p>
+                    </div>
+                    <span
+                      className={`mt-1 h-4 w-4 rounded-full border ${
+                        active
+                          ? "border-purple-300 bg-purple-400"
+                          : "border-slate-500"
+                      }`}
+                    />
+                  </div>
+
+                  <div className="mt-4 grid gap-2 text-sm font-bold text-indigo-100 sm:grid-cols-3">
+                    <span className="inline-flex items-center gap-1 text-amber-300">
+                      <IndianRupee size={15} />
+                      {formatPrice(service.price).replace(/^Rs\s?/, "")}
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-slate-300">
+                      <Clock size={15} />
+                      {service.duration}
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-slate-300">
+                      <CalendarDays size={15} />
+                      {service.availability.join(", ")}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </section>
       </div>
-    </div>
+    </main>
   );
 }

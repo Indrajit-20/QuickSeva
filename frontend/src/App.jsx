@@ -14,8 +14,9 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminLogin from "./pages/AdminLogin";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider, useAuth } from "./context/AuthContext";
-import Home from "./pages/Home";
+import { WalletProvider } from "./context/WalletContext";
 
+import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import OtpVerification from "./pages/OtpVerification";
@@ -25,11 +26,8 @@ import BookingPage from "./pages/BookingPage";
 import MyBookings from "./pages/MyBookings";
 import BookingHistory from "./pages/BookingHistory";
 import ProfilePage from "./pages/ProfilePage";
-
 import NotFound from "./pages/NotFound";
-
 import { cleanupExpiredPremium } from "./utils/premium";
-
 import Unauthorized from "./pages/Unauthorized";
 import SellerLayout from "./layouts/SellerLayout";
 import SellerDashboard from "./pages/seller/SellerDashboard";
@@ -54,22 +52,19 @@ function SellerProtectedRoute() {
   return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
 }
 
-function AppContent() {
+function AppRoutes() {
   const location = useLocation();
-  // cleanup expired premium on app mount
+
   useEffect(() => {
     cleanupExpiredPremium();
   }, []);
 
   const isAdminRoute = location.pathname.startsWith("/admin");
   const isSellerRoute = location.pathname.startsWith("/seller");
-
-  // TODO: Get userRole from localStorage or authentication context
   const userRole = localStorage.getItem("userRole") || null;
 
   return (
-    <AuthProvider>
-      {/* Show user navbar only on public user routes */}
+    <>
       {!isAdminRoute && !isSellerRoute && <Navbar />}
 
       <Routes>
@@ -84,16 +79,12 @@ function AppContent() {
         <Route path="/booking-history" element={<BookingHistory />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/seller/:id" element={<SellerPublicProfile />} />
-
         <Route path="/verify-otp" element={<OtpVerification />} />
 
         {/* Seller */}
         <Route element={<SellerProtectedRoute />}>
           <Route path="/seller" element={<SellerLayout />}>
-            <Route
-              index
-              element={<Navigate to="/seller/dashboard" replace />}
-            />
+            <Route index element={<Navigate to="/seller/dashboard" replace />} />
             <Route path="dashboard" element={<SellerDashboard />} />
             <Route path="profile" element={<SellerProfile />} />
             <Route path="services" element={<SellerServices />} />
@@ -105,10 +96,7 @@ function AppContent() {
 
         {/* Admin */}
         <Route path="/admin/login" element={<AdminLogin />} />
-
         <Route path="/unauthorized" element={<Unauthorized />} />
-
-        {/* Protected */}
         <Route
           path="/admin/dashboard"
           element={
@@ -120,19 +108,24 @@ function AppContent() {
           }
         />
 
-        {/* Catch-all route for 404 - must be last */}
         <Route path="*" element={<NotFound />} />
       </Routes>
 
       {!isAdminRoute && !isSellerRoute && <Footer />}
-    </AuthProvider>
+    </>
   );
 }
 
+// ✅ FIX: AuthProvider must be OUTERMOST, then WalletProvider inside it
+// so WalletProvider can access auth user if needed in future.
 export default function App() {
   return (
     <BrowserRouter>
-      <AppContent />
+      <AuthProvider>
+        <WalletProvider>
+          <AppRoutes />
+        </WalletProvider>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

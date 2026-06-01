@@ -15,6 +15,50 @@ const inputClass =
 
 const labelClass = "mb-2 block text-sm font-semibold text-slate-300";
 
+function readJson(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function getCurrentSellerIdentity() {
+  const registeredSeller = readJson("registeredSeller", null);
+  return {
+    id: registeredSeller?.id,
+    phone: registeredSeller?.mobileNumber,
+    name: registeredSeller?.businessName,
+  };
+}
+
+function syncSellerServices(nextServices) {
+  const identity = getCurrentSellerIdentity();
+  const sellers = readJson("sellers", []);
+  if (!Array.isArray(sellers)) return;
+
+  const updated = sellers.map((seller) => {
+    const matches =
+      seller.id === identity.id ||
+      (identity.phone && seller.phone === identity.phone) ||
+      (identity.name && seller.name === identity.name);
+
+    if (!matches) return seller;
+
+    return {
+      ...seller,
+      service: nextServices[0]?.name || seller.service,
+      services: nextServices.map((service) => ({
+        ...service,
+        sellerId: seller.id,
+      })),
+    };
+  });
+
+  localStorage.setItem("sellers", JSON.stringify(updated));
+}
+
 export default function SellerServices() {
   const [services, setServices] = useState(() =>
     loadArray("sellerServices", mockServices),
@@ -23,8 +67,14 @@ export default function SellerServices() {
   const [editingId, setEditingId] = useState(null);
 
   const persist = (nextServices) => {
-    setServices(nextServices);
-    localStorage.setItem("sellerServices", JSON.stringify(nextServices));
+    const identity = getCurrentSellerIdentity();
+    const normalizedServices = nextServices.map((service) => ({
+      ...service,
+      sellerId: identity.id || service.sellerId,
+    }));
+    setServices(normalizedServices);
+    localStorage.setItem("sellerServices", JSON.stringify(normalizedServices));
+    syncSellerServices(normalizedServices);
   };
 
   const handleChange = (e) => {

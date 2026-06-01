@@ -1,12 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
-import { Plus, History, Wallet } from "lucide-react";
+import { useMemo, useState } from "react";
+import { History, Wallet, Plus, RefreshCw } from "lucide-react";
 import { useAuth } from "../../../src/context/AuthContext";
-import {
-  addFunds,
-  getTransactions,
-  initWallet,
-  isWalletSufficient,
-} from "../../utils/wallet";
+import { isWalletSufficient } from "../../utils/wallet";
+import AddFundsModal from "../../components/AddFundsModal";
+import { useWallet } from "../../context/WalletContext";
 
 const cardBase =
   "rounded-xl border border-[rgba(99,102,241,0.2)] bg-[#1a1830] p-5";
@@ -36,35 +33,13 @@ function balanceColorClasses(balance) {
 
 export default function SellerWallet() {
   const { user } = useAuth();
+  const { walletBalance, transactions, refreshWallet, addFundsToWallet } =
+    useWallet();
 
-  const [wallet, setWallet] = useState(null);
   const [rechargeOpen, setRechargeOpen] = useState(false);
-  const [quickAmount, setQuickAmount] = useState(100);
-  const [customAmount, setCustomAmount] = useState("");
-
-  const transactions = useMemo(() => {
-    if (!wallet) return [];
-    return Array.isArray(wallet.transactions) ? wallet.transactions : [];
-  }, [wallet]);
-
-  const reload = () => {
-    initWallet();
-    try {
-      const raw = localStorage.getItem("sellerWallet");
-      const parsed = raw ? JSON.parse(raw) : null;
-      setWallet(parsed);
-    } catch {
-      setWallet(initWallet());
-    }
-  };
-
-  useEffect(() => {
-    reload();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const balance = Number(wallet?.balance || 0);
   const sufficient = isWalletSufficient();
+
+  const balance = Number(walletBalance || 0);
 
   const activeBanner = useMemo(() => {
     if (balance === 0) {
@@ -81,14 +56,6 @@ export default function SellerWallet() {
     }
     return null;
   }, [balance]);
-
-  const handleRecharge = () => {
-    const amt = Number(customAmount || quickAmount);
-    const next = addFunds(amt);
-    setWallet(next);
-    setRechargeOpen(false);
-    setCustomAmount("");
-  };
 
   return (
     <div className="animate-fade-in space-y-6">
@@ -107,7 +74,6 @@ export default function SellerWallet() {
           {activeBanner && (
             <div className={activeBanner.tone}>{activeBanner.text}</div>
           )}
-         
         </div>
       </div>
 
@@ -125,16 +91,25 @@ export default function SellerWallet() {
             </div>
           </div>
 
-          <div
-            className={`rounded-xl border px-4 py-2 text-sm font-bold ${balanceColorClasses(
-              balance,
-            )}`}
-          >
-            {balance === 0
-              ? "Listing paused"
-              : balance < 10
-                ? "Low credits"
-                : "Active in searches"}
+          <div className="flex flex-col gap-2">
+            <div
+              className={`rounded-xl border px-4 py-2 text-sm font-bold ${balanceColorClasses(
+                balance,
+              )}`}
+            >
+              {balance === 0
+                ? "Listing paused"
+                : balance < 10
+                  ? "Low credits"
+                  : "Active in searches"}
+            </div>
+            <button
+              onClick={() => setRechargeOpen(true)}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-bold text-white hover:bg-indigo-500"
+            >
+              <Plus size={16} />
+              Add Funds
+            </button>
           </div>
         </div>
 
@@ -179,7 +154,9 @@ export default function SellerWallet() {
                       {formatDateShort(tx.timestamp)}
                     </td>
                     <td className="py-4 pr-4">{tx.description}</td>
-                    <td className="py-4 pr-4 font-bold">
+                    <td className={`py-4 pr-4 font-bold ${
+                      tx.type === "debit" ? "text-red-300" : "text-emerald-300"
+                    }`}>
                       {tx.type === "debit" ? "-₹" : "+₹"}
                       {Number(tx.amount || 0)}
                     </td>
@@ -194,69 +171,18 @@ export default function SellerWallet() {
         </div>
       </section>
 
-      {rechargeOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-          <div className="w-full max-w-md rounded-2xl border border-indigo-400/30 bg-[#1a1830] p-6 shadow-2xl">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-2xl font-black text-white">
-                  Wallet Recharge
-                </h2>
-                <p className="mt-1 text-sm text-slate-400">
-                  Choose a quick amount or enter a custom value.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setRechargeOpen(false)}
-                className="rounded-lg bg-white/5 p-2 text-slate-300 hover:text-white"
-                aria-label="Close recharge modal"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="mt-4 flex flex-wrap gap-3">
-              {[50, 100, 200].map((amt) => (
-                <button
-                  key={amt}
-                  type="button"
-                  onClick={() => {
-                    setQuickAmount(amt);
-                    setCustomAmount("");
-                  }}
-                  className={`rounded-lg border px-4 py-2.5 text-sm font-bold transition ${
-                    quickAmount === amt && !customAmount
-                      ? "border-indigo-500 bg-indigo-500/15 text-indigo-200"
-                      : "border-indigo-400/20 bg-white/5 text-slate-300 hover:text-white"
-                  }`}
-                >
-                  ₹{amt}
-                </button>
-              ))}
-            </div>
-
-            <label className="mt-4 block text-xs font-semibold text-indigo-200">
-              Custom amount
-            </label>
-            <input
-              value={customAmount}
-              onChange={(e) => setCustomAmount(e.target.value)}
-              inputMode="numeric"
-              placeholder="e.g., 75"
-              className="mt-2 w-full rounded-lg border border-indigo-500/30 bg-indigo-950/40 px-3 py-2 text-sm text-white focus:outline-none"
-            />
-
-            <button
-              type="button"
-              onClick={handleRecharge}
-              className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2.5 text-sm font-bold text-white transition hover:from-indigo-500 hover:to-violet-500"
-            >
-              Confirm Recharge
-            </button>
-          </div>
-        </div>
-      )}
+      <AddFundsModal
+        open={rechargeOpen}
+        onClose={() => setRechargeOpen(false)}
+        prefillAmount={100}
+        successMessage={"₹X added! You can now search again."}
+        continueButtonLabel={"Done"}
+        onSuccess={() => {
+          refreshWallet();
+          setRechargeOpen(false);
+        }}
+        closeOnSuccess={true}
+      />
     </div>
   );
 }

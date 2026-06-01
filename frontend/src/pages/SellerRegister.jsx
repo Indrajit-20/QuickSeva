@@ -120,11 +120,20 @@ const SellerRegister = () => {
       ? formData.services[0] || ""
       : "";
 
+    const sellerId = Date.now();
     const newSeller = {
-      id: Date.now(),
+      id: sellerId,
       name: formData.businessName,
       phone: formData.mobileNumber,
       service: primaryService,
+      services: formData.services.map((service, index) => ({
+        id: `${sellerId}-${index}`,
+        name: service,
+        description: `Professional ${service.toLowerCase()} service at your doorstep`,
+        price: 299,
+        duration: "1-2 hours",
+        availability: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+      })),
       lat: formData.location.lat,
       lng: formData.location.lng,
       address: shortAddress,
@@ -137,7 +146,10 @@ const SellerRegister = () => {
     localStorage.setItem("sellers", JSON.stringify(next));
 
     // Keep existing key for OTP flow compatibility (if used elsewhere)
-    localStorage.setItem("registeredSeller", JSON.stringify({ ...formData }));
+    localStorage.setItem(
+      "registeredSeller",
+      JSON.stringify({ ...formData, id: sellerId }),
+    );
 
     setIsLoading(true);
     setTimeout(() => {

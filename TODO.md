@@ -1,22 +1,15 @@
-# QuickSeva UI Upgrade (Premium Dark Luxury)
+- [ ] Gather/verify current wallet + packages confirm modal flow
+- [ ] Add WalletContext shared state (walletBalance + transactions) and provider
+- [ ] Wrap App in WalletProvider
+- [ ] Create reusable AddFundsModal component with tabs UPI/Card/Net Banking and fake payment success
+- [x] Update SellerWallet page to use WalletContext + AddFundsModal
 
-- [ ] Step 1: Append premium CSS utility classes to `frontend/src/index.css` (glass-card, gradients, glow, hover-lift, animated-bg, scrollbar)
-- [ ] Step 2: Create reusable components:
-  - [ ] `frontend/src/components/PageTransition.jsx`
-  - [ ] `frontend/src/components/SkeletonCard.jsx`
-  - [ ] `frontend/src/components/AnimatedCounter.jsx`
-- [x] Step 3: Install `framer-motion`
-- [x] Step 1: Append premium CSS utility classes to `frontend/src/index.css` (glass-card, gradients, glow, hover-lift, animated-bg, scrollbar)
-- [ ] Step 4: Apply gradient text + glass cards + hover-lift + glow styles to key UI files (no logic changes)
-  - [ ] `frontend/src/components/Navbar.jsx`
-  - [ ] `frontend/src/pages/Home.jsx`
-  - [ ] `frontend/src/pages/seller/SellerDashboard.jsx`
-  - [x] `frontend/src/pages/seller/SellerOrders.jsx`
-  - [ ] `frontend/src/pages/seller/SellerWallet.jsx`
-  - [ ] `frontend/src/pages/seller/SellerPackages.jsx`
-  - [ ] `frontend/src/pages/SellerPublicProfile.jsx`
+- [ ] Update SellerPackages confirm modal:
+  - [ ] If balance insufficient: replace Confirm with “+ Add Money to Wallet” button
 
-- [ ] Step 5: Add Framer Motion behaviors (page transitions, stagger, tap effects)
-- [ ] Step 6: Animated counter integration on seller dashboard stats
-- [ ] Step 7: Toast animation for existing toast UI in `ProfilePage.jsx` (visual only)
-- [ ] Step 8: Run dev server + smoke test key flows (routes + booking + wallet)
+  - [ ] On click: close confirm modal, open AddFundsModal with prefilled shortfall amount
+  - [ ] On add success: show success screen + “Continue to Purchase” reopens original confirm modal
+  - [ ] If balance sufficient: keep normal Confirm deduction flow
+
+- [ ] Verify transaction history updates on Wallet page after recharge
+- [ ] Run build/dev to ensure no errors
