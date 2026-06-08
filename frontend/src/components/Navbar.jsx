@@ -118,6 +118,7 @@ const Navbar = () => {
   const { address, loading } = useNearbyLocation();
 
   const initials = useMemo(() => getInitials(user?.name), [user?.name]);
+  void initials;
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -142,8 +143,8 @@ const Navbar = () => {
     return () => document.removeEventListener("mousedown", onDocMouseDown);
   }, [isPartnerOpen]);
 
-  return (
-    <nav className="bg-indigo-950 shadow-lg border-b border-indigo-900">
+return (
+    <nav className="sticky top-0 z-50 bg-indigo-950 shadow-lg border-b border-indigo-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           {/* Logo */}

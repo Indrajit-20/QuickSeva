@@ -1,15 +1,25 @@
-- [ ] Gather/verify current wallet + packages confirm modal flow
-- [ ] Add WalletContext shared state (walletBalance + transactions) and provider
-- [ ] Wrap App in WalletProvider
-- [ ] Create reusable AddFundsModal component with tabs UPI/Card/Net Banking and fake payment success
-- [x] Update SellerWallet page to use WalletContext + AddFundsModal
+# TODO - Fix mobile swipe/scroll on icon strip
 
-- [ ] Update SellerPackages confirm modal:
-  - [ ] If balance insufficient: replace Confirm with “+ Add Money to Wallet” button
+## Step 1: Inspect current implementation
 
-  - [ ] On click: close confirm modal, open AddFundsModal with prefilled shortfall amount
-  - [ ] On add success: show success screen + “Continue to Purchase” reopens original confirm modal
-  - [ ] If balance sufficient: keep normal Confirm deduction flow
+- [x] Read `frontend/src/components/Hero.jsx` to find the icon strip markup and classes.
 
-- [ ] Verify transaction history updates on Wallet page after recharge
-- [ ] Run build/dev to ensure no errors
+## Step 2: Update CSS behavior for mobile scrolling
+
+- [x] Ensure icon strip container allows horizontal momentum scroll and swipe:
+  - [x] Add `style` for `WebkitOverflowScrolling: 'touch'` and `touchAction: 'pan-x'`
+  - [x] Make sure container has `flex-nowrap` and `overflow-x-auto` on mobile.
+
+## Step 3: Prevent icon items from shrinking
+
+- [x] Confirm icon button uses `flex-shrink-0` (or equivalent) for the icon+label.
+
+## Step 4: Ensure no ancestor clips scrolling
+
+- [x] Verify outer wrappers don’t use `overflow-hidden` on the mobile scroll path.
+  - [x] Likely fix: removed `overflow-hidden` from the strip’s outer wrapper that could clip touch scroll.
+
+## Step 5: Test
+
+- [ ] Run frontend build/dev and verify on mobile widths (<640px): swipe left/right works.
+- [ ] Verify desktop behavior (≥640px) still shows arrows and all icons fit.
