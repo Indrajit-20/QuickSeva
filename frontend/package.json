@@ -20,7 +20,7 @@
     "react-leaflet": "^5.0.0",
     "react-leaflet-markercluster": "^5.0.0-rc.0",
     "react-router-dom": "^6.30.3",
-  "react-multi-date-picker": "^4.5.2",
+  
     "react-time-picker": "^6.6.2"
   },
   "devDependencies": {
