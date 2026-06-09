@@ -24,7 +24,13 @@ export default function SellerProfile() {
     serviceType: savedProfile.serviceType || "AC Repair",
     bio: savedProfile.bio || "",
     experience: savedProfile.experience || "",
+
+    // New: Service Availability (mock marketplace fields)
+    serviceMode: savedProfile.serviceMode || "online",
+    serviceModeLabel: savedProfile.serviceModeLabel || "Online Only",
+    instantService: Boolean(savedProfile.instantService),
   });
+
   const [saved, setSaved] = useState(false);
 
   const memberSince = user?.loginTime
@@ -83,7 +89,106 @@ export default function SellerProfile() {
         className="rounded-xl border border-[rgba(99,102,241,0.2)] bg-[#1a1830] p-6"
       >
         <h2 className="mb-5 text-xl font-bold text-white">Edit Profile</h2>
+
+        {/* Service Settings (new, frontend-only) */}
+        <div className="mb-5 rounded-xl border border-[rgba(99,102,241,0.18)] bg-[#0f1024] p-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h3 className="text-lg font-black text-white">Service Settings</h3>
+            <span className="rounded-full border border-indigo-400/30 bg-indigo-500/10 px-3 py-1 text-[11px] font-bold text-indigo-200">
+              {profile.serviceModeLabel || "Service Availability"}
+            </span>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label className={labelClass}>Service Mode</label>
+              <div className="space-y-2">
+                {[
+                  { value: "online", label: "Online Only", hint: "Remote work" },
+                  { value: "offline", label: "Offline Only", hint: "Visit customer location" },
+                  { value: "both", label: "Both Online & Offline", hint: "Hybrid" },
+                ].map((opt) => {
+                  const checked = profile.serviceMode === opt.value;
+                  return (
+                    <label
+                      key={opt.value}
+                      className={`flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-3 transition ${checked
+                        ? "border-indigo-400/60 bg-indigo-500/10"
+                        : "border-indigo-500/20 bg-[#0f0e1a] hover:border-indigo-400/40"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="serviceMode"
+                        value={opt.value}
+                        checked={checked}
+                        onChange={() =>
+                          setProfile((prev) => ({
+                            ...prev,
+                            serviceMode: opt.value,
+                            serviceModeLabel: opt.label,
+                          }))
+                        }
+                        className="mt-0.5 accent-indigo-500"
+                      />
+                      <div className="min-w-0">
+                        <div className="text-sm font-black text-white">
+                          {opt.label}
+                        </div>
+                        <div className="mt-1 text-xs font-semibold text-[#94a3b8]">
+                          {opt.hint}
+                        </div>
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <label className={labelClass}>Availability</label>
+              <label
+                className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border px-3 py-3 transition ${profile.instantService
+                  ? "border-emerald-400/50 bg-emerald-500/10"
+                  : "border-indigo-500/20 bg-[#0f0e1a] hover:border-emerald-400/30"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(profile.instantService)}
+                    onChange={(e) =>
+                      setProfile((prev) => ({
+                        ...prev,
+                        instantService: e.target.checked,
+                      }))
+                    }
+                    className="h-4 w-4 accent-emerald-400"
+                  />
+                  <div>
+                    <div className="text-sm font-black text-white">
+                      Instant Service Available
+                    </div>
+                    <div className="mt-1 text-xs font-semibold text-[#94a3b8]">
+                      Show ⚡ Instant Service badge
+                    </div>
+                  </div>
+                </div>
+                <span
+                  className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-black ${profile.instantService
+                    ? "bg-emerald-500/15 text-emerald-200 border border-emerald-400/40"
+                    : "bg-white/5 text-slate-300 border border-indigo-400/20"
+                  }`}
+                >
+                  {profile.instantService ? "Enabled" : "Disabled"}
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+
         <div className="grid gap-4 md:grid-cols-2">
+
           <div>
             <label className={labelClass}>Full Name</label>
             <input

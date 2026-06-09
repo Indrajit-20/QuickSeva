@@ -229,7 +229,21 @@ export default function NearbyServices({
   const [selectedSellerId, setSelectedSellerId] = useState(null);
   const [dropdownStyle, setDropdownStyle] = useState(null);
 
+  // Provider listing filters (frontend-only, mock data)
+  const [filterServiceMode, setFilterServiceMode] = useState("All"); // All | Online | Offline | Both
+  const [filterAvailability, setFilterAvailability] = useState("All"); // All | Instant
+  const [filterRating, setFilterRating] = useState("All"); // All | 4 | 4.5
+
+  const FILTER_SERVICE_MODE = ["All", "Online", "Offline", "Both"];
+  const FILTER_AVAILABILITY = ["All", "Instant Service"];
+  const FILTER_RATINGS = [
+    { value: "All", label: "All" },
+    { value: "4", label: "4★+" },
+    { value: "4.5", label: "4.5★+" },
+  ];
+
   const clickedSellers = useRef(new Set());
+
 
   const [radiusKm, setRadiusKm] = useState(5);
 
@@ -429,6 +443,7 @@ export default function NearbyServices({
   const nearby = useMemo(() => {
     if (!buyerPos) return [];
 
+
     const filteredByDistance = sellers.filter((s) => {
       if (typeof s?.lat !== "number" || typeof s?.lng !== "number")
         return false;
@@ -449,7 +464,34 @@ export default function NearbyServices({
         })
       : withDistance;
 
-    return filteredBySearch.sort((a, b) => {
+    const filteredByServiceMode =
+      filterServiceMode === "All"
+        ? filteredBySearch
+        : filteredBySearch.filter((s) => {
+            const mode = s?.serviceMode;
+            if (!mode) return false;
+            if (filterServiceMode === "Online") return mode === "online" || mode === "both";
+            if (filterServiceMode === "Offline") return mode === "offline" || mode === "both";
+            if (filterServiceMode === "Both") return mode === "both";
+            return true;
+          });
+
+    const filteredByAvailability =
+      filterAvailability === "All"
+        ? filteredByServiceMode
+        : filteredByServiceMode.filter((s) => Boolean(s?.instantService));
+
+    const filteredByRating =
+      filterRating === "All"
+        ? filteredByAvailability
+        : filteredByAvailability.filter((s) => {
+            const r = Number(s?.rating || 0);
+            if (filterRating === "4") return r >= 4;
+            if (filterRating === "4.5") return r >= 4.5;
+            return true;
+          });
+
+    return filteredByRating.sort((a, b) => {
       const rankA = getSellerPackageRank(a);
       const rankB = getSellerPackageRank(b);
       if (rankA !== rankB) return rankB - rankA;
@@ -957,10 +999,12 @@ export default function NearbyServices({
                               🛠 {seller.service}
                             </div>
                             <div style={{ fontSize: 12, color: "#4b5563", marginBottom: 2 }}>
-                              📍 {seller.address}
+                              {seller?.serviceMode === "offline" ? `📍 ${seller.address}` : "🌐 Works Across India"}
                             </div>
                             <div style={{ fontSize: 12, color: "#16a34a", fontWeight: 700, marginBottom: 8 }}>
-                              📏 {Number(seller.distanceKm || 0).toFixed(1)} km away
+                              {seller?.serviceMode === "online" || seller?.serviceMode === "both"
+                                ? "⚡ Available Online"
+                                : `📏 ${Number(seller.distanceKm || 0).toFixed(1)} km away`}
                             </div>
 
                             {packageRank > 0 ? (
@@ -1062,8 +1106,14 @@ export default function NearbyServices({
                       </div>
                     </div>
                     <div className="qs-distance-badge">
-                      <span className="text-[10px] opacity-80">📍</span>
-                      <span>{distanceLabel}km</span>
+                      <span className="text-[10px] opacity-80">
+                        {seller?.serviceMode === "online" || seller?.serviceMode === "both" ? "🌐" : "📍"}
+                      </span>
+                      <span>
+                        {seller?.serviceMode === "online" || seller?.serviceMode === "both"
+                          ? "Works Across India"
+                          : `${distanceLabel}km away`}
+                      </span>
                     </div>
                   </div>
 
@@ -1075,6 +1125,39 @@ export default function NearbyServices({
 
                   {/* Badge row */}
                   <div className="mt-2.5 flex flex-wrap gap-1.5">
+                    {/* Service Mode badges */}
+                    {seller?.serviceMode === "online" && (
+                      <span className="qs-tag qs-tag-indigo">🌐 Online Service</span>
+                    )}
+                    {seller?.serviceMode === "offline" && (
+                      <span className="qs-tag qs-tag-emerald">📍 Offline Service</span>
+                    )}
+                    {seller?.serviceMode === "both" && (
+                      <span className="qs-tag qs-tag-amber">🔄 Online + Offline</span>
+                    )}
+
+                    {/* Instant Service */}
+                    {seller?.instantService && (
+                      <span className="qs-instant-badge" title="⚡ Instant Service">
+                        <span className="qs-instant-badge-dot" />
+                        ⚡ Instant Service
+                      </span>
+                    )}
+
+                    {/* Rating badge */}
+                    <span className="qs-tag qs-tag-indigo">
+                      ⭐ {Number(seller?.rating || 0).toFixed(1)}
+                      <span className="opacity-80"> ({Number(seller?.reviews || 0)} Reviews)</span>
+                    </span>
+
+                    {/* Top Rated */}
+                    {seller?.isTopRated && (
+                      <span className="qs-tag qs-tag-gold">⭐ Top Rated</span>
+                    )}
+
+                    {/* Verified (keep premium tick + add text badge) */}
+                    {packageRank > 0 && <span className="qs-tag qs-tag-green">✓ Verified</span>}
+
                     {packageRank >= 3 && (
                       <span className="qs-tag qs-tag-gold">⭐ Gold</span>
                     )}

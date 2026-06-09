@@ -1,6 +1,13 @@
-# TODO - NearbyServices Search UI Fix
+# TODO - Unavailable dates calendar fixes
 
-- [x] Step 1: Update dropdown wrapper/stacking so suggestions float above chips/radius/map and remain scrollable.
-- [ ] Step 2: Move pincode UI from separate row into the right-side badge/chip area of the location search row (desktop) with responsive wrap (mobile).
-- [ ] Step 3: Verify JSX keeps existing behaviors: searching, selecting a location, closing dropdown, pincode validation/search.
-- [ ] Step 4: Run frontend lint/build (if available) to ensure no syntax issues.
+- [x] Update `frontend/src/pages/seller/SellerServices.jsx` to use dedicated `unavailableDates` state.
+
+- [ ] Implement robust ymd <-> Date conversion without timezone shift.
+- [ ] Fix `react-multi-date-picker` `multiple` + `range` `onChange` normalization.
+- [ ] Implement per-date remove UI and handler (Remove button on each chip).
+- [ ] Implement Clear All Dates button.
+- [ ] Ensure selected dates render below calendar and update instantly.
+- [ ] Ensure Live Service Preview shows unavailable dates from same state.
+- [ ] Add temporary log: `console.log("Selected Dates:", unavailableDates);`
+- [ ] Ensure submit persists `unavailableDates` into service.
+- [ ] Run `npm run lint` and basic manual tests.

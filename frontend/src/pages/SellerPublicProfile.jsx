@@ -158,6 +158,15 @@ export default function SellerPublicProfile() {
   }, [savedServices, seller]);
 
   useEffect(() => {
+    // Online service providers shouldn't show distance.
+    const serviceMode = seller?.serviceMode;
+    const isOnlineCapable = serviceMode === "online" || serviceMode === "both";
+
+    if (isOnlineCapable) {
+      setDistanceLabel("🌐 Works Across India");
+      return undefined;
+    }
+
     if (
       !seller ||
       typeof seller.lat !== "number" ||
@@ -183,6 +192,7 @@ export default function SellerPublicProfile() {
 
     return undefined;
   }, [seller]);
+
 
   if (!seller) {
     return (

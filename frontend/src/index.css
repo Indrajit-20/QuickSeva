@@ -428,13 +428,12 @@
   /* ---------- Glass panel ---------- */
   .qs-glass-panel {
     position: relative;
-    background:
-      linear-gradient(
-        135deg,
-        rgba(99, 102, 241, 0.12),
-        rgba(79, 70, 229, 0.06) 40%,
-        rgba(15, 23, 42, 0.35)
-      );
+    background: linear-gradient(
+      135deg,
+      rgba(99, 102, 241, 0.12),
+      rgba(79, 70, 229, 0.06) 40%,
+      rgba(15, 23, 42, 0.35)
+    );
     border-radius: 20px;
     border: 1px solid rgba(165, 180, 252, 0.18);
     backdrop-filter: blur(18px) saturate(140%);
@@ -472,7 +471,10 @@
     box-shadow:
       0 6px 20px -4px rgba(99, 102, 241, 0.55),
       0 0 0 1px rgba(255, 255, 255, 0.08) inset;
-    transition: transform 0.18s ease, box-shadow 0.25s ease, filter 0.2s ease;
+    transition:
+      transform 0.18s ease,
+      box-shadow 0.25s ease,
+      filter 0.2s ease;
   }
   .qs-btn-primary:hover {
     transform: translateY(-1.5px);
@@ -490,7 +492,10 @@
     box-shadow:
       0 6px 20px -4px rgba(16, 185, 129, 0.5),
       0 0 0 1px rgba(255, 255, 255, 0.08) inset;
-    transition: transform 0.18s ease, box-shadow 0.25s ease, filter 0.2s ease;
+    transition:
+      transform 0.18s ease,
+      box-shadow 0.25s ease,
+      filter 0.2s ease;
   }
   .qs-btn-locate:hover {
     transform: translateY(-1.5px);
@@ -576,7 +581,9 @@
     box-shadow:
       0 0 0 4px rgba(99, 102, 241, 0.2),
       0 6px 16px -2px rgba(99, 102, 241, 0.5);
-    transition: transform 0.15s ease, box-shadow 0.2s ease;
+    transition:
+      transform 0.15s ease,
+      box-shadow 0.2s ease;
   }
   .qs-range::-webkit-slider-thumb:hover {
     transform: scale(1.15);
@@ -640,12 +647,11 @@
     position: relative;
     padding: 14px;
     border-radius: 16px;
-    background:
-      linear-gradient(
-        135deg,
-        rgba(99, 102, 241, 0.10),
-        rgba(30, 27, 75, 0.55)
-      );
+    background: linear-gradient(
+      135deg,
+      rgba(99, 102, 241, 0.1),
+      rgba(30, 27, 75, 0.55)
+    );
     border: 1px solid rgba(165, 180, 252, 0.18);
     transition:
       transform 0.25s ease,
@@ -657,12 +663,11 @@
   .qs-card:hover {
     transform: translateY(-3px);
     border-color: rgba(165, 180, 252, 0.45);
-    background:
-      linear-gradient(
-        135deg,
-        rgba(99, 102, 241, 0.18),
-        rgba(30, 27, 75, 0.7)
-      );
+    background: linear-gradient(
+      135deg,
+      rgba(99, 102, 241, 0.18),
+      rgba(30, 27, 75, 0.7)
+    );
     box-shadow:
       0 18px 38px -14px rgba(99, 102, 241, 0.45),
       0 0 0 1px rgba(165, 180, 252, 0.25) inset;
@@ -672,12 +677,11 @@
     box-shadow:
       0 0 0 2px rgba(99, 102, 241, 0.55),
       0 18px 40px -12px rgba(99, 102, 241, 0.55);
-    background:
-      linear-gradient(
-        135deg,
-        rgba(99, 102, 241, 0.22),
-        rgba(30, 27, 75, 0.75)
-      ) !important;
+    background: linear-gradient(
+      135deg,
+      rgba(99, 102, 241, 0.22),
+      rgba(30, 27, 75, 0.75)
+    ) !important;
   }
 
   .qs-avatar-ring {
@@ -777,7 +781,10 @@
     color: #c7d2fe;
     background: rgba(99, 102, 241, 0.14);
     border: 1px solid rgba(165, 180, 252, 0.3);
-    transition: background 0.2s ease, transform 0.15s ease, color 0.2s ease;
+    transition:
+      background 0.2s ease,
+      transform 0.15s ease,
+      color 0.2s ease;
   }
   .qs-contact-btn:hover {
     background: rgba(99, 102, 241, 0.25);
@@ -790,7 +797,10 @@
     box-shadow:
       0 6px 18px -4px rgba(99, 102, 241, 0.55),
       0 0 0 1px rgba(255, 255, 255, 0.08) inset;
-    transition: transform 0.18s ease, box-shadow 0.25s ease, filter 0.2s ease;
+    transition:
+      transform 0.18s ease,
+      box-shadow 0.25s ease,
+      filter 0.2s ease;
   }
   .qs-cta:hover {
     transform: translateY(-1.5px);
@@ -818,11 +828,72 @@
     animation: qsPulse 1.6s ease-in-out infinite;
   }
   @keyframes qsPulse {
-    0%, 100% {
+    0%,
+    100% {
       box-shadow: 0 6px 20px -4px rgba(16, 185, 129, 0.5);
     }
     50% {
       box-shadow: 0 6px 28px 4px rgba(16, 185, 129, 0.75);
+    }
+  }
+
+  /* ---------- Instant Service Badge (glow + pulse) ---------- */
+  @keyframes qsInstantPulse {
+    0%,
+    100% {
+      box-shadow:
+        0 0 0 0 rgba(16, 185, 129, 0),
+        0 0 18px rgba(16, 185, 129, 0.35);
+      transform: translateY(0);
+    }
+    50% {
+      box-shadow:
+        0 0 0 10px rgba(16, 185, 129, 0.1),
+        0 0 30px rgba(16, 185, 129, 0.7);
+      transform: translateY(-1px);
+    }
+  }
+
+  .qs-instant-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border-radius: 9999px;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.2px;
+    color: #bfffe0;
+    background: linear-gradient(
+      135deg,
+      rgba(16, 185, 129, 0.18),
+      rgba(5, 150, 105, 0.12)
+    );
+    border: 1px solid rgba(52, 211, 153, 0.45);
+    box-shadow: 0 0 18px rgba(16, 185, 129, 0.35);
+    animation: qsInstantPulse 1.35s ease-in-out infinite;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  .qs-instant-badge-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 9999px;
+    background: #34d399;
+    box-shadow: 0 0 10px rgba(52, 211, 153, 0.9);
+    animation: qsInstantDot 1.35s ease-in-out infinite;
+  }
+
+  @keyframes qsInstantDot {
+    0%,
+    100% {
+      transform: scale(1);
+      opacity: 0.95;
+    }
+    50% {
+      transform: scale(1.25);
+      opacity: 1;
     }
   }
 

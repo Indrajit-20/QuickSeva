@@ -96,6 +96,14 @@ const createSeller = (index) => {
   const plan = isPremium ? PLANS[index % PLANS.length] : null;
   const now = Date.now();
 
+  // Mock provider features (frontend-only)
+  const serviceMode =
+    index % 3 === 0 ? "online" : index % 3 === 1 ? "offline" : "both";
+  const instantService = index % 4 === 0;
+  const rating = Number((4.3 + (index % 7) * 0.1).toFixed(1)); // 4.3 - 5.0-ish
+  const reviews = 50 + ((index * 37) % 250);
+  const isTopRated = rating >= 4.7;
+
   return {
     id: now + index + 1,
     name: `${surname} ${SERVICE_LABELS[service]} ${area.name}`,
@@ -110,6 +118,7 @@ const createSeller = (index) => {
         duration: "1-2 hours",
         availability: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
       },
+
       {
         id: `seed-${index}-deep`,
         name: `${service} Deep Service`,
