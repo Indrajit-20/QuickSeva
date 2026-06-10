@@ -74,8 +74,8 @@ const Register = () => {
   // Password validation
   const validatePassword = (password) => {
     if (!password) return { error: "Password is required" };
-    if (password.length < 6)
-      return { error: "Password must be at least 6 characters" };
+    if (password.length <=4)
+      return { error: "Password must be at least 4 characters" };
     return { error: null };
   };
 
