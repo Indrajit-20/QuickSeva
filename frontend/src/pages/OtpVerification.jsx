@@ -1,42 +1,40 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import {
-  sendOTP,
-  isValidOTP,
-  formatPhoneNumber,
-  verifyOTP,
-} from "../utils/otpService";
 
-const initialOtpRequests = new Map();
+// Base URL without double /api
+const API_BASE = (import.meta.env.VITE_API_URL || "http://localhost:5000")
+  .replace(/\/api\/?$/, "");
 
-const getInitialOtpRequest = (requestKey, phone) => {
-  if (!initialOtpRequests.has(requestKey)) {
-    initialOtpRequests.set(requestKey, sendOTP(phone));
+const isValidOTP = (otp) => /^\d{6}$/.test(otp);
+
+const formatPhoneNumber = (phone) => {
+  let cleaned = String(phone || "").replace(/[^\d+-]/g, "");
+
+  if (!cleaned.startsWith("+")) {
+    if (cleaned.startsWith("0")) cleaned = cleaned.substring(1);
+    if (!cleaned.startsWith("91")) cleaned = "91" + cleaned;
+    cleaned = "+" + cleaned;
   }
 
-  return initialOtpRequests.get(requestKey);
+  return cleaned;
 };
 
-/**
- * OTP Verification Component
- * Features:
- * - 6 separate input boxes with auto-focus
- * - Backspace support for seamless navigation
- * - Paste support for 6-digit codes
- * - Page-refresh proof 30-second timer (localStorage)
- * - Resend limit hard cap (max 3 times with localStorage tracking)
- * - Real SMS OTP integration with 2factor.in API
- */
+const pad2 = (n) => String(n).padStart(2, "0");
+
 const OtpVerification = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { loginWithPhone } = useAuth();
+
   const inputsRef = useRef([]);
 
-  // Get phone number from location state
+  // Get phone number and seller-register fields from location state
   const phoneNumber = location.state?.phoneNumber;
   const userName = location.state?.userName || "User";
+  const firstName = location.state?.firstName;
+  const lastName = location.state?.lastName;
+  const email = location.state?.email;
+
+  // Kept for compatibility; real sessionId comes from backend send-otp
   const otpRequestId = location.state?.otpRequestId || phoneNumber;
 
   // OTP state
@@ -44,154 +42,188 @@ const OtpVerification = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+
   const sessionIdRef = useRef(null);
-  const [, setSessionId] = useState(null);
+  const [sessionId, setSessionId] = useState(null);
 
-  // Timer states
+  // Resend cooldown = 30 seconds
   const [timeRemaining, setTimeRemaining] = useState(0);
-  const [timerActive, setTimerActive] = useState(false);
-
-  // Resend states
-  const [resendCount, setResendCount] = useState(0);
-  const [resendDisabled, setResendDisabled] = useState(false);
+  const [resendDisabled, setResendDisabled] = useState(true);
   const [resendLocked, setResendLocked] = useState(false);
+  const [resendCount, setResendCount] = useState(0);
+  const resendTimerRef = useRef(null);
 
-  // Initialize timer and resend count on component mount
+  const TIMER_SECONDS = 30;
+  const MAX_RESENDS = 3;
+
+  // Init timer/resend count; also triggers initial SEND OTP immediately
   useEffect(() => {
-    // Check if phone number is provided
-    if (!phoneNumber) {
-      setError("Phone number not provided. Please register again.");
-      setTimeout(() => navigate("/register"), 2000);
-      return;
-    }
-
-    initializeTimerAndResendCount();
-  }, [phoneNumber, navigate]);
-
-  // Send OTP on first load and save sessionId
-  useEffect(() => {
-    if (!phoneNumber) return;
-
-    const sendInitialOTP = async () => {
-      const formattedPhone = formatPhoneNumber(phoneNumber);
-      const requestKey = `${otpRequestId}:${formattedPhone}`;
-      const result = await getInitialOtpRequest(requestKey, formattedPhone);
-
-      if (result.status === "success") {
-        sessionIdRef.current = result.sessionId;
-        setSessionId(result.sessionId);
-        console.log("Initial sessionId saved:", sessionIdRef.current);
-
-        // Start timer
-        const expiryTime = Date.now() + 30 * 1000;
-        localStorage.setItem("otpTimerExpiry", expiryTime);
-        setTimeRemaining(30);
-        setTimerActive(true);
-      } else {
-        setError(result.details || "Failed to send OTP. Please try again.");
+    const init = async () => {
+      if (!phoneNumber) {
+        setError("Phone number not provided. Please register again.");
+        setTimeout(() => navigate("/register"), 2000);
+        return;
       }
+
+      // Load resend count (hard cap)
+      const savedResendCount = localStorage.getItem("otpResendCount");
+      const count = savedResendCount ? parseInt(savedResendCount, 10) : 0;
+      setResendCount(count);
+      if (count >= MAX_RESENDS) {
+        setResendLocked(true);
+        setResendDisabled(true);
+      }
+
+      // Prime sessionId from state (fallback only)
+      sessionIdRef.current = otpRequestId;
+      setSessionId(otpRequestId);
+
+      // Start with disabled button until first send completes
+      setResendDisabled(true);
+
+      // Reset resend timer
+      setTimeRemaining(0);
+      if (resendTimerRef.current) clearInterval(resendTimerRef.current);
+
+      // Immediately send OTP on open
+      await sendOtpNow({ resetTimer: true });
     };
 
-    sendInitialOTP();
-  }, [otpRequestId, phoneNumber]);
+    init();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phoneNumber, navigate]);
 
-  // Timer countdown effect
+  // Timer tick
   useEffect(() => {
-    if (!timerActive || timeRemaining <= 0) {
-      if (timeRemaining <= 0 && timerActive) {
-        setTimerActive(false);
+    if (!resendDisabled || resendLocked) return;
+
+    if (timeRemaining <= 0) {
+      // enable if allowed
+      if (!resendLocked && resendCount < MAX_RESENDS) {
+        setResendDisabled(false);
       }
       return;
     }
 
     const interval = setInterval(() => {
       setTimeRemaining((prev) => {
-        const newTime = prev - 1;
-        if (newTime <= 0) {
-          setTimerActive(false);
-          localStorage.removeItem("otpTimerExpiry");
-        } else {
-          // Update expiry timestamp in localStorage
-          const expiryTime = Date.now() + newTime * 1000;
-          localStorage.setItem("otpTimerExpiry", expiryTime);
+        const next = prev - 1;
+        if (next <= 0) {
+          clearInterval(interval);
+          return 0;
         }
-        return newTime;
+        return next;
       });
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [timerActive, timeRemaining]);
+  }, [timeRemaining, resendDisabled, resendLocked, resendCount]);
 
-  /**
-   * Initialize timer from localStorage (page-refresh proof)
-   * and load resend count
-   */
-  const initializeTimerAndResendCount = () => {
-    // Check for existing timer in localStorage
-    const savedExpiryTime = localStorage.getItem("otpTimerExpiry");
-    if (savedExpiryTime) {
-      const expiryMs = parseInt(savedExpiryTime, 10);
-      const now = Date.now();
-      const remainingMs = expiryMs - now;
+  const startCooldown = () => {
+    // reset cooldown UI to 30 seconds
+    setTimeRemaining(TIMER_SECONDS);
+    setResendDisabled(true);
 
-      if (remainingMs > 0) {
+    // Also persist to localStorage for refresh durability
+    const expiryTime = Date.now() + TIMER_SECONDS * 1000;
+    localStorage.setItem("otpTimerExpiry", expiryTime);
+
+    if (resendTimerRef.current) clearInterval(resendTimerRef.current);
+
+    resendTimerRef.current = setInterval(() => {
+      const expiryStr = localStorage.getItem("otpTimerExpiry");
+      if (!expiryStr) return;
+      const expiryMs = parseInt(expiryStr, 10);
+      const remainingMs = expiryMs - Date.now();
+      if (remainingMs <= 0) {
+        clearInterval(resendTimerRef.current);
+        localStorage.removeItem("otpTimerExpiry");
+        setTimeRemaining(0);
+        setResendDisabled(resendLocked || resendCount >= MAX_RESENDS);
+      } else {
         const remainingSeconds = Math.ceil(remainingMs / 1000);
         setTimeRemaining(remainingSeconds);
-        setTimerActive(true);
-      } else {
-        localStorage.removeItem("otpTimerExpiry");
       }
+    }, 250);
+  };
+
+  const sendOtpNow = async ({ resetTimer }) => {
+    const formattedPhone = formatPhoneNumber(phoneNumber);
+
+    if (!formattedPhone) {
+      setError("Invalid phone number. Please register again.");
+      return;
     }
 
-    // Load resend count from localStorage
-    const savedResendCount = localStorage.getItem("otpResendCount");
-    if (savedResendCount) {
-      const count = parseInt(savedResendCount, 10);
-      setResendCount(count);
+    setError("");
+    setSuccess("");
 
-      // Hard cap: if resend count >= 3, lock the button permanently
-      if (count >= 3) {
-        setResendLocked(true);
-        setResendDisabled(true);
-      }
+    try {
+      // Disable during request
+      setResendDisabled(true);
+      setLoading(true);
+
+      const res = await fetch(`${API_BASE}/api/auth/send-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          identifier: formattedPhone,
+          type: "seller-register",
+        }),
+      });
+
+      const responseData = await res.json();
+      console.log("SEND OTP RESPONSE", responseData);
+      console.log("SESSION ID", responseData?.data?.sessionId || responseData?.sessionId);
+
+      if (!res.ok) throw new Error(responseData?.message || "Failed to send OTP");
+
+      // IMPORTANT: store returned sessionId immediately
+      const newSessionId = responseData?.data?.sessionId || responseData?.sessionId;
+      sessionIdRef.current = newSessionId;
+      setSessionId(newSessionId);
+
+      // Reset cooldown to 30 seconds after every send
+      if (resetTimer) startCooldown();
+
+      // increment resend count only on resend clicks; but initial send should not count.
+      // keep resendCount as-is here.
+
+      setSuccess(`✓ OTP sent to ${phoneNumber || formattedPhone}!`);
+
+      // Focus inputs
+      setOtp(["", "", "", "", "", ""]);
+      setTimeout(() => inputsRef.current[0]?.focus(), 0);
+    } catch (err) {
+      setError(err.message || "Failed to send OTP. Please try again.");
+      console.error("Send OTP error:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  /**
-   * Handle individual digit input
-   */
   const handleInputChange = (index, value) => {
-    // Allow only digits
     if (!/^\d*$/.test(value)) return;
-
-    // Allow only single character
     if (value.length > 1) return;
 
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
 
-    // Auto-focus to next input if digit is entered
     if (value && index < 5) {
       inputsRef.current[index + 1]?.focus();
     }
   };
 
-  /**
-   * Handle backspace to move to previous input
-   */
   const handleKeyDown = (index, e) => {
     if (e.key === "Backspace") {
       e.preventDefault();
-
       const newOtp = [...otp];
 
-      // If current box is empty, move to previous and clear it
       if (!otp[index] && index > 0) {
         inputsRef.current[index - 1]?.focus();
         newOtp[index - 1] = "";
       } else {
-        // Clear current box
         newOtp[index] = "";
       }
 
@@ -199,28 +231,51 @@ const OtpVerification = () => {
     }
   };
 
-  /**
-   * Handle paste event - split 6-digit code into boxes
-   */
   const handlePaste = (e) => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData("text");
-
-    // Extract only digits
     const digits = pastedData.replace(/\D/g, "");
 
     if (digits.length >= 6) {
       const newOtp = digits.slice(0, 6).split("");
       setOtp(newOtp);
-
-      // Auto-focus to the last input after paste
       inputsRef.current[5]?.focus();
     }
   };
 
-  /**
-   * Handle OTP submission
-   */
+  const formatTime = () => {
+    // UI requirement: Resend OTP (00:30) style
+    return `(${pad2(Math.floor(timeRemaining / 60))}:${pad2(timeRemaining % 60)})`;
+  };
+
+  const handleResendOtp = async () => {
+    if (resendLocked) {
+      setError("⚠️ Maximum resend attempts reached. Contact support for assistance.");
+      return;
+    }
+
+    if (resendCount >= MAX_RESENDS) {
+      setResendLocked(true);
+      setResendDisabled(true);
+      setError("⚠️ Maximum resend attempts reached. Contact support for assistance.");
+      return;
+    }
+
+    // Cooldown guard
+    if (timeRemaining > 0 || resendDisabled) return;
+
+    // Clicked resend: increment resend count
+    const newCount = resendCount + 1;
+    setResendCount(newCount);
+    localStorage.setItem("otpResendCount", String(newCount));
+
+    if (newCount >= MAX_RESENDS) setResendLocked(true);
+
+    // Call backend send-otp again and reset cooldown
+    // Also resets timer back to 30 seconds
+    await sendOtpNow({ resetTimer: true });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -229,7 +284,17 @@ const OtpVerification = () => {
     const otpCode = otp.join("");
 
     // Validation
-    if (otpCode.length !== 6) {
+    if (!phoneNumber) {
+      setError("Phone number missing. Please register again.");
+      return;
+    }
+
+    if (!sessionIdRef.current) {
+      setError("OTP session missing. Please wait for OTP resend and try again.");
+      return;
+    }
+
+    if (!otpCode || otpCode.length !== 6) {
       setError("Please enter all 6 digits");
       return;
     }
@@ -239,42 +304,47 @@ const OtpVerification = () => {
       return;
     }
 
-    setLoading(true);
+    const formattedPhone = formatPhoneNumber(phoneNumber);
 
     try {
-      if (!sessionIdRef.current) {
-        throw new Error("OTP is still being sent. Please wait a moment.");
-      }
+      setLoading(true);
 
-      // Verify OTP with the API session
-      const result = await verifyOTP(
-        phoneNumber,
-        sessionIdRef.current,
-        otpCode,
-      );
+      const res = await fetch(`${API_BASE}/api/auth/verify-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          identifier: formattedPhone,
+          otp: otpCode,
+          sessionId: sessionIdRef.current,
+          type: "seller-register",
+          firstName,
+          lastName,
+          email,
+        }),
+      });
 
-      if (result.verified) {
-        initialOtpRequests.delete(
-          `${otpRequestId}:${formatPhoneNumber(phoneNumber)}`,
-        );
-        setSuccess("✓ OTP verified successfully!");
+      const responseData = await res.json();
+      console.log("VERIFY OTP RESPONSE", responseData);
 
-        // Clear localStorage timers
-        localStorage.removeItem("otpTimerExpiry");
-        localStorage.removeItem("otpResendCount");
+      if (!res.ok) throw new Error(responseData?.message || "OTP verification failed");
 
-        // Redirect to dashboard after 1.5 seconds
-        setTimeout(() => {
-          loginWithPhone(phoneNumber, userName);
-          navigate("/seller/dashboard", {
-            state: { phone: phoneNumber, name: userName },
-          });
-        }, 1500);
-      } else {
-        setError(result.message || "Invalid OTP. Please try again.");
-        setOtp(["", "", "", "", "", ""]);
-        inputsRef.current[0]?.focus();
-      }
+      // Success: token + user stored
+      const token = responseData?.data?.token || responseData?.token;
+      const user = responseData?.data?.user || responseData?.user;
+
+      if (token) localStorage.setItem("token", token);
+      if (user) localStorage.setItem("user", JSON.stringify(user));
+
+      setSuccess("✓ OTP verified successfully!");
+
+      // Clear timers
+      localStorage.removeItem("otpTimerExpiry");
+      localStorage.removeItem("otpResendCount");
+
+      // Navigate directly to seller dashboard
+      setTimeout(() => {
+        navigate("/seller/dashboard", { state: { phone: phoneNumber, name: userName } });
+      }, 200);
     } catch (err) {
       setError("Verification failed. Please try again.");
       console.error("OTP verification error:", err);
@@ -283,112 +353,20 @@ const OtpVerification = () => {
     }
   };
 
-  /**
-   * Handle Resend OTP with hard cap at 3 attempts
-   */
-  const handleResendOtp = async () => {
-    // Hard cap check: prevent any action if already at 3 resends
-    if (resendCount >= 3) {
-      setResendLocked(true);
-      setError(
-        "⚠️ Maximum resend attempts reached. Contact support for assistance.",
-      );
-      return;
-    }
-
-    setError("");
-    setSuccess("");
-    setResendDisabled(true);
-
-    try {
-      // Give proxy a moment on the FIRST send only (resendCount === 0)
-      if (resendCount === 0) {
-        await new Promise((resolve) => setTimeout(resolve, 300));
-      }
-
-      // Send OTP via SMS
-      const result = await sendOTP(formatPhoneNumber(phoneNumber));
-
-      if (result.status === "success") {
-        initialOtpRequests.delete(
-          `${otpRequestId}:${formatPhoneNumber(phoneNumber)}`,
-        );
-
-        // Store session ID for verification (useRef to avoid stale state)
-        sessionIdRef.current = result.sessionId;
-        setSessionId(result.sessionId);
-
-        // Increment resend count
-
-        const newResendCount = resendCount + 1;
-        setResendCount(newResendCount);
-        localStorage.setItem("otpResendCount", newResendCount);
-
-        // If this is the 3rd resend, lock for future attempts
-        if (newResendCount >= 3) {
-          setResendLocked(true);
-        }
-
-        // Reset OTP inputs
-        setOtp(["", "", "", "", "", ""]);
-        inputsRef.current[0]?.focus();
-
-        // Start 30-second timer
-        const expiryTime = Date.now() + 30 * 1000;
-        localStorage.setItem("otpTimerExpiry", expiryTime);
-        setTimeRemaining(30);
-        setTimerActive(true);
-
-        setSuccess(
-          `✓ New OTP sent to ${phoneNumber}! (${newResendCount}/3 resends used)`,
-        );
-      } else {
-        setError(`Failed to resend OTP: ${result.details}`);
-        setResendDisabled(false);
-      }
-    } catch (err) {
-      setError("Failed to resend OTP. Please try again.");
-      setResendDisabled(false);
-      console.error("Resend OTP error:", err);
-    } finally {
-      // Keep button disabled until timer expires
-      if (timeRemaining > 0) {
-        setResendDisabled(true);
-      }
-    }
-  };
-
-  /**
-   * Format time display (MM:SS)
-   */
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs
-      .toString()
-      .padStart(2, "0")}`;
-  };
-
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-50 to-slate-100 flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
-        {/* Card Container */}
         <div className="bg-white rounded-2xl shadow-lg p-8 space-y-6">
-          {/* Header */}
           <div className="text-center space-y-2">
             <h1 className="text-3xl font-bold text-gray-900">Verify OTP</h1>
             <p className="text-gray-600">
-              We've sent a 6-digit code to your registered email/phone
+              {phoneNumber ? `We sent a 6-digit code to ${phoneNumber}` : "We sent a 6-digit code"}
             </p>
           </div>
 
-          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* OTP Input Boxes */}
             <div className="space-y-4">
-              <label className="block text-sm font-medium text-gray-700">
-                Enter OTP
-              </label>
+              <label className="block text-sm font-medium text-gray-700">Enter OTP</label>
 
               <div className="flex gap-3 justify-center">
                 {otp.map((digit, index) => (
@@ -410,43 +388,51 @@ const OtpVerification = () => {
                 ))}
               </div>
 
-              {/* Paste Hint */}
               <p className="text-xs text-gray-500 text-center">
                 💡 Tip: You can paste a 6-digit code in the first box
               </p>
             </div>
 
-            {/* Error Message */}
             {error && (
               <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
-                <span className="text-red-600 font-semibold text-sm flex-1">
-                  {error}
-                </span>
+                <span className="text-red-600 font-semibold text-sm flex-1">{error}</span>
               </div>
             )}
 
-            {/* Success Message */}
             {success && (
               <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg flex items-start gap-2">
-                <span className="text-emerald-600 font-semibold text-sm flex-1">
-                  {success}
-                </span>
+                <span className="text-emerald-600 font-semibold text-sm flex-1">{success}</span>
               </div>
             )}
 
-            {/* Timer Display */}
-            {timerActive && (
-              <div className="flex items-center justify-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <span className="text-sm text-blue-600">
-                  ⏱️ OTP expires in:{" "}
-                </span>
-                <span className="font-mono font-bold text-blue-700">
-                  {formatTime(timeRemaining)}
-                </span>
-              </div>
-            )}
+            {/* Resend OTP cooldown / button */}
+            <div className="border-t pt-6 space-y-3">
+              <p className="text-sm text-gray-600 text-center">Didn't receive the code?</p>
 
-            {/* Submit Button */}
+              <button
+                type="button"
+                onClick={handleResendOtp}
+                disabled={resendDisabled || resendLocked || loading}
+                className={`w-full py-2 px-4 font-medium rounded-lg border-2 transition-colors ${
+                  resendLocked
+                    ? "border-red-300 bg-red-50 text-red-600 cursor-not-allowed"
+                    : resendDisabled
+                    ? "border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed"
+                    : "border-emerald-600 bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
+                }`}
+              >
+                {resendLocked
+                  ? "🔒 Resend Locked (Max attempts reached)"
+                  : resendDisabled
+                  ? `Resend OTP (${pad2(Math.floor(timeRemaining / 60))}:${pad2(timeRemaining % 60)})`
+                  : "Resend OTP"}
+              </button>
+
+              <p className="text-xs text-gray-500 text-center">
+                Resend attempts: {resendCount}/{MAX_RESENDS}
+              </p>
+            </div>
+
             <button
               type="submit"
               disabled={loading || otp.join("").length !== 6}
@@ -463,67 +449,22 @@ const OtpVerification = () => {
             </button>
           </form>
 
-          {/* Resend OTP Section */}
-          <div className="border-t pt-6 space-y-3">
-            <p className="text-sm text-gray-600 text-center">
-              Didn't receive the code?
-            </p>
-
-            {/* Resend Button */}
-            <button
-              onClick={handleResendOtp}
-              disabled={resendDisabled || resendLocked}
-              className={`w-full py-2 px-4 font-medium rounded-lg border-2 transition-colors ${
-                resendLocked
-                  ? "border-red-300 bg-red-50 text-red-600 cursor-not-allowed"
-                  : resendDisabled
-                    ? "border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed"
-                    : "border-emerald-600 bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
-              }`}
-            >
-              {resendLocked
-                ? "🔒 Resend Locked (Max attempts reached)"
-                : resendDisabled && timerActive
-                  ? `Resend OTP (${formatTime(timeRemaining)})`
-                  : resendDisabled
-                    ? "Resend OTP"
-                    : `Resend OTP (${resendCount}/3)`}
-            </button>
-
-            {/* Resend Count Info */}
-            {!resendLocked && (
-              <p className="text-xs text-gray-500 text-center">
-                Resend attempts: {resendCount}/3
-              </p>
-            )}
-
-            {/* Lock Warning */}
-            {resendLocked && (
-              <p className="text-xs text-red-600 text-center font-semibold">
-                ⚠️ Contact support if you need additional resends
-              </p>
-            )}
-          </div>
-
-          {/* Footer Link */}
           <div className="text-center pt-4 border-t">
             <p className="text-sm text-gray-600">
               Wrong contact info?{" "}
-              <a
-                href="/register"
-                className="text-emerald-600 font-semibold hover:underline"
-              >
+              <a href="/register" className="text-emerald-600 font-semibold hover:underline">
                 Update it here
               </a>
             </p>
           </div>
         </div>
 
-        {/* Debug Info (Remove in Production) */}
+        {/* Debug info (remove in production) */}
         <div className="mt-4 text-center">
           <p className="text-xs text-gray-400">
-            🔧 Debug: Resends: {resendCount}/3 | Timer: {timeRemaining}s | OTP:
-            {otp.join("") || "(empty)"}
+            🔧 Debug: Timer: {timeRemaining}s | SessionId set: {sessionId ? "yes" : "no"}
+            
+            | OTP: {otp.join("") || "(empty)"}
           </p>
         </div>
       </div>
@@ -532,3 +473,4 @@ const OtpVerification = () => {
 };
 
 export default OtpVerification;
+

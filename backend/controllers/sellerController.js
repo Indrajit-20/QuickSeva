@@ -58,16 +58,22 @@ exports.updateSellerProfile = async (req, res) => {
     const seller = await SellerModel.findByUserId(req.user.id);
     if (!seller) return errorRes(res, "Seller profile not found", 404);
 
-    const { business_name, category_id, bio, experience_yrs,
-            working_radius, is_available } = req.body;
+    const {
+      business_name,
+      category_id,
+      bio,
+      experience_yrs,
+      working_radius,
+      is_available,
+    } = req.body;
     const fields = {};
 
-    if (business_name  !== undefined) fields.business_name  = business_name;
-    if (category_id    !== undefined) fields.category_id    = category_id;
-    if (bio            !== undefined) fields.bio            = bio;
+    if (business_name !== undefined) fields.business_name = business_name;
+    if (category_id !== undefined) fields.category_id = category_id;
+    if (bio !== undefined) fields.bio = bio;
     if (experience_yrs !== undefined) fields.experience_yrs = experience_yrs;
     if (working_radius !== undefined) fields.working_radius = working_radius;
-    if (is_available   !== undefined) fields.is_available   = is_available;
+    if (is_available !== undefined) fields.is_available = is_available;
 
     await SellerModel.update(seller.id, fields);
     const updated = await SellerModel.findById(seller.id);
@@ -86,8 +92,9 @@ exports.toggleAvailability = async (req, res) => {
     const newStatus = seller.is_available ? 0 : 1;
     await SellerModel.update(seller.id, { is_available: newStatus });
     return successRes(
-      res, { is_available: !!newStatus },
-      newStatus ? "You are now available" : "You are now offline"
+      res,
+      { is_available: !!newStatus },
+      newStatus ? "You are now available" : "You are now offline",
     );
   } catch (err) {
     return errorRes(res, "Failed to toggle availability");
@@ -107,7 +114,11 @@ exports.uploadDocuments = async (req, res) => {
     const docs = req.files.map((f) => `/uploads/documents/${f.filename}`);
     await SellerModel.update(seller.id, { documents: JSON.stringify(docs) });
 
-    return successRes(res, { documents: docs }, "Documents uploaded successfully");
+    return successRes(
+      res,
+      { documents: docs },
+      "Documents uploaded successfully",
+    );
   } catch (err) {
     return errorRes(res, "Failed to upload documents");
   }
@@ -119,8 +130,12 @@ exports.getAllSellers = async (req, res) => {
     const { page = 1, limit = 20, is_verified } = req.query;
     const { limit: lim, offset } = paginate(page, limit);
 
-    const verifiedFilter = is_verified !== undefined ? "WHERE s.is_verified = ?" : "";
-    const params = is_verified !== undefined ? [parseInt(is_verified), lim, offset] : [lim, offset];
+    const verifiedFilter =
+      is_verified !== undefined ? "WHERE s.is_verified = ?" : "";
+    const params =
+      is_verified !== undefined
+        ? [parseInt(is_verified), lim, offset]
+        : [lim, offset];
 
     const [rows] = await pool.query(
       `SELECT s.id, s.business_name, s.avg_rating, s.total_orders, s.is_verified, s.is_available,
@@ -130,7 +145,7 @@ exports.getAllSellers = async (req, res) => {
        LEFT JOIN categories c ON s.category_id = c.id
        ${verifiedFilter}
        ORDER BY s.created_at DESC LIMIT ? OFFSET ?`,
-      params
+      params,
     );
     return successRes(res, { sellers: rows });
   } catch (err) {

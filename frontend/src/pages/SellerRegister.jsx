@@ -154,10 +154,14 @@ const SellerRegister = () => {
     setIsLoading(true);
     setTimeout(() => {
       setIsLoading(false);
-      // OTP flow expects phoneNumber in location.state
+      // OTP flow expects phoneNumber and seller-register fields in location.state.
+      // IMPORTANT: OTP page will call backend /api/auth/send-otp immediately on load.
       navigate("/verify-otp", {
         state: {
           phoneNumber: formData.mobileNumber,
+          firstName: formData.ownerName,
+          lastName: "",
+          email: formData.email,
           userName: formData.businessName,
           otpRequestId: `seller-${Date.now()}`,
         },

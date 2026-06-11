@@ -1,469 +1,559 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-// Input field component — outside Register to prevent re-mount on every render
+// Strip trailing /api so it's never doubled regardless of .env value
+// e.g. "http://localhost:5000/api" → "http://localhost:5000"
+const API_BASE = (import.meta.env.VITE_API_URL || "http://localhost:5000")
+  .replace(/\/api\/?$/, "");
+
+// ─── Shared Input Component ───────────────────────────────────────────────────
+// Kept outside Register so it doesn't re-mount on every parent render.
 const InputField = ({
   label,
   name,
   type = "text",
   placeholder,
   maxLength,
-  formData,
-  errors,
-  touched,
-  handleChange,
-  handleBlur,
+  value,
+  error,
+  isTouched,
+  onChange,
+  onBlur,
+  prefix,
+  disabled,
 }) => (
   <div>
     <label className="block text-xs font-semibold text-indigo-200 mb-2">
       {label} <span className="text-red-400">*</span>
     </label>
-    <input
-      type={type}
-      name={name}
-      value={formData[name]}
-      onChange={handleChange}
-      onBlur={handleBlur}
-      placeholder={placeholder}
-      maxLength={maxLength}
-      className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${
-        errors[name] && touched[name]
-          ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
-          : !errors[name] && touched[name] && formData[name]
+    <div className="relative">
+      {prefix && (
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-400 font-semibold text-sm pointer-events-none select-none">
+          {prefix}
+        </span>
+      )}
+      <input
+        type={type}
+        name={name}
+        value={value}
+        onChange={onChange}
+        onBlur={onBlur}
+        placeholder={placeholder}
+        maxLength={maxLength}
+        disabled={disabled}
+        className={`w-full ${prefix ? "pl-12 pr-3" : "px-3"} py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed ${
+          error && isTouched
+            ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
+            : !error && isTouched && value
             ? "border-green-500/50 focus:ring-2 focus:ring-green-500/30 focus:border-green-500"
             : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
-      }`}
-    />
-    {errors[name] && touched[name] && (
-      <p className="mt-1 text-xs text-red-300">⚠ {errors[name]}</p>
+        }`}
+      />
+    </div>
+    {error && isTouched && (
+      <p className="mt-1 text-xs text-red-300">⚠ {error}</p>
     )}
   </div>
 );
 
+// ─── Step Indicator ───────────────────────────────────────────────────────────
+const StepIndicator = ({ current, labels }) => (
+  <div className="flex items-center justify-center gap-0 mb-6">
+    {labels.map((label, i) => {
+      const step = i + 1;
+      const done = current > step;
+      const active = current === step;
+      return (
+        <React.Fragment key={step}>
+          <div className="flex flex-col items-center gap-1">
+            <div
+              className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+                done
+                  ? "bg-green-600 text-white"
+                  : active
+                  ? "bg-indigo-600 text-white ring-2 ring-indigo-400/40"
+                  : "bg-indigo-900/60 text-indigo-500 border border-indigo-500/30"
+              }`}
+            >
+              {done ? "✓" : step}
+            </div>
+            <span
+              className={`text-[10px] font-medium transition-colors ${
+                active ? "text-indigo-200" : done ? "text-green-400" : "text-indigo-600"
+              }`}
+            >
+              {label}
+            </span>
+          </div>
+          {i < labels.length - 1 && (
+            <div
+              className={`h-0.5 w-14 mb-4 mx-1 transition-all duration-300 ${
+                current > step ? "bg-green-600/60" : "bg-indigo-800"
+              }`}
+            />
+          )}
+        </React.Fragment>
+      );
+    })}
+  </div>
+);
+
+// ─── Register Page ─────────────────────────────────────────────────────────────
 const Register = () => {
   const navigate = useNavigate();
+
+  // ── UI State ───────────────────────────────────────────────────────────────
+  const [step, setStep]               = useState(1); // 1 = details, 2 = OTP
+  const [isLoading, setIsLoading]     = useState(false);
+  const [serverError, setServerError] = useState("");
+  const [successMessage, setSuccess]  = useState("");
+
+  // ── Form State ─────────────────────────────────────────────────────────────
   const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
+    firstName:    "",
+    lastName:     "",
+    email:        "",
     mobileNumber: "",
+    agreeToTerms: false,
   });
-
-  const [errors, setErrors] = useState({});
+  const [errors,  setErrors]  = useState({});
   const [touched, setTouched] = useState({});
-  const [isLoading, setIsLoading] = useState(false);
-  const [passwordStrength, setPasswordStrength] = useState("none");
-  const [successMessage, setSuccessMessage] = useState("");
 
-  // Email validation
-  const validateEmail = (email) => {
-    if (!email) return "Email is required";
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) return "Enter valid email";
-    return null;
+  // ── OTP State ──────────────────────────────────────────────────────────────
+  const [otp,       setOtp]       = useState("");
+  const [sessionId, setSessionId] = useState("");
+  const [otpError,  setOtpError]  = useState("");
+
+  // ── Resend OTP State ────────────────────────────────────────────────────────
+  const [resendCountdown, setResendCountdown] = useState(0);   // seconds left
+  const resendTimerRef                        = useRef(null);   // interval ref
+
+  // Cleanup interval when component unmounts
+  useEffect(() => () => clearInterval(resendTimerRef.current), []);
+
+  // Start/restart a 60-second cooldown after every OTP send
+  const startResendTimer = () => {
+    clearInterval(resendTimerRef.current);
+    setResendCountdown(60);
+    resendTimerRef.current = setInterval(() => {
+      setResendCountdown((prev) => {
+        if (prev <= 1) { clearInterval(resendTimerRef.current); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
   };
 
-  // Mobile validation
-  const validateMobile = (mobile) => {
-    if (!mobile) return "Mobile number is required";
-    const digitsOnly = mobile.replace(/\D/g, "");
-    if (digitsOnly.length !== 10) return "Mobile number must be 10 digits";
-    return null;
+  // ── Field Validators ───────────────────────────────────────────────────────
+  const validators = {
+    firstName: (v) =>
+      !v ? "First name is required" : v.length < 2 ? "At least 2 characters required" : null,
+    lastName: (v) =>
+      !v ? "Last name is required" : v.length < 2 ? "At least 2 characters required" : null,
+    email: (v) => {
+      if (!v) return "Email address is required";
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return "Enter a valid email address";
+      return null;
+    },
+    mobileNumber: (v) => {
+      if (!v) return "Mobile number is required";
+      if (v.replace(/\D/g, "").length !== 10) return "Must be exactly 10 digits";
+      return null;
+    },
+    agreeToTerms: (v) => (!v ? "You must accept the Terms & Conditions" : null),
   };
 
-  // Password validation
-  const validatePassword = (password) => {
-    if (!password) return { error: "Password is required" };
-    if (password.length <=4)
-      return { error: "Password must be at least 4 characters" };
-    return { error: null };
+  const runFieldValidation = (name, value) => {
+    const err = validators[name]?.(value) ?? null;
+    setErrors((prev) => ({ ...prev, [name]: err }));
+    return !err;
   };
 
-  // Handle input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
-    let sanitizedValue = value;
+    const sanitized =
+      name === "mobileNumber" ? value.replace(/\D/g, "").slice(0, 10) : value;
 
-    if (name === "mobileNumber") {
-      sanitizedValue = value.replace(/\D/g, "").slice(0, 10);
-    }
-
-    // Update form data first
-    const newFormData = {
-      ...formData,
-      [name]: sanitizedValue,
-    };
-    setFormData(newFormData);
-
-    // Then validate using new form data
-    if (touched[name]) {
-      validateFieldWithData(name, sanitizedValue, newFormData);
-    }
+    setFormData((prev) => ({ ...prev, [name]: sanitized }));
+    if (touched[name]) runFieldValidation(name, sanitized);
   };
 
-  // Validate with new form data (for immediate feedback)
-  const validateFieldWithData = (name, value, currentFormData) => {
-    let error = null;
-
-    switch (name) {
-      case "firstName":
-        if (!value) error = "First name is required";
-        else if (value.length < 2) error = "Must be at least 2 characters";
-        break;
-      case "lastName":
-        if (!value) error = "Last name is required";
-        else if (value.length < 2) error = "Must be at least 2 characters";
-        break;
-      case "email":
-        error = validateEmail(value);
-        break;
-      case "mobileNumber":
-        error = validateMobile(value);
-        break;
-      default:
-        break;
-    }
-
-    setErrors((prev) => ({
-      ...prev,
-      [name]: error,
-    }));
-  };
-
-  // Handle blur
   const handleBlur = (e) => {
     const { name } = e.target;
     setTouched((prev) => ({ ...prev, [name]: true }));
-    validateFieldWithData(name, formData[name], formData);
+    runFieldValidation(name, formData[name]);
   };
 
-  // Validate individual field
-  const validateField = (name, value) => {
-    let error = null;
-
-    switch (name) {
-      case "firstName":
-        if (!value) error = "First name is required";
-        else if (value.length < 2) error = "Must be at least 2 characters";
-        break;
-      case "lastName":
-        if (!value) error = "Last name is required";
-        else if (value.length < 2) error = "Must be at least 2 characters";
-        break;
-      case "email":
-        error = validateEmail(value);
-        break;
-      case "mobileNumber":
-        error = validateMobile(value);
-        break;
-      case "password":
-        const passwordVal = validatePassword(value);
-        error = passwordVal.error;
-        break;
-      case "confirmPassword":
-        if (!value) error = "Confirm password is required";
-        else if (value !== formData.password) error = "Passwords do not match";
-        break;
-      default:
-        break;
-    }
-
+  const handleTermsChange = (e) => {
+    const checked = e.target.checked;
+    setFormData((prev) => ({ ...prev, agreeToTerms: checked }));
+    setTouched((prev) => ({ ...prev, agreeToTerms: true }));
     setErrors((prev) => ({
       ...prev,
-      [name]: error,
+      agreeToTerms: validators.agreeToTerms(checked),
     }));
   };
 
-  // Validate entire form
-  const validateForm = () => {
+  const validateAllFields = () => {
+    // Mark everything touched so errors become visible
+    setTouched(
+      Object.keys(validators).reduce((acc, k) => ({ ...acc, [k]: true }), {})
+    );
     const newErrors = {};
-    let isValid = true;
-
-    if (!formData.firstName || formData.firstName.length < 2) {
-      newErrors.firstName = formData.firstName
-        ? "Must be at least 2 characters"
-        : "First name is required";
-      isValid = false;
+    let valid = true;
+    for (const [key, fn] of Object.entries(validators)) {
+      const err = fn(formData[key]);
+      if (err) { newErrors[key] = err; valid = false; }
     }
-    if (!formData.lastName || formData.lastName.length < 2) {
-      newErrors.lastName = formData.lastName
-        ? "Must be at least 2 characters"
-        : "Last name is required";
-      isValid = false;
-    }
-
-    const emailError = validateEmail(formData.email);
-    if (emailError) {
-      newErrors.email = emailError;
-      isValid = false;
-    }
-
-    const mobileError = validateMobile(formData.mobileNumber);
-    if (mobileError) {
-      newErrors.mobileNumber = mobileError;
-      isValid = false;
-    }
-
-    const passwordVal = validatePassword(formData.password);
-    if (passwordVal.error) {
-      newErrors.password = passwordVal.error;
-      isValid = false;
-    }
-
-    if (!formData.confirmPassword) {
-      newErrors.confirmPassword = "Confirm password is required";
-
-      isValid = false;
-    } else if (formData.confirmPassword !== formData.password) {
-      newErrors.confirmPassword = "Passwords do not match";
-
-      isValid = false;
-    }
-
     setErrors(newErrors);
-    setTouched({
-      firstName: true,
-      lastName: true,
-      email: true,
-      mobileNumber: true,
-      password: true,
-      confirmPassword: true,
-    });
-
-    return isValid;
+    return valid;
   };
 
-  // Handle form submission
-  const handleSubmit = async (e) => {
+  // ── Step 1 → Send OTP ─────────────────────────────────────────────────────
+  // POST /api/auth/send-otp  { identifier, type: "register" }
+  // Checks user does NOT exist → sends OTP → returns sessionId
+  const handleSendOtp = async (e) => {
     e.preventDefault();
-    setSuccessMessage("");
-
-    if (!validateForm()) {
-      setErrors((prev) => ({
-        ...prev,
-        submit: "Please fill all required information first.",
-      }));
-      return;
-    }
+    setServerError("");
+    if (!validateAllFields()) return;
 
     setIsLoading(true);
-
     try {
-      // ========================================
-      // Store user data for registration
-      // ========================================
-      const userData = {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        mobileNumber: formData.mobileNumber,
-        password: formData.password,
-      };
-
-      // Store in localStorage (in production, send to backend)
-      localStorage.setItem("registeredUser", JSON.stringify(userData));
-
-      setSuccessMessage("✓ Registration Successful! Redirecting to login...");
-
-      setTimeout(() => {
-        // Reset form before redirecting
-        setFormData({
-          firstName: "",
-          lastName: "",
-          email: "",
-          mobileNumber: "",
-          password: "",
-          confirmPassword: "",
-        });
-        setErrors({});
-        setTouched({});
-        setPasswordStrength("none");
-        setSuccessMessage("");
-
-        // Redirect to login
-        navigate("/login");
-      }, 2000);
-
-      console.log("User registered successfully:", userData);
-    } catch (err) {
-      setErrors({
-        submit: err.message || "An error occurred during registration",
+      const res = await fetch(`${API_BASE}/api/auth/send-otp`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({
+          identifier: formData.mobileNumber,
+          type:       "register",
+        }),
       });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to send OTP");
+
+      setSessionId(data.data?.sessionId ?? "");
+      startResendTimer();   // begin 60-second cooldown
+      setStep(2);
+    } catch (err) {
+      setServerError(err.message || "Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
 
+  // ── Resend OTP ─────────────────────────────────────────────────────────────
+  // Allowed only after the 60-second cooldown expires.
+  const handleResendOtp = async () => {
+    if (resendCountdown > 0 || isLoading) return;
+    setServerError("");
+    setOtpError("");
+    setIsLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/send-otp`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({
+          identifier: formData.mobileNumber,
+          type:       "register",
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to resend OTP");
+
+      setSessionId(data.data?.sessionId ?? "");
+      setOtp("");
+      startResendTimer();
+    } catch (err) {
+      setServerError(err.message || "Failed to resend OTP. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ── Step 2 → Verify OTP + Create Account ──────────────────────────────────
+  // POST /api/auth/verify-otp  { identifier, otp, sessionId, type: "register",
+  //                              name, email, role }
+  // Verifies OTP → creates user → creates wallet → returns JWT + user
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    setServerError("");
+    setOtpError("");
+
+    if (!otp || !/^\d{6}$/.test(otp)) {
+      setOtpError("Please enter the 6-digit code sent to your phone.");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/verify-otp`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({
+          identifier: formData.mobileNumber,
+          otp,
+          sessionId,
+          type:       "register",
+          name:       `${formData.firstName.trim()} ${formData.lastName.trim()}`,
+          email:      formData.email,
+          role:       "buyer",
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "OTP verification failed");
+
+      setSuccess("Account created successfully! Redirecting to login…");
+      setTimeout(() => navigate("/login"), 1800);
+    } catch (err) {
+      setServerError(err.message || "Something went wrong. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ── Go back to step 1 ─────────────────────────────────────────────────────
+  const handleBack = () => {
+    setStep(1);
+    setOtp("");
+    setOtpError("");
+    setServerError("");
+  };
+
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-900 via-indigo-950 to-black flex items-center justify-center p-3 py-6">
       <div className="bg-indigo-900/40 backdrop-blur-md rounded-2xl shadow-2xl w-full max-w-md p-8 border border-indigo-500/30 red-accent-line">
+
         {/* Header */}
         <div className="text-center mb-6">
-          <h1 className="text-3xl font-bold text-white mb-2">Create Account</h1>
-          <p className="text-indigo-200 text-sm">Join us today</p>
+          <h1 className="text-3xl font-bold text-white mb-1">Create Account</h1>
+          <p className="text-indigo-300 text-sm">
+            {step === 1
+              ? "Fill in your details to get started"
+              : `OTP sent to +91 ${formData.mobileNumber}`}
+          </p>
         </div>
 
-        {/* Success Message */}
+        {/* Step Indicator */}
+        <StepIndicator current={step} labels={["Your Details", "Verify OTP"]} />
+
+        {/* Success Banner */}
         {successMessage && (
           <div className="mb-4 p-3 bg-green-500/20 border border-green-500/50 rounded-lg">
-            <p className="text-green-200 text-xs flex items-center font-semibold">
-              <span className="mr-2">✓</span>
-              {successMessage}
+            <p className="text-green-200 text-xs font-semibold flex items-center gap-2">
+              <span>✓</span> {successMessage}
             </p>
           </div>
         )}
 
-        {/* Error Message */}
-        {errors.submit && (
+        {/* Server / Network Error */}
+        {serverError && (
           <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg">
-            <p className="text-red-200 text-xs flex items-center">
-              <span className="mr-2">⚠</span>
-              {errors.submit}
+            <p className="text-red-200 text-xs flex items-center gap-2">
+              <span>⚠️</span> {serverError}
             </p>
           </div>
         )}
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-3">
-          {/* Grid: First Name + Last Name on same row */}
-          <div className="grid grid-cols-2 gap-2">
-            <InputField
-              label="First Name"
-              name="firstName"
-              placeholder="John"
-              formData={formData}
-              errors={errors}
-              touched={touched}
-              handleChange={handleChange}
-              handleBlur={handleBlur}
-            />
-            <InputField
-              label="Last Name"
-              name="lastName"
-              placeholder="Doe"
-              formData={formData}
-              errors={errors}
-              touched={touched}
-              handleChange={handleChange}
-              handleBlur={handleBlur}
-            />
-          </div>
-          {/* Email */}
-          <InputField
-            label="Email Address"
-            name="email"
-            type="email"
-            placeholder="you@example.com"
-            formData={formData}
-            errors={errors}
-            touched={touched}
-            handleChange={handleChange}
-            handleBlur={handleBlur}
-          />
-          {/* Mobile Number */}
-          <div>
-            <label className="form-label">
-              Mobile Number <span className="text-danger">*</span>
-            </label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted font-semibold">
-                +91
-              </span>
-              <input
-                type="tel"
-                name="mobileNumber"
-                value={formData.mobileNumber}
+        {/* ── STEP 1: Details ────────────────────────────────────────────── */}
+        {step === 1 && (
+          <form onSubmit={handleSendOtp} className="space-y-3" noValidate>
+
+            {/* First + Last Name on one row */}
+            <div className="grid grid-cols-2 gap-2">
+              <InputField
+                label="First Name"
+                name="firstName"
+                placeholder="John"
+                value={formData.firstName}
+                error={errors.firstName}
+                isTouched={touched.firstName}
                 onChange={handleChange}
                 onBlur={handleBlur}
-                placeholder="98765 43210"
-                maxLength="10"
-                className={`form-input pl-12 ${
-                  errors.mobileNumber && touched.mobileNumber
-                    ? "border-danger focus:ring-danger"
-                    : !errors.mobileNumber &&
-                        touched.mobileNumber &&
-                        formData.mobileNumber
-                      ? "border-success focus:ring-success"
-                      : "focus:border-primary"
-                }`}
+                disabled={isLoading}
+              />
+              <InputField
+                label="Last Name"
+                name="lastName"
+                placeholder="Doe"
+                value={formData.lastName}
+                error={errors.lastName}
+                isTouched={touched.lastName}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                disabled={isLoading}
               />
             </div>
-            {errors.mobileNumber && touched.mobileNumber && (
-              <p className="mt-1 text-xs text-danger">
-                ⚠ {errors.mobileNumber}
-              </p>
-            )}
-          </div>
-          {/* Password */}
-          <div>
-            <label className="block text-xs font-semibold text-indigo-200 mb-2">
-              Password <span className="text-red-400">*</span>
-            </label>
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
+
+            {/* Email */}
+            <InputField
+              label="Email Address"
+              name="email"
+              type="email"
+              placeholder="you@example.com"
+              value={formData.email}
+              error={errors.email}
+              isTouched={touched.email}
               onChange={handleChange}
               onBlur={handleBlur}
-              placeholder="••••••••"
-              className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${
-                errors.password && touched.password
-                  ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
-                  : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
-              }`}
+              disabled={isLoading}
             />
-            {errors.password && touched.password && (
-              <p className="mt-1 text-xs text-red-300">⚠ {errors.password}</p>
-            )}
-          </div>{" "}
-          {/* Confirm Password */}
-          <InputField
-            label="Confirm Password"
-            name="confirmPassword"
-            type="password"
-            placeholder="••••••••"
-            formData={formData}
-            errors={errors}
-            touched={touched}
-            handleChange={handleChange}
-            handleBlur={handleBlur}
-          />
-          {/* Terms & Conditions */}
-          <div className="flex items-start text-sm">
-            <input
-              type="checkbox"
-              id="terms"
-              required
-              className="w-4 h-4 text-indigo-600 rounded mt-0.5 focus:ring-indigo-500 border-indigo-500/50 bg-indigo-950/40"
+
+            {/* Mobile — with +91 prefix, uses InputField for consistency */}
+            <InputField
+              label="Mobile Number"
+              name="mobileNumber"
+              type="tel"
+              placeholder="98765 43210"
+              maxLength={10}
+              prefix="+91"
+              value={formData.mobileNumber}
+              error={errors.mobileNumber}
+              isTouched={touched.mobileNumber}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              disabled={isLoading}
             />
-            <label htmlFor="terms" className="ml-2 text-indigo-200">
-              I agree to the{" "}
-              <Link
-                to="#"
-                className="text-indigo-400 hover:text-indigo-300 hover:underline font-semibold"
-              >
-                Terms & Conditions
-              </Link>
-            </label>
-          </div>
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full mt-4 px-4 py-2.5 rounded-lg font-semibold text-white bg-linear-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 hover:scale-[1.01] hover:shadow-lg active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-          >
-            {isLoading ? "Creating Account..." : "Sign Up"}
-          </button>
-        </form>
+
+            {/* Terms & Conditions */}
+            <div>
+              <div className="flex items-start gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  id="terms"
+                  checked={formData.agreeToTerms}
+                  onChange={handleTermsChange}
+                  disabled={isLoading}
+                  className="w-4 h-4 mt-0.5 text-indigo-600 rounded border-indigo-500/50 bg-indigo-950/40 focus:ring-indigo-500 disabled:opacity-60 cursor-pointer"
+                />
+                <label htmlFor="terms" className="text-indigo-200 cursor-pointer select-none">
+                  I agree to the{" "}
+                  <Link
+                    to="#"
+                    className="text-indigo-400 hover:text-indigo-300 hover:underline font-semibold"
+                  >
+                    Terms & Conditions
+                  </Link>
+                </label>
+              </div>
+              {errors.agreeToTerms && touched.agreeToTerms && (
+                <p className="mt-1 text-xs text-red-300">⚠ {errors.agreeToTerms}</p>
+              )}
+            </div>
+
+            {/* CTA */}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full mt-2 px-4 py-2.5 rounded-lg font-semibold text-white bg-linear-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 hover:scale-[1.01] hover:shadow-lg active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+            >
+              {isLoading ? "Sending OTP…" : "Get OTP →"}
+            </button>
+          </form>
+        )}
+
+        {/* ── STEP 2: OTP Verification ───────────────────────────────────── */}
+        {step === 2 && (
+          <form onSubmit={handleVerifyOtp} className="space-y-4" noValidate>
+
+            {/* Summary card */}
+            <div className="bg-indigo-950/50 border border-indigo-500/20 rounded-xl p-4 space-y-1 text-sm">
+              <p className="text-indigo-300">
+                <span className="text-indigo-500 font-medium">Name: </span>
+                {formData.firstName} {formData.lastName}
+              </p>
+              <p className="text-indigo-300">
+                <span className="text-indigo-500 font-medium">Email: </span>
+                {formData.email}
+              </p>
+              <p className="text-indigo-300">
+                <span className="text-indigo-500 font-medium">Mobile: </span>
+                +91 {formData.mobileNumber}
+              </p>
+            </div>
+
+            {/* OTP input */}
+            <div>
+              <label className="block text-xs font-semibold text-indigo-200 mb-2">
+                Enter OTP <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={otp}
+                onChange={(e) => {
+                  const v = e.target.value.replace(/\D/g, "").slice(0, 6);
+                  setOtp(v);
+                  if (otpError) setOtpError("");
+                }}
+                placeholder="• • • • • •"
+                maxLength={6}
+                disabled={isLoading}
+                className={`w-full px-3 py-2.5 rounded-lg text-lg tracking-[0.4em] font-bold text-center bg-indigo-950/40 border transition-all duration-200 text-white focus:outline-none disabled:opacity-60 ${
+                  otpError
+                    ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
+                    : otp.length === 6
+                    ? "border-green-500/50 focus:ring-2 focus:ring-green-500/30"
+                    : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
+                }`}
+              />
+              {otpError && (
+                <p className="mt-1 text-xs text-red-300">⚠ {otpError}</p>
+              )}
+
+              {/* Sent-to hint + Resend OTP */}
+              <div className="mt-3 flex items-center justify-between">
+                <p className="text-xs text-indigo-400">
+                  Sent to +91 {formData.mobileNumber}
+                </p>
+                <button
+                  type="button"
+                  onClick={handleResendOtp}
+                  disabled={resendCountdown > 0 || isLoading}
+                  className={`text-xs font-semibold transition-all duration-200 ${
+                    resendCountdown > 0 || isLoading
+                      ? "text-indigo-600 cursor-not-allowed"
+                      : "text-indigo-400 hover:text-indigo-200 hover:underline cursor-pointer"
+                  }`}
+                >
+                  {resendCountdown > 0
+                    ? `Resend in ${resendCountdown}s`
+                    : isLoading
+                    ? "Sending…"
+                    : "Resend OTP"}
+                </button>
+              </div>
+            </div>
+
+            {/* Verify button */}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full px-4 py-2.5 rounded-lg font-semibold text-white bg-linear-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 hover:scale-[1.01] hover:shadow-lg active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+            >
+              {isLoading ? "Creating Account…" : "Create Account ✓"}
+            </button>
+
+            {/* Back button */}
+            <button
+              type="button"
+              onClick={handleBack}
+              disabled={isLoading}
+              className="w-full px-4 py-2 rounded-lg font-medium text-indigo-300 bg-transparent border border-indigo-500/30 hover:bg-indigo-800/30 transition-all duration-200 text-sm disabled:opacity-50"
+            >
+              ← Change Details
+            </button>
+          </form>
+        )}
 
         {/* Divider */}
         <div className="my-6 flex items-center red-accent-top pt-6">
-          <div className="grow border-t border-indigo-500/30"></div>
+          <div className="grow border-t border-indigo-500/30" />
           <span className="px-4 text-indigo-300 text-sm">or</span>
-          <div className="grow border-t border-indigo-500/30"></div>
+          <div className="grow border-t border-indigo-500/30" />
         </div>
 
-        {/* Link to Login */}
+        {/* Sign-in link */}
         <p className="text-center text-indigo-200 text-sm">
           Already have an account?{" "}
           <Link

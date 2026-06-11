@@ -1,11 +1,13 @@
 const { pool } = require("../config/db");
+const { normalizeIndianMobile } = require("../utils/phoneUtils");
 
 const UserModel = {
   // Create a new user
   create: async ({ name, email, phone, hashedPassword, role = "buyer" }) => {
+    const normalizedPhone = normalizeIndianMobile(phone);
     const [result] = await pool.query(
       `INSERT INTO users (name, email, phone, password, role) VALUES (?, ?, ?, ?, ?)`,
-      [name, email || null, phone, hashedPassword, role]
+      [name, email || null, normalizedPhone, hashedPassword, role],
     );
     return result.insertId;
   },
@@ -15,16 +17,19 @@ const UserModel = {
     const [rows] = await pool.query(
       `SELECT id, name, email, phone, role, profile_pic, address, city, state, pincode, lat, lng, is_verified, is_active, created_at
        FROM users WHERE id = ?`,
-      [id]
+      [id],
     );
     return rows[0] || null;
   },
 
   // Find by phone
   findByPhone: async (phone) => {
+    const normalizedPhone = normalizeIndianMobile(phone);
+    if (!normalizedPhone) return null;
+
     const [rows] = await pool.query(
       `SELECT * FROM users WHERE phone = ? LIMIT 1`,
-      [phone]
+      [normalizedPhone],
     );
     return rows[0] || null;
   },
@@ -33,25 +38,30 @@ const UserModel = {
   findByEmail: async (email) => {
     const [rows] = await pool.query(
       `SELECT * FROM users WHERE email = ? LIMIT 1`,
-      [email]
+      [email],
     );
     return rows[0] || null;
   },
 
   // Update user profile
   update: async (id, fields) => {
-    const sets = Object.keys(fields).map((k) => `${k} = ?`).join(", ");
+    const sets = Object.keys(fields)
+      .map((k) => `${k} = ?`)
+      .join(", ");
     const values = [...Object.values(fields), id];
     const [result] = await pool.query(
       `UPDATE users SET ${sets} WHERE id = ?`,
-      values
+      values,
     );
     return result.affectedRows;
   },
 
   // Update password
   updatePassword: async (id, hashedPassword) => {
-    await pool.query(`UPDATE users SET password = ? WHERE id = ?`, [hashedPassword, id]);
+    await pool.query(`UPDATE users SET password = ? WHERE id = ?`, [
+      hashedPassword,
+      id,
+    ]);
   },
 
   // Verify user
@@ -64,9 +74,11 @@ const UserModel = {
     const [rows] = await pool.query(
       `SELECT id, name, email, phone, role, city, is_verified, is_active, created_at
        FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?`,
-      [limit, offset]
+      [limit, offset],
     );
-    const [[{ total }]] = await pool.query(`SELECT COUNT(*) as total FROM users`);
+    const [[{ total }]] = await pool.query(
+      `SELECT COUNT(*) as total FROM users`,
+    );
     return { users: rows, total };
   },
 };

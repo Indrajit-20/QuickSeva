@@ -12,9 +12,9 @@ import axios from "axios";
 // ========================================
 // 1. CREATE AXIOS INSTANCE
 // ========================================
-// Point this to your .NET backend URL
 const API_BASE_URL =
-  process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+  import.meta.env.VITE_API_URL ||
+  "http://localhost:5000/api";
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -60,13 +60,27 @@ apiClient.interceptors.request.use(
     // If there's an error before the request is sent, reject it
     console.error("[API Request Error]", error);
     return Promise.reject(error);
-  }
+  },
 );
 
 // ========================================
-// 3. RESPONSE INTERCEPTOR (Will be added in Step 2)
+// 3. RESPONSE INTERCEPTOR
+// - If token is invalid/expired => auto-remove and bubble error
 // ========================================
-// We'll add this in the next step
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error?.response?.status;
+    if (status === 401) {
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("userRole");
+      // Keep it generic (no router dependency here)
+      console.warn("[API] 401 received - clearing auth token");
+    }
+
+    return Promise.reject(error);
+  },
+);
 
 // ========================================
 // 4. EXPORT THE CONFIGURED INSTANCE

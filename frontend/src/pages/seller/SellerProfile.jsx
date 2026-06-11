@@ -3,13 +3,15 @@ import { Save } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { serviceOptions } from "./sellerData";
 
+
 const inputClass =
   "w-full rounded-lg border border-indigo-500/20 bg-[#0f0e1a] px-3 py-2.5 text-sm font-medium text-white outline-none transition placeholder:text-slate-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20";
 
 const labelClass = "mb-2 block text-sm font-semibold text-slate-300";
 
 export default function SellerProfile() {
-  const { user, updateUser, getUserIdentifier } = useAuth();
+  const { user, updateUser } = useAuth();
+
   const savedProfile = (() => {
     try {
       return JSON.parse(localStorage.getItem("sellerProfile") || "{}");
@@ -71,7 +73,8 @@ export default function SellerProfile() {
             <h1 className="text-3xl font-bold text-white">
               {profile.fullName || "Seller"}
             </h1>
-            <p className="mt-1 text-[#94a3b8]">{getUserIdentifier()}</p>
+            <p className="mt-1 text-[#94a3b8]">{user?.phone || user?.email || ""}</p>
+
             <div className="mt-3 flex flex-wrap gap-2">
               <span className="rounded-full border border-indigo-400/30 bg-indigo-500/10 px-3 py-1 text-xs font-bold text-indigo-200">
                 {user?.type === "email" ? "Email Login" : "OTP Login"}
@@ -207,19 +210,7 @@ export default function SellerProfile() {
               className={inputClass}
             />
           </div>
-          <div>
-            <label className={labelClass}>Service Type</label>
-            <select
-              name="serviceType"
-              value={profile.serviceType}
-              onChange={handleChange}
-              className={inputClass}
-            >
-              {serviceOptions.map((service) => (
-                <option key={service}>{service}</option>
-              ))}
-            </select>
-          </div>
+         
           <div>
             <label className={labelClass}>Years of Experience</label>
             <input

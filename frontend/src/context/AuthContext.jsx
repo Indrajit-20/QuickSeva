@@ -1,38 +1,51 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 
+import { getMe, verifyOtp, sendOtp, getBackendErrorMessage } from "../api/authService";
+
+
 /**
  * AuthContext
- * Manages global authentication state
- * Supports both email and phone-verified users
+ * JWT-backed auth state using backend:
+ * - POST /api/auth/send-otp
+ * - POST /api/auth/verify-otp
+ * - GET  /api/auth/me
  */
+
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   // ========================================
   // AUTH STATE
   // ========================================
-  const [user, setUser] = useState(null); // Authenticated user
+  const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [authError, setAuthError] = useState(null);
 
   // ========================================
-  // INITIALIZE AUTH STATE ON MOUNT
-  // Load from localStorage to persist login
+  // LOAD CURRENT USER (JWT) ON MOUNT
   // ========================================
   useEffect(() => {
-    const initializeAuth = () => {
+    const initializeAuth = async () => {
       try {
-        const storedUser = localStorage.getItem("loggedInUser");
-
-        if (storedUser) {
-          const parsedUser = JSON.parse(storedUser);
-          setUser(parsedUser);
-          setIsAuthenticated(true);
+        const token = localStorage.getItem("authToken");
+        if (!token) {
+          setIsAuthenticated(false);
+          setUser(null);
+          return;
         }
+
+        // Fetch /api/auth/me to validate token + get user
+        const { data } = await getMe();
+        setUser(data.user || null);
+        setIsAuthenticated(Boolean(data?.user));
+        setAuthError(null);
       } catch (err) {
-        console.error("Failed to initialize auth:", err);
-        setAuthError("Failed to load authentication");
+        console.error("Auth init failed:", err);
+        localStorage.removeItem("authToken");
+        setUser(null);
+        setIsAuthenticated(false);
+        setAuthError("Session expired. Please login again.");
       } finally {
         setIsLoading(false);
       }
@@ -42,87 +55,72 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // ========================================
-  // LOGIN - EMAIL
+  // OTP LOGIN
   // ========================================
-  const loginWithEmail = (email, name) => {
-    const userData = {
-      type: "email",
-      email,
-      name,
-      loginTime: new Date().toISOString(),
-    };
-
-    localStorage.setItem("loggedInUser", JSON.stringify(userData));
-    setUser(userData);
-    setIsAuthenticated(true);
+  const sendOtpToPhone = async ({ identifier }) => {
+    setIsLoading(true);
     setAuthError(null);
+    try {
+      const result = await sendOtp({ identifier, type: "login" });
+      return result;
+    } catch (err) {
+      const message = getBackendErrorMessage(err);
+      setAuthError(message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  // ========================================
-  // LOGIN - PHONE (OTP VERIFIED)
-  // ========================================
-  const loginWithPhone = (phone, name) => {
-    const userData = {
-      type: "phone",
-      phone,
-      name,
-      loginTime: new Date().toISOString(),
-    };
+  const loginWithOtp = async ({ identifier, otp, sessionId }) => {
 
-    localStorage.setItem("loggedInUser", JSON.stringify(userData));
-    setUser(userData);
-    setIsAuthenticated(true);
+    setIsLoading(true);
+
     setAuthError(null);
+
+    try {
+      const payload = { identifier, otp, sessionId, type: "login" };
+      const result = await verifyOtp(payload);
+
+      const token = result?.data?.token;
+      const userData = result?.data?.user;
+
+      if (!token || !userData) {
+        throw new Error("Invalid OTP verification response from server.");
+      }
+
+      localStorage.setItem("authToken", token);
+      if (userData?.role) localStorage.setItem("userRole", userData.role);
+
+      setUser(userData);
+      setIsAuthenticated(true);
+      return { user: userData, token };
+    } catch (err) {
+      const message = getBackendErrorMessage(err);
+      setAuthError(message);
+      setIsAuthenticated(false);
+      setUser(null);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  // ========================================
-  // UPDATE USER INFO
-  // ========================================
-  const updateUser = (updates) => {
-    if (!user) return;
-
-    const updatedUser = {
-      ...user,
-      ...updates,
-    };
-
-    localStorage.setItem("loggedInUser", JSON.stringify(updatedUser));
-    setUser(updatedUser);
-  };
 
   // ========================================
   // LOGOUT
   // ========================================
   const logout = () => {
-    localStorage.removeItem("loggedInUser");
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("userRole");
     localStorage.removeItem("otpTimerExpiry");
     localStorage.removeItem("otpResendCount");
+
     setUser(null);
     setIsAuthenticated(false);
     setAuthError(null);
   };
 
-  // ========================================
-  // CHECK IF USER IS LOGGED IN
-  // ========================================
-  const isLoggedIn = () => {
-    return isAuthenticated && user !== null;
-  };
-
-  // ========================================
-  // GET USER LOGIN TYPE
-  // ========================================
-  const getUserLoginType = () => {
-    return user?.type; // "email" or "phone"
-  };
-
-  // ========================================
-  // GET USER IDENTIFIER (EMAIL or PHONE)
-  // ========================================
-  const getUserIdentifier = () => {
-    if (!user) return null;
-    return user.type === "email" ? user.email : user.phone;
-  };
 
   // ========================================
   // CONTEXT VALUE
@@ -135,14 +133,11 @@ export const AuthProvider = ({ children }) => {
     authError,
 
     // Methods
-    loginWithEmail,
-    loginWithPhone,
-    updateUser,
+    sendOtp: sendOtpToPhone,
+    loginWithOtp,
     logout,
-    isLoggedIn,
-    getUserLoginType,
-    getUserIdentifier,
   };
+
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

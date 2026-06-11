@@ -1,13 +1,29 @@
-# TODO - Unavailable dates calendar fixes
+# TODO - QuickSeva Seller/User Authentication Fix
 
-- [x] Update `frontend/src/pages/seller/SellerServices.jsx` to use dedicated `unavailableDates` state.
+## Step 1: Identify root cause
 
-- [ ] Implement robust ymd <-> Date conversion without timezone shift.
-- [ ] Fix `react-multi-date-picker` `multiple` + `range` `onChange` normalization.
-- [ ] Implement per-date remove UI and handler (Remove button on each chip).
-- [ ] Implement Clear All Dates button.
-- [ ] Ensure selected dates render below calendar and update instantly.
-- [ ] Ensure Live Service Preview shows unavailable dates from same state.
-- [ ] Add temporary log: `console.log("Selected Dates:", unavailableDates);`
-- [ ] Ensure submit persists `unavailableDates` into service.
-- [ ] Run `npm run lint` and basic manual tests.
+- [x] Analyze backend OTP endpoints (sendOTP/verifyOTP) and frontend OTP flow.
+- [x] Confirm which DB fields are used for phone normalization in each path.
+
+## Step 2: Implement required architecture
+
+- [x] Ensure login OTP searches ONLY `users` table.
+- [x] Ensure OTP send/verify accept both seller and user roles (role stored in users).
+- [x] Ensure seller registration creates `users` row with role='seller' and also creates `sellers` row with user_id immediately.
+
+## Step 3: Fix seller OTP not finding seller accounts
+
+- [x] Add seller profile creation inside `verifyOTP()` for `type === "seller-register"` immediately after `UserModel.create(...)`.
+- [x] Add required console logs.
+- [ ] Run verification SQL checks (manual):
+  - [ ] SELECT \* FROM users WHERE role='seller';
+  - [ ] SELECT \* FROM sellers;
+
+## Step 4: Frontend redirect logic
+
+- [ ] Ensure after OTP verify, frontend redirects based on returned user.role.
+
+## Step 5: Add tests / run verification
+
+- [ ] Manual test: Seller Register → OTP Verify → seller dashboard works.
+- [ ] Manual test: Buyer Register/Login flow unchanged.

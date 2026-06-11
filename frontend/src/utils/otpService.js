@@ -3,7 +3,10 @@
  * Handles SMS OTP verification using 2factor.in API
  */
 
-const API_KEY = "354d27f2-fdd2-11eb-a13b-0200cd936042"; // Your API key
+// NOTE: 2Factor API key MUST NOT be shipped to browser.
+// This file should not be used for production OTP flows.
+// Seller Registration OTP must use backend APIs only.
+const API_KEY = null; // deprecated
 const API_BASE_URL = "/otp-api/API/V1"; // Vite proxy endpoint
 
 /**
@@ -12,51 +15,17 @@ const API_BASE_URL = "/otp-api/API/V1"; // Vite proxy endpoint
  * @returns {Promise<{status: string, details: string, sessionId?: string}>}
  */
 export const sendOTP = async (phone) => {
-  try {
-    // Correct send URL (server generates OTP/session)
-    // Your confirmed SEND endpoint pattern:
-    // https://2factor.in/API/V1/{apiKey}/SMS/{phone}/AUTOGEN/anyhelp
-    const url = `${API_BASE_URL}/${API_KEY}/SMS/${phone}/AUTOGEN/anyhelp`;
-
-    console.log("📤 Sending OTP to:", phone);
-    console.log("🔗 Using Vite proxy at:", url);
-
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    console.log("📥 Response from 2factor.in:", data);
-
-    if (data.Status === "Success") {
-      return {
-        status: "success",
-        details: data.Details,
-        // session id for VERIFY is returned in Details
-        sessionId: data.Details,
-      };
-    }
-
-    return {
-      status: "error",
-      details: data.Details || "Failed to send OTP",
-    };
-  } catch (error) {
-    console.error("❌ Error sending OTP:", error);
-    return {
-      status: "error",
-      details:
-        error.message || "Failed to send OTP. Check console for details.",
-    };
-  }
+  throw new Error(
+    "sendOTP is disabled for production. Seller Registration must call backend /api/auth/send-otp only (no 2factor.in from frontend).",
+  );
 };
 
 /**
  * Generate random 6-digit OTP
  * @returns {string} - 6-digit OTP
  */
+// The following helpers are no longer required for production login flow.
+// Kept as-is for compatibility with any other (non-OTP-login) code.
 export const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
@@ -102,44 +71,10 @@ export const formatPhoneNumber = (phone) => {
  * @param {string} enteredOtp - OTP entered by user
  * @returns {Promise<{verified: boolean, message: string}>}
  */
-export const verifyOTP = async (phone, sessionId, enteredOtp) => {
-  try {
-    // Your confirmed VERIFY endpoint:
-    // https://2factor.in/API/V1/{apiKey}/SMS/VERIFY/{sessionId}/{otp}
-    const url = `${API_BASE_URL}/${API_KEY}/SMS/VERIFY/${sessionId}/${enteredOtp}`;
-
-    console.log("🔐 Verifying OTP...");
-    console.log("🔗 Using Vite proxy at:", url);
-
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    console.log("📥 Verify response from 2factor.in:", data);
-
-    if (data.Status === "Success") {
-      // Expected response like:
-      // {"Status":"Success","Details":"<sessionId>"}
-      return {
-        verified: true,
-        message: "OTP verified successfully",
-      };
-    }
-
-    return {
-      verified: false,
-      message: data.Details || "Invalid OTP",
-    };
-  } catch (error) {
-    console.error("Error verifying OTP:", error);
-    return {
-      verified: false,
-      message: error.message || "Verification failed",
-    };
-  }
+export const verifyOTP = async () => {
+  throw new Error(
+    "verifyOTP is disabled for production. Seller Registration must call backend /api/auth/verify-otp only (no 2factor.in from frontend).",
+  );
 };
 
 /**
