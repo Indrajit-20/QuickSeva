@@ -17,6 +17,7 @@ const nearbyRoutes = require("./routes/nearbyRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const sellerLocationRoutes = require("./routes/sellerLocationRoutes");
+const leadChargeRoutes = require("./routes/leadChargeRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -58,6 +59,7 @@ app.use("/api/nearby", nearbyRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api", sellerLocationRoutes);
+app.use("/api", leadChargeRoutes);
 
 // ── Error Handling ────────────────────────────────────────────────────────────
 app.use(notFound);

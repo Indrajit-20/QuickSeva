@@ -271,17 +271,10 @@ export default function SellerServices() {
           </div>
 
           <div>
-            <label className={labelClass}>⏱ Service Duration</label>
+            <label className={labelClass}> Service Duration</label>
 
             <div className="mt-1 rounded-xl border border-[rgba(99,102,241,0.18)] bg-[#0f1024] p-4 shadow-[inset_0_0_0_1px_rgba(99,102,241,0.08)]">
-              <TimePicker
-                onChange={setDuration}
-                value={duration}
-                disableClock={true}
-                clearIcon={null}
-                format="HH:mm"
-                className="custom-time-picker"
-              />
+              
 
               <style>{`
                 .custom-time-picker .react-time-picker__wrapper {

@@ -105,6 +105,10 @@ export default function SellerPublicProfile() {
   const [bookingError, setBookingError] = useState("");
   const [distanceLabel, setDistanceLabel] = useState("");
 
+  const [showContact, setShowContact] = useState(false);
+  const [contactLoading, setContactLoading] = useState(false);
+  const [contactError, setContactError] = useState("");
+
   const sellers = useMemo(() => {
     try {
       const raw = localStorage.getItem("sellers");
@@ -140,7 +144,9 @@ export default function SellerPublicProfile() {
 
   const services = useMemo(() => {
     const source =
-      savedServices.length > 0 ? savedServices : defaultServicesForSeller(seller);
+      savedServices.length > 0
+        ? savedServices
+        : defaultServicesForSeller(seller);
 
     return source.map((service, index) => ({
       id: service.id || `${service.name}-${index}`,
@@ -193,7 +199,6 @@ export default function SellerPublicProfile() {
     return undefined;
   }, [seller]);
 
-
   if (!seller) {
     return (
       <main className="min-h-screen bg-[#0d0d1a] px-4 py-10 text-white">
@@ -236,6 +241,44 @@ export default function SellerPublicProfile() {
     navigate(`/book/${seller.id}`, { state: { selectedService } });
   };
 
+  const chargeAndRevealContact = async () => {
+    if (!selectedService) {
+      setContactError("Select a service first.");
+      return;
+    }
+    if (!seller?.id) {
+      setContactError("Seller not found.");
+      return;
+    }
+
+    setContactLoading(true);
+    setContactError("");
+
+    try {
+      // Use same axios config style as other API files
+      const apiClient = (await import("../api/axiosConfig.js")).default;
+
+      const res = await apiClient.post("/leads/charge", {
+        sellerId: seller.id,
+        serviceId: selectedService.id,
+        source: "contact_view",
+      });
+
+      if (res?.data?.charged) {
+        setShowContact(true);
+      } else {
+        // Already charged for this buyer->seller->service; still reveal
+        setShowContact(true);
+      }
+    } catch (err) {
+      setContactError(
+        err?.response?.data?.message || "Failed to reveal contact.",
+      );
+    } finally {
+      setContactLoading(false);
+    }
+  };
+
   return (
     <main className="min-h-screen bg-[#0d0d1a] px-4 py-8 text-white">
       <div className="mx-auto max-w-6xl space-y-5">
@@ -265,7 +308,8 @@ export default function SellerPublicProfile() {
                   </span>
                 </div>
                 <p className="mt-2 text-sm font-semibold text-indigo-200">
-                  {distanceLabel || "Distance will appear after location access"}
+                  {distanceLabel ||
+                    "Distance will appear after location access"}
                 </p>
               </div>
             </div>
@@ -280,7 +324,7 @@ export default function SellerPublicProfile() {
               <div className="flex items-start gap-3 rounded-xl border border-indigo-500/20 bg-[#0f1024] p-4">
                 <Phone size={18} className="mt-0.5 text-purple-300" />
                 <span className="text-sm font-semibold text-slate-200">
-                  {seller.phone || "Phone not available"}
+                  **********
                 </span>
               </div>
             </div>
@@ -316,32 +360,55 @@ export default function SellerPublicProfile() {
               )}
 
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-                <a
-                  href={`tel:${seller.phone || ""}`}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 font-black text-emerald-200 hover:bg-emerald-500/20"
-                >
-                  <Phone size={17} />
-                  Call Now
-                </a>
-                <a
-                  href={whatsappHref}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-green-400/30 bg-green-500/10 px-4 py-3 font-black text-green-200 hover:bg-green-500/20"
-                >
-                  <MessageCircle size={17} />
-                  WhatsApp
-                </a>
+                {showContact ? (
+                  <>
+                    <a
+                      href={`tel:${seller.phone || ""}`}
+                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 font-black text-emerald-200 hover:bg-emerald-500/20"
+                    >
+                      <Phone size={17} />
+                      Call Now
+                    </a>
+                    <a
+                      href={whatsappHref}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-green-400/30 bg-green-500/10 px-4 py-3 font-black text-green-200 hover:bg-green-500/20"
+                    >
+                      <MessageCircle size={17} />
+                      WhatsApp
+                    </a>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const ok = window.confirm(
+                        "Interested in this service?\n\nWould you like to connect with this service provider?",
+                      );
+                      if (!ok) return;
+                      chargeAndRevealContact();
+                    }}
+                    disabled={contactLoading}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-indigo-400/30 bg-indigo-500/10 px-4 py-3 font-black text-indigo-200 hover:bg-indigo-500/20 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {contactLoading ? "Connecting…" : "View Contact"}
+                  </button>
+                )}
               </div>
+
+              {contactError && (
+                <p className="mt-3 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm font-bold text-red-200">
+                  {contactError}
+                </p>
+              )}
             </div>
           </aside>
         </section>
 
         <section className="rounded-2xl border border-indigo-500/20 bg-[#1a1a2e] p-5 shadow-2xl shadow-black/20">
           <div className="mb-4 flex items-center justify-between gap-3">
-            <h2 className="text-2xl font-black text-white">
-              Services Offered
-            </h2>
+            <h2 className="text-2xl font-black text-white">Services Offered</h2>
             {selectedService && (
               <span className="rounded-full border border-purple-400/30 bg-purple-500/10 px-3 py-1 text-xs font-black text-purple-200">
                 Selected: {selectedService.name}

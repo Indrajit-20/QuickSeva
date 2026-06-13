@@ -46,6 +46,9 @@ export default function BookingPage() {
   const seller = sellers.find((s) => String(s.id) === String(sellerId));
   const [confirmedBooking, setConfirmedBooking] = useState(null);
   const [errors, setErrors] = useState({});
+  const [bookingLoading, setBookingLoading] = useState(false);
+  const [leadChargeLoading, setLeadChargeLoading] = useState(false);
+  const [leadChargeError, setLeadChargeError] = useState("");
   const [formData, setFormData] = useState({
     service: selectedService?.name || seller?.service || "",
     date: "",
@@ -94,8 +97,36 @@ export default function BookingPage() {
     return Object.keys(nextErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const chargeLeadIfNeeded = async () => {
+    // Always attempt charge; backend guarantees it happens only once.
+    if (!seller?.id || !selectedService?.id) return { charged: false };
+
+    setLeadChargeLoading(true);
+    setLeadChargeError("");
+
+    try {
+      const apiClient = (await import("../api/axiosConfig.js")).default;
+
+      const res = await apiClient.post("/leads/charge", {
+        sellerId: seller.id,
+        serviceId: selectedService.id,
+        source: "booking",
+      });
+
+      return {
+        charged: Boolean(res?.data?.charged),
+      };
+    } catch (err) {
+      // Per acceptance criteria: continue booking regardless of charged flag.
+      // If backend fails due to wallet, still keep existing booking flow intact.
+      setLeadChargeError(err?.response?.data?.message || "Lead charge failed.");
+      return { charged: false, error: true };
+    } finally {
+      setLeadChargeLoading(false);
+    }
+  };
+
+  const finalizeBooking = () => {
     if (!seller || !validate()) return;
 
     // Try to resolve selected service price from whatever seller object has.
@@ -143,6 +174,23 @@ export default function BookingPage() {
     localStorage.setItem("sellerOrders", JSON.stringify(sellerOrders));
 
     setConfirmedBooking(booking);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLeadChargeError("");
+
+    // Confirmation modal required before booking.
+    const ok = window.confirm(
+      "Confirm Service Booking\n\nAre you interested in booking this service?",
+    );
+    if (!ok) return;
+
+    if (leadChargeLoading) return;
+
+    await chargeLeadIfNeeded();
+    // Continue booking regardless of whether charged was true/false.
+    finalizeBooking();
   };
 
   if (!seller) {
@@ -236,7 +284,9 @@ export default function BookingPage() {
 
         {selectedService && (
           <section className="rounded-2xl border border-indigo-200 bg-indigo-50 p-5 shadow-sm">
-            <p className="text-sm font-bold text-indigo-700">Selected service</p>
+            <p className="text-sm font-bold text-indigo-700">
+              Selected service
+            </p>
             <h2 className="mt-1 text-xl font-black text-slate-900">
               You are booking: {selectedService.name}
               {selectedServicePrice ? ` - Rs ${selectedServicePrice}` : ""}
@@ -368,11 +418,18 @@ export default function BookingPage() {
             </div>
           </div>
 
+          {leadChargeError && (
+            <p className="mt-4 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm font-bold text-red-200">
+              {leadChargeError}
+            </p>
+          )}
+
           <button
             type="submit"
-            className="mt-6 w-full rounded-xl bg-indigo-600 px-4 py-3 text-base font-black text-white shadow-sm hover:bg-indigo-700"
+            disabled={leadChargeLoading}
+            className="mt-6 w-full rounded-xl bg-indigo-600 px-4 py-3 text-base font-black text-white shadow-sm hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            Confirm Booking
+            {leadChargeLoading ? "Processing…" : "Confirm Booking"}
           </button>
         </form>
       </div>
