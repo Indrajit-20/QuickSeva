@@ -42,6 +42,7 @@ const emptyForm = {
   duration: "",
   availability: [],
   unavailableDates: [], // yyyy-mm-dd strings
+  is_instant: false,   // ⚡ can customer book same-day with no advance notice?
 };
 
 const inputClass =
@@ -194,6 +195,7 @@ export default function SellerServices() {
       duration: service.duration || "",
       availability: service.availability || [],
       unavailableDates: service.unavailableDates || [],
+      is_instant: service.is_instant ?? false,
     });
   };
 
@@ -613,6 +615,40 @@ export default function SellerServices() {
             </div>
 
           </div>
+
+          {/* ── Instant Booking Toggle ── */}
+          <div>
+            <label className={labelClass}>⚡ Instant Booking</label>
+            <div className="mt-1 flex items-start gap-3 rounded-xl border border-indigo-500/20 bg-[#0f1024] px-4 py-3.5">
+              <button
+                type="button"
+                onClick={() =>
+                  setForm((prev) => ({ ...prev, is_instant: !prev.is_instant }))
+                }
+                aria-label="Toggle instant booking"
+                className={`relative mt-0.5 inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 ${
+                  form.is_instant ? "bg-indigo-500" : "bg-slate-700"
+                }`}
+              >
+                <span
+                  className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition-transform duration-200 ${
+                    form.is_instant ? "translate-x-5" : "translate-x-0"
+                  }`}
+                />
+              </button>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-white">
+                  {form.is_instant
+                    ? "⚡ Instant Booking Enabled"
+                    : "Scheduled Booking Only"}
+                </p>
+                <p className="mt-0.5 text-xs text-slate-400">
+                  Instant bookings allow customers to request this service
+                  same-day with no advance notice needed.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="mt-6">
@@ -721,6 +757,11 @@ export default function SellerServices() {
                   <Clock size={15} />
                   {service.duration}
                 </span>
+                {service.is_instant && (
+                  <span className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-400/30 bg-indigo-500/10 px-3 py-1.5 text-xs font-bold text-indigo-300">
+                    ⚡ Instant
+                  </span>
+                )}
                 {(service.availability || []).map((day) => (
                   <span
                     key={day}

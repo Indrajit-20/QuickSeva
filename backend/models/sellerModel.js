@@ -2,11 +2,17 @@ const { pool } = require("../config/db");
 
 const SellerModel = {
   // Create seller profile
-  create: async ({ user_id, business_name, category_id, bio, experience_yrs }) => {
+  create: async ({
+    user_id,
+    business_name,
+    category_id,
+    bio,
+    experience_yrs,
+  }) => {
     const [result] = await pool.query(
       `INSERT INTO sellers (user_id, business_name, category_id, bio, experience_yrs)
        VALUES (?, ?, ?, ?, ?)`,
-      [user_id, business_name, category_id, bio, experience_yrs || 0]
+      [user_id, business_name, category_id, bio, experience_yrs || 0],
     );
     return result.insertId;
   },
@@ -20,7 +26,7 @@ const SellerModel = {
        JOIN users u ON s.user_id = u.id
        LEFT JOIN categories c ON s.category_id = c.id
        WHERE s.id = ?`,
-      [id]
+      [id],
     );
     return rows[0] || null;
   },
@@ -34,49 +40,106 @@ const SellerModel = {
        JOIN users u ON s.user_id = u.id
        LEFT JOIN categories c ON s.category_id = c.id
        WHERE s.user_id = ?`,
-      [user_id]
+      [user_id],
     );
     return rows[0] || null;
   },
 
   // Update seller profile
   update: async (id, fields) => {
-    const sets = Object.keys(fields).map((k) => `${k} = ?`).join(", ");
+    const sets = Object.keys(fields)
+      .map((k) => `${k} = ?`)
+      .join(", ");
     const values = [...Object.values(fields), id];
     const [result] = await pool.query(
       `UPDATE sellers SET ${sets} WHERE id = ?`,
-      values
+      values,
     );
     return result.affectedRows;
   },
 
   // Find nearby sellers using Haversine formula
-  findNearby: async ({ lat, lng, radius = 10, category_id, limit = 20, offset = 0 }) => {
+  findNearby: async ({
+    lat,
+    lng,
+    radius = 10,
+    category_id,
+    limit = 20,
+    offset = 0,
+  }) => {
     const catFilter = category_id ? "AND s.category_id = ?" : "";
     const params = [lat, lng, lat, radius, limit, offset];
     if (category_id) params.splice(4, 0, category_id);
 
+    // NOTE: We LEFT JOIN services so each provider can include a services[] array.
+    // Nearby page filtering (price/duration/is_instant) depends on this structure.
     const [rows] = await pool.query(
-      `SELECT s.id, s.business_name, s.avg_rating, s.total_reviews, s.is_available,
-              u.name, u.profile_pic, u.city,
-              c.name AS category_name, c.icon AS category_icon,
-              (6371 * ACOS(
-                COS(RADIANS(?)) * COS(RADIANS(u.lat)) *
-                COS(RADIANS(u.lng) - RADIANS(?)) +
-                SIN(RADIANS(?)) * SIN(RADIANS(u.lat))
-              )) AS distance_km
-       FROM sellers s
-       JOIN users u ON s.user_id = u.id
-       LEFT JOIN categories c ON s.category_id = c.id
-       WHERE u.lat IS NOT NULL AND u.lng IS NOT NULL
-         AND u.is_active = 1 AND s.is_available = 1
-         ${catFilter}
-       HAVING distance_km <= ?
-       ORDER BY distance_km ASC
-       LIMIT ? OFFSET ?`,
-      params
+      `SELECT
+        s.id,
+        s.business_name,
+        s.avg_rating,
+        s.total_reviews,
+        s.is_available,
+        u.name,
+        u.profile_pic,
+        u.city,
+        c.name AS category_name,
+        c.icon AS category_icon,
+        (6371 * ACOS(
+          COS(RADIANS(?)) * COS(RADIANS(u.lat)) *
+          COS(RADIANS(u.lng) - RADIANS(?)) +
+          SIN(RADIANS(?)) * SIN(RADIANS(u.lat))
+        )) AS distance_km,
+        JSON_ARRAYAGG(
+          JSON_OBJECT(
+            'id', sv.id,
+            'name', sv.title,
+            'price', sv.price,
+            'duration', sv.duration,
+            'duration_hrs', sv.duration_hrs,
+            'is_instant', sv.is_instant
+          )
+        ) AS services_json
+      FROM sellers s
+      JOIN users u ON s.user_id = u.id
+      LEFT JOIN categories c ON s.category_id = c.id
+      LEFT JOIN services sv
+        ON sv.seller_id = s.id
+        AND sv.is_active = 1
+      WHERE u.lat IS NOT NULL AND u.lng IS NOT NULL
+        AND u.is_active = 1 AND s.is_available = 1
+        ${catFilter}
+      HAVING distance_km <= ?
+      GROUP BY s.id
+      ORDER BY distance_km ASC
+      LIMIT ? OFFSET ?`,
+      params,
     );
-    return rows;
+
+    // Convert JSON array string -> JS array
+    return rows.map((r) => {
+      let services = [];
+      try {
+        services = r.services_json ? JSON.parse(r.services_json) : [];
+      } catch {
+        services = [];
+      }
+
+      // If there were no services, JSON_ARRAYAGG can still include a single null object.
+      services = Array.isArray(services)
+        ? services.filter((sv) => sv && sv.id != null)
+        : [];
+
+      return {
+        ...r,
+        service: undefined,
+        serviceMode: undefined,
+        instantService: undefined,
+        rating: r.avg_rating,
+        reviews: r.total_reviews,
+        services,
+      };
+    });
   },
 
   // Update rating after review
@@ -86,7 +149,7 @@ const SellerModel = {
        SET avg_rating = (SELECT AVG(rating) FROM reviews WHERE seller_id = ?),
            total_reviews = (SELECT COUNT(*) FROM reviews WHERE seller_id = ?)
        WHERE s.id = ?`,
-      [seller_id, seller_id, seller_id]
+      [seller_id, seller_id, seller_id],
     );
   },
 };

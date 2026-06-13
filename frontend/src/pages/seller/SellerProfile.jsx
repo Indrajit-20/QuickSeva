@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Save } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
-import { serviceOptions } from "./sellerData";
+
 
 
 const inputClass =
@@ -23,6 +23,7 @@ export default function SellerProfile() {
   const [profile, setProfile] = useState({
     fullName: savedProfile.fullName || user?.name || "",
     phoneNumber: savedProfile.phoneNumber || user?.phone || "",
+    gstnumber: savedProfile.gstnumber || "",
     serviceType: savedProfile.serviceType || "AC Repair",
     bio: savedProfile.bio || "",
     experience: savedProfile.experience || "",
@@ -50,6 +51,16 @@ export default function SellerProfile() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    // GST is optional; validate only if user typed something.
+    const gst = profile.gstnumber?.trim();
+    const gstRegex = /^(\d{2}[A-Z]{5}\d{4}[A-Z]{1}[A-Z\d]{1}Z[A-Z\d]{1})$/;
+    if (gst && !gstRegex.test(profile.gstnumber)) {
+      setSaved(false);
+      alert("Invalid GSTIN format. Example: 27ABCDE1234F2Z5");
+      return;
+    }
+
     localStorage.setItem("sellerProfile", JSON.stringify(profile));
     updateUser({ name: profile.fullName, phone: profile.phoneNumber });
     setSaved(true);
@@ -210,7 +221,42 @@ export default function SellerProfile() {
               className={inputClass}
             />
           </div>
-         
+          <div>
+            <label className={labelClass}>GST Number (Optional)</label>
+            <input
+              name="gstnumber"
+              value={profile.gstnumber}
+              onChange={(e) => {
+                const raw = e.target.value;
+                const next = raw
+                  .toUpperCase()
+                  // GSTIN is alphanumeric; keep only A-Z / 0-9
+                  .replace(/[^A-Z0-9]/g, "");
+                setProfile((prev) => ({ ...prev, gstnumber: next }));
+              }}
+              className={
+                profile.gstnumber
+                  ? /^(\d{2}[A-Z]{5}\d{4}[A-Z]{1}[A-Z\d]{1}Z[A-Z\d]{1})$/.test(
+                      profile.gstnumber
+                    )
+                    ? inputClass
+                    : `${inputClass} border-red-500/60 focus:border-red-500 focus:ring-red-500/20`
+                  : inputClass
+              }
+              placeholder="Eg: 27ABCDE1234F2Z5"
+              inputMode="text"
+              autoComplete="off"
+            />
+            {profile.gstnumber &&
+              !/^(\d{2}[A-Z]{5}\d{4}[A-Z]{1}[A-Z\d]{1}Z[A-Z\d]{1})$/.test(
+                profile.gstnumber
+              ) && (
+                <div className="mt-1 text-xs font-semibold text-red-300">
+                  Invalid GSTIN format. Example: 27ABCDE1234F2Z5
+                </div>
+              )}
+          </div>
+
           <div>
             <label className={labelClass}>Years of Experience</label>
             <input

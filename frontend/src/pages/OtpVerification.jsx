@@ -332,8 +332,11 @@ const OtpVerification = () => {
       const token = responseData?.data?.token || responseData?.token;
       const user = responseData?.data?.user || responseData?.user;
 
-      if (token) localStorage.setItem("token", token);
-      if (user) localStorage.setItem("user", JSON.stringify(user));
+      if (token) localStorage.setItem("authToken", token);
+      if (user) {
+        localStorage.setItem("user", JSON.stringify(user));
+        if (user.role) localStorage.setItem("userRole", user.role);
+      }
 
       setSuccess("✓ OTP verified successfully!");
 

@@ -225,13 +225,13 @@ exports.sendOTP = async (req, res) => {
     }
 
     if (type === "register") {
-      const existing = await UserModel.findByPhone(phone);
+      const existing = await UserModel.findByPhone(normalizedPhone);
       if (existing)
         return errorRes(res, "Phone number already registered", 400);
     }
 
     if (type === "seller-register") {
-      const existing = await UserModel.findByPhone(phone);
+      const existing = await UserModel.findByPhone(normalizedPhone);
       if (existing)
         return errorRes(res, "Phone number already registered", 400);
     }

@@ -242,6 +242,72 @@ export default function NearbyServices({
     { value: "4.5", label: "4.5★+" },
   ];
 
+  // ── NEW: Refine Results filters ──────────────────────────────────────────
+  const [filterPrice, setFilterPrice] = useState("all");
+  const [filterDuration, setFilterDuration] = useState("all");
+  const [filterBooking, setFilterBooking] = useState("all");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  const PRICE_OPTIONS = [
+    { value: "all", label: "All" },
+    { value: "under500", label: "Under ₹500" },
+    { value: "500-1000", label: "₹500–₹1k" },
+    { value: "1000-2000", label: "₹1k–₹2k" },
+    { value: "2000+", label: "₹2k+" },
+  ];
+  const DURATION_OPTIONS = [
+    { value: "all", label: "All" },
+    { value: "under1", label: "< 1 hr" },
+    { value: "1-2", label: "1–2 hrs" },
+    { value: "2-4", label: "2–4 hrs" },
+    { value: "4+", label: "4+ hrs" },
+  ];
+  const BOOKING_OPTIONS = [
+    { value: "all", label: "All" },
+    { value: "instant", label: "⚡ Instant" },
+    { value: "scheduled", label: "📅 Scheduled" },
+  ];
+
+  // ── Duration bucket helpers ──────────────────────────────────────────────
+  const parseDurationToMinutes = (str) => {
+    if (!str || typeof str !== "string") return null;
+    const t = str.trim().toLowerCase();
+    const hourMatch = t.match(/(\d+)\s*h/);
+    const minMatch  = t.match(/(\d+)\s*m(?!o)/); // 'm' but not 'mo' (month)
+    const hours = hourMatch ? Number(hourMatch[1]) : 0;
+    const mins  = minMatch  ? Number(minMatch[1])  : 0;
+    if (!hourMatch && !minMatch) {
+      const range  = t.match(/(\d+)\s*-\s*(\d+)/);
+      if (range) return Math.round(((Number(range[1]) + Number(range[2])) * 60) / 2);
+      const single = t.match(/(\d+)\s*hours?/);
+      if (single) return Number(single[1]) * 60;
+      const bare   = t.match(/^(\d+)$/);
+      if (bare)   return Number(bare[1]) * 60;
+      return null;
+    }
+    return hours * 60 + mins;
+  };
+
+  const getDurationBucket = (str) => {
+    const mins = parseDurationToMinutes(str);
+    if (mins === null) return null;
+    if (mins < 60)  return "under1";
+    if (mins <= 120) return "1-2";
+    if (mins <= 240) return "2-4";
+    return "4+";
+  };
+
+  const activeFilterCount =
+    (filterPrice    !== "all" ? 1 : 0) +
+    (filterDuration !== "all" ? 1 : 0) +
+    (filterBooking  !== "all" ? 1 : 0);
+
+  const clearAllFilters = () => {
+    setFilterPrice("all");
+    setFilterDuration("all");
+    setFilterBooking("all");
+  };
+
   const clickedSellers = useRef(new Set());
 
 
@@ -443,12 +509,9 @@ export default function NearbyServices({
   const nearby = useMemo(() => {
     if (!buyerPos) return [];
 
-
     const filteredByDistance = sellers.filter((s) => {
-      if (typeof s?.lat !== "number" || typeof s?.lng !== "number")
-        return false;
-      const d = getDistanceKm(buyerPos.lat, buyerPos.lng, s.lat, s.lng);
-      return d <= radiusKm;
+      if (typeof s?.lat !== "number" || typeof s?.lng !== "number") return false;
+      return getDistanceKm(buyerPos.lat, buyerPos.lng, s.lat, s.lng) <= radiusKm;
     });
 
     const withDistance = filteredByDistance.map((s) => ({
@@ -458,10 +521,9 @@ export default function NearbyServices({
 
     const normalizedSearch = search.trim().toLowerCase();
     const filteredBySearch = normalizedSearch
-      ? withDistance.filter((s) => {
-          const serviceStr = (s?.service || "").toLowerCase();
-          return serviceStr.includes(normalizedSearch);
-        })
+      ? withDistance.filter((s) =>
+          (s?.service || "").toLowerCase().includes(normalizedSearch),
+        )
       : withDistance;
 
     const filteredByServiceMode =
@@ -470,9 +532,9 @@ export default function NearbyServices({
         : filteredBySearch.filter((s) => {
             const mode = s?.serviceMode;
             if (!mode) return false;
-            if (filterServiceMode === "Online") return mode === "online" || mode === "both";
+            if (filterServiceMode === "Online")  return mode === "online" || mode === "both";
             if (filterServiceMode === "Offline") return mode === "offline" || mode === "both";
-            if (filterServiceMode === "Both") return mode === "both";
+            if (filterServiceMode === "Both")    return mode === "both";
             return true;
           });
 
@@ -486,18 +548,71 @@ export default function NearbyServices({
         ? filteredByAvailability
         : filteredByAvailability.filter((s) => {
             const r = Number(s?.rating || 0);
-            if (filterRating === "4") return r >= 4;
+            if (filterRating === "4")   return r >= 4;
             if (filterRating === "4.5") return r >= 4.5;
             return true;
           });
 
-    return filteredByRating.sort((a, b) => {
+    // ── NEW: price range filter ──────────────────────────────────────────
+    const filteredByPrice =
+      filterPrice === "all"
+        ? filteredByRating
+        : filteredByRating.filter((s) => {
+            const svcs = Array.isArray(s?.services) ? s.services : [];
+            if (!svcs.length) return false;
+            return svcs.some((svc) => {
+              const p = Number(svc?.price || 0);
+              if (filterPrice === "under500")  return p > 0 && p < 500;
+              if (filterPrice === "500-1000")  return p >= 500 && p <= 1000;
+              if (filterPrice === "1000-2000") return p > 1000 && p <= 2000;
+              if (filterPrice === "2000+")     return p > 2000;
+              return true;
+            });
+          });
+
+    // ── NEW: duration bucket filter ──────────────────────────────────────
+    const filteredByDuration =
+      filterDuration === "all"
+        ? filteredByPrice
+        : filteredByPrice.filter((s) => {
+            const svcs = Array.isArray(s?.services) ? s.services : [];
+            if (!svcs.length) return false;
+            return svcs.some(
+              (svc) => getDurationBucket(svc?.duration) === filterDuration,
+            );
+          });
+
+    // ── NEW: booking type filter ─────────────────────────────────────────
+    // Uses service-level is_instant if available; falls back to seller.instantService
+    const filteredByBooking =
+      filterBooking === "all"
+        ? filteredByDuration
+        : filteredByDuration.filter((s) => {
+            const svcs = Array.isArray(s?.services) ? s.services : [];
+            const sellerInstant = Boolean(s?.instantService);
+
+            if (filterBooking === "instant") {
+              if (svcs.length > 0) return svcs.some((svc) => Boolean(svc?.is_instant));
+              return sellerInstant;
+            }
+            if (filterBooking === "scheduled") {
+              if (svcs.length > 0) return svcs.every((svc) => !svc?.is_instant);
+              return !sellerInstant;
+            }
+            return true;
+          });
+
+    return filteredByBooking.sort((a, b) => {
       const rankA = getSellerPackageRank(a);
       const rankB = getSellerPackageRank(b);
       if (rankA !== rankB) return rankB - rankA;
       return a.distanceKm - b.distanceKm;
     });
-  }, [buyerPos, sellers, search, radiusKm]);
+  }, [
+    buyerPos, sellers, search, radiusKm,
+    filterServiceMode, filterAvailability, filterRating,
+    filterPrice, filterDuration, filterBooking,
+  ]);
 
   const handleLocationSubmit = (e) => {
     e.preventDefault();
@@ -833,6 +948,119 @@ export default function NearbyServices({
           </div>
         </div>
 
+        {/* ============ REFINE RESULTS FILTER PANEL ============ */}
+        <div className="relative z-10 mt-4">
+          {/* Toggle button */}
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((prev) => !prev)}
+            className="inline-flex items-center gap-2 rounded-xl border border-indigo-400/25 bg-indigo-950/40 px-4 py-2 text-sm font-semibold text-indigo-200 transition-all hover:border-indigo-400/50 hover:bg-indigo-950/60"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/>
+            </svg>
+            Refine Results
+            {activeFilterCount > 0 && (
+              <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-indigo-500 text-[11px] font-bold text-white">
+                {activeFilterCount}
+              </span>
+            )}
+            <span className={`ml-auto transition-transform duration-200 ${filtersOpen ? "rotate-180" : ""}`}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M6 9l6 6 6-6"/></svg>
+            </span>
+          </button>
+
+          {/* Collapsible panel */}
+          {filtersOpen && (
+            <div className="mt-2 rounded-xl border border-indigo-400/20 bg-indigo-950/30 p-4 space-y-4">
+
+              {/* Price Range */}
+              <div>
+                <p className="mb-2 text-xs font-bold uppercase tracking-wider text-indigo-300/80">
+                  💰 Price Range
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {PRICE_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setFilterPrice(opt.value)}
+                      className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all ${
+                        filterPrice === opt.value
+                          ? "border-indigo-400/60 bg-indigo-500 text-white shadow-lg shadow-indigo-500/25"
+                          : "border-indigo-400/20 bg-white/5 text-indigo-200 hover:border-indigo-400/40 hover:bg-white/10"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Duration */}
+              <div>
+                <p className="mb-2 text-xs font-bold uppercase tracking-wider text-indigo-300/80">
+                  ⏱ Time to Complete
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {DURATION_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setFilterDuration(opt.value)}
+                      className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all ${
+                        filterDuration === opt.value
+                          ? "border-indigo-400/60 bg-indigo-500 text-white shadow-lg shadow-indigo-500/25"
+                          : "border-indigo-400/20 bg-white/5 text-indigo-200 hover:border-indigo-400/40 hover:bg-white/10"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Booking Type */}
+              <div>
+                <p className="mb-2 text-xs font-bold uppercase tracking-wider text-indigo-300/80">
+                  📅 Booking Type
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {BOOKING_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setFilterBooking(opt.value)}
+                      className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all ${
+                        filterBooking === opt.value
+                          ? opt.value === "instant"
+                            ? "border-emerald-400/60 bg-emerald-500 text-white shadow-lg shadow-emerald-500/25"
+                            : "border-indigo-400/60 bg-indigo-500 text-white shadow-lg shadow-indigo-500/25"
+                          : "border-indigo-400/20 bg-white/5 text-indigo-200 hover:border-indigo-400/40 hover:bg-white/10"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Clear all */}
+              {activeFilterCount > 0 && (
+                <div className="border-t border-indigo-400/15 pt-3">
+                  <button
+                    type="button"
+                    onClick={clearAllFilters}
+                    className="text-xs font-semibold text-red-300 hover:text-red-200 transition-colors"
+                  >
+                    ✕ Clear All Filters
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         {buyerPos && (
           <div className="relative z-10 mt-4 flex flex-wrap items-center gap-2 text-xs">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2.5 py-1 font-semibold text-emerald-200">
@@ -847,6 +1075,11 @@ export default function NearbyServices({
             {search && (
               <span className="rounded-md bg-indigo-500/15 px-2 py-0.5 text-indigo-200">
                 for "{search}"
+              </span>
+            )}
+            {activeFilterCount > 0 && (
+              <span className="rounded-md bg-indigo-500/20 px-2 py-0.5 font-semibold text-indigo-300">
+                · {activeFilterCount} filter{activeFilterCount > 1 ? "s" : ""} active
               </span>
             )}
           </div>
@@ -1057,11 +1290,24 @@ export default function NearbyServices({
               <div className="qs-glass-panel w-full py-14 text-center text-indigo-300">
                 <div className="text-5xl">🔍</div>
                 <p className="mt-3 text-base font-semibold text-white">
-                  No providers found
+                  {activeFilterCount > 0
+                    ? "No providers match your filters"
+                    : "No providers found"}
                 </p>
                 <p className="mt-1 text-xs text-indigo-300/80">
-                  Try increasing radius or changing service
+                  {activeFilterCount > 0
+                    ? "Try adjusting your price, duration, or booking type filters."
+                    : "Try increasing radius or changing service"}
                 </p>
+                {activeFilterCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={clearAllFilters}
+                    className="mt-4 rounded-xl border border-indigo-400/30 bg-indigo-500/15 px-5 py-2 text-sm font-semibold text-indigo-200 transition hover:bg-indigo-500/25"
+                  >
+                    ✕ Clear All Filters
+                  </button>
+                )}
               </div>
             )}
 
