@@ -8,32 +8,19 @@ import "react-clock/dist/Clock.css";
 import { Editor } from "@tinymce/tinymce-react";
 import { Calendar } from "react-multi-date-picker";
 
-
-
 // console.log("[SellerServices] Editor:", Editor);
 // console.log("[SellerServices] TimePicker:", TimePicker);
 // console.log("[SellerServices] Calendar:", Calendar);
 
-
-
-
-
-
-
-
-import {
-  days,
-  formatCurrency,
-  loadArray,
-  mockServices,
-  serviceOptions,
-} from "./sellerData";
+import { days, formatCurrency, serviceOptions } from "./sellerData";
 import {
   durationTextToMinutes,
   minutesToDurationText,
   ymdToDisplay,
-
 } from "./SellerServicesUxs";
+
+import { serviceApi } from "../../api/serviceApi";
+import { useAuth } from "../../context/AuthContext";
 
 const emptyForm = {
   name: "AC Repair",
@@ -42,18 +29,13 @@ const emptyForm = {
   duration: "",
   availability: [],
   unavailableDates: [], // yyyy-mm-dd strings
-  is_instant: false,   // ⚡ can customer book same-day with no advance notice?
+  is_instant: false, // ⚡ can customer book same-day with no advance notice?
 };
 
 const inputClass =
   "w-full rounded-lg border border-indigo-500/20 bg-[#0f0e1a] px-3 py-2.5 text-sm font-medium text-white outline-none transition placeholder:text-slate-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20";
 
 const labelClass = "mb-2 block text-sm font-semibold text-slate-300";
-
-
-
-
-
 
 function readJson(key, fallback) {
   try {
@@ -100,15 +82,35 @@ function syncSellerServices(nextServices) {
 }
 
 export default function SellerServices() {
-  const [services, setServices] = useState(() =>
-    loadArray("sellerServices", mockServices),
-  );
+  const { user } = useAuth();
+
+  const [services, setServices] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const [loadError, setLoadError] = useState(null);
+
+  const refreshMyServices = async () => {
+    try {
+      setLoading(true);
+      setLoadError(null);
+      const res = await serviceApi.listMyServices();
+      setServices(res?.data?.services || []);
+    } catch (e) {
+      setLoadError(e?.response?.data?.message || "Failed to load services");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    refreshMyServices();
+  }, []);
+
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
 
   // Calendar state (unavailable dates)
   const [unavailableDates, setUnavailableDates] = useState([]);
-
 
   const [duration, setDuration] = useState(null);
 
@@ -119,18 +121,15 @@ export default function SellerServices() {
 
   // Keep existing durationMinutes logic but we will render a custom picker below.
 
-
-
-
-  const persist = (nextServices) => {
+  const persist = async (nextServices) => {
     const identity = getCurrentSellerIdentity();
     const normalizedServices = nextServices.map((service) => ({
       ...service,
       sellerId: identity.id || service.sellerId,
     }));
 
+    // Backend is the source of truth now; keep syncSellerServices only for premium listing UI.
     setServices(normalizedServices);
-    localStorage.setItem("sellerServices", JSON.stringify(normalizedServices));
     syncSellerServices(normalizedServices);
   };
 
@@ -157,13 +156,8 @@ export default function SellerServices() {
     setForm((prev) => ({ ...prev, unavailableDates: [] }));
   };
 
-
-
-
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-
 
     const service = {
       ...form,
@@ -172,13 +166,37 @@ export default function SellerServices() {
       price: Number(form.price || 0),
     };
 
-
-
     const nextServices = editingId
-      ? services.map((item) => (item.id === editingId ? service : item))
+      ? services.map((item) =>
+          item.id === editingId ? { ...item, ...service } : item,
+        )
       : [service, ...services];
 
-    persist(nextServices);
+    if (editingId) {
+      // Update service in backend
+      // Note: backend expects category_id/title/description/price/duration_hrs/images/tags.
+      // This UI stores a simplified model; we keep existing behavior by mapping what we have.
+      await serviceApi.update(editingId, {
+        title: form.name,
+        description: form.description,
+        price: Number(form.price || 0),
+        duration_hrs: null,
+        price_type: "fixed",
+        // category_id is not available in this UI; backend may require it.
+      });
+    } else {
+      await serviceApi.create({
+        // Same note: simplified payload from this UI
+        title: form.name,
+        description: form.description,
+        price: Number(form.price || 0),
+        duration_hrs: null,
+        price_type: "fixed",
+        category_id: null,
+      });
+    }
+
+    await refreshMyServices();
     setForm(emptyForm);
     setEditingId(null);
   };
@@ -199,11 +217,9 @@ export default function SellerServices() {
     });
   };
 
-
-
-
-  const handleDelete = (id) => {
-    persist(services.filter((service) => service.id !== id));
+  const handleDelete = async (id) => {
+    await serviceApi.delete(id);
+    await refreshMyServices();
     if (editingId === id) {
       setEditingId(null);
       setForm(emptyForm);
@@ -213,10 +229,6 @@ export default function SellerServices() {
   const previewHtml = form.description || "";
   const previewAvailableDays = form?.availability || [];
   const previewUnavailableDates = unavailableDates || [];
-
-
-
-
 
   return (
     <div className="animate-fade-in space-y-6">
@@ -274,8 +286,6 @@ export default function SellerServices() {
             <label className={labelClass}> Service Duration</label>
 
             <div className="mt-1 rounded-xl border border-[rgba(99,102,241,0.18)] bg-[#0f1024] p-4 shadow-[inset_0_0_0_1px_rgba(99,102,241,0.08)]">
-              
-
               <style>{`
                 .custom-time-picker .react-time-picker__wrapper {
                   background-color: #1e1e2e;
@@ -311,7 +321,8 @@ export default function SellerServices() {
                         const total = h * 60 + minsPart;
                         setForm((prev) => ({
                           ...prev,
-                          duration: total > 0 ? minutesToDurationText(total) : "",
+                          duration:
+                            total > 0 ? minutesToDurationText(total) : "",
                         }));
                       }}
                       className="w-full rounded-lg border border-indigo-500/20 bg-[#0f0e1a] px-3 py-2.5 text-sm font-medium text-white outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
@@ -341,7 +352,9 @@ export default function SellerServices() {
                         const m = n % 60;
                         // show only 00/15/30/45 options; otherwise snap to nearest 5
                         const steps = [0, 15, 30, 45];
-                        const snapped = steps.includes(m) ? m : Math.round(m / 15) * 15;
+                        const snapped = steps.includes(m)
+                          ? m
+                          : Math.round(m / 15) * 15;
                         const mm = Math.max(0, Math.min(45, snapped));
                         return String(mm).padStart(2, "0");
                       })()}
@@ -352,7 +365,8 @@ export default function SellerServices() {
                         const total = hoursPart * 60 + m;
                         setForm((prev) => ({
                           ...prev,
-                          duration: total > 0 ? minutesToDurationText(total) : "",
+                          duration:
+                            total > 0 ? minutesToDurationText(total) : "",
                         }));
                       }}
                       className="w-full rounded-lg border border-indigo-500/20 bg-[#0f0e1a] px-3 py-2.5 text-sm font-medium text-white outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
@@ -389,7 +403,6 @@ export default function SellerServices() {
                   Pick an hour and a minute step (00/15/30/45).
                 </p>
               </div>
-
             </div>
           </div>
 
@@ -475,7 +488,6 @@ export default function SellerServices() {
                 Clear all
               </button>
             )}
-
           </div>
 
           <div className="mt-4">
@@ -530,7 +542,11 @@ export default function SellerServices() {
 
                 // Expand if the library returns range-like objects, otherwise treat as individual dates
                 for (const item of arr) {
-                  if (item && typeof item === "object" && (item.start || item.end)) {
+                  if (
+                    item &&
+                    typeof item === "object" &&
+                    (item.start || item.end)
+                  ) {
                     const startYmd = extractYMD(item.start);
                     const endYmd = extractYMD(item.end);
                     if (startYmd && endYmd) {
@@ -555,7 +571,6 @@ export default function SellerServices() {
             />
 
             <div className="mt-4">
-
               {(unavailableDates || []).length === 0 ? (
                 <div className="rounded-lg border border-dashed border-indigo-400/30 bg-[#1a1830] px-4 py-3 text-xs font-semibold text-[#94a3b8]">
                   No unavailable dates added yet.
@@ -606,7 +621,6 @@ export default function SellerServices() {
                 </div>
               )}
             </div>
-
           </div>
 
           {/* ── Instant Booking Toggle ── */}
@@ -645,7 +659,9 @@ export default function SellerServices() {
         </div>
 
         <div className="mt-6">
-          <div className="text-sm font-bold text-white">Live Service Preview</div>
+          <div className="text-sm font-bold text-white">
+            Live Service Preview
+          </div>
           <div className="mt-3 rounded-xl border border-[rgba(99,102,241,0.2)] bg-[#1a1830] p-5">
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -670,13 +686,19 @@ export default function SellerServices() {
                 className="mt-2 prose prose-invert max-w-none"
                 dangerouslySetInnerHTML={{ __html: previewHtml }}
               />
-              {(!previewHtml || previewHtml === "<p></p>" || previewHtml === "") && (
-                <p className="mt-2 text-xs font-semibold">Your description will appear here.</p>
+              {(!previewHtml ||
+                previewHtml === "<p></p>" ||
+                previewHtml === "") && (
+                <p className="mt-2 text-xs font-semibold">
+                  Your description will appear here.
+                </p>
               )}
             </div>
 
             <div className="mt-4 flex flex-wrap items-center gap-2">
-              <div className="text-xs font-bold text-slate-300">Available days:</div>
+              <div className="text-xs font-bold text-slate-300">
+                Available days:
+              </div>
               {(previewAvailableDays || []).length === 0 ? (
                 <span className="rounded-lg border border-indigo-500/20 bg-indigo-500/10 px-2.5 py-1 text-[11px] font-bold text-indigo-200">
                   Not selected
@@ -694,7 +716,9 @@ export default function SellerServices() {
             </div>
 
             <div className="mt-4">
-              <div className="text-xs font-bold text-slate-300">Unavailable dates:</div>
+              <div className="text-xs font-bold text-slate-300">
+                Unavailable dates:
+              </div>
               {(previewUnavailableDates || []).length === 0 ? (
                 <div className="mt-2 text-xs font-semibold text-[#94a3b8]">
                   None
@@ -737,8 +761,12 @@ export default function SellerServices() {
             >
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <h3 className="text-xl font-bold text-white">{service.name}</h3>
-                  <p className="mt-2 text-sm text-[#94a3b8]">{service.description}</p>
+                  <h3 className="text-xl font-bold text-white">
+                    {service.name}
+                  </h3>
+                  <p className="mt-2 text-sm text-[#94a3b8]">
+                    {service.description}
+                  </p>
                 </div>
                 <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-sm font-bold text-emerald-300">
                   <IndianRupee size={14} />
@@ -789,4 +817,3 @@ export default function SellerServices() {
     </div>
   );
 }
-

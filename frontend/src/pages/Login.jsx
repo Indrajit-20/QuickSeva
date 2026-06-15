@@ -147,8 +147,23 @@ const Login = () => {
       if (!sessionId) {
         throw new Error("sessionId missing. Please resend OTP.");
       }
-      await loginWithOtp({ identifier: digitsOnlyPhone, otp, sessionId });
-      navigate("/", { replace: true });
+      const result = await loginWithOtp({
+        identifier: digitsOnlyPhone,
+        otp,
+        sessionId,
+      });
+      const role = result?.user?.role;
+
+      console.log("LOGIN ROLE:", role);
+      console.log("LOGIN USER:", result?.user);
+
+      if (role === "seller") {
+        return navigate("/seller/dashboard", { replace: true });
+      }x``
+      if (role === "admin") {
+        return navigate("/admin/dashboard", { replace: true });
+      }
+      return navigate("/", { replace: true });
     } catch {
       // AuthContext already sets authError
     }

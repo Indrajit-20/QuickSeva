@@ -76,7 +76,7 @@ exports.updateSellerProfile = async (req, res) => {
       is_available,
     } = req.body;
 
-    // Keep sellers.phone synchronized with users.phone (minimal sync requirement)
+    // Keep sellers.phone synchronized with users.phone
     const syncFields = { phone: req.user.phone };
     const fields = { ...syncFields };
 
