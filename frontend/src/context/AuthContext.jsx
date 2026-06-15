@@ -1,7 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 
-import { getMe, verifyOtp, sendOtp, getBackendErrorMessage } from "../api/authService";
-
+import {
+  getMe,
+  verifyOtp,
+  sendOtp,
+  getBackendErrorMessage,
+} from "../api/authService";
 
 /**
  * AuthContext
@@ -13,11 +17,48 @@ import { getMe, verifyOtp, sendOtp, getBackendErrorMessage } from "../api/authSe
 
 const AuthContext = createContext();
 
+const mapAuthErrorToUserMessage = (message) => {
+  const normalized = String(message || "").toLowerCase();
+
+  if (
+    normalized.includes("user not found") ||
+    normalized.includes("invalid phone") ||
+    normalized.includes("no user")
+  ) {
+    return "Mobile number not found. Please register first.";
+  }
+
+  if (
+    normalized.includes("invalid otp") ||
+    normalized.includes("otp verification failed") ||
+    normalized.includes("incorrect otp")
+  ) {
+    return "The OTP you entered is incorrect.";
+  }
+
+  if (normalized.includes("expired")) {
+    return "OTP has expired. Please request a new OTP.";
+  }
+
+  if (
+    normalized.includes("too many requests") ||
+    normalized.includes("maximum resend") ||
+    normalized.includes("rate limit")
+  ) {
+    return "Too many OTP requests. Please try again later.";
+  }
+
+  return String(message || "Something went wrong");
+};
+
 export const AuthProvider = ({ children }) => {
   // ========================================
   // AUTH STATE
   // ========================================
+  // Single source of truth for authorization is data.user from /api/auth/me
+  // Do NOT bootstrap from localStorage.userRole or localStorage.user (stale/cross-tab).
   const [user, setUser] = useState(null);
+
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [authError, setAuthError] = useState(null);
@@ -65,7 +106,7 @@ export const AuthProvider = ({ children }) => {
       return result;
     } catch (err) {
       const message = getBackendErrorMessage(err);
-      setAuthError(message);
+      setAuthError(mapAuthErrorToUserMessage(message));
       throw err;
     } finally {
       setIsLoading(false);
@@ -73,7 +114,6 @@ export const AuthProvider = ({ children }) => {
   };
 
   const loginWithOtp = async ({ identifier, otp, sessionId }) => {
-
     setIsLoading(true);
 
     setAuthError(null);
@@ -97,7 +137,7 @@ export const AuthProvider = ({ children }) => {
       return { user: userData, token };
     } catch (err) {
       const message = getBackendErrorMessage(err);
-      setAuthError(message);
+      setAuthError(mapAuthErrorToUserMessage(message));
       setIsAuthenticated(false);
       setUser(null);
       throw err;
@@ -105,7 +145,6 @@ export const AuthProvider = ({ children }) => {
       setIsLoading(false);
     }
   };
-
 
   // ========================================
   // LOGOUT
@@ -120,7 +159,6 @@ export const AuthProvider = ({ children }) => {
     setIsAuthenticated(false);
     setAuthError(null);
   };
-
 
   // ========================================
   // CONTEXT VALUE
@@ -137,7 +175,6 @@ export const AuthProvider = ({ children }) => {
     loginWithOtp,
     logout,
   };
-
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

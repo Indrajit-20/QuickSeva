@@ -8,11 +8,19 @@ const SellerModel = {
     category_id,
     bio,
     experience_yrs,
+    phone,
   }) => {
     const [result] = await pool.query(
-      `INSERT INTO sellers (user_id, business_name, category_id, bio, experience_yrs)
-       VALUES (?, ?, ?, ?, ?)`,
-      [user_id, business_name, category_id, bio, experience_yrs || 0],
+      `INSERT INTO sellers (user_id, business_name, category_id, bio, experience_yrs, phone)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        user_id,
+        business_name,
+        category_id,
+        bio,
+        experience_yrs || 0,
+        phone || null,
+      ],
     );
     return result.insertId;
   },

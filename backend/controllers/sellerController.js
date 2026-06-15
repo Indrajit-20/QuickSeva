@@ -20,6 +20,8 @@ exports.createSellerProfile = async (req, res) => {
       category_id,
       bio,
       experience_yrs,
+      // Copy from users.phone (source of truth for authentication)
+      phone: req.user.phone,
     });
 
     const seller = await SellerModel.findById(sellerId);
@@ -55,6 +57,13 @@ exports.getSellerById = async (req, res) => {
 // Update seller profile
 exports.updateSellerProfile = async (req, res) => {
   try {
+    if (!req.user?.role || req.user.role !== "seller") {
+      return {
+        success: false,
+        message: "Seller access required",
+      };
+    }
+
     const seller = await SellerModel.findByUserId(req.user.id);
     if (!seller) return errorRes(res, "Seller profile not found", 404);
 
@@ -66,7 +75,10 @@ exports.updateSellerProfile = async (req, res) => {
       working_radius,
       is_available,
     } = req.body;
-    const fields = {};
+
+    // Keep sellers.phone synchronized with users.phone (minimal sync requirement)
+    const syncFields = { phone: req.user.phone };
+    const fields = { ...syncFields };
 
     if (business_name !== undefined) fields.business_name = business_name;
     if (category_id !== undefined) fields.category_id = category_id;
@@ -86,6 +98,13 @@ exports.updateSellerProfile = async (req, res) => {
 // Toggle availability
 exports.toggleAvailability = async (req, res) => {
   try {
+    if (!req.user?.role || req.user.role !== "seller") {
+      return {
+        success: false,
+        message: "Seller access required",
+      };
+    }
+
     const seller = await SellerModel.findByUserId(req.user.id);
     if (!seller) return errorRes(res, "Seller profile not found", 404);
 
@@ -104,6 +123,13 @@ exports.toggleAvailability = async (req, res) => {
 // Upload documents (ID proof, certificates)
 exports.uploadDocuments = async (req, res) => {
   try {
+    if (!req.user?.role || req.user.role !== "seller") {
+      return {
+        success: false,
+        message: "Seller access required",
+      };
+    }
+
     const seller = await SellerModel.findByUserId(req.user.id);
     if (!seller) return errorRes(res, "Seller profile not found", 404);
 

@@ -2,8 +2,9 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 // Base URL without double /api
-const API_BASE = (import.meta.env.VITE_API_URL || "http://localhost:5000")
-  .replace(/\/api\/?$/, "");
+const API_BASE = (
+  import.meta.env.VITE_API_URL || "http://localhost:5000"
+).replace(/\/api\/?$/, "");
 
 const isValidOTP = (otp) => /^\d{6}$/.test(otp);
 
@@ -174,12 +175,17 @@ const OtpVerification = () => {
 
       const responseData = await res.json();
       console.log("SEND OTP RESPONSE", responseData);
-      console.log("SESSION ID", responseData?.data?.sessionId || responseData?.sessionId);
+      console.log(
+        "SESSION ID",
+        responseData?.data?.sessionId || responseData?.sessionId,
+      );
 
-      if (!res.ok) throw new Error(responseData?.message || "Failed to send OTP");
+      if (!res.ok)
+        throw new Error(responseData?.message || "Failed to send OTP");
 
       // IMPORTANT: store returned sessionId immediately
-      const newSessionId = responseData?.data?.sessionId || responseData?.sessionId;
+      const newSessionId =
+        responseData?.data?.sessionId || responseData?.sessionId;
       sessionIdRef.current = newSessionId;
       setSessionId(newSessionId);
 
@@ -250,14 +256,18 @@ const OtpVerification = () => {
 
   const handleResendOtp = async () => {
     if (resendLocked) {
-      setError("⚠️ Maximum resend attempts reached. Contact support for assistance.");
+      setError(
+        "⚠️ Maximum resend attempts reached. Contact support for assistance.",
+      );
       return;
     }
 
     if (resendCount >= MAX_RESENDS) {
       setResendLocked(true);
       setResendDisabled(true);
-      setError("⚠️ Maximum resend attempts reached. Contact support for assistance.");
+      setError(
+        "⚠️ Maximum resend attempts reached. Contact support for assistance.",
+      );
       return;
     }
 
@@ -290,7 +300,9 @@ const OtpVerification = () => {
     }
 
     if (!sessionIdRef.current) {
-      setError("OTP session missing. Please wait for OTP resend and try again.");
+      setError(
+        "OTP session missing. Please wait for OTP resend and try again.",
+      );
       return;
     }
 
@@ -326,17 +338,13 @@ const OtpVerification = () => {
       const responseData = await res.json();
       console.log("VERIFY OTP RESPONSE", responseData);
 
-      if (!res.ok) throw new Error(responseData?.message || "OTP verification failed");
+      if (!res.ok)
+        throw new Error(responseData?.message || "OTP verification failed");
 
       // Success: token + user stored
       const token = responseData?.data?.token || responseData?.token;
-      const user = responseData?.data?.user || responseData?.user;
 
       if (token) localStorage.setItem("authToken", token);
-      if (user) {
-        localStorage.setItem("user", JSON.stringify(user));
-        if (user.role) localStorage.setItem("userRole", user.role);
-      }
 
       setSuccess("✓ OTP verified successfully!");
 
@@ -346,7 +354,9 @@ const OtpVerification = () => {
 
       // Navigate directly to seller dashboard
       setTimeout(() => {
-        navigate("/seller/dashboard", { state: { phone: phoneNumber, name: userName } });
+        navigate("/seller/dashboard", {
+          state: { phone: phoneNumber, name: userName },
+        });
       }, 200);
     } catch (err) {
       setError("Verification failed. Please try again.");
@@ -363,13 +373,17 @@ const OtpVerification = () => {
           <div className="text-center space-y-2">
             <h1 className="text-3xl font-bold text-gray-900">Verify OTP</h1>
             <p className="text-gray-600">
-              {phoneNumber ? `We sent a 6-digit code to ${phoneNumber}` : "We sent a 6-digit code"}
+              {phoneNumber
+                ? `We sent a 6-digit code to ${phoneNumber}`
+                : "We sent a 6-digit code"}
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-4">
-              <label className="block text-sm font-medium text-gray-700">Enter OTP</label>
+              <label className="block text-sm font-medium text-gray-700">
+                Enter OTP
+              </label>
 
               <div className="flex gap-3 justify-center">
                 {otp.map((digit, index) => (
@@ -398,19 +412,25 @@ const OtpVerification = () => {
 
             {error && (
               <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
-                <span className="text-red-600 font-semibold text-sm flex-1">{error}</span>
+                <span className="text-red-600 font-semibold text-sm flex-1">
+                  {error}
+                </span>
               </div>
             )}
 
             {success && (
               <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg flex items-start gap-2">
-                <span className="text-emerald-600 font-semibold text-sm flex-1">{success}</span>
+                <span className="text-emerald-600 font-semibold text-sm flex-1">
+                  {success}
+                </span>
               </div>
             )}
 
             {/* Resend OTP cooldown / button */}
             <div className="border-t pt-6 space-y-3">
-              <p className="text-sm text-gray-600 text-center">Didn't receive the code?</p>
+              <p className="text-sm text-gray-600 text-center">
+                Didn't receive the code?
+              </p>
 
               <button
                 type="button"
@@ -420,15 +440,15 @@ const OtpVerification = () => {
                   resendLocked
                     ? "border-red-300 bg-red-50 text-red-600 cursor-not-allowed"
                     : resendDisabled
-                    ? "border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed"
-                    : "border-emerald-600 bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
+                      ? "border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed"
+                      : "border-emerald-600 bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
                 }`}
               >
                 {resendLocked
                   ? "🔒 Resend Locked (Max attempts reached)"
                   : resendDisabled
-                  ? `Resend OTP (${pad2(Math.floor(timeRemaining / 60))}:${pad2(timeRemaining % 60)})`
-                  : "Resend OTP"}
+                    ? `Resend OTP (${pad2(Math.floor(timeRemaining / 60))}:${pad2(timeRemaining % 60)})`
+                    : "Resend OTP"}
               </button>
 
               <p className="text-xs text-gray-500 text-center">
@@ -455,7 +475,10 @@ const OtpVerification = () => {
           <div className="text-center pt-4 border-t">
             <p className="text-sm text-gray-600">
               Wrong contact info?{" "}
-              <a href="/register" className="text-emerald-600 font-semibold hover:underline">
+              <a
+                href="/register"
+                className="text-emerald-600 font-semibold hover:underline"
+              >
                 Update it here
               </a>
             </p>
@@ -465,9 +488,8 @@ const OtpVerification = () => {
         {/* Debug info (remove in production) */}
         <div className="mt-4 text-center">
           <p className="text-xs text-gray-400">
-            🔧 Debug: Timer: {timeRemaining}s | SessionId set: {sessionId ? "yes" : "no"}
-            
-            | OTP: {otp.join("") || "(empty)"}
+            🔧 Debug: Timer: {timeRemaining}s | SessionId set:{" "}
+            {sessionId ? "yes" : "no"}| OTP: {otp.join("") || "(empty)"}
           </p>
         </div>
       </div>
@@ -476,4 +498,3 @@ const OtpVerification = () => {
 };
 
 export default OtpVerification;
-

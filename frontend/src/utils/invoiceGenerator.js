@@ -1,17 +1,6 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-// Safely attach autoTable in browser runtime
-if (typeof window !== "undefined") {
-  try {
-    jsPDF.API = jsPDF.API || jsPDF.prototype;
-    jsPDF.prototype.autoTable = autoTable(jsPDF);
-  } catch (e) {
-    // keep silent; generateInvoicePDF will fail gracefully
-    console.error("autoTable init failed", e);
-  }
-}
-
 function safeString(v) {
   return v === null || v === undefined ? "" : String(v);
 }

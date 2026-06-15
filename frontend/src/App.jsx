@@ -12,8 +12,11 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminLogin from "./pages/AdminLogin";
-import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+
+import SellerRoute from "./components/SellerRoute";
+import AdminRoute from "./components/AdminRoute";
+
 import { WalletProvider } from "./context/WalletContext";
 
 import Home from "./pages/Home";
@@ -38,8 +41,10 @@ import SellerPackages from "./pages/seller/SellerPackages";
 import SellerWallet from "./pages/seller/SellerWallet";
 import SellerPublicProfile from "./pages/SellerPublicProfile";
 
+// Backward-compatibility: kept empty. SellerRoute/AdminRoute/UserRoute are the source of truth.
 function SellerProtectedRoute() {
-  const { isAuthenticated, isLoading } = useAuth();
+  // Kept for backward-compatibility; the source of truth is SellerRoute.
+  const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {
     return (
@@ -49,11 +54,20 @@ function SellerProtectedRoute() {
     );
   }
 
-  return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (user?.role !== "seller") {
+    return <Navigate to="/unauthorized" replace />;
+  }
+
+  return <Outlet />;
 }
 
 function AppRoutes() {
   const location = useLocation();
+  const { user } = useAuth();
 
   useEffect(() => {
     cleanupExpiredPremium();
@@ -61,7 +75,7 @@ function AppRoutes() {
 
   const isAdminRoute = location.pathname.startsWith("/admin");
   const isSellerRoute = location.pathname.startsWith("/seller");
-  const userRole = localStorage.getItem("userRole") || null;
+  const userRole = user?.role || null;
 
   return (
     <>
@@ -81,10 +95,13 @@ function AppRoutes() {
         <Route path="/seller/:id" element={<SellerPublicProfile />} />
         <Route path="/verify-otp" element={<OtpVerification />} />
 
-        {/* Seller */}
-        <Route element={<SellerProtectedRoute />}>
+        {/* Seller (seller only) */}
+        <Route element={<SellerRoute />}>
           <Route path="/seller" element={<SellerLayout />}>
-            <Route index element={<Navigate to="/seller/dashboard" replace />} />
+            <Route
+              index
+              element={<Navigate to="/seller/dashboard" replace />}
+            />
             <Route path="dashboard" element={<SellerDashboard />} />
             <Route path="profile" element={<SellerProfile />} />
             <Route path="services" element={<SellerServices />} />
@@ -97,16 +114,9 @@ function AppRoutes() {
         {/* Admin */}
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
-        <Route
-          path="/admin/dashboard"
-          element={
-            <ProtectedRoute
-              element={<AdminDashboard />}
-              allowedRoles={["admin"]}
-              userRole={userRole}
-            />
-          }
-        />
+        <Route element={<AdminRoute />}>
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        </Route>
 
         <Route path="*" element={<NotFound />} />
       </Routes>
