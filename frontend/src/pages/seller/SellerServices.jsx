@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Clock, IndianRupee, Pencil, Plus, Trash2 } from "lucide-react";
 
@@ -37,49 +37,7 @@ const inputClass =
 
 const labelClass = "mb-2 block text-sm font-semibold text-slate-300";
 
-function readJson(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function getCurrentSellerIdentity() {
-  const registeredSeller = readJson("registeredSeller", null);
-  return {
-    id: registeredSeller?.id,
-    phone: registeredSeller?.mobileNumber,
-    name: registeredSeller?.businessName,
-  };
-}
-
-function syncSellerServices(nextServices) {
-  const identity = getCurrentSellerIdentity();
-  const sellers = readJson("sellers", []);
-  if (!Array.isArray(sellers)) return;
-
-  const updated = sellers.map((seller) => {
-    const matches =
-      seller.id === identity.id ||
-      (identity.phone && seller.phone === identity.phone) ||
-      (identity.name && seller.name === identity.name);
-
-    if (!matches) return seller;
-
-    return {
-      ...seller,
-      service: nextServices[0]?.name || seller.service,
-      services: nextServices.map((service) => ({
-        ...service,
-        sellerId: seller.id,
-      })),
-    };
-  });
-
-  localStorage.setItem("sellers", JSON.stringify(updated));
-}
+// Backend is the single source of truth — no localStorage for business data.
 
 export default function SellerServices() {
   const { user } = useAuth();
@@ -121,16 +79,9 @@ export default function SellerServices() {
 
   // Keep existing durationMinutes logic but we will render a custom picker below.
 
+  // No-op: backend is the source of truth. State is replaced by refreshMyServices().
   const persist = async (nextServices) => {
-    const identity = getCurrentSellerIdentity();
-    const normalizedServices = nextServices.map((service) => ({
-      ...service,
-      sellerId: identity.id || service.sellerId,
-    }));
-
-    // Backend is the source of truth now; keep syncSellerServices only for premium listing UI.
-    setServices(normalizedServices);
-    syncSellerServices(normalizedServices);
+    setServices(nextServices);
   };
 
   const handleChange = (e) => {

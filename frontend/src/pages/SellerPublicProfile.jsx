@@ -109,38 +109,60 @@ export default function SellerPublicProfile() {
   const [contactLoading, setContactLoading] = useState(false);
   const [contactError, setContactError] = useState("");
 
-  const sellers = useMemo(() => {
-    try {
-      const raw = localStorage.getItem("sellers");
-      const arr = raw ? JSON.parse(raw) : [];
-      return Array.isArray(arr) ? arr : [];
-    } catch {
-      return [];
-    }
-  }, []);
+  // Load seller + services from backend (no localStorage for business data).
+  const [seller, setSeller] = useState(null);
+  const [sellerLoading, setSellerLoading] = useState(true);
+  const [savedServices, setSavedServices] = useState([]);
 
-  const seller = useMemo(
-    () => sellers.find((s) => String(s?.id) === String(id)),
-    [sellers, id],
-  );
-
-  const savedServices = useMemo(() => {
-    try {
-      if (Array.isArray(seller?.services) && seller.services.length > 0) {
-        return seller.services;
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        setSellerLoading(true);
+        const apiClient = (await import("../api/axiosConfig.js")).default;
+        const [sellerRes, servicesRes] = await Promise.all([
+          apiClient.get(`/sellers/${id}`),
+          apiClient.get(`/services/seller/${id}`).catch(() => ({ data: {} })),
+        ]);
+        const rawSeller =
+          sellerRes?.data?.data?.seller ||
+          sellerRes?.data?.seller ||
+          null;
+        // Normalize backend shape → legacy keys used by existing JSX.
+        const s = rawSeller
+          ? {
+              ...rawSeller,
+              name: rawSeller.business_name || rawSeller.name || "Seller",
+              service:
+                rawSeller.category_name ||
+                rawSeller.service ||
+                "Service Provider",
+              address: rawSeller.address || rawSeller.city || "",
+              lat: rawSeller.lat != null ? Number(rawSeller.lat) : undefined,
+              lng: rawSeller.lng != null ? Number(rawSeller.lng) : undefined,
+            }
+          : null;
+        const svc =
+          servicesRes?.data?.data?.services ||
+          servicesRes?.data?.services ||
+          [];
+        if (!cancelled) {
+          setSeller(s);
+          setSavedServices(Array.isArray(svc) ? svc : []);
+        }
+      } catch {
+        if (!cancelled) {
+          setSeller(null);
+          setSavedServices([]);
+        }
+      } finally {
+        if (!cancelled) setSellerLoading(false);
       }
-
-      const raw = localStorage.getItem("sellerServices");
-      const arr = raw ? JSON.parse(raw) : [];
-      if (!Array.isArray(arr)) return [];
-
-      return arr.filter(
-        (service) => String(service?.sellerId) === String(seller?.id),
-      );
-    } catch {
-      return [];
-    }
-  }, [seller]);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
   const services = useMemo(() => {
     const source =
@@ -149,17 +171,17 @@ export default function SellerPublicProfile() {
         : defaultServicesForSeller(seller);
 
     return source.map((service, index) => ({
-      id: service.id || `${service.name}-${index}`,
-      name: service.name || service.title || seller?.service || "Service",
+      id: service.id || `${service.title || service.name}-${index}`,
+      name: service.title || service.name || seller?.business_name || "Service",
       description:
         service.description || "Professional service from a verified provider.",
-      price: service.price ?? service.startingPrice ?? "Price on request",
-      duration: service.duration || "1-2 hours",
+      price: service.price ?? "Price on request",
+      duration: service.duration_hrs
+        ? `${service.duration_hrs} hrs`
+        : service.duration || "1-2 hours",
       availability: Array.isArray(service.availability)
         ? service.availability
-        : service.days
-          ? [service.days]
-          : ["Mon-Sun"],
+        : ["Mon-Sun"],
     }));
   }, [savedServices, seller]);
 
@@ -198,6 +220,16 @@ export default function SellerPublicProfile() {
 
     return undefined;
   }, [seller]);
+
+  if (sellerLoading) {
+    return (
+      <main className="min-h-screen bg-[#0d0d1a] px-4 py-10 text-white">
+        <div className="mx-auto max-w-xl rounded-2xl border border-indigo-500/20 bg-[#1a1a2e] p-6 text-center">
+          <h1 className="text-xl font-black">Loading seller…</h1>
+        </div>
+      </main>
+    );
+  }
 
   if (!seller) {
     return (

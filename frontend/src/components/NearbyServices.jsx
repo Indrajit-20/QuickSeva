@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import {
@@ -273,16 +272,17 @@ export default function NearbyServices({
     if (!str || typeof str !== "string") return null;
     const t = str.trim().toLowerCase();
     const hourMatch = t.match(/(\d+)\s*h/);
-    const minMatch  = t.match(/(\d+)\s*m(?!o)/); // 'm' but not 'mo' (month)
+    const minMatch = t.match(/(\d+)\s*m(?!o)/); // 'm' but not 'mo' (month)
     const hours = hourMatch ? Number(hourMatch[1]) : 0;
-    const mins  = minMatch  ? Number(minMatch[1])  : 0;
+    const mins = minMatch ? Number(minMatch[1]) : 0;
     if (!hourMatch && !minMatch) {
-      const range  = t.match(/(\d+)\s*-\s*(\d+)/);
-      if (range) return Math.round(((Number(range[1]) + Number(range[2])) * 60) / 2);
+      const range = t.match(/(\d+)\s*-\s*(\d+)/);
+      if (range)
+        return Math.round(((Number(range[1]) + Number(range[2])) * 60) / 2);
       const single = t.match(/(\d+)\s*hours?/);
       if (single) return Number(single[1]) * 60;
-      const bare   = t.match(/^(\d+)$/);
-      if (bare)   return Number(bare[1]) * 60;
+      const bare = t.match(/^(\d+)$/);
+      if (bare) return Number(bare[1]) * 60;
       return null;
     }
     return hours * 60 + mins;
@@ -291,16 +291,16 @@ export default function NearbyServices({
   const getDurationBucket = (str) => {
     const mins = parseDurationToMinutes(str);
     if (mins === null) return null;
-    if (mins < 60)  return "under1";
+    if (mins < 60) return "under1";
     if (mins <= 120) return "1-2";
     if (mins <= 240) return "2-4";
     return "4+";
   };
 
   const activeFilterCount =
-    (filterPrice    !== "all" ? 1 : 0) +
+    (filterPrice !== "all" ? 1 : 0) +
     (filterDuration !== "all" ? 1 : 0) +
-    (filterBooking  !== "all" ? 1 : 0);
+    (filterBooking !== "all" ? 1 : 0);
 
   const clearAllFilters = () => {
     setFilterPrice("all");
@@ -309,7 +309,6 @@ export default function NearbyServices({
   };
 
   const clickedSellers = useRef(new Set());
-
 
   const [radiusKm, setRadiusKm] = useState(5);
 
@@ -373,6 +372,7 @@ export default function NearbyServices({
 
     if (trimmed.length > 4) {
       results = await nominatimSearch(`${trimmed.slice(0, -2)}, India`);
+      console.log("Smart search fallback results:", results);
       if (results.length > 0) return results;
     }
 
@@ -437,7 +437,11 @@ export default function NearbyServices({
       // Ignore clicks inside the search form
       if (locationSearchRef.current.contains(e.target)) return;
       // Ignore clicks inside the portal dropdown (it lives outside the form in the DOM)
-      if (portalDropdownRef.current && portalDropdownRef.current.contains(e.target)) return;
+      if (
+        portalDropdownRef.current &&
+        portalDropdownRef.current.contains(e.target)
+      )
+        return;
       setLocationResults([]);
     };
 
@@ -459,7 +463,7 @@ export default function NearbyServices({
         top,
         left: rect.left,
         width: rect.width,
-        zIndex: 45,          // below navbar (z-50 = 50) but above page content
+        zIndex: 45, // below navbar (z-50 = 50) but above page content
       });
     };
 
@@ -468,7 +472,10 @@ export default function NearbyServices({
 
     updatePos();
     window.addEventListener("resize", updatePos);
-    window.addEventListener("scroll", closeOnScroll, { passive: true, capture: true });
+    window.addEventListener("scroll", closeOnScroll, {
+      passive: true,
+      capture: true,
+    });
 
     return () => {
       window.removeEventListener("resize", updatePos);
@@ -488,7 +495,6 @@ export default function NearbyServices({
     }, 400);
     return () => clearTimeout(timer);
   }, [locationQuery, locationMode]);
-
 
   useEffect(() => {
     if (!selectedSellerId) return;
@@ -510,8 +516,11 @@ export default function NearbyServices({
     if (!buyerPos) return [];
 
     const filteredByDistance = sellers.filter((s) => {
-      if (typeof s?.lat !== "number" || typeof s?.lng !== "number") return false;
-      return getDistanceKm(buyerPos.lat, buyerPos.lng, s.lat, s.lng) <= radiusKm;
+      if (typeof s?.lat !== "number" || typeof s?.lng !== "number")
+        return false;
+      return (
+        getDistanceKm(buyerPos.lat, buyerPos.lng, s.lat, s.lng) <= radiusKm
+      );
     });
 
     const withDistance = filteredByDistance.map((s) => ({
@@ -532,9 +541,11 @@ export default function NearbyServices({
         : filteredBySearch.filter((s) => {
             const mode = s?.serviceMode;
             if (!mode) return false;
-            if (filterServiceMode === "Online")  return mode === "online" || mode === "both";
-            if (filterServiceMode === "Offline") return mode === "offline" || mode === "both";
-            if (filterServiceMode === "Both")    return mode === "both";
+            if (filterServiceMode === "Online")
+              return mode === "online" || mode === "both";
+            if (filterServiceMode === "Offline")
+              return mode === "offline" || mode === "both";
+            if (filterServiceMode === "Both") return mode === "both";
             return true;
           });
 
@@ -548,7 +559,7 @@ export default function NearbyServices({
         ? filteredByAvailability
         : filteredByAvailability.filter((s) => {
             const r = Number(s?.rating || 0);
-            if (filterRating === "4")   return r >= 4;
+            if (filterRating === "4") return r >= 4;
             if (filterRating === "4.5") return r >= 4.5;
             return true;
           });
@@ -562,10 +573,10 @@ export default function NearbyServices({
             if (!svcs.length) return false;
             return svcs.some((svc) => {
               const p = Number(svc?.price || 0);
-              if (filterPrice === "under500")  return p > 0 && p < 500;
-              if (filterPrice === "500-1000")  return p >= 500 && p <= 1000;
+              if (filterPrice === "under500") return p > 0 && p < 500;
+              if (filterPrice === "500-1000") return p >= 500 && p <= 1000;
               if (filterPrice === "1000-2000") return p > 1000 && p <= 2000;
-              if (filterPrice === "2000+")     return p > 2000;
+              if (filterPrice === "2000+") return p > 2000;
               return true;
             });
           });
@@ -592,7 +603,8 @@ export default function NearbyServices({
             const sellerInstant = Boolean(s?.instantService);
 
             if (filterBooking === "instant") {
-              if (svcs.length > 0) return svcs.some((svc) => Boolean(svc?.is_instant));
+              if (svcs.length > 0)
+                return svcs.some((svc) => Boolean(svc?.is_instant));
               return sellerInstant;
             }
             if (filterBooking === "scheduled") {
@@ -609,9 +621,16 @@ export default function NearbyServices({
       return a.distanceKm - b.distanceKm;
     });
   }, [
-    buyerPos, sellers, search, radiusKm,
-    filterServiceMode, filterAvailability, filterRating,
-    filterPrice, filterDuration, filterBooking,
+    buyerPos,
+    sellers,
+    search,
+    radiusKm,
+    filterServiceMode,
+    filterAvailability,
+    filterRating,
+    filterPrice,
+    filterDuration,
+    filterBooking,
   ]);
 
   const handleLocationSubmit = (e) => {
@@ -619,7 +638,6 @@ export default function NearbyServices({
     if (locationMode !== "area") return;
     searchLocation(locationQuery);
   };
-
 
   const handleResultClick = (result) => {
     setBuyerPos({
@@ -633,7 +651,6 @@ export default function NearbyServices({
     setPincodeError("");
     setGeoError("");
   };
-
 
   const handlePincodeSearch = async () => {
     const trimmed = pincode.trim();
@@ -674,7 +691,6 @@ export default function NearbyServices({
     setGeoError("");
   };
 
-
   const handleUseMyLocation = () => {
     if (gpsPosRef.current) {
       setBuyerPos(gpsPosRef.current);
@@ -685,7 +701,6 @@ export default function NearbyServices({
       setGeoError("");
       return;
     }
-
 
     if (!navigator.geolocation) return;
     setGeoLoading(true);
@@ -738,7 +753,19 @@ export default function NearbyServices({
             <div className="relative min-w-0 flex-1">
               <div className="qs-input-wrap group relative">
                 <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-indigo-300/70 transition-colors group-focus-within:text-indigo-200">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <circle cx="11" cy="11" r="7" />
+                    <path d="m20 20-3.5-3.5" />
+                  </svg>
                 </span>
                 <input
                   value={locationQuery}
@@ -777,38 +804,43 @@ export default function NearbyServices({
           </div>
 
           {/* Portal dropdown — renders at body level so it never clips or overlaps siblings */}
-          {locationResults.length > 0 && dropdownStyle && createPortal(
-            <div
-              ref={portalDropdownRef}
-              style={dropdownStyle}
-              className="max-h-[300px] overflow-y-auto overflow-x-hidden rounded-xl border border-indigo-400/30 bg-[#0a0918] shadow-2xl"
-            >
-              {locationResults.map((result) => (
-                <button
-                  key={`${result.place_id}-${result.lat}-${result.lon}`}
-                  type="button"
-                  onClick={() => handleResultClick(result)}
-                  className="block w-full border-b border-indigo-400/10 px-4 py-3 text-left text-sm text-indigo-100 transition-colors hover:bg-indigo-500/15"
-                >
-                  <span className="flex items-start gap-3">
-                    <span className="mt-0.5 inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-lg border border-indigo-400/20 bg-indigo-500/10 text-indigo-200">
-                      📍
-                    </span>
-                    <span className="flex-1 min-w-0">
-                      <span className="block font-semibold text-white">
-                        {result.display_name.split(",")[0]}
+          {locationResults.length > 0 &&
+            dropdownStyle &&
+            createPortal(
+              <div
+                ref={portalDropdownRef}
+                style={dropdownStyle}
+                className="max-h-[300px] overflow-y-auto overflow-x-hidden rounded-xl border border-indigo-400/30 bg-[#0a0918] shadow-2xl"
+              >
+                {locationResults.map((result) => (
+                  <button
+                    key={`${result.place_id}-${result.lat}-${result.lon}`}
+                    type="button"
+                    onClick={() => handleResultClick(result)}
+                    className="block w-full border-b border-indigo-400/10 px-4 py-3 text-left text-sm text-indigo-100 transition-colors hover:bg-indigo-500/15"
+                  >
+                    <span className="flex items-start gap-3">
+                      <span className="mt-0.5 inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-lg border border-indigo-400/20 bg-indigo-500/10 text-indigo-200">
+                        📍
                       </span>
-                      <span className="block truncate text-xs text-indigo-300/80">
-                        {result.display_name.split(",").slice(1, 3).join(",").trim()}
+                      <span className="flex-1 min-w-0">
+                        <span className="block font-semibold text-white">
+                          {result.display_name.split(",")[0]}
+                        </span>
+                        <span className="block truncate text-xs text-indigo-300/80">
+                          {result.display_name
+                            .split(",")
+                            .slice(1, 3)
+                            .join(",")
+                            .trim()}
+                        </span>
                       </span>
                     </span>
-                  </span>
-                </button>
-              ))}
-            </div>,
-            document.body
-          )}
-
+                  </button>
+                ))}
+              </div>,
+              document.body,
+            )}
 
           {locationNotFoundMsg && (
             <p className="mt-2.5 text-sm text-indigo-200/90">
@@ -824,7 +856,9 @@ export default function NearbyServices({
              */}
             <div className="hidden sm:flex items-center justify-end">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-indigo-400/20 bg-indigo-950/40 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm backdrop-blur">
-                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-indigo-500/15">📮</span>
+                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-indigo-500/15">
+                  📮
+                </span>
                 <input
                   className="w-24 bg-transparent text-center text-sm font-extrabold tracking-widest outline-none"
                   inputMode="numeric"
@@ -871,7 +905,9 @@ export default function NearbyServices({
                       setPincode(val);
                       setPincodeError("");
                     }}
-                    onKeyDown={(e) => e.key === "Enter" && handlePincodeSearch()}
+                    onKeyDown={(e) =>
+                      e.key === "Enter" && handlePincodeSearch()
+                    }
                     placeholder="Enter 6-digit pincode"
                     className="w-full rounded-xl border border-indigo-400/20 bg-indigo-950/40 py-2.5 pl-9 pr-4 text-sm font-medium text-white placeholder-indigo-300/50 focus:border-indigo-400/60 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                   />
@@ -892,7 +928,9 @@ export default function NearbyServices({
             </div>
 
             {pincodeError && (
-              <p className="mt-1.5 text-xs font-medium text-red-300">⚠ {pincodeError}</p>
+              <p className="mt-1.5 text-xs font-medium text-red-300">
+                ⚠ {pincodeError}
+              </p>
             )}
           </div>
         </form>
@@ -956,8 +994,19 @@ export default function NearbyServices({
             onClick={() => setFiltersOpen((prev) => !prev)}
             className="inline-flex items-center gap-2 rounded-xl border border-indigo-400/25 bg-indigo-950/40 px-4 py-2 text-sm font-semibold text-indigo-200 transition-all hover:border-indigo-400/50 hover:bg-indigo-950/60"
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/>
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="4" y1="6" x2="20" y2="6" />
+              <line x1="8" y1="12" x2="16" y2="12" />
+              <line x1="11" y1="18" x2="13" y2="18" />
             </svg>
             Refine Results
             {activeFilterCount > 0 && (
@@ -965,15 +1014,25 @@ export default function NearbyServices({
                 {activeFilterCount}
               </span>
             )}
-            <span className={`ml-auto transition-transform duration-200 ${filtersOpen ? "rotate-180" : ""}`}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M6 9l6 6 6-6"/></svg>
+            <span
+              className={`ml-auto transition-transform duration-200 ${filtersOpen ? "rotate-180" : ""}`}
+            >
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+              >
+                <path d="M6 9l6 6 6-6" />
+              </svg>
             </span>
           </button>
 
           {/* Collapsible panel */}
           {filtersOpen && (
             <div className="mt-2 rounded-xl border border-indigo-400/20 bg-indigo-950/30 p-4 space-y-4">
-
               {/* Price Range */}
               <div>
                 <p className="mb-2 text-xs font-bold uppercase tracking-wider text-indigo-300/80">
@@ -1079,7 +1138,8 @@ export default function NearbyServices({
             )}
             {activeFilterCount > 0 && (
               <span className="rounded-md bg-indigo-500/20 px-2 py-0.5 font-semibold text-indigo-300">
-                · {activeFilterCount} filter{activeFilterCount > 1 ? "s" : ""} active
+                · {activeFilterCount} filter{activeFilterCount > 1 ? "s" : ""}{" "}
+                active
               </span>
             )}
           </div>
@@ -1224,28 +1284,75 @@ export default function NearbyServices({
                         }}
                       >
                         <Popup minWidth={240}>
-                          <div style={{ fontSize: 13, lineHeight: 1.4, padding: 4 }}>
-                            <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 4 }}>
+                          <div
+                            style={{
+                              fontSize: 13,
+                              lineHeight: 1.4,
+                              padding: 4,
+                            }}
+                          >
+                            <div
+                              style={{
+                                fontWeight: 800,
+                                fontSize: 14,
+                                marginBottom: 4,
+                              }}
+                            >
                               🔧 {seller.name}
                             </div>
-                            <div style={{ fontSize: 12, color: "#4b5563", marginBottom: 2 }}>
+                            <div
+                              style={{
+                                fontSize: 12,
+                                color: "#4b5563",
+                                marginBottom: 2,
+                              }}
+                            >
                               🛠 {seller.service}
                             </div>
-                            <div style={{ fontSize: 12, color: "#4b5563", marginBottom: 2 }}>
-                              {seller?.serviceMode === "offline" ? `📍 ${seller.address}` : "🌐 Works Across India"}
+                            <div
+                              style={{
+                                fontSize: 12,
+                                color: "#4b5563",
+                                marginBottom: 2,
+                              }}
+                            >
+                              {seller?.serviceMode === "offline"
+                                ? `📍 ${seller.address}`
+                                : "🌐 Works Across India"}
                             </div>
-                            <div style={{ fontSize: 12, color: "#16a34a", fontWeight: 700, marginBottom: 8 }}>
-                              {seller?.serviceMode === "online" || seller?.serviceMode === "both"
+                            <div
+                              style={{
+                                fontSize: 12,
+                                color: "#16a34a",
+                                fontWeight: 700,
+                                marginBottom: 8,
+                              }}
+                            >
+                              {seller?.serviceMode === "online" ||
+                              seller?.serviceMode === "both"
                                 ? "⚡ Available Online"
                                 : `📏 ${Number(seller.distanceKm || 0).toFixed(1)} km away`}
                             </div>
 
                             {packageRank > 0 ? (
-                              <div style={{ fontSize: 12, color: "#16a34a", marginBottom: 6 }}>
+                              <div
+                                style={{
+                                  fontSize: 12,
+                                  color: "#16a34a",
+                                  marginBottom: 6,
+                                }}
+                              >
                                 📞 {seller.phone}
                               </div>
                             ) : (
-                              <div style={{ fontSize: 11, color: "#9ca3af", marginBottom: 6, fontStyle: "italic" }}>
+                              <div
+                                style={{
+                                  fontSize: 11,
+                                  color: "#9ca3af",
+                                  marginBottom: 6,
+                                  fontStyle: "italic",
+                                }}
+                              >
                                 📞 Contact available on booking
                               </div>
                             )}
@@ -1257,7 +1364,8 @@ export default function NearbyServices({
                                 width: "100%",
                                 padding: "8px 0",
                                 borderRadius: 8,
-                                background: "linear-gradient(135deg, #6366f1, #4f46e5)",
+                                background:
+                                  "linear-gradient(135deg, #6366f1, #4f46e5)",
                                 color: "#fff",
                                 fontWeight: 700,
                                 fontSize: 12,
@@ -1283,9 +1391,7 @@ export default function NearbyServices({
 
         {/* ============ PROVIDER LIST ============ */}
         <div className="w-full lg:w-[42%]">
-          <div
-            className="qs-list flex gap-3 overflow-x-auto pb-2 pr-1 snap-x snap-mandatory lg:block lg:h-[520px] lg:space-y-3 lg:overflow-y-auto lg:overflow-x-hidden lg:pb-0 lg:snap-none"
-          >
+          <div className="qs-list flex gap-3 overflow-x-auto pb-2 pr-1 snap-x snap-mandatory lg:block lg:h-[520px] lg:space-y-3 lg:overflow-y-auto lg:overflow-x-hidden lg:pb-0 lg:snap-none">
             {nearby.length === 0 && buyerPos && (
               <div className="qs-glass-panel w-full py-14 text-center text-indigo-300">
                 <div className="text-5xl">🔍</div>
@@ -1353,10 +1459,14 @@ export default function NearbyServices({
                     </div>
                     <div className="qs-distance-badge">
                       <span className="text-[10px] opacity-80">
-                        {seller?.serviceMode === "online" || seller?.serviceMode === "both" ? "🌐" : "📍"}
+                        {seller?.serviceMode === "online" ||
+                        seller?.serviceMode === "both"
+                          ? "🌐"
+                          : "📍"}
                       </span>
                       <span>
-                        {seller?.serviceMode === "online" || seller?.serviceMode === "both"
+                        {seller?.serviceMode === "online" ||
+                        seller?.serviceMode === "both"
                           ? "Works Across India"
                           : `${distanceLabel}km away`}
                       </span>
@@ -1373,27 +1483,39 @@ export default function NearbyServices({
                   <div className="mt-2.5 flex flex-wrap gap-1.5">
                     {/* Service Mode badges */}
                     {seller?.serviceMode === "online" && (
-                      <span className="qs-tag qs-tag-indigo">🌐 Online Service</span>
+                      <span className="qs-tag qs-tag-indigo">
+                        🌐 Online Service
+                      </span>
                     )}
                     {seller?.serviceMode === "offline" && (
-                      <span className="qs-tag qs-tag-emerald">📍 Offline Service</span>
+                      <span className="qs-tag qs-tag-emerald">
+                        📍 Offline Service
+                      </span>
                     )}
                     {seller?.serviceMode === "both" && (
-                      <span className="qs-tag qs-tag-amber">🔄 Online + Offline</span>
+                      <span className="qs-tag qs-tag-amber">
+                        🔄 Online + Offline
+                      </span>
                     )}
 
                     {/* Instant Service */}
                     {seller?.instantService && (
-                      <span className="qs-instant-badge" title="⚡ Instant Service">
-                        <span className="qs-instant-badge-dot" />
-                        ⚡ Instant Service
+                      <span
+                        className="qs-instant-badge"
+                        title="⚡ Instant Service"
+                      >
+                        <span className="qs-instant-badge-dot" />⚡ Instant
+                        Service
                       </span>
                     )}
 
                     {/* Rating badge */}
                     <span className="qs-tag qs-tag-indigo">
                       ⭐ {Number(seller?.rating || 0).toFixed(1)}
-                      <span className="opacity-80"> ({Number(seller?.reviews || 0)} Reviews)</span>
+                      <span className="opacity-80">
+                        {" "}
+                        ({Number(seller?.reviews || 0)} Reviews)
+                      </span>
                     </span>
 
                     {/* Top Rated */}
@@ -1402,7 +1524,9 @@ export default function NearbyServices({
                     )}
 
                     {/* Verified (keep premium tick + add text badge) */}
-                    {packageRank > 0 && <span className="qs-tag qs-tag-green">✓ Verified</span>}
+                    {packageRank > 0 && (
+                      <span className="qs-tag qs-tag-green">✓ Verified</span>
+                    )}
 
                     {packageRank >= 3 && (
                       <span className="qs-tag qs-tag-gold">⭐ Gold</span>
@@ -1414,7 +1538,9 @@ export default function NearbyServices({
                       <span className="qs-tag qs-tag-indigo">⭐ Top</span>
                     )}
                     {packageRank >= 2 && (
-                      <span className="qs-tag qs-tag-amber">⚡ Fast Response</span>
+                      <span className="qs-tag qs-tag-amber">
+                        ⚡ Fast Response
+                      </span>
                     )}
                     <span className="qs-tag qs-tag-green">
                       <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />

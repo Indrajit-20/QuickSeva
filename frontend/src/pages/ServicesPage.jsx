@@ -4,10 +4,32 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { categoriesData, categoryToKeywords } from "../data/servicesData";
 import NearbyServices from "../components/NearbyServices";
 
-const loadSellers = () => {
+import apiClient from "../api/axiosConfig";
+
+// Sellers come from backend — never from localStorage.
+const fetchSellersByKeyword = async (keyword) => {
   try {
-    const parsed = JSON.parse(localStorage.getItem("sellers") || "[]");
-    return Array.isArray(parsed) ? parsed : [];
+    const params = keyword ? { keyword } : {};
+    // Reuse the public services search; flatten unique sellers.
+    const res = await apiClient.get("/services/search", { params });
+    const services =
+      res?.data?.data?.services || res?.data?.services || [];
+    const sellerMap = new Map();
+    services.forEach((svc) => {
+      const sid = svc.seller_id;
+      if (!sid || sellerMap.has(sid)) return;
+      sellerMap.set(sid, {
+        id: sid,
+        name: svc.seller_business_name || svc.seller_name || "Seller",
+        service: svc.category_name || svc.title || "",
+        address: svc.seller_address || svc.address || "",
+        phone: svc.seller_phone || "",
+        isPremium: Boolean(svc.is_premium),
+        lat: svc.lat,
+        lng: svc.lng,
+      });
+    });
+    return Array.from(sellerMap.values());
   } catch {
     return [];
   }
@@ -24,13 +46,14 @@ export default function ServicesPage() {
   const category = categoryParam || queryFromUrl || "";
 
   const [query, setQuery] = useState(queryFromUrl || "");
-  const [sellers, setSellers] = useState(() => loadSellers());
+  const [sellers, setSellers] = useState([]);
 
   const mapRef = useRef(null);
 
   useEffect(() => {
     setQuery(searchParams.get("q") || "");
-    setSellers(loadSellers());
+    const kw = searchParams.get("category") || searchParams.get("q") || "";
+    fetchSellersByKeyword(kw).then(setSellers);
   }, [searchParams]);
 
   const filteredCategory = useMemo(() => {

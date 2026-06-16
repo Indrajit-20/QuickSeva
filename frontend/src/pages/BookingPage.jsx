@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import apiClient from "../api/axiosConfig";
 
 const TIME_SLOTS = [
   "8:00 AM",
@@ -27,14 +28,18 @@ const formatDate = (value) =>
     year: "numeric",
   }).format(new Date(value));
 
-const readArray = (key) => {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(key) || "[]");
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-};
+// Convert "10:00 AM" + "YYYY-MM-DD" → MySQL DATETIME string
+function buildScheduledAt(date, slot) {
+  if (!date || !slot) return null;
+  const m = slot.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if (!m) return `${date} 10:00:00`;
+  let h = parseInt(m[1], 10);
+  const min = parseInt(m[2], 10);
+  const ampm = m[3].toUpperCase();
+  if (ampm === "PM" && h !== 12) h += 12;
+  if (ampm === "AM" && h === 12) h = 0;
+  return `${date} ${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}:00`;
+}
 
 export default function BookingPage() {
   const { sellerId } = useParams();
@@ -42,15 +47,16 @@ export default function BookingPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const selectedService = location.state?.selectedService || null;
-  const sellers = readArray("sellers");
-  const seller = sellers.find((s) => String(s.id) === String(sellerId));
+
+  const [seller, setSeller] = useState(null);
+  const [sellerLoading, setSellerLoading] = useState(true);
   const [confirmedBooking, setConfirmedBooking] = useState(null);
   const [errors, setErrors] = useState({});
   const [bookingLoading, setBookingLoading] = useState(false);
-  const [leadChargeLoading, setLeadChargeLoading] = useState(false);
-  const [leadChargeError, setLeadChargeError] = useState("");
+  const [submitError, setSubmitError] = useState("");
+
   const [formData, setFormData] = useState({
-    service: selectedService?.name || seller?.service || "",
+    service: selectedService?.name || selectedService?.title || "",
     date: "",
     timeSlot: "",
     address: "",
@@ -58,14 +64,33 @@ export default function BookingPage() {
     instructions: "",
   });
 
+  // Load seller from backend
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        setSellerLoading(true);
+        const res = await apiClient.get(`/sellers/${sellerId}`);
+        const s = res?.data?.data?.seller || res?.data?.seller || null;
+        if (!cancelled) setSeller(s);
+      } catch {
+        if (!cancelled) setSeller(null);
+      } finally {
+        if (!cancelled) setSellerLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [sellerId]);
+
   const serviceOptions = useMemo(() => {
     const values = [
-      selectedService?.name,
-      seller?.service,
-      ...(Array.isArray(seller?.services) ? seller.services : []),
+      selectedService?.name || selectedService?.title,
+      seller?.business_name,
     ].filter(Boolean);
     return Array.from(new Set(values));
-  }, [selectedService?.name, seller]);
+  }, [selectedService, seller]);
 
   const selectedServicePrice = useMemo(() => {
     const rawPrice = selectedService?.price;
@@ -74,7 +99,10 @@ export default function BookingPage() {
     return Number.isFinite(numeric) ? numeric : 0;
   }, [selectedService?.price]);
 
-  const avatarLetter = seller?.name?.trim()?.[0]?.toUpperCase() || "?";
+  const avatarLetter =
+    (seller?.business_name || seller?.name || "?")
+      .trim()[0]
+      ?.toUpperCase() || "?";
 
   const updateField = (name, value) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -97,101 +125,60 @@ export default function BookingPage() {
     return Object.keys(nextErrors).length === 0;
   };
 
-  const chargeLeadIfNeeded = async () => {
-    // Always attempt charge; backend guarantees it happens only once.
-    if (!seller?.id || !selectedService?.id) return { charged: false };
-
-    setLeadChargeLoading(true);
-    setLeadChargeError("");
-
-    try {
-      const apiClient = (await import("../api/axiosConfig.js")).default;
-
-      const res = await apiClient.post("/leads/charge", {
-        sellerId: seller.id,
-        serviceId: selectedService.id,
-        source: "booking",
-      });
-
-      return {
-        charged: Boolean(res?.data?.charged),
-      };
-    } catch (err) {
-      // Per acceptance criteria: continue booking regardless of charged flag.
-      // If backend fails due to wallet, still keep existing booking flow intact.
-      setLeadChargeError(err?.response?.data?.message || "Lead charge failed.");
-      return { charged: false, error: true };
-    } finally {
-      setLeadChargeLoading(false);
-    }
-  };
-
-  const finalizeBooking = () => {
-    if (!seller || !validate()) return;
-
-    // Try to resolve selected service price from whatever seller object has.
-    // (Different profiles store different shapes in localStorage.)
-    const selectedServiceObj =
-      selectedService ||
-      (Array.isArray(seller?.services) &&
-        seller.services.find(
-          (s) => s?.name === formData.service || s?.title === formData.service,
-        )) ||
-      (Array.isArray(seller?.serviceList) &&
-        seller.serviceList.find((s) => s?.name === formData.service)) ||
-      null;
-
-    const resolvedServicePrice =
-      Number(selectedServiceObj?.price ?? selectedServiceObj?.startingPrice) ||
-      0;
-
-    const booking = {
-      id: `BK${Date.now()}`,
-      sellerId: seller.id,
-      sellerName: seller.name,
-      sellerService: seller.service,
-      service: formData.service,
-      serviceDetail: formData.service,
-      amount: resolvedServicePrice,
-      selectedService,
-      customerName: user?.name || user?.fullName || "",
-      customerPhone: formData.mobile || user?.phone || "",
-      date: formData.date,
-      timeSlot: formData.timeSlot,
-      address: formData.address,
-      mobile: formData.mobile,
-      instructions: formData.instructions,
-      status: "pending",
-      bookedAt: new Date().toISOString(),
-    };
-
-    const buyerBookings = readArray("buyerBookings");
-    buyerBookings.push(booking);
-    localStorage.setItem("buyerBookings", JSON.stringify(buyerBookings));
-
-    const sellerOrders = readArray("sellerOrders");
-    sellerOrders.push(booking);
-    localStorage.setItem("sellerOrders", JSON.stringify(sellerOrders));
-
-    setConfirmedBooking(booking);
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLeadChargeError("");
+    setSubmitError("");
+    if (!seller || !validate()) return;
 
-    // Confirmation modal required before booking.
     const ok = window.confirm(
       "Confirm Service Booking\n\nAre you interested in booking this service?",
     );
     if (!ok) return;
 
-    if (leadChargeLoading) return;
+    setBookingLoading(true);
+    try {
+      const payload = {
+        seller_id: seller.id,
+        service_id: selectedService?.id || null,
+        total_amount: selectedServicePrice || 0,
+        payment_method: "cash",
+        address: formData.address,
+        lat: seller.lat ?? null,
+        lng: seller.lng ?? null,
+        scheduled_at: buildScheduledAt(formData.date, formData.timeSlot),
+        notes: formData.instructions || "",
+      };
 
-    await chargeLeadIfNeeded();
-    // Continue booking regardless of whether charged was true/false.
-    finalizeBooking();
+      const res = await apiClient.post("/orders", payload);
+      const order = res?.data?.data?.order || res?.data?.order || null;
+
+      setConfirmedBooking({
+        id: order?.order_number || order?.id || `BK${Date.now()}`,
+        service: formData.service,
+        date: formData.date,
+        timeSlot: formData.timeSlot,
+        sellerName: seller.business_name || seller.name,
+      });
+    } catch (err) {
+      setSubmitError(
+        err?.response?.data?.message || "Failed to place booking. Try again.",
+      );
+    } finally {
+      setBookingLoading(false);
+    }
   };
+
+  if (sellerLoading) {
+    return (
+      <main className="min-h-screen bg-brand-bg px-4 py-12">
+        <div className="mx-auto max-w-xl rounded-2xl bg-white p-8 text-center shadow-sm">
+          <h1 className="text-xl font-black text-slate-900">
+            Loading provider…
+          </h1>
+        </div>
+      </main>
+    );
+  }
 
   if (!seller) {
     return (
@@ -271,25 +258,23 @@ export default function BookingPage() {
             </div>
             <div>
               <h1 className="text-2xl font-black text-slate-900">
-                {seller.name}
+                {seller.business_name || seller.name}
               </h1>
-              <p className="mt-1 text-sm font-semibold text-indigo-700">
-                {seller.service}
+              <p className="mt-1 text-sm text-slate-600">
+                {seller.address || ""}
               </p>
-              <p className="mt-1 text-sm text-slate-600">{seller.address}</p>
-              <p className="mt-2 text-sm text-amber-500">⭐⭐⭐⭐⭐ 4.5</p>
+              <p className="mt-2 text-sm text-amber-500">⭐ {seller.avg_rating || "—"}</p>
             </div>
           </div>
         </section>
 
         {selectedService && (
           <section className="rounded-2xl border border-indigo-200 bg-indigo-50 p-5 shadow-sm">
-            <p className="text-sm font-bold text-indigo-700">
-              Selected service
-            </p>
+            <p className="text-sm font-bold text-indigo-700">Selected service</p>
             <h2 className="mt-1 text-xl font-black text-slate-900">
-              You are booking: {selectedService.name}
-              {selectedServicePrice ? ` - Rs ${selectedServicePrice}` : ""}
+              You are booking:{" "}
+              {selectedService.name || selectedService.title}
+              {selectedServicePrice ? ` - ₹${selectedServicePrice}` : ""}
             </h2>
             {selectedService.description && (
               <p className="mt-2 text-sm font-semibold text-slate-600">
@@ -308,19 +293,20 @@ export default function BookingPage() {
           <div className="mt-5 space-y-5">
             <div>
               <label className="mb-2 block text-sm font-bold text-slate-700">
-                Select Service
+                Service
               </label>
-              <select
+              <input
                 value={formData.service}
                 onChange={(e) => updateField("service", e.target.value)}
+                placeholder="Service name"
                 className="w-full rounded-lg border border-indigo-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
-              >
-                {serviceOptions.map((service) => (
-                  <option key={service} value={service}>
-                    {service}
-                  </option>
+                list="service-options"
+              />
+              <datalist id="service-options">
+                {serviceOptions.map((s) => (
+                  <option key={s} value={s} />
                 ))}
-              </select>
+              </datalist>
               {errors.service && (
                 <p className="mt-1 text-xs text-red-600">{errors.service}</p>
               )}
@@ -411,25 +397,25 @@ export default function BookingPage() {
               <textarea
                 value={formData.instructions}
                 onChange={(e) => updateField("instructions", e.target.value)}
-                placeholder="Any specific requirements or notes for the service provider"
+                placeholder="Any specific requirements or notes"
                 rows={3}
                 className="w-full resize-none rounded-lg border border-indigo-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
               />
             </div>
           </div>
 
-          {leadChargeError && (
-            <p className="mt-4 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm font-bold text-red-200">
-              {leadChargeError}
+          {submitError && (
+            <p className="mt-4 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
+              {submitError}
             </p>
           )}
 
           <button
             type="submit"
-            disabled={leadChargeLoading}
+            disabled={bookingLoading}
             className="mt-6 w-full rounded-xl bg-indigo-600 px-4 py-3 text-base font-black text-white shadow-sm hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {leadChargeLoading ? "Processing…" : "Confirm Booking"}
+            {bookingLoading ? "Placing booking…" : "Confirm Booking"}
           </button>
         </form>
       </div>

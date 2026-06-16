@@ -1,11 +1,8 @@
+import { useEffect, useState } from "react";
 import { CheckCircle2, ClipboardList, Clock3, IndianRupee } from "lucide-react";
-import {
-  formatCurrency,
-  loadArray,
-  mockOrders,
-  statusClasses,
-} from "./sellerData";
+import { formatCurrency, statusClasses } from "./sellerData";
 import { useAuth } from "../../context/AuthContext";
+import { sellerOrdersApi } from "../../api/orderApi";
 
 const cardBase =
   "rounded-xl border border-[rgba(99,102,241,0.2)] bg-[#1a1830] p-5";
@@ -13,14 +10,37 @@ const cardBase =
 export default function SellerDashboard() {
   const { user } = useAuth();
 
-  const orders = loadArray("sellerOrders", mockOrders);
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const completed = orders.filter((order) => order.status === "completed");
-  const pending = orders.filter((order) => order.status === "pending");
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        setLoading(true);
+        const res = await sellerOrdersApi.list();
+        const list = res?.data?.orders || res?.orders || [];
+        if (!cancelled) setOrders(Array.isArray(list) ? list : []);
+      } catch (e) {
+        if (!cancelled)
+          setError(e?.response?.data?.message || "Failed to load orders");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const completed = orders.filter((o) => o.status === "completed");
+  const pending = orders.filter((o) => o.status === "pending");
   const earnings = completed.reduce(
-    (total, order) => total + Number(order.amount || 0),
+    (total, o) => total + Number(o.total_amount || o.amount || 0),
     0,
   );
+
   const today = new Intl.DateTimeFormat("en-IN", {
     weekday: "long",
     day: "numeric",
@@ -64,6 +84,12 @@ export default function SellerDashboard() {
         </h1>
       </div>
 
+      {error && (
+        <div className="rounded-xl border border-red-400/30 bg-red-500/10 p-4 text-sm font-bold text-red-200">
+          {error}
+        </div>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat) => {
           const Icon = stat.icon;
@@ -74,7 +100,9 @@ export default function SellerDashboard() {
               >
                 <Icon size={22} />
               </div>
-              <div className="text-3xl font-black text-white">{stat.value}</div>
+              <div className="text-3xl font-black text-white">
+                {loading ? "…" : stat.value}
+              </div>
               <div className="mt-1 text-sm font-medium text-[#94a3b8]">
                 {stat.label}
               </div>
@@ -91,7 +119,11 @@ export default function SellerDashboard() {
           </span>
         </div>
 
-        {orders.length === 0 ? (
+        {loading ? (
+          <div className="rounded-lg border border-dashed border-indigo-400/30 p-8 text-center text-[#94a3b8]">
+            Loading orders…
+          </div>
+        ) : orders.length === 0 ? (
           <div className="rounded-lg border border-dashed border-indigo-400/30 p-8 text-center text-[#94a3b8]">
             No orders yet — your bookings will appear here
           </div>
@@ -100,7 +132,7 @@ export default function SellerDashboard() {
             <table className="w-full min-w-[760px] text-left text-sm">
               <thead className="border-b border-indigo-500/20 text-xs uppercase text-[#94a3b8]">
                 <tr>
-                  <th className="py-3 pr-4">Order ID</th>
+                  <th className="py-3 pr-4">Order #</th>
                   <th className="py-3 pr-4">Customer</th>
                   <th className="py-3 pr-4">Service</th>
                   <th className="py-3 pr-4">Amount</th>
@@ -112,23 +144,32 @@ export default function SellerDashboard() {
                 {orders.slice(0, 6).map((order) => (
                   <tr key={order.id} className="text-slate-200">
                     <td className="py-4 pr-4 font-bold text-white">
-                      {order.id}
+                      {order.order_number || order.id}
                     </td>
-                    <td className="py-4 pr-4">{order.customer}</td>
-                    <td className="py-4 pr-4">{order.service}</td>
+                    <td className="py-4 pr-4">
+                      {order.buyer_name || order.customer_name || "—"}
+                    </td>
+                    <td className="py-4 pr-4">
+                      {order.service_title || order.service_name || "—"}
+                    </td>
                     <td className="py-4 pr-4 font-semibold">
-                      {formatCurrency(order.amount)}
+                      {formatCurrency(order.total_amount)}
                     </td>
                     <td className="py-4 pr-4">
                       <span
                         className={`rounded-full border px-3 py-1 text-xs font-bold capitalize ${
-                          statusClasses[order.status]
+                          statusClasses[order.status] ||
+                          "border-slate-400/30 bg-slate-400/10 text-slate-300"
                         }`}
                       >
                         {order.status}
                       </span>
                     </td>
-                    <td className="py-4 text-[#94a3b8]">{order.date}</td>
+                    <td className="py-4 text-[#94a3b8]">
+                      {order.created_at
+                        ? new Date(order.created_at).toLocaleDateString("en-IN")
+                        : "—"}
+                    </td>
                   </tr>
                 ))}
               </tbody>

@@ -1,15 +1,6 @@
-import React, { useMemo } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-
-const readArray = (key) => {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(key) || "[]");
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-};
+import React, { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { buyerOrdersApi } from "../api/orderApi";
 
 const formatDate = (value) => {
   if (!value) return "";
@@ -20,58 +11,33 @@ const formatDate = (value) => {
   }).format(new Date(value));
 };
 
-const statusBadgeClasses = {
-  pending: "border-amber-300 bg-amber-50 text-amber-700",
-  confirmed: "border-emerald-300 bg-emerald-50 text-emerald-700",
-  completed: "border-emerald-300 bg-emerald-50 text-emerald-700",
-  cancelled: "border-red-300 bg-red-50 text-red-700",
-};
-
 export default function BookingHistory() {
-  const navigate = useNavigate();
-  const { user } = useAuth();
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const historyBookings = useMemo(() => {
-    const buyerBookings = readArray("buyerBookings");
-    // Treat completed bookings as history (plus optionally cancelled if you want)
-    return (buyerBookings || [])
-      .filter((b) => (b.status || "").toLowerCase() === "completed")
-      .map((b) => ({
-        ...b,
-        provider: b.sellerName,
-        price: b.price ?? b.totalPrice ?? 499, // mock price
-      }))
-      .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await buyerOrdersApi.list({ status: "completed" });
+        const list = res?.data?.orders || res?.orders || [];
+        setBookings(Array.isArray(list) ? list : []);
+      } catch {
+        setBookings([]);
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
 
-  const rebook = (booking) => {
-    const buyerBookings = readArray("buyerBookings");
-    const sellerOrders = readArray("sellerOrders");
-
-    const next = {
-      id: `BK${Date.now()}`,
-      sellerId: booking.sellerId,
-      sellerName: booking.sellerName,
-      sellerService: booking.sellerService,
-      service: booking.service,
-      date: new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0],
-      timeSlot: booking.timeSlot || "10:00 AM",
-      address: booking.address,
-      mobile: user?.phone || booking.mobile || "",
-      instructions: booking.instructions || "",
-      status: "pending",
-      bookedAt: new Date().toISOString(),
-      price: booking.price,
-    };
-
-    buyerBookings.push(next);
-    sellerOrders.push(next);
-
-    localStorage.setItem("buyerBookings", JSON.stringify(buyerBookings));
-    localStorage.setItem("sellerOrders", JSON.stringify(sellerOrders));
-
-    navigate("/my-bookings");
-  };
+  const historyBookings = useMemo(
+    () =>
+      [...bookings].sort(
+        (a, b) =>
+          new Date(b.completed_at || b.created_at || 0) -
+          new Date(a.completed_at || a.created_at || 0),
+      ),
+    [bookings],
+  );
 
   return (
     <main className="min-h-screen bg-brand-bg px-4 py-10">
@@ -83,7 +49,11 @@ export default function BookingHistory() {
           </h1>
         </div>
 
-        {historyBookings.length === 0 ? (
+        {loading ? (
+          <div className="rounded-2xl bg-white p-10 text-center shadow-sm">
+            <h2 className="text-2xl font-black text-slate-900">Loading…</h2>
+          </div>
+        ) : historyBookings.length === 0 ? (
           <div className="rounded-2xl bg-white p-10 text-center shadow-sm">
             <h2 className="text-2xl font-black text-slate-900">
               No completed bookings
@@ -107,53 +77,29 @@ export default function BookingHistory() {
               >
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div>
-                    <div className="flex flex-wrap items-center gap-3">
-                      <h2 className="text-lg font-black text-slate-900">
-                        {b.service}
-                      </h2>
-                      <span
-                        className={`rounded-full border px-3 py-1 text-xs font-black capitalize ${
-                          statusBadgeClasses[b.status] ||
-                          "border-slate-300 bg-slate-50 text-slate-700"
-                        }`}
-                      >
-                        {b.status}
-                      </span>
-                    </div>
-
+                    <h2 className="text-lg font-black text-slate-900">
+                      {b.service_title || b.service_name || "Service"}
+                    </h2>
+                    <p className="mt-1 text-sm font-semibold text-slate-800">
+                      {b.seller_business_name ||
+                        b.seller_name ||
+                        "Provider"}
+                    </p>
+                    <p className="mt-2 text-sm text-slate-600">
+                      📅 {formatDate(b.scheduled_at || b.created_at)}
+                    </p>
                     <p className="mt-2 text-sm font-semibold text-slate-800">
-                      Provider: {b.provider}
-                    </p>
-
-                    <p className="mt-2 text-sm text-slate-600">
-                      🗓️ {formatDate(b.date)} <span className="mx-2">🕒</span>
-                      {b.timeSlot}
-                    </p>
-
-                    <p className="mt-3 text-sm font-black text-indigo-700">
-                      💰 ₹{b.price}
-                    </p>
-
-                    <p className="mt-2 text-sm text-slate-600">
-                      📍 {b.address}
+                      ₹{Number(b.total_amount || 0).toLocaleString("en-IN")}
                     </p>
                   </div>
-
-                  <div className="flex shrink-0 flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => rebook(b)}
-                      className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-600"
-                    >
-                      Re-book
-                    </button>
+                  {b.seller_id && (
                     <Link
-                      to="/services"
-                      className="rounded-lg border border-indigo-300 bg-white px-4 py-2 text-sm font-bold text-indigo-700 hover:bg-indigo-50"
+                      to={`/seller/${b.seller_id}`}
+                      className="self-start rounded-lg border border-indigo-300 bg-white px-4 py-2 text-sm font-bold text-indigo-700 hover:bg-indigo-50"
                     >
-                      Browse
+                      Book Again
                     </Link>
-                  </div>
+                  )}
                 </div>
               </article>
             ))}

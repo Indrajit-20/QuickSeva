@@ -1,42 +1,60 @@
-import { useMemo, useState } from "react";
-import { CheckCircle2, Download, MessageSquare, XCircle } from "lucide-react";
-import {
-  formatCurrency,
-  loadArray,
-  mockOrders,
-  statusClasses,
-} from "./sellerData";
-
-const tabs = ["all", "pending", "completed", "cancelled"];
+import { useEffect, useMemo, useState } from "react";
+import { CheckCircle2, PlayCircle, XCircle } from "lucide-react";
+import { formatCurrency, statusClasses } from "./sellerData";
+import { sellerOrdersApi } from "../../api/orderApi";
 
 import PageTransition from "../../components/PageTransition";
 import "../../index.css";
-import {
-  generateInvoicePDF,
-  openWhatsAppInvoice,
-} from "../../utils/invoiceGenerator";
+
+const tabs = ["all", "pending", "accepted", "in_progress", "completed", "cancelled"];
 
 const maskPhone = (phone) =>
-  phone ? `${phone.slice(0, 2)}XXXXXX${phone.slice(-2)}` : "";
+  phone ? `${String(phone).slice(0, 2)}XXXXXX${String(phone).slice(-2)}` : "";
 
 export default function SellerOrders() {
   const [activeTab, setActiveTab] = useState("all");
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [busyId, setBusyId] = useState(null);
 
-  const [orders, setOrders] = useState(() =>
-    loadArray("sellerOrders", mockOrders),
-  );
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await sellerOrdersApi.list();
+      const list = res?.data?.orders || res?.orders || [];
+      setOrders(Array.isArray(list) ? list : []);
+    } catch (e) {
+      setError(e?.response?.data?.message || "Failed to load orders");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
 
   const filteredOrders = useMemo(() => {
     if (activeTab === "all") return orders;
-    return orders.filter((order) => order.status === activeTab);
+    return orders.filter((o) => o.status === activeTab);
   }, [activeTab, orders]);
 
-  const updateStatus = (id, status) => {
-    const nextOrders = orders.map((order) =>
-      order.id === id || order.order_id === id ? { ...order, status } : order,
-    );
-    setOrders(nextOrders);
-    localStorage.setItem("sellerOrders", JSON.stringify(nextOrders));
+  const runAction = async (action, id) => {
+    setBusyId(id);
+    try {
+      if (action === "accept") await sellerOrdersApi.accept(id);
+      else if (action === "start") await sellerOrdersApi.start(id);
+      else if (action === "complete") await sellerOrdersApi.complete(id);
+      else if (action === "cancel")
+        await sellerOrdersApi.cancel(id, { reason: "Cancelled by seller" });
+      await fetchOrders();
+    } catch (e) {
+      alert(e?.response?.data?.message || "Action failed");
+    } finally {
+      setBusyId(null);
+    }
   };
 
   return (
@@ -46,9 +64,8 @@ export default function SellerOrders() {
           <h1 className="text-3xl font-bold text-white gradient-text-purple">
             Orders
           </h1>
-
           <p className="mt-1 text-[#94a3b8]">
-            Review bookings and update pending order status.
+            Review bookings and update order status.
           </p>
         </div>
 
@@ -64,54 +81,54 @@ export default function SellerOrders() {
                   : "border border-indigo-500/20 bg-[#1a1830] text-[#94a3b8] hover:text-white"
               }`}
             >
-              {tab}
+              {tab.replace("_", " ")}
             </button>
           ))}
         </div>
 
-        {filteredOrders.length === 0 ? (
+        {error && (
+          <div className="rounded-xl border border-red-400/30 bg-red-500/10 p-4 text-sm font-bold text-red-200">
+            {error}
+          </div>
+        )}
+
+        {loading ? (
           <div className="rounded-xl border border-dashed border-indigo-400/30 bg-[#1a1830] p-8 text-center text-[#94a3b8]">
-            No {activeTab} orders
+            Loading orders…
+          </div>
+        ) : filteredOrders.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-indigo-400/30 bg-[#1a1830] p-8 text-center text-[#94a3b8]">
+            No {activeTab.replace("_", " ")} orders
           </div>
         ) : (
           <div className="space-y-4">
             {filteredOrders.map((order) => {
-              const orderId = order.order_id || order.id;
-              const customerName =
-                order.customer_name ||
-                order.customerName ||
-                order.customer ||
-                order.mobile ||
-                "Guest";
-              const serviceName =
-                order.service_name ||
-                order.serviceDetail ||
-                order.sellerService ||
-                order.service ||
-                "—";
-              const customerPhone = order.customer_phone;
-              const amount =
-                order.total_amount !== undefined
-                  ? order.total_amount
-                  : order.amount;
+              const id = order.id;
+              const number = order.order_number || `#${id}`;
+              const customer = order.buyer_name || order.customer_name || "Guest";
+              const service = order.service_title || order.service_name || "—";
+              const amount = order.total_amount;
+              const phone = order.buyer_phone || order.customer_phone;
+              const busy = busyId === id;
 
               return (
                 <article
-                  key={orderId}
+                  key={id}
                   className="rounded-xl border border-[rgba(99,102,241,0.2)] bg-[#1a1830] p-5"
                 >
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div>
                       <div className="flex flex-wrap items-center gap-3">
                         <h2 className="text-xl font-bold text-white">
-                          {orderId}
+                          {number}
                         </h2>
                         <span
                           className={`rounded-full border px-3 py-1 text-xs font-bold capitalize ${
-                            statusClasses[order.status]
+                            statusClasses[order.status] ||
+                            "border-slate-400/30 bg-slate-400/10 text-slate-300"
                           }`}
                         >
-                          {order.status}
+                          {order.status?.replace("_", " ")}
                         </span>
                       </div>
 
@@ -121,14 +138,14 @@ export default function SellerOrders() {
                             Customer
                           </span>
                           <span className="font-semibold text-white">
-                            {customerName}
+                            {customer}
                           </span>
                         </div>
                         <div>
                           <span className="block text-xs text-[#94a3b8]">
                             Service
                           </span>
-                          <span>{serviceName}</span>
+                          <span>{service}</span>
                         </div>
                         <div>
                           <span className="block text-xs text-[#94a3b8]">
@@ -137,7 +154,7 @@ export default function SellerOrders() {
                           <span className="font-semibold">
                             {amount !== undefined && amount !== null
                               ? formatCurrency(amount)
-                              : "Not specified"}
+                              : "—"}
                           </span>
                         </div>
                         <div>
@@ -145,27 +162,26 @@ export default function SellerOrders() {
                             Date
                           </span>
                           <span>
-                            {order.date
-                              ? new Date(order.date).toLocaleDateString(
-                                  "en-IN",
-                                  {
-                                    day: "numeric",
-                                    month: "short",
-                                    year: "numeric",
-                                  },
-                                )
+                            {order.scheduled_at || order.created_at
+                              ? new Date(
+                                  order.scheduled_at || order.created_at,
+                                ).toLocaleDateString("en-IN", {
+                                  day: "numeric",
+                                  month: "short",
+                                  year: "numeric",
+                                })
                               : "—"}
                           </span>
                         </div>
                       </div>
 
-                      {order.status === "completed" && (
+                      {order.status === "completed" && phone && (
                         <div className="mt-3">
                           <span className="block text-xs text-[#94a3b8]">
                             Phone
                           </span>
                           <span className="font-semibold text-white">
-                            {maskPhone(customerPhone)}
+                            {maskPhone(phone)}
                           </span>
                         </div>
                       )}
@@ -176,55 +192,45 @@ export default function SellerOrders() {
                         <>
                           <button
                             type="button"
-                            onClick={() => updateStatus(orderId, "completed")}
-                            className="inline-flex items-center gap-2 rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-sm font-bold text-emerald-200 transition hover:bg-emerald-500/20"
+                            disabled={busy}
+                            onClick={() => runAction("accept", id)}
+                            className="inline-flex items-center gap-2 rounded-lg border border-sky-400/30 bg-sky-500/10 px-3 py-2 text-sm font-bold text-sky-200 transition hover:bg-sky-500/20 disabled:opacity-50"
                           >
                             <CheckCircle2 size={16} />
-                            Mark Complete
+                            Accept
                           </button>
                           <button
                             type="button"
-                            onClick={() => updateStatus(orderId, "cancelled")}
-                            className="inline-flex items-center gap-2 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm font-bold text-red-200 transition hover:bg-red-500/20"
+                            disabled={busy}
+                            onClick={() => runAction("cancel", id)}
+                            className="inline-flex items-center gap-2 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm font-bold text-red-200 transition hover:bg-red-500/20 disabled:opacity-50"
                           >
                             <XCircle size={16} />
                             Cancel
                           </button>
                         </>
                       )}
-
-                      {order.status !== "pending" &&
-                        order.status !== "completed" && (
-                          <div className="rounded-lg border border-[rgba(99,102,241,0.2)] bg-[#1a1830] px-3 py-2 text-sm font-bold text-[#94a3b8]">
-                            —
-                          </div>
-                        )}
-
-                      {order.status === "completed" && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => generateInvoicePDF(order)}
-                            className="inline-flex items-center gap-2 rounded-lg border border-indigo-400/30 bg-[#1a1830] px-3 py-2 text-sm font-bold text-indigo-200 transition hover:bg-indigo-500/10"
-                          >
-                            <Download size={16} />
-                            Download Invoice
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => openWhatsAppInvoice(order)}
-                            className="inline-flex items-center gap-2 rounded-lg bg-[#25D366] px-3 py-2 text-sm font-bold text-[#0b2a17] transition hover:brightness-95"
-                          >
-                            <MessageSquare size={16} />
-                            Send on WhatsApp
-                          </button>
-                        </>
+                      {order.status === "accepted" && (
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => runAction("start", id)}
+                          className="inline-flex items-center gap-2 rounded-lg border border-indigo-400/30 bg-indigo-500/10 px-3 py-2 text-sm font-bold text-indigo-200 transition hover:bg-indigo-500/20 disabled:opacity-50"
+                        >
+                          <PlayCircle size={16} />
+                          Start
+                        </button>
                       )}
-
-                      {order.status === "pending" && (
-                        <div className="inline-flex items-center rounded-lg bg-[#1a1830] px-3 py-2 text-sm font-bold text-[#94a3b8]">
-                          ⏳ Invoice available after completion
-                        </div>
+                      {order.status === "in_progress" && (
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => runAction("complete", id)}
+                          className="inline-flex items-center gap-2 rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-sm font-bold text-emerald-200 transition hover:bg-emerald-500/20 disabled:opacity-50"
+                        >
+                          <CheckCircle2 size={16} />
+                          Mark Complete
+                        </button>
                       )}
                     </div>
                   </div>
