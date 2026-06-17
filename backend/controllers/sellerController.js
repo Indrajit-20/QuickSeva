@@ -1,7 +1,11 @@
 const SellerModel = require("../models/sellerModel");
 const UserModel = require("../models/userModel");
+const WalletModel = require("../models/walletModel");
+
 const { pool } = require("../config/db");
 const { successRes, errorRes, paginate } = require("../utils/helpers");
+const bcrypt = require("bcryptjs");
+const { normalizeIndianMobile } = require("../utils/phoneUtils");
 
 // Create seller profile (buyer becomes seller)
 exports.createSellerProfile = async (req, res) => {
@@ -35,10 +39,22 @@ exports.createSellerProfile = async (req, res) => {
 // Get own seller profile
 exports.getMySellerProfile = async (req, res) => {
   try {
-    const seller = await SellerModel.findByUserId(req.user.id);
-    if (!seller) return errorRes(res, "Seller profile not found", 404);
+    let seller = await SellerModel.findByUserId(req.user.id);
+    if (!seller) {
+      // Auto-create seller profile if it doesn't exist yet (self-healing db state)
+      const sellerId = await SellerModel.create({
+        user_id: req.user.id,
+        business_name: req.user.name || "QuickSeva Partner",
+        category_id: null,
+        bio: "",
+        experience_yrs: 0,
+        phone: req.user.phone,
+      });
+      seller = await SellerModel.findById(sellerId);
+    }
     return successRes(res, { seller });
   } catch (err) {
+    console.error("getMySellerProfile error:", err);
     return errorRes(res, "Failed to fetch seller profile");
   }
 };
@@ -64,8 +80,20 @@ exports.updateSellerProfile = async (req, res) => {
       };
     }
 
-    const seller = await SellerModel.findByUserId(req.user.id);
-    if (!seller) return errorRes(res, "Seller profile not found", 404);
+    let seller = await SellerModel.findByUserId(req.user.id);
+    if (!seller) {
+      const tempBusinessName =
+        req.body.business_name || req.user.name || "QuickSeva Partner";
+      const sellerId = await SellerModel.create({
+        user_id: req.user.id,
+        business_name: tempBusinessName,
+        category_id: req.body.category_id || null,
+        bio: req.body.bio || "",
+        experience_yrs: Number(req.body.experience_yrs || 0),
+        phone: req.user.phone,
+      });
+      seller = await SellerModel.findById(sellerId);
+    }
 
     const {
       business_name,
@@ -74,6 +102,8 @@ exports.updateSellerProfile = async (req, res) => {
       experience_yrs,
       working_radius,
       is_available,
+      gst_number,
+      profile_completed,
     } = req.body;
 
     // Keep sellers.phone synchronized with users.phone
@@ -86,11 +116,15 @@ exports.updateSellerProfile = async (req, res) => {
     if (experience_yrs !== undefined) fields.experience_yrs = experience_yrs;
     if (working_radius !== undefined) fields.working_radius = working_radius;
     if (is_available !== undefined) fields.is_available = is_available;
+    if (gst_number !== undefined) fields.gst_number = gst_number;
+    if (profile_completed !== undefined)
+      fields.profile_completed = profile_completed;
 
     await SellerModel.update(seller.id, fields);
     const updated = await SellerModel.findById(seller.id);
     return successRes(res, { seller: updated }, "Seller profile updated");
   } catch (err) {
+    console.error("updateSellerProfile error details:", err);
     return errorRes(res, "Failed to update seller profile");
   }
 };
@@ -150,6 +184,182 @@ exports.uploadDocuments = async (req, res) => {
   }
 };
 
+// ── Public: Seller registration ─────────────────────────────────────────────
+exports.registerSeller = async (req, res) => {
+  const conn = await pool.getConnection();
+
+  try {
+    const {
+      ownerName,
+      businessName,
+      email,
+      phone,
+      password,
+      bio = "",
+      experience_yrs = 0,
+      address,
+      lat,
+      lng,
+      categoryIds,
+      city,
+      state,
+      pincode,
+    } = req.body || {};
+
+    // Validation
+    if (!ownerName || String(ownerName).trim().length < 2) {
+      return errorRes(res, "Owner name is required", 400);
+    }
+    if (!businessName || String(businessName).trim().length < 2) {
+      return errorRes(res, "Business name is required", 400);
+    }
+
+    const trimmedEmail = typeof email === "string" ? email.trim() : "";
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!trimmedEmail) {
+      return errorRes(res, "Email is required", 400);
+    }
+    if (!emailRegex.test(trimmedEmail)) {
+      return errorRes(res, "Email is invalid", 400);
+    }
+
+    if (!phone) {
+      return errorRes(res, "Phone is required", 400);
+    }
+    const normalizedPhone = normalizeIndianMobile(phone);
+    if (!normalizedPhone) {
+      return errorRes(res, "Valid phone number is required", 400);
+    }
+
+    // Password is now optional for seller registration.
+    // If missing, we generate a temporary password that the seller can change later.
+    let finalPassword = password;
+    if (!finalPassword) {
+      // No password provided from client.
+      // Generate a temporary password; seller can later change it.
+      finalPassword = `Temp#${Date.now()}`;
+    }
+    if (String(finalPassword).length < 6) {
+      finalPassword = `${finalPassword}12345`;
+    }
+
+    if (!address || String(address).trim().length < 3) {
+      return errorRes(res, "Address is required", 400);
+    }
+
+    if (lat === undefined || lat === null || lat === "") {
+      return errorRes(res, "Latitude is required", 400);
+    }
+    if (lng === undefined || lng === null || lng === "") {
+      return errorRes(res, "Longitude is required", 400);
+    }
+    const latNum = Number(lat);
+    const lngNum = Number(lng);
+    if (!Number.isFinite(latNum)) {
+      return errorRes(res, "Latitude must be numeric", 400);
+    }
+    if (!Number.isFinite(lngNum)) {
+      return errorRes(res, "Longitude must be numeric", 400);
+    }
+
+    // categoryIds are optional for registration.
+    const normalizedCategoryIds = Array.isArray(categoryIds)
+      ? Array.from(new Set(categoryIds))
+          .map((c) => parseInt(c, 10))
+          .filter((id) => Number.isFinite(id))
+      : [];
+
+    await conn.beginTransaction();
+
+    // Duplicate checks
+    const [existingEmailRows] = await conn.query(
+      `SELECT id FROM users WHERE email = ? LIMIT 1`,
+      [trimmedEmail],
+    );
+    if (existingEmailRows?.length) {
+      await conn.rollback();
+      return errorRes(res, "Email already registered", 409);
+    }
+
+    const [existingPhoneRows] = await conn.query(
+      `SELECT id FROM users WHERE phone = ? LIMIT 1`,
+      [normalizedPhone],
+    );
+    if (existingPhoneRows?.length) {
+      await conn.rollback();
+      return errorRes(res, "Phone number already registered", 409);
+    }
+
+    const hashedPassword = await bcrypt.hash(finalPassword, 12);
+
+    // Create user (city/state/pincode optional)
+    const [userResult] = await conn.query(
+      `INSERT INTO users (name, email, phone, password, role, address, lat, lng, city, state, pincode)
+       VALUES (?, ?, ?, ?, 'seller', ?, ?, ?, ?, ?, ?)`,
+      [
+        ownerName.trim(),
+        trimmedEmail,
+        normalizedPhone,
+        hashedPassword,
+        String(address).trim(),
+        latNum,
+        lngNum,
+        city ? String(city).trim() : null,
+        state ? String(state).trim() : null,
+        pincode ? String(pincode).trim() : null,
+      ],
+    );
+
+    const userId = userResult.insertId;
+
+    // Create seller row
+    const [sellerResult] = await conn.query(
+      `INSERT INTO sellers (user_id, business_name, bio, experience_yrs, avg_rating, total_reviews, total_orders,
+                              is_verified, is_available, working_radius, documents, gst_number, profile_completed)
+       VALUES (?, ?, ?, ?, 0.00, 0, 0, 0, 1, 10, NULL, NULL, 0)`,
+      [userId, businessName.trim(), bio || null, experience_yrs || 0],
+    );
+    const sellerId = sellerResult.insertId;
+
+    // Insert seller categories only if categories are provided.
+    if (normalizedCategoryIds.length > 0) {
+      for (const categoryId of normalizedCategoryIds) {
+        await conn.query(
+          `INSERT INTO seller_categories (seller_id, category_id) VALUES (?, ?)`,
+          [sellerId, categoryId],
+        );
+      }
+    }
+
+    // Wallet: create if missing
+    const [walletRows] = await conn.query(
+      `SELECT id FROM wallets WHERE user_id = ? LIMIT 1`,
+      [userId],
+    );
+    if (!walletRows?.length) {
+      await conn.query(
+        `INSERT INTO wallets (user_id, balance) VALUES (?, 0.00)`,
+        [userId],
+      );
+    }
+
+    await conn.commit();
+
+    // Contract: return only { success: true, userId, sellerId }
+    return successRes(res, { success: true, userId, sellerId }, null, 201);
+  } catch (err) {
+    console.error("Seller register error:", err);
+    try {
+      await conn.rollback();
+    } catch {
+      // ignore
+    }
+    return errorRes(res, "Failed to register seller");
+  } finally {
+    conn.release();
+  }
+};
+
 // ── Admin ────────────────────────────────────────────────────────────────────
 exports.getAllSellers = async (req, res) => {
   try {
@@ -185,5 +395,129 @@ exports.verifySeller = async (req, res) => {
     return successRes(res, null, "Seller verified successfully");
   } catch (err) {
     return errorRes(res, "Failed to verify seller");
+  }
+};
+
+exports.getMySellerCategories = async (req, res) => {
+  try {
+    const seller = await SellerModel.findByUserId(req.user.id);
+    if (!seller) return errorRes(res, "Seller profile not found", 404);
+
+    const [rows] = await pool.query(
+      `SELECT c.* FROM categories c
+       JOIN seller_categories sc ON c.id = sc.category_id
+       WHERE sc.seller_id = ? AND c.is_active = 1`,
+      [seller.id]
+    );
+
+    // If seller has no categories in seller_categories, return all categories as fallback
+    if (rows.length === 0) {
+      const [allCats] = await pool.query(
+        "SELECT * FROM categories WHERE is_active = 1 ORDER BY name ASC"
+      );
+      return successRes(res, { categories: allCats });
+    }
+
+    return successRes(res, { categories: rows });
+  } catch (err) {
+    console.error("Get my seller categories error:", err);
+    return errorRes(res, "Failed to fetch seller categories");
+  }
+};
+
+// Get authenticated seller's availability
+exports.getSellerAvailability = async (req, res) => {
+  try {
+    const seller = await SellerModel.findByUserId(req.user.id);
+    if (!seller) return errorRes(res, "Seller profile not found", 404);
+
+    let availableDays = [];
+    if (seller.available_days) {
+      availableDays = typeof seller.available_days === "string" 
+        ? JSON.parse(seller.available_days) 
+        : seller.available_days;
+    } else {
+      availableDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    }
+
+    let unavailableDates = [];
+    if (seller.unavailable_dates) {
+      unavailableDates = typeof seller.unavailable_dates === "string"
+        ? JSON.parse(seller.unavailable_dates)
+        : seller.unavailable_dates;
+    }
+
+    return successRes(res, {
+      available_days: availableDays,
+      unavailable_dates: unavailableDates,
+    });
+  } catch (err) {
+    console.error("getSellerAvailability error:", err);
+    return errorRes(res, "Failed to fetch availability");
+  }
+};
+
+// Update availability
+exports.updateSellerAvailability = async (req, res) => {
+  try {
+    const seller = await SellerModel.findByUserId(req.user.id);
+    if (!seller) return errorRes(res, "Seller profile not found", 404);
+
+    const { available_days, unavailable_dates } = req.body;
+
+    // Strict validation for available_days
+    if (available_days !== undefined) {
+      if (!Array.isArray(available_days)) {
+        return errorRes(res, "available_days must be an array of day names", 400);
+      }
+
+      const validDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+      const daySet = new Set();
+      for (const day of available_days) {
+        if (!validDays.includes(day)) {
+          return errorRes(res, `Invalid day name: ${day}`, 400);
+        }
+        if (daySet.has(day)) {
+          return errorRes(res, `Duplicate day name: ${day}`, 400);
+        }
+        daySet.add(day);
+      }
+    }
+
+    // Strict validation for unavailable_dates
+    if (unavailable_dates !== undefined) {
+      if (!Array.isArray(unavailable_dates)) {
+        return errorRes(res, "unavailable_dates must be an array of date strings", 400);
+      }
+
+      // Check format YYYY-MM-DD
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      for (const dateStr of unavailable_dates) {
+        if (typeof dateStr !== "string" || !dateRegex.test(dateStr)) {
+          return errorRes(res, `Invalid date format (must be YYYY-MM-DD): ${dateStr}`, 400);
+        }
+        const parsedDate = new Date(dateStr);
+        if (isNaN(parsedDate.getTime())) {
+          return errorRes(res, `Invalid calendar date: ${dateStr}`, 400);
+        }
+      }
+    }
+
+    const fieldsToUpdate = {};
+    if (available_days !== undefined) {
+      fieldsToUpdate.available_days = JSON.stringify(available_days);
+    }
+    if (unavailable_dates !== undefined) {
+      fieldsToUpdate.unavailable_dates = JSON.stringify(unavailable_dates);
+    }
+
+    if (Object.keys(fieldsToUpdate).length > 0) {
+      await SellerModel.update(seller.id, fieldsToUpdate);
+    }
+
+    return successRes(res, null, "Availability updated successfully");
+  } catch (err) {
+    console.error("updateSellerAvailability error:", err);
+    return errorRes(res, "Failed to update availability");
   }
 };

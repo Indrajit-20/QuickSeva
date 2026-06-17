@@ -3,6 +3,7 @@ const UserModel = require("../models/userModel");
 const WalletModel = require("../models/walletModel");
 const SellerModel = require("../models/sellerModel");
 const { generateToken } = require("../utils/jwtUtils");
+
 const { pool } = require("../config/db");
 const { successRes, errorRes } = require("../utils/helpers");
 const { sendEmail, otpEmailTemplate } = require("../utils/sendEmail");
@@ -140,6 +141,8 @@ exports.register = async (req, res) => {
 
 // ── Login ────────────────────────────────────────────────────────────────────
 exports.login = async (req, res) => {
+  const { generateToken } = require("../utils/jwtUtils");
+
   try {
     const { phone, password } = req.body;
 
@@ -151,14 +154,29 @@ exports.login = async (req, res) => {
 
     // Get seller profile if role is seller
     let sellerProfile = null;
+    let profile_completed = null;
+    let services_count = 0;
     if (user.role === "seller") {
-      sellerProfile = await SellerModel.findByUserId(user.id);
+      const seller = await SellerModel.findByUserId(user.id);
+      sellerProfile = seller;
+      profile_completed = seller?.profile_completed ?? 0;
+      const [serviceRows] = await pool.query(
+        "SELECT COUNT(*) AS count FROM services WHERE seller_id = ? AND is_active = 1",
+        [seller?.id || 0]
+      );
+      services_count = serviceRows[0]?.count || 0;
     }
 
     const { password: _, ...userData } = user;
+
+    const sellerUserPayload =
+      user.role === "seller" && profile_completed !== null
+        ? { ...userData, profile_completed, services_count }
+        : userData;
+
     return successRes(
       res,
-      { user: userData, sellerProfile, token },
+      { user: sellerUserPayload, sellerProfile, token },
       "Login successful",
     );
   } catch (err) {
@@ -171,6 +189,23 @@ exports.login = async (req, res) => {
 exports.getMe = async (req, res) => {
   try {
     const user = await UserModel.findById(req.user.id);
+
+    if (user?.role === "seller") {
+      const seller = await SellerModel.findByUserId(user.id);
+      const [serviceRows] = await pool.query(
+        "SELECT COUNT(*) AS count FROM services WHERE seller_id = ? AND is_active = 1",
+        [seller?.id || 0]
+      );
+      const services_count = serviceRows[0]?.count || 0;
+      return successRes(res, {
+        user: {
+          ...user,
+          profile_completed: seller?.profile_completed ?? 0,
+          services_count,
+        },
+      });
+    }
+
     return successRes(res, { user });
   } catch (err) {
     return errorRes(res, "Failed to fetch profile");
@@ -274,6 +309,18 @@ exports.verifyOTP = async (req, res) => {
 
       const { password: _, ...userData } = user;
 
+      let profile_completed = 0;
+      let services_count = 0;
+      if (user.role === "seller") {
+        const seller = await SellerModel.findByUserId(user.id);
+        profile_completed = seller?.profile_completed ?? 0;
+        const [serviceRows] = await pool.query(
+          "SELECT COUNT(*) AS count FROM services WHERE seller_id = ? AND is_active = 1",
+          [seller?.id || 0]
+        );
+        services_count = serviceRows[0]?.count || 0;
+      }
+
       return successRes(
         res,
         {
@@ -283,6 +330,8 @@ exports.verifyOTP = async (req, res) => {
             name: userData.name,
             phone: userData.phone,
             role: userData.role,
+            profile_completed,
+            services_count,
           },
         },
         "Login successful",
@@ -384,6 +433,9 @@ exports.verifyOTP = async (req, res) => {
 
       const { password: _, ...userData } = user;
 
+      const seller = await SellerModel.findByUserId(userId);
+      const profile_completed = seller?.profile_completed ?? 0;
+
       return successRes(
         res,
         {
@@ -393,6 +445,8 @@ exports.verifyOTP = async (req, res) => {
             name: userData.name,
             phone: userData.phone,
             role: userData.role,
+            profile_completed,
+            services_count: 0,
           },
         },
         "Seller registration successful",

@@ -1,8 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Save } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
-
-
+import apiClient from "../../api/axiosConfig";
 
 const inputClass =
   "w-full rounded-lg border border-indigo-500/20 bg-[#0f0e1a] px-3 py-2.5 text-sm font-medium text-white outline-none transition placeholder:text-slate-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20";
@@ -12,29 +11,48 @@ const labelClass = "mb-2 block text-sm font-semibold text-slate-300";
 export default function SellerProfile() {
   const { user, updateUser } = useAuth();
 
-  const savedProfile = (() => {
-    try {
-      return JSON.parse(localStorage.getItem("sellerProfile") || "{}");
-    } catch {
-      return {};
-    }
-  })();
-
   const [profile, setProfile] = useState({
-    fullName: savedProfile.fullName || user?.name || "",
-    phoneNumber: savedProfile.phoneNumber || user?.phone || "",
-    gstnumber: savedProfile.gstnumber || "",
-    serviceType: savedProfile.serviceType || "AC Repair",
-    bio: savedProfile.bio || "",
-    experience: savedProfile.experience || "",
+    fullName: user?.name || "",
+    phoneNumber: user?.phone || "",
+    gstnumber: "",
+    serviceType: "AC Repair",
+    bio: "",
+    experience: "",
 
     // New: Service Availability (mock marketplace fields)
-    serviceMode: savedProfile.serviceMode || "online",
-    serviceModeLabel: savedProfile.serviceModeLabel || "Online Only",
-    instantService: Boolean(savedProfile.instantService),
+    serviceMode: "online",
+    serviceModeLabel: "Online Only",
+    instantService: false,
   });
 
   const [saved, setSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchProfile = async () => {
+      try {
+        const resp = await apiClient.get("/sellers/me/profile");
+        if (resp?.data?.success && isMounted) {
+          const seller = resp.data.data.seller;
+          setProfile((prev) => ({
+            ...prev,
+            fullName: user?.name || prev.fullName,
+            phoneNumber: user?.phone || prev.phoneNumber,
+            gstnumber: seller.gst_number || prev.gstnumber,
+            bio: seller.bio || prev.bio,
+            experience: seller.experience_yrs !== undefined ? seller.experience_yrs : prev.experience,
+          }));
+        }
+      } catch (err) {
+        console.error("Failed to load seller profile from backend:", err);
+      }
+    };
+    fetchProfile();
+    return () => {
+      isMounted = false;
+    };
+  }, [user]);
 
   const memberSince = user?.loginTime
     ? new Intl.DateTimeFormat("en-IN", {
@@ -49,7 +67,7 @@ export default function SellerProfile() {
     setProfile((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     // GST is optional; validate only if user typed something.
@@ -61,10 +79,36 @@ export default function SellerProfile() {
       return;
     }
 
-    localStorage.setItem("sellerProfile", JSON.stringify(profile));
-    updateUser({ name: profile.fullName, phone: profile.phoneNumber });
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    setIsSaving(true);
+    try {
+      // 1. Update user profile (name)
+      await apiClient.put("/users/profile", {
+        name: profile.fullName,
+      });
+
+      // 2. Update seller profile (bio, experience, gst_number, profile_completed)
+      await apiClient.put("/sellers/me/profile", {
+        bio: profile.bio,
+        experience_yrs: Number(profile.experience || 0),
+        gst_number: profile.gstnumber,
+        profile_completed: 1,
+      });
+
+      // 3. Update context
+      updateUser({
+        name: profile.fullName,
+        phone: profile.phoneNumber,
+        profile_completed: 1,
+      });
+
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      console.error("Failed to save profile:", err);
+      alert("Failed to save profile. Please check connection and try again.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -72,6 +116,30 @@ export default function SellerProfile() {
       {saved && (
         <div className="fixed right-4 top-4 z-50 rounded-lg border border-emerald-400/30 bg-emerald-500/15 px-4 py-3 text-sm font-bold text-emerald-200 shadow-xl">
           Profile updated successfully!
+        </div>
+      )}
+
+      {Number(user?.profile_completed ?? 0) === 0 && (
+        <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-200 text-sm font-semibold flex items-center gap-3 animate-pulse">
+          <span className="text-xl">⚠️</span>
+          <div>
+            <p className="font-bold text-amber-300">Complete Your Profile</p>
+            <p className="text-xs font-normal text-amber-200/80 mt-0.5">
+              Please fill in your details and click "Save Profile" below to unlock the Seller Dashboard, Services, and Orders pages.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {Number(user?.profile_completed ?? 0) === 1 && Number(user?.services_count ?? 0) === 0 && (
+        <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-200 text-sm font-semibold flex items-center gap-3 animate-pulse">
+          <span className="text-xl">⚠️</span>
+          <div>
+            <p className="font-bold text-amber-300">Add Your First Service</p>
+            <p className="text-xs font-normal text-amber-200/80 mt-0.5">
+              Please go to "My Services" and add at least one service to unlock the Seller Dashboard, Orders, and Wallet pages.
+            </p>
+          </div>
         </div>
       )}
 

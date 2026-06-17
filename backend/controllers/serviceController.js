@@ -1,6 +1,7 @@
 const ServiceModel = require("../models/serviceModel");
 const SellerModel = require("../models/sellerModel");
 const { successRes, errorRes, paginate } = require("../utils/helpers");
+const { pool } = require("../config/db");
 
 // Create a service
 exports.createService = async (req, res) => {
@@ -9,18 +10,68 @@ exports.createService = async (req, res) => {
     if (!seller) return errorRes(res, "Seller profile required", 403);
 
     const { category_id, title, description, price, price_type, duration_hrs, tags } = req.body;
+
+    if (!category_id) {
+      return errorRes(res, "Category is required", 400);
+    }
+    if (!title || !title.trim()) {
+      return errorRes(res, "Service title is required", 400);
+    }
+
+    const numPrice = Number(price);
+    if (isNaN(numPrice) || numPrice <= 0) {
+      return errorRes(res, "Price must be a positive number", 400);
+    }
+
+    const validPriceTypes = ["fixed", "hourly", "negotiable"];
+    if (!validPriceTypes.includes(price_type)) {
+      return errorRes(res, "Invalid price type", 400);
+    }
+
+    // Validate: category_id must be one of the categories this seller is registered for
+    const [regCheck] = await pool.query(
+      "SELECT 1 FROM seller_categories WHERE seller_id = ?",
+      [seller.id]
+    );
+
+    if (regCheck.length > 0) {
+      const [catCheck] = await pool.query(
+        "SELECT 1 FROM seller_categories WHERE seller_id = ? AND category_id = ?",
+        [seller.id, category_id]
+      );
+      if (catCheck.length === 0) {
+        return errorRes(res, "Category must be one of your registered categories", 400);
+      }
+    } else {
+      // Self-healing: if they have no categories registered, register this category for them!
+      await pool.query(
+        "INSERT INTO seller_categories (seller_id, category_id) VALUES (?, ?)",
+        [seller.id, category_id]
+      );
+      console.log(`[Self-Healing] Registering category ${category_id} for seller ${seller.id} as they had none registered.`);
+    }
+
     const images = req.files ? req.files.map((f) => `/uploads/services/${f.filename}`) : [];
+
+    let parsedTags = [];
+    if (tags) {
+      try {
+        parsedTags = typeof tags === "string" ? JSON.parse(tags) : tags;
+      } catch (e) {
+        parsedTags = [];
+      }
+    }
 
     const serviceId = await ServiceModel.create({
       seller_id: seller.id,
       category_id,
       title,
-      description,
-      price,
+      description: description || null,
+      price: numPrice,
       price_type,
-      duration_hrs,
+      duration_hrs: duration_hrs || null,
       images,
-      tags: tags ? JSON.parse(tags) : [],
+      tags: parsedTags,
     });
 
     const service = await ServiceModel.findById(serviceId);
@@ -95,12 +146,57 @@ exports.updateService = async (req, res) => {
     const { title, description, price, price_type, duration_hrs, category_id } = req.body;
     const fields = {};
 
-    if (title        !== undefined) fields.title        = title;
-    if (description  !== undefined) fields.description  = description;
-    if (price        !== undefined) fields.price        = price;
-    if (price_type   !== undefined) fields.price_type   = price_type;
+    if (title !== undefined) {
+      if (!title || !title.trim()) {
+        return errorRes(res, "Service title is required", 400);
+      }
+      fields.title = title.trim();
+    }
+    if (description !== undefined) fields.description = description;
+
+    if (price !== undefined) {
+      const numPrice = Number(price);
+      if (isNaN(numPrice) || numPrice <= 0) {
+        return errorRes(res, "Price must be a positive number", 400);
+      }
+      fields.price = numPrice;
+    }
+
+    if (price_type !== undefined) {
+      const validPriceTypes = ["fixed", "hourly", "negotiable"];
+      if (!validPriceTypes.includes(price_type)) {
+        return errorRes(res, "Invalid price type", 400);
+      }
+      fields.price_type = price_type;
+    }
+
     if (duration_hrs !== undefined) fields.duration_hrs = duration_hrs;
-    if (category_id  !== undefined) fields.category_id  = category_id;
+
+    if (category_id !== undefined) {
+      // Validate: category_id must be one of the categories this seller is registered for
+      const [regCheck] = await pool.query(
+        "SELECT 1 FROM seller_categories WHERE seller_id = ?",
+        [seller.id]
+      );
+
+      if (regCheck.length > 0) {
+        const [catCheck] = await pool.query(
+          "SELECT 1 FROM seller_categories WHERE seller_id = ? AND category_id = ?",
+          [seller.id, category_id]
+        );
+        if (catCheck.length === 0) {
+          return errorRes(res, "Category must be one of your registered categories", 400);
+        }
+      } else {
+        // Self-healing: if they have no categories registered, register this category for them!
+        await pool.query(
+          "INSERT INTO seller_categories (seller_id, category_id) VALUES (?, ?)",
+          [seller.id, category_id]
+        );
+        console.log(`[Self-Healing] Registering category ${category_id} for seller ${seller.id} as they had none registered.`);
+      }
+      fields.category_id = category_id;
+    }
 
     if (req.files && req.files.length) {
       fields.images = JSON.stringify(req.files.map((f) => `/uploads/services/${f.filename}`));
@@ -110,6 +206,7 @@ exports.updateService = async (req, res) => {
     const updated = await ServiceModel.findById(req.params.id);
     return successRes(res, { service: updated }, "Service updated");
   } catch (err) {
+    console.error("Update service error:", err);
     return errorRes(res, "Failed to update service");
   }
 };
@@ -123,8 +220,16 @@ exports.deleteService = async (req, res) => {
     const affected = await ServiceModel.delete(req.params.id, seller.id);
     if (!affected) return errorRes(res, "Service not found or unauthorized", 403);
 
-    return successRes(res, null, "Service deleted");
+    // Count active services for this seller after deletion
+    const [serviceRows] = await pool.query(
+      "SELECT COUNT(*) AS count FROM services WHERE seller_id = ? AND is_active = 1",
+      [seller.id]
+    );
+    const services_count = serviceRows[0]?.count || 0;
+
+    return successRes(res, { services_count }, "Service deleted successfully");
   } catch (err) {
+    console.error("Delete service error:", err);
     return errorRes(res, "Failed to delete service");
   }
 };

@@ -1,6 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+
 import { Link, useNavigate } from "react-router-dom";
 import LocationPicker from "../components/LocationPicker";
+import apiClient from "../api/axiosConfig";
 
 const SellerRegister = () => {
   const navigate = useNavigate();
@@ -10,15 +12,38 @@ const SellerRegister = () => {
     ownerName: "",
     email: "",
     mobileNumber: "",
-    // checkbox selection
-    services: [], // e.g. ["Cleaning"]
     location: { lat: null, lng: null, address: "" },
+    categoryIds: [],
   });
 
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+
+  const [apiError, setApiError] = useState("");
+
+  const [categories, setCategories] = useState([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+
+  // useEffect(() => {
+  //   let isMounted = true;
+  //   const fetchCategories = async () => {
+  //     try {
+  //       // const resp = await apiClient.get("/categories");
+  //       const list = resp?.data?.data || resp?.data?.categories || resp?.data || [];
+  //       if (isMounted) setCategories(Array.isArray(list) ? list : []);
+  //     } catch (err) {
+  //       if (isMounted) setCategories([]);
+  //     } finally {
+  //       if (isMounted) setCategoriesLoading(false);
+  //     }
+  //   };
+  //   fetchCategories();
+  //   return () => {
+  //     isMounted = false;
+  //   };
+  // }, []);
 
   const validateEmail = (email) => {
     if (!email) return "Email is required";
@@ -33,15 +58,6 @@ const SellerRegister = () => {
     if (digitsOnly.length !== 10) return "Mobile number must be 10 digits";
     return null;
   };
-
-  const SERVICES = [
-    "Cleaning",
-    "Electrical",
-    "Plumbing",
-    "Carpentry",
-    "AC Repair",
-    "Pest Control",
-  ];
 
   const validateForm = () => {
     const nextErrors = {};
@@ -58,11 +74,18 @@ const SellerRegister = () => {
     const mobileError = validateMobile(formData.mobileNumber);
     if (mobileError) nextErrors.mobileNumber = mobileError;
 
-    if (!formData.services || formData.services.length === 0)
-      nextErrors.services = "Select at least one service";
-
-    if (!formData.location || formData.location.lat === null)
+    if (
+      !formData.location ||
+      formData.location.lat === null ||
+      formData.location.lng === null
+    ) {
       nextErrors.location = "Please pin your service location on the map";
+    }
+
+    // Commented out since categories are optional and selection UI is commented out
+    // if (!Array.isArray(formData.categoryIds) || formData.categoryIds.length === 0) {
+    //   nextErrors.categoryIds = "Please select at least one category";
+    // }
 
     setErrors(nextErrors);
     setTouched({
@@ -70,11 +93,15 @@ const SellerRegister = () => {
       ownerName: true,
       email: true,
       mobileNumber: true,
-      services: true,
       location: true,
+      // categoryIds: true,
     });
 
-    return Object.keys(nextErrors).length === 0;
+    const isValid = Object.keys(nextErrors).length === 0;
+    if (!isValid) {
+      console.warn("SellerRegister validation failed:", nextErrors);
+    }
+    return isValid;
   };
 
   const handleChange = (e) => {
@@ -96,77 +123,57 @@ const SellerRegister = () => {
     setTouched((prev) => ({ ...prev, [name]: true }));
   };
 
+  const handleCategoryToggle = (categoryId) => {
+    setFormData((prev) => {
+      const exists = prev.categoryIds.includes(categoryId);
+      const nextIds = exists
+        ? prev.categoryIds.filter((id) => id !== categoryId)
+        : [...prev.categoryIds, categoryId];
+      return { ...prev, categoryIds: nextIds };
+    });
+    setTouched((prev) => ({ ...prev, categoryIds: true }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // password is intentionally omitted for seller registration
+
     setSuccessMessage("");
+    setApiError("");
 
     if (!validateForm()) return;
 
-    if (formData.location?.lat === null) {
-      setErrors((prev) => ({
-        ...prev,
-        location: "Please pin your service location on the map",
-      }));
-      return;
-    }
-
-    // Save sellers list for buyer-side NearbyServices
-    const existing = JSON.parse(localStorage.getItem("sellers") || "[]");
-
-    const shortAddress = formData.location?.address || "";
-
-    // Store only one primary service (first selected) for simpler matching
-    const primaryService = Array.isArray(formData.services)
-      ? formData.services[0] || ""
-      : "";
-
-    const sellerId = Date.now();
-    const newSeller = {
-      id: sellerId,
-      name: formData.businessName,
-      phone: formData.mobileNumber,
-      service: primaryService,
-      services: formData.services.map((service, index) => ({
-        id: `${sellerId}-${index}`,
-        name: service,
-        description: `Professional ${service.toLowerCase()} service at your doorstep`,
-        price: 299,
-        duration: "1-2 hours",
-        availability: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-      })),
-      lat: formData.location.lat,
-      lng: formData.location.lng,
-      address: shortAddress,
-      registeredAt: new Date().toISOString(),
-    };
-
-    const next = Array.isArray(existing)
-      ? [...existing, newSeller]
-      : [newSeller];
-    localStorage.setItem("sellers", JSON.stringify(next));
-
-    // Keep existing key for OTP flow compatibility (if used elsewhere)
-    localStorage.setItem(
-      "registeredSeller",
-      JSON.stringify({ ...formData, id: sellerId }),
-    );
+    // location already validated in validateForm (lat/lng not null)
+    const { lat, lng, address } = formData.location || {};
 
     setIsLoading(true);
-    setTimeout(() => {
+    try {
+      const payload = {
+        ownerName: formData.ownerName,
+        businessName: formData.businessName,
+        email: formData.email,
+        phone: formData.mobileNumber,
+        address: address || "",
+        lat,
+        lng,
+        // categoryIds: formData.categoryIds,
+      };
+
+      const resp = await apiClient.post("/sellers/register", payload);
+
+      if (resp?.data?.success) {
+        setSuccessMessage("Registration successful. Please login.");
+        navigate("/login", { replace: true });
+      } else {
+        setApiError(resp?.data?.message || "Registration failed");
+      }
+    } catch (err) {
+      const msg =
+        err?.response?.data?.message || err?.message || "Registration failed";
+      setApiError(msg);
+    } finally {
       setIsLoading(false);
-      // OTP flow expects phoneNumber and seller-register fields in location.state.
-      // IMPORTANT: OTP page will call backend /api/auth/send-otp immediately on load.
-      navigate("/verify-otp", {
-        state: {
-          phoneNumber: formData.mobileNumber,
-          firstName: formData.ownerName,
-          lastName: "",
-          email: formData.email,
-          userName: formData.businessName,
-          otpRequestId: `seller-${Date.now()}`,
-        },
-      });
-    }, 300);
+    }
   };
 
   return (
@@ -188,11 +195,11 @@ const SellerRegister = () => {
           </div>
         )}
 
-        {errors.submit && (
+        {apiError && (
           <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg">
             <p className="text-red-200 text-xs flex items-center">
               <span className="mr-2">⚠</span>
-              {errors.submit}
+              {apiError}
             </p>
           </div>
         )}
@@ -244,7 +251,7 @@ const SellerRegister = () => {
 
           <div>
             <label className="block text-xs font-semibold text-indigo-200 mb-2">
-              Email <span className="text-red-400">*</span>
+              Email {/*<span className="text-red-400">*</span> */}
             </label>
             <input
               type="email"
@@ -259,9 +266,9 @@ const SellerRegister = () => {
                   : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
               }`}
             />
-            {errors.email && touched.email && (
+            {/* {errors.email && touched.email && (
               <p className="mt-1 text-xs text-red-300">⚠ {errors.email}</p>
-            )}
+            )}*/}
           </div>
 
           <div>
@@ -293,6 +300,7 @@ const SellerRegister = () => {
             <label className="block text-xs font-semibold text-indigo-200 mb-2">
               Your Service Location <span className="text-red-400">*</span>
             </label>
+
             <LocationPicker
               onChange={({ lat, lng, address }) =>
                 setFormData((prev) => ({
@@ -305,43 +313,51 @@ const SellerRegister = () => {
               <p className="mt-1 text-xs text-red-300">⚠ {errors.location}</p>
             )}
           </div>
-
+          {/* 
           <div>
             <label className="block text-xs font-semibold text-indigo-200 mb-2">
-              Type of services <span className="text-red-400">*</span>
+              Service Categories <span className="text-red-400">*</span>
             </label>
-            <div className="space-y-2">
-              {SERVICES.map((service) => {
-                const checked = formData.services.includes(service);
-                return (
-                  <label
-                    key={service}
-                    className="flex items-start text-sm cursor-pointer select-none"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={(e) => {
-                        const nextChecked = e.target.checked;
-                        setFormData((prev) => {
-                          const set = new Set(prev.services);
-                          if (nextChecked) set.add(service);
-                          else set.delete(service);
-                          return { ...prev, services: Array.from(set) };
-                        });
-                      }}
-                      onBlur={handleBlur}
-                      className="w-4 h-4 mt-0.5 text-indigo-600 rounded focus:ring-indigo-500 border-indigo-500/50 bg-indigo-950/40"
-                    />
-                    <span className="ml-2 text-indigo-200">{service}</span>
-                  </label>
-                );
-              })}
-            </div>
-            {errors.services && touched.services && (
-              <p className="mt-1 text-xs text-red-300">⚠ {errors.services}</p>
+
+            {categoriesLoading ? (
+              <p className="text-xs text-indigo-300">Loading categories...</p>
+            ) : categories.length === 0 ? (
+              <p className="text-xs text-red-300">
+                ⚠ Could not load categories. Please refresh and try again.
+              </p>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                {categories.map((cat) => {
+                  const checked = formData.categoryIds.includes(cat.id);
+                  return (
+                    <label
+                      key={cat.id}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium border cursor-pointer transition-all duration-200 ${
+                        checked
+                          ? "bg-indigo-600/30 border-indigo-500 text-white"
+                          : "bg-indigo-950/40 border-indigo-500/30 text-indigo-200"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => handleCategoryToggle(cat.id)}
+                        className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 border-indigo-500/50 bg-indigo-950/40"
+                      />
+                      {cat.icon ? `${cat.icon} ` : ""}
+                      {cat.name}
+                    </label>
+                  );
+                })}
+              </div>
             )}
-          </div>
+
+            {errors.categoryIds && touched.categoryIds && (
+              <p className="mt-1 text-xs text-red-300">
+                ⚠ {errors.categoryIds}
+              </p>
+            )}
+          </div> */}
 
           <div className="flex items-start text-sm">
             <input

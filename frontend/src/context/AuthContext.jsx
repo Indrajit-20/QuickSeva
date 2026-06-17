@@ -83,10 +83,19 @@ export const AuthProvider = ({ children }) => {
         setAuthError(null);
       } catch (err) {
         console.error("Auth init failed:", err);
-        localStorage.removeItem("authToken");
-        setUser(null);
-        setIsAuthenticated(false);
-        setAuthError("Session expired. Please login again.");
+        const status = err?.response?.status;
+        if (status === 401 || status === 403) {
+          localStorage.removeItem("authToken");
+          localStorage.removeItem("userRole");
+          setUser(null);
+          setIsAuthenticated(false);
+          setAuthError("Session expired. Please login again.");
+        } else {
+          // Network error or database 500 error: keep token, but set error
+          setIsAuthenticated(false);
+          setUser(null);
+          setAuthError("Unable to connect to server. Please try again.");
+        }
       } finally {
         setIsLoading(false);
       }
@@ -161,6 +170,13 @@ export const AuthProvider = ({ children }) => {
   };
 
   // ========================================
+  // UPDATE USER STATE
+  // ========================================
+  const updateUser = (newUserData) => {
+    setUser((prev) => (prev ? { ...prev, ...newUserData } : null));
+  };
+
+  // ========================================
   // CONTEXT VALUE
   // ========================================
   const value = {
@@ -174,6 +190,7 @@ export const AuthProvider = ({ children }) => {
     sendOtp: sendOtpToPhone,
     loginWithOtp,
     logout,
+    updateUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

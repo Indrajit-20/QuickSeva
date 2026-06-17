@@ -172,7 +172,22 @@ return (
               Home
             </Link>
 
-            {isAuthenticated && (
+            {isAuthenticated && user?.role === "seller" ? (
+              <>
+                <Link
+                  to="/seller/services"
+                  className="text-indigo-100 hover:text-red-400 font-semibold transition-colors duration-300"
+                >
+                  My Services
+                </Link>
+                <Link
+                  to="/seller/dashboard"
+                  className="text-indigo-100 hover:text-red-400 font-semibold transition-colors duration-300"
+                >
+                  Dashboard
+                </Link>
+              </>
+            ) : isAuthenticated && (
               <Link
                 to="/my-bookings"
                 className="text-indigo-100 hover:text-red-400 font-semibold transition-colors duration-300"
@@ -277,7 +292,24 @@ return (
               Home
             </Link>
 
-            {isAuthenticated && (
+            {isAuthenticated && user?.role === "seller" ? (
+              <>
+                <Link
+                  to="/seller/services"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="block text-indigo-100 hover:text-red-400 font-semibold py-2 px-3 rounded-lg hover:bg-indigo-900 transition-colors"
+                >
+                  My Services
+                </Link>
+                <Link
+                  to="/seller/dashboard"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="block text-indigo-100 hover:text-red-400 font-semibold py-2 px-3 rounded-lg hover:bg-indigo-900 transition-colors"
+                >
+                  Dashboard
+                </Link>
+              </>
+            ) : isAuthenticated && (
               <Link
                 to="/my-bookings"
                 onClick={() => setIsMenuOpen(false)}

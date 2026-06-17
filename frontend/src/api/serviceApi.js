@@ -1,12 +1,12 @@
 import apiClient from "./axiosConfig";
+import { serviceService } from "../services/serviceService";
 
 export const serviceApi = {
   // Seller-only
-  create: async (payload) => apiClient.post("/services", payload),
-  listMyServices: async () => apiClient.get("/services/me/my"),
-  update: async (serviceId, payload) =>
-    apiClient.put(`/services/${serviceId}`, payload),
-  delete: async (serviceId) => apiClient.delete(`/services/${serviceId}`),
+  create: serviceService.createService,
+  listMyServices: serviceService.getMyServices,
+  update: serviceService.updateService,
+  delete: serviceService.deleteService,
 
   // Public
   getById: async (serviceId) => apiClient.get(`/services/${serviceId}`),
@@ -14,3 +14,4 @@ export const serviceApi = {
     apiClient.get(`/services/seller/${sellerId}`),
   search: async (params) => apiClient.get("/services/search", { params }),
 };
+

@@ -41,6 +41,9 @@ export default function ProfileDropdown({ user, onLogout }) {
   const navigate = useNavigate();
   const { updateUser } = useAuth();
 
+  const isSeller = user?.role === "seller";
+  const isAdmin = user?.role === "admin";
+
   const rootRef = useRef(null);
   const [open, setOpen] = useState(false);
 
@@ -167,27 +170,63 @@ export default function ProfileDropdown({ user, onLogout }) {
               </div>
 
               <div className="px-4 pb-5 space-y-3">
-                <button
-                  type="button"
-                  onClick={() => closeAndNav("/profile")}
-                  className="w-full rounded-xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-100 font-black py-3 hover:bg-emerald-500/25 transition"
-                >
-                  👤 My Profile
-                </button>
-                <button
-                  type="button"
-                  onClick={() => closeAndNav("/my-bookings")}
-                  className="w-full rounded-xl bg-indigo-950/30 border border-indigo-500/20 text-indigo-200 font-black py-3 hover:bg-indigo-950/40 transition"
-                >
-                  📋 My Bookings
-                </button>
-                <button
-                  type="button"
-                  onClick={() => closeAndNav("/booking-history")}
-                  className="w-full rounded-xl bg-indigo-950/30 border border-indigo-500/20 text-indigo-200 font-black py-3 hover:bg-indigo-950/40 transition"
-                >
-                  🕓 Booking History
-                </button>
+                {isSeller ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => closeAndNav("/seller/profile")}
+                      className="w-full rounded-xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-100 font-black py-3 hover:bg-emerald-500/25 transition"
+                    >
+                      👤 My Profile
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => closeAndNav("/seller/services")}
+                      className="w-full rounded-xl bg-indigo-950/30 border border-indigo-500/20 text-indigo-200 font-black py-3 hover:bg-indigo-950/40 transition"
+                    >
+                      💼 My Services
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => closeAndNav("/seller/dashboard")}
+                      className="w-full rounded-xl bg-indigo-950/30 border border-indigo-500/20 text-indigo-200 font-black py-3 hover:bg-indigo-950/40 transition"
+                    >
+                      📊 Seller Dashboard
+                    </button>
+                  </>
+                ) : isAdmin ? (
+                  <button
+                    type="button"
+                    onClick={() => closeAndNav("/admin/dashboard")}
+                    className="w-full rounded-xl bg-indigo-950/30 border border-indigo-500/20 text-indigo-200 font-black py-3 hover:bg-indigo-950/40 transition"
+                  >
+                    📊 Admin Dashboard
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => closeAndNav("/profile")}
+                      className="w-full rounded-xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-100 font-black py-3 hover:bg-emerald-500/25 transition"
+                    >
+                      👤 My Profile
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => closeAndNav("/my-bookings")}
+                      className="w-full rounded-xl bg-indigo-950/30 border border-indigo-500/20 text-indigo-200 font-black py-3 hover:bg-indigo-950/40 transition"
+                    >
+                      📋 My Bookings
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => closeAndNav("/booking-history")}
+                      className="w-full rounded-xl bg-indigo-950/30 border border-indigo-500/20 text-indigo-200 font-black py-3 hover:bg-indigo-950/40 transition"
+                    >
+                      🕓 Booking History
+                    </button>
+                  </>
+                )}
 
                 <button
                   type="button"
@@ -234,39 +273,96 @@ export default function ProfileDropdown({ user, onLogout }) {
               </div>
 
               <div className="p-3">
-                <div className="flex gap-2 mb-3">
-                  <button
-                    type="button"
-                    onClick={() => closeAndNav("/profile")}
-                    className="flex-1 rounded-xl px-3 py-2 text-sm font-black bg-emerald-500/20 border border-emerald-400/40 text-emerald-100 hover:bg-emerald-500/25 transition"
-                  >
-                    👤 My Profile
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => closeAndNav("/my-bookings")}
-                    className="flex-1 rounded-xl px-3 py-2 text-sm font-black transition bg-indigo-950/30 border border-indigo-500/20 text-indigo-200 hover:bg-indigo-950/40"
-                  >
-                    📋 My Bookings
-                  </button>
-                </div>
+                {isSeller ? (
+                  <>
+                    <div className="flex gap-2 mb-3">
+                      <button
+                        type="button"
+                        onClick={() => closeAndNav("/seller/profile")}
+                        className="flex-1 rounded-xl px-3 py-2 text-sm font-black bg-emerald-500/20 border border-emerald-400/40 text-emerald-100 hover:bg-emerald-500/25 transition"
+                      >
+                        👤 My Profile
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => closeAndNav("/seller/services")}
+                        className="flex-1 rounded-xl px-3 py-2 text-sm font-black transition bg-indigo-950/30 border border-indigo-500/20 text-indigo-200 hover:bg-indigo-950/40"
+                      >
+                        💼 My Services
+                      </button>
+                    </div>
 
-                <div className="flex gap-2 mb-3">
-                  <button
-                    type="button"
-                    onClick={() => closeAndNav("/booking-history")}
-                    className="flex-1 rounded-xl px-3 py-2 text-sm font-black bg-indigo-950/30 border border-indigo-500/20 text-indigo-200 hover:bg-indigo-950/40 transition"
-                  >
-                    🕓 Booking History
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="rounded-xl px-3 py-2 text-sm font-black bg-red-600/90 border border-red-500/20 text-white hover:bg-red-700 transition"
-                  >
-                    🚪 Logout
-                  </button>
-                </div>
+                    <div className="flex gap-2 mb-3">
+                      <button
+                        type="button"
+                        onClick={() => closeAndNav("/seller/dashboard")}
+                        className="flex-1 rounded-xl px-3 py-2 text-sm font-black bg-indigo-950/30 border border-indigo-500/20 text-indigo-200 hover:bg-indigo-950/40 transition"
+                      >
+                        📊 Seller Dashboard
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleLogout}
+                        className="rounded-xl px-3 py-2 text-sm font-black bg-red-600/90 border border-red-500/20 text-white hover:bg-red-700 transition"
+                      >
+                        🚪 Logout
+                      </button>
+                    </div>
+                  </>
+                ) : isAdmin ? (
+                  <div className="flex gap-2 mb-3">
+                    <button
+                      type="button"
+                      onClick={() => closeAndNav("/admin/dashboard")}
+                      className="flex-1 rounded-xl px-3 py-2 text-sm font-black bg-indigo-950/30 border border-indigo-500/20 text-indigo-200 hover:bg-indigo-950/40 transition"
+                    >
+                      📊 Admin Dashboard
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="rounded-xl px-3 py-2 text-sm font-black bg-red-600/90 border border-red-500/20 text-white hover:bg-red-700 transition"
+                    >
+                      🚪 Logout
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex gap-2 mb-3">
+                      <button
+                        type="button"
+                        onClick={() => closeAndNav("/profile")}
+                        className="flex-1 rounded-xl px-3 py-2 text-sm font-black bg-emerald-500/20 border border-emerald-400/40 text-emerald-100 hover:bg-emerald-500/25 transition"
+                      >
+                        👤 My Profile
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => closeAndNav("/my-bookings")}
+                        className="flex-1 rounded-xl px-3 py-2 text-sm font-black transition bg-indigo-950/30 border border-indigo-500/20 text-indigo-200 hover:bg-indigo-950/40"
+                      >
+                        📋 My Bookings
+                      </button>
+                    </div>
+
+                    <div className="flex gap-2 mb-3">
+                      <button
+                        type="button"
+                        onClick={() => closeAndNav("/booking-history")}
+                        className="flex-1 rounded-xl px-3 py-2 text-sm font-black bg-indigo-950/30 border border-indigo-500/20 text-indigo-200 hover:bg-indigo-950/40 transition"
+                      >
+                        🕓 Booking History
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleLogout}
+                        className="rounded-xl px-3 py-2 text-sm font-black bg-red-600/90 border border-red-500/20 text-white hover:bg-red-700 transition"
+                      >
+                        🚪 Logout
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>

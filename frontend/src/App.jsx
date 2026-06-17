@@ -16,6 +16,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 
 import SellerRoute from "./components/SellerRoute";
 import AdminRoute from "./components/AdminRoute";
+import UserRoute from "./components/UserRoute";
 
 import { WalletProvider } from "./context/WalletContext";
 
@@ -82,18 +83,28 @@ function AppRoutes() {
       {!isAdminRoute && !isSellerRoute && <Navbar />}
 
       <Routes>
-        {/* Public Routes */}
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/seller-register" element={<SellerRegister />} />
-        <Route path="/services" element={<ServicesPage />} />
-        <Route path="/book/:sellerId" element={<BookingPage />} />
-        <Route path="/my-bookings" element={<MyBookings />} />
-        <Route path="/booking-history" element={<BookingHistory />} />
-        <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/seller/:id" element={<SellerPublicProfile />} />
-        <Route path="/verify-otp" element={<OtpVerification />} />
+        {/* Guest or Customer routes */}
+        <Route element={<UserRoute allowGuests={true} />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/services" element={<ServicesPage />} />
+          <Route path="/seller/:id" element={<SellerPublicProfile />} />
+        </Route>
+
+        {/* Guest-only auth routes */}
+        <Route element={<UserRoute guestOnly={true} />}>
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/seller-register" element={<SellerRegister />} />
+          <Route path="/verify-otp" element={<OtpVerification />} />
+        </Route>
+
+        {/* Customer-only protected routes */}
+        <Route element={<UserRoute />}>
+          <Route path="/book/:sellerId" element={<BookingPage />} />
+          <Route path="/my-bookings" element={<MyBookings />} />
+          <Route path="/booking-history" element={<BookingHistory />} />
+          <Route path="/profile" element={<ProfilePage />} />
+        </Route>
 
         {/* Seller (seller only) */}
         <Route element={<SellerRoute />}>
