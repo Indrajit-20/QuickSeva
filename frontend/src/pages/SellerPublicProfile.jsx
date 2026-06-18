@@ -182,6 +182,7 @@ export default function SellerPublicProfile() {
       availability: Array.isArray(service.availability)
         ? service.availability
         : ["Mon-Sun"],
+      sub_service_name: service.sub_service_name || null,
     }));
   }, [savedServices, seller]);
 
@@ -467,6 +468,11 @@ export default function SellerPublicProfile() {
                       <h3 className="text-lg font-black text-white">
                         {service.name}
                       </h3>
+                      {service.sub_service_name && (
+                        <span className="text-[10px] bg-purple-500/10 border border-purple-500/25 text-purple-300 font-bold px-2 py-0.5 rounded-full inline-block mt-1">
+                          🎯 {service.sub_service_name}
+                        </span>
+                      )}
                       <p className="mt-2 text-sm font-medium text-slate-300">
                         {service.description}
                       </p>

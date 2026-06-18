@@ -2,13 +2,14 @@ const { pool } = require("../config/db");
 
 const Service = {
   // Create new service
-  create: async ({ seller_id, category_id, title, description, price, price_type }) => {
+  create: async ({ seller_id, category_id, sub_service_id, title, description, price, price_type }) => {
     const [result] = await pool.query(
-      `INSERT INTO services (seller_id, category_id, title, description, price, price_type, is_active)
-       VALUES (?, ?, ?, ?, ?, ?, 1)`,
+      `INSERT INTO services (seller_id, category_id, sub_service_id, title, description, price, price_type, is_active)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 1)`,
       [
         seller_id,
         category_id || null,
+        sub_service_id || null,
         title,
         description || null,
         price,
@@ -21,9 +22,10 @@ const Service = {
   // Find active services by seller
   findBySeller: async (seller_id) => {
     const [rows] = await pool.query(
-      `SELECT sv.*, c.name AS category_name, c.icon AS category_icon
+      `SELECT sv.*, c.name AS category_name, c.icon AS category_icon, ss.name AS sub_service_name
        FROM services sv
        LEFT JOIN categories c ON sv.category_id = c.id
+       LEFT JOIN sub_services ss ON sv.sub_service_id = ss.id
        WHERE sv.seller_id = ? AND sv.is_active = 1
        ORDER BY sv.created_at DESC`,
       [seller_id]
@@ -34,9 +36,10 @@ const Service = {
   // Find service by ID
   findById: async (id) => {
     const [rows] = await pool.query(
-      `SELECT sv.*, c.name AS category_name, c.icon AS category_icon
+      `SELECT sv.*, c.name AS category_name, c.icon AS category_icon, ss.name AS sub_service_name
        FROM services sv
        LEFT JOIN categories c ON sv.category_id = c.id
+       LEFT JOIN sub_services ss ON sv.sub_service_id = ss.id
        WHERE sv.id = ? AND sv.is_active = 1`,
       [id]
     );
@@ -62,11 +65,13 @@ const Service = {
       `SELECT sv.id, sv.title, sv.price, sv.price_type, sv.images,
               s.id AS seller_id, s.avg_rating, s.business_name,
               u.name AS seller_name, u.city,
-              c.name AS category_name, c.icon AS category_icon
+              c.name AS category_name, c.icon AS category_icon,
+              ss.name AS sub_service_name
        FROM services sv
        JOIN sellers s ON sv.seller_id = s.id
        JOIN users u ON s.user_id = u.id
        LEFT JOIN categories c ON sv.category_id = c.id
+       LEFT JOIN sub_services ss ON sv.sub_service_id = ss.id
        WHERE ${where.join(" AND ")}
        ORDER BY s.avg_rating DESC
        LIMIT ? OFFSET ?`,

@@ -19,6 +19,11 @@ export const serviceService = {
   deleteService: async (id) => {
     const res = await apiClient.delete(`/services/${id}`);
     return res;
+  },
+
+  getSubServices: async (categoryId) => {
+    const res = await apiClient.get(`/services/sub-services/${categoryId}`);
+    return res;
   }
 };
 

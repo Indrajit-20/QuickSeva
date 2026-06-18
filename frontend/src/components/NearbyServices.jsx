@@ -17,6 +17,7 @@ import {
   Circle,
   Marker,
   Popup,
+  Tooltip,
   useMap,
   useMapEvents,
 } from "react-leaflet";
@@ -33,43 +34,64 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
-const GREEN_PIN_ICON_HTML =
-  "<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none'>" +
-  "<path d='M12 21s7-5.3 7-12a7 7 0 1 0-14 0c0 6.7 7 12 7 12z' fill='#16a34a' stroke='#166534' stroke-width='1.5'/>" +
-  "<circle cx='12' cy='9' r='3.2' fill='#22c55e' stroke='#166534' stroke-width='1.2'/>" +
+const GREEN_PIN_HTML =
+  "<svg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0 0 24 24' fill='none' style='filter: drop-shadow(0 4px 6px rgba(0,0,0,0.15));'>" +
+  "<path d='M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z' fill='#10b981' stroke='#047857' stroke-width='1.5'/>" +
+  "<circle cx='12' cy='9' r='3' fill='#ffffff'/>" +
   "</svg>";
 
 const GREEN_ICON = L.divIcon({
-  className: "green-service-pin",
-  html: GREEN_PIN_ICON_HTML,
-  iconSize: [24, 24],
-  iconAnchor: [12, 24],
+  className: "service-pin-green",
+  html: GREEN_PIN_HTML,
+  iconSize: [30, 30],
+  iconAnchor: [15, 30],
+  popupAnchor: [0, -30],
+  tooltipAnchor: [0, -30],
 });
 
 const PREMIUM_PIN_HTML =
-  "<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24' fill='none'>" +
-  "<path d='M12 21s7-5.3 7-12a7 7 0 1 0-14 0c0 6.7 7 12 7 12z' fill='#16a34a' stroke='#166534' stroke-width='1.5'/>" +
-  "<circle cx='12' cy='9' r='3.2' fill='#22c55e' stroke='#166534' stroke-width='1.2'/>" +
+  "<svg xmlns='http://www.w3.org/2000/svg' width='34' height='34' viewBox='0 0 24 24' fill='none' style='filter: drop-shadow(0 4px 6px rgba(0,0,0,0.15));'>" +
+  "<path d='M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z' fill='#6366f1' stroke='#4338ca' stroke-width='1.5'/>" +
+  "<polygon points='12,6 13.5,9 16.5,9.5 14,11.5 15,14.5 12,13 9,14.5 10,11.5 7.5,9.5 10.5,9' fill='#ffffff'/>" +
   "</svg>";
 
 const PREMIUM_ICON = L.divIcon({
-  className: "premium-service-pin",
+  className: "service-pin-premium",
   html: PREMIUM_PIN_HTML,
-  iconSize: [28, 28],
-  iconAnchor: [14, 28],
+  iconSize: [34, 34],
+  iconAnchor: [17, 34],
+  popupAnchor: [0, -34],
+  tooltipAnchor: [0, -34],
 });
 
 const GOLD_PIN_HTML =
-  "<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24' fill='none'>" +
-  "<path d='M12 21s7-5.3 7-12a7 7 0 1 0-14 0c0 6.7 7 12 7 12z' fill='#f59e0b' stroke='#92400e' stroke-width='1.5'/>" +
-  "<circle cx='12' cy='9' r='3.2' fill='#fde68a' stroke='#92400e' stroke-width='1.2'/>" +
+  "<svg xmlns='http://www.w3.org/2000/svg' width='38' height='38' viewBox='0 0 24 24' fill='none' style='filter: drop-shadow(0 4px 6px rgba(0,0,0,0.25));'>" +
+  "<path d='M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z' fill='#f59e0b' stroke='#b45309' stroke-width='1.5'/>" +
+  "<polygon points='12,5.5 13.8,9.2 17.8,9.8 14.8,12.6 15.5,16.6 12,14.7 8.5,16.6 9.2,12.6 6.2,9.8 10.2,9.2' fill='#ffffff'/>" +
   "</svg>";
 
 const GOLD_ICON = L.divIcon({
-  className: "gold-service-pin",
+  className: "service-pin-gold",
   html: GOLD_PIN_HTML,
-  iconSize: [32, 32],
-  iconAnchor: [16, 32],
+  iconSize: [38, 38],
+  iconAnchor: [19, 38],
+  popupAnchor: [0, -38],
+  tooltipAnchor: [0, -38],
+});
+
+const USER_PIN_HTML =
+  "<div class='relative flex items-center justify-center'>" +
+  "<span class='absolute inline-flex h-6 w-6 animate-ping rounded-full bg-indigo-400 opacity-75'></span>" +
+  "<div class='relative flex h-4 w-4 items-center justify-center rounded-full bg-indigo-600 border-2 border-white shadow-[0_0_10px_rgba(99,102,241,0.8)]'>" +
+  "<div class='h-1.5 w-1.5 rounded-full bg-white'></div>" +
+  "</div>" +
+  "</div>";
+
+const USER_ICON = L.divIcon({
+  className: "user-location-pin",
+  html: USER_PIN_HTML,
+  iconSize: [24, 24],
+  iconAnchor: [12, 12],
 });
 
 const SERVICE_FILTERS = [
@@ -96,18 +118,28 @@ function getDistanceKm(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-function MapController({ center }) {
+function formatDistance(distKm) {
+  if (typeof distKm !== "number") return "";
+  if (distKm < 1) {
+    return `${Math.round(distKm * 1000)}m away`;
+  }
+  return `${distKm.toFixed(1)} km away`;
+}
+
+function MapController({ center, flyTrigger }) {
   const map = useMap();
-  const hasInitialized = useRef(false);
+  const lastTriggerRef = useRef(0);
+
   useEffect(() => {
     if (!center) return;
-    if (!hasInitialized.current) {
-      map.flyTo(center, 14, { animate: true, duration: 1.2 });
-      hasInitialized.current = true;
-    } else {
-      map.flyTo(center, map.getZoom(), { animate: true, duration: 1.0 });
+    if (flyTrigger > lastTriggerRef.current) {
+      const currentZoom = map.getZoom();
+      const nextZoom = currentZoom < 13 ? 14 : currentZoom;
+      map.flyTo(center, nextZoom, { animate: true, duration: 1.2 });
+      lastTriggerRef.current = flyTrigger;
     }
-  }, [center, map]);
+  }, [center, flyTrigger, map]);
+
   return null;
 }
 
@@ -212,6 +244,7 @@ export default function NearbyServices({
   locationFilter = "",
 }) {
   const [buyerPos, setBuyerPos] = useState(null);
+  const [mapFlyTrigger, setMapFlyTrigger] = useState(0);
   const [geoError, setGeoError] = useState("");
   const [search, setSearch] = useState(initialSearch);
   const [locationQuery, setLocationQuery] = useState("");
@@ -317,21 +350,24 @@ export default function NearbyServices({
   const deductedSellers = useRef(new Set());
 
   const handlePremiumSellerClick = (seller) => {
-    if (seller?.id) setSelectedSellerId(seller.id);
+    const sId = seller?.id || seller?.sellerId;
+    if (sId) setSelectedSellerId(sId);
   };
 
   const viewedContacts = useRef(new Set());
   const [revealedContacts, setRevealedContacts] = useState(() => new Set());
 
   const navigateToSeller = (seller) => {
-    window.location.href = `/seller/${seller.id}`;
+    const sId = seller?.id || seller?.sellerId;
+    window.location.href = `/seller/${sId}`;
   };
 
   const handleViewDetailsClick = (seller, e) => {
     e?.preventDefault?.();
     e?.stopPropagation?.();
-    if (seller?.id) {
-      setSelectedSellerId(seller.id);
+    const sId = seller?.id || seller?.sellerId;
+    if (sId) {
+      setSelectedSellerId(sId);
     }
     navigateToSeller(seller);
   };
@@ -423,6 +459,7 @@ export default function NearbyServices({
         };
         gpsPosRef.current = nextPos;
         setBuyerPos(nextPos);
+        setMapFlyTrigger((prev) => prev + 1);
       },
       () => {
         setGeoError("Please allow location access to find nearby services");
@@ -502,15 +539,46 @@ export default function NearbyServices({
     el?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [selectedSellerId]);
 
-  const sellers = useMemo(() => {
+  const [sellers, setSellers] = useState([]);
+  const [apiLoading, setApiLoading] = useState(false);
+
+  useEffect(() => {
     try {
-      const raw = localStorage.getItem("sellers");
-      const arr = raw ? JSON.parse(raw) : [];
-      return Array.isArray(arr) ? arr : [];
-    } catch {
-      return [];
-    }
+      localStorage.removeItem("sellers");
+    } catch (e) {}
   }, []);
+
+  useEffect(() => {
+    if (!buyerPos) return;
+
+    let active = true;
+    const fetchNearby = async () => {
+      setApiLoading(true);
+      try {
+        const res = await fetch(
+          `http://localhost:5000/api/search/nearby?lat=${encodeURIComponent(buyerPos.lat)}&lng=${encodeURIComponent(buyerPos.lng)}&radius=${encodeURIComponent(radiusKm)}`
+        );
+        if (!res.ok) throw new Error("Failed to fetch nearby services");
+        const data = await res.json();
+        if (active && Array.isArray(data)) {
+          setSellers(data);
+        }
+      } catch (err) {
+        console.error("Fetch nearby error:", err);
+      } finally {
+        if (active) setApiLoading(false);
+      }
+    };
+
+    const timer = setTimeout(() => {
+      fetchNearby();
+    }, 250);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [buyerPos?.lat, buyerPos?.lng, radiusKm]);
 
   const nearby = useMemo(() => {
     if (!buyerPos) return [];
@@ -644,6 +712,7 @@ export default function NearbyServices({
       lat: parseFloat(result.lat),
       lng: parseFloat(result.lon),
     });
+    setMapFlyTrigger((prev) => prev + 1);
     setLocationQuery(result.display_name || "");
     setLocationResults([]);
     setLocationNotFoundMsg("");
@@ -665,6 +734,7 @@ export default function NearbyServices({
       if (results.length > 0) {
         const r = results[0];
         setBuyerPos({ lat: parseFloat(r.lat), lng: parseFloat(r.lon) });
+        setMapFlyTrigger((prev) => prev + 1);
         setLocationQuery(r.display_name.split(",")[0] + " - " + trimmed);
         setLocationResults([]);
         setLocationNotFoundMsg("");
@@ -684,6 +754,7 @@ export default function NearbyServices({
     const nextPos = { lat: latlng.lat, lng: latlng.lng };
     gpsPosRef.current = nextPos;
     setBuyerPos(nextPos);
+    setMapFlyTrigger((prev) => prev + 1);
     setLocationResults([]);
     setLocationNotFoundMsg("");
     setPincodeResults([]);
@@ -694,6 +765,7 @@ export default function NearbyServices({
   const handleUseMyLocation = () => {
     if (gpsPosRef.current) {
       setBuyerPos(gpsPosRef.current);
+      setMapFlyTrigger((prev) => prev + 1);
       setLocationResults([]);
       setLocationNotFoundMsg("");
       setPincodeResults([]);
@@ -712,6 +784,7 @@ export default function NearbyServices({
         };
         gpsPosRef.current = nextPos;
         setBuyerPos(nextPos);
+        setMapFlyTrigger((prev) => prev + 1);
         setGeoError("");
         setGeoLoading(false);
       },
@@ -741,11 +814,11 @@ export default function NearbyServices({
           onSubmit={handleLocationSubmit}
           className="relative z-10"
         >
-          <label className="mb-2.5 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-indigo-200/90">
-            <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-indigo-500/20 text-indigo-200">
-              🔍
+          <label className="mb-2.5 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-indigo-100">
+            <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-indigo-500/30 text-indigo-200 font-extrabold">
+              1
             </span>
-            Search Location
+            Step 1: Where are you? (Enter Area or Pincode below)
           </label>
 
           <div className="flex flex-col gap-2.5 sm:flex-row">
@@ -937,6 +1010,12 @@ export default function NearbyServices({
 
         {/* ============ CATEGORY CHIPS ============ */}
         <div className="relative z-10 mt-5">
+          <label className="mb-2.5 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-indigo-100">
+            <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-indigo-500/30 text-indigo-200 font-extrabold">
+              2
+            </span>
+            Step 2: Choose the Service you need
+          </label>
           <div className="qs-chip-row flex gap-2 overflow-x-auto pb-1.5 scrollbar-none snap-x snap-mandatory">
             {SERVICE_FILTERS.map((serviceFilter) => {
               const active =
@@ -960,8 +1039,11 @@ export default function NearbyServices({
         {/* ============ RADIUS SLIDER ============ */}
         <div className="relative z-10 mt-5 rounded-xl border border-indigo-400/15 bg-indigo-950/30 p-3.5">
           <div className="flex items-center justify-between">
-            <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-indigo-200/90">
-              <span>📏</span> Search Radius
+            <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-indigo-100">
+              <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-indigo-500/30 text-indigo-200 font-extrabold">
+                3
+              </span>
+              Step 3: How far should we look? (Distance)
             </span>
             <span className="qs-radius-badge">{radiusKm} km</span>
           </div>
@@ -1228,6 +1310,7 @@ export default function NearbyServices({
             >
               <MapController
                 center={buyerPos ? [buyerPos.lat, buyerPos.lng] : null}
+                flyTrigger={mapFlyTrigger}
               />
               <MapClickHandler onMapClick={handleMapClick} />
 
@@ -1251,16 +1334,7 @@ export default function NearbyServices({
 
                   <Marker
                     position={[buyerPos.lat, buyerPos.lng]}
-                    icon={L.divIcon({
-                      className: "blue-buyer-icon",
-                      html:
-                        "<svg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24' fill='none'>" +
-                        "<path d='M12 21s7-5.3 7-12a7 7 0 1 0-14 0c0 6.7 7 12 7 12z' fill='#6366f1' stroke='#4338ca' stroke-width='1.5'/>" +
-                        "<circle cx='12' cy='9' r='3.2' fill='#a5b4fc' stroke='#4338ca' stroke-width='1.2'/>" +
-                        "</svg>",
-                      iconSize: [22, 22],
-                      iconAnchor: [11, 22],
-                    })}
+                    icon={USER_ICON}
                   />
                 </>
               )}
@@ -1274,109 +1348,53 @@ export default function NearbyServices({
                       return null;
                     }
 
+                    const sId = seller.id || seller.sellerId;
+
                     return (
                       <Marker
-                        key={seller.id}
+                        key={sId}
                         position={[seller.lat, seller.lng]}
                         icon={getSellerPinIcon(seller)}
                         eventHandlers={{
-                          click: () => setSelectedSellerId(seller.id),
+                          click: (e) => {
+                            if (e.originalEvent) {
+                              e.originalEvent.stopPropagation();
+                            }
+                            setSelectedSellerId(sId);
+                            e.target.openPopup();
+                          },
                         }}
                       >
-                        <Popup minWidth={240}>
-                          <div
-                            style={{
-                              fontSize: 13,
-                              lineHeight: 1.4,
-                              padding: 4,
-                            }}
-                          >
-                            <div
-                              style={{
-                                fontWeight: 800,
-                                fontSize: 14,
-                                marginBottom: 4,
-                              }}
-                            >
-                              🔧 {seller.name}
-                            </div>
-                            <div
-                              style={{
-                                fontSize: 12,
-                                color: "#4b5563",
-                                marginBottom: 2,
-                              }}
-                            >
-                              🛠 {seller.service}
-                            </div>
-                            <div
-                              style={{
-                                fontSize: 12,
-                                color: "#4b5563",
-                                marginBottom: 2,
-                              }}
-                            >
-                              {seller?.serviceMode === "offline"
-                                ? `📍 ${seller.address}`
-                                : "🌐 Works Across India"}
-                            </div>
-                            <div
-                              style={{
-                                fontSize: 12,
-                                color: "#16a34a",
-                                fontWeight: 700,
-                                marginBottom: 8,
-                              }}
-                            >
-                              {seller?.serviceMode === "online" ||
-                              seller?.serviceMode === "both"
-                                ? "⚡ Available Online"
-                                : `📏 ${Number(seller.distanceKm || 0).toFixed(1)} km away`}
-                            </div>
-
-                            {packageRank > 0 ? (
-                              <div
-                                style={{
-                                  fontSize: 12,
-                                  color: "#16a34a",
-                                  marginBottom: 6,
-                                }}
-                              >
-                                📞 {seller.phone}
+                        <Tooltip direction="top" offset={[0, -25]} opacity={0.95} permanent={false}>
+                          <div className="font-bold text-xs text-indigo-950 bg-white px-2 py-1 rounded shadow-md border border-indigo-100/50">
+                            <strong>{seller.name}</strong> — {seller.service}
+                          </div>
+                        </Tooltip>
+                        <Popup minWidth={220} className="custom-premium-popup">
+                          <div className="p-1 font-sans">
+                            <h4 className="text-sm font-extrabold text-indigo-950 mb-0.5">
+                              {seller.name}
+                            </h4>
+                            <p className="text-xs font-semibold text-indigo-600 mb-2">
+                              {seller.service}
+                            </p>
+                            <div className="space-y-1 text-[11px] text-slate-500 mb-3">
+                              <div className="flex items-center gap-1 font-semibold text-slate-600">
+                                <span>📍</span>
+                                <span>{formatDistance(seller.distanceKm)}</span>
                               </div>
-                            ) : (
-                              <div
-                                style={{
-                                  fontSize: 11,
-                                  color: "#9ca3af",
-                                  marginBottom: 6,
-                                  fontStyle: "italic",
-                                }}
-                              >
-                                📞 Contact available on booking
+                              <div className="flex items-center gap-1 font-semibold text-amber-600">
+                                <span>⭐</span>
+                                <span>
+                                  {Number(seller.rating || 0).toFixed(1)} ({seller.reviews || 0} reviews)
+                                </span>
                               </div>
-                            )}
-
+                            </div>
                             <a
-                              href={`/seller/${seller.id}`}
-                              style={{
-                                display: "block",
-                                width: "100%",
-                                padding: "8px 0",
-                                borderRadius: 8,
-                                background:
-                                  "linear-gradient(135deg, #6366f1, #4f46e5)",
-                                color: "#fff",
-                                fontWeight: 700,
-                                fontSize: 12,
-                                border: "none",
-                                cursor: "pointer",
-                                textAlign: "center",
-                                textDecoration: "none",
-                                boxShadow: "0 4px 14px rgba(99,102,241,0.45)",
-                              }}
+                              href={`/seller/${sId}`}
+                              className="block w-full text-center text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 py-2 rounded-lg transition-colors shadow-md shadow-indigo-600/20"
                             >
-                              View Profile &amp; Services →
+                              View Provider Profile
                             </a>
                           </div>
                         </Popup>
@@ -1392,7 +1410,21 @@ export default function NearbyServices({
         {/* ============ PROVIDER LIST ============ */}
         <div className="w-full lg:w-[42%]">
           <div className="qs-list flex gap-3 overflow-x-auto pb-2 pr-1 snap-x snap-mandatory lg:block lg:h-[520px] lg:space-y-3 lg:overflow-y-auto lg:overflow-x-hidden lg:pb-0 lg:snap-none">
-            {nearby.length === 0 && buyerPos && (
+            {apiLoading && nearby.length === 0 && (
+              <div className="qs-glass-panel w-full py-14 text-center text-indigo-300">
+                <div className="flex justify-center items-center">
+                  <div className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-500/30 border-t-indigo-500" />
+                </div>
+                <p className="mt-4 text-base font-semibold text-white">
+                  Loading providers…
+                </p>
+                <p className="mt-1 text-xs text-indigo-300/80">
+                  Fetching services near you from MySQL database
+                </p>
+              </div>
+            )}
+
+            {!apiLoading && nearby.length === 0 && buyerPos && (
               <div className="qs-glass-panel w-full py-14 text-center text-indigo-300">
                 <div className="text-5xl">🔍</div>
                 <p className="mt-3 text-base font-semibold text-white">
@@ -1424,13 +1456,14 @@ export default function NearbyServices({
                 return null;
               }
 
-              const isSelected = selectedSellerId === seller.id;
+              const sId = seller.id || seller.sellerId;
+              const isSelected = selectedSellerId === sId;
               const distanceLabel = Number(seller.distanceKm || 0).toFixed(1);
 
               return (
                 <div
-                  key={seller.id}
-                  id={`seller-card-${seller.id}`}
+                  key={sId}
+                  id={`seller-card-${sId}`}
                   onClick={() => handlePremiumSellerClick(seller)}
                   style={{ animationDelay: `${Math.min(idx * 50, 400)}ms` }}
                   className={`qs-card group w-[290px] flex-shrink-0 cursor-pointer snap-start lg:w-auto ${isSelected ? "qs-card-active" : ""}`}
@@ -1478,6 +1511,14 @@ export default function NearbyServices({
                     <span className="mt-0.5">📌</span>
                     <span className="truncate">{seller.address}</span>
                   </div>
+
+                  {/* Distance */}
+                  {buyerPos && (
+                    <div className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-indigo-300/80">
+                      <span>📍</span>
+                      <span>{formatDistance(seller.distanceKm)}</span>
+                    </div>
+                  )}
 
                   {/* Badge row */}
                   <div className="mt-2.5 flex flex-wrap gap-1.5">
@@ -1552,7 +1593,7 @@ export default function NearbyServices({
                   <div className="mt-3">
                     {packageRank > 0 ? (
                       <div className="text-xs">
-                        {revealedContacts.has(seller.id) ? (
+                        {revealedContacts.has(sId) ? (
                           <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-2.5 py-1 font-semibold text-emerald-200">
                             📞 {seller.phone}
                           </span>
@@ -1564,10 +1605,10 @@ export default function NearbyServices({
                               e.stopPropagation();
                               e.preventDefault();
 
-                              if (viewedContacts.current.has(seller.id)) {
+                              if (viewedContacts.current.has(sId)) {
                                 setRevealedContacts((prev) => {
                                   const next = new Set(prev);
-                                  next.add(seller.id);
+                                  next.add(sId);
                                   return next;
                                 });
                                 return;
@@ -1586,18 +1627,18 @@ export default function NearbyServices({
                               ) {
                                 setRevealedContacts((prev) => {
                                   const next = new Set(prev);
-                                  next.add(seller.id);
+                                  next.add(sId);
                                   return next;
                                 });
-                                viewedContacts.current.add(seller.id);
+                                viewedContacts.current.add(sId);
                                 return;
                               }
 
-                              viewedContacts.current.add(seller.id);
-                              deductContactView(seller.id, seller.service);
+                              viewedContacts.current.add(sId);
+                              deductContactView(sId, seller.service);
                               setRevealedContacts((prev) => {
                                 const next = new Set(prev);
-                                next.add(seller.id);
+                                next.add(sId);
                                 return next;
                               });
                             }}
@@ -1615,7 +1656,7 @@ export default function NearbyServices({
 
                   {/* CTA */}
                   <a
-                    href={`/seller/${seller.id}`}
+                    href={`/seller/${sId}`}
                     onClick={(e) => handleViewDetailsClick(seller, e)}
                     className="qs-cta mt-3 block w-full rounded-xl py-2.5 text-center text-xs font-bold text-white"
                   >

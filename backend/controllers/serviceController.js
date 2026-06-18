@@ -9,7 +9,7 @@ exports.createService = async (req, res) => {
     const seller = await SellerModel.findByUserId(req.user.id);
     if (!seller) return errorRes(res, "Seller profile required", 403);
 
-    const { category_id, title, description, price, price_type, duration_hrs, tags } = req.body;
+    const { category_id, sub_service_id, title, description, price, price_type, duration_hrs, tags } = req.body;
 
     if (!category_id) {
       return errorRes(res, "Category is required", 400);
@@ -28,27 +28,17 @@ exports.createService = async (req, res) => {
       return errorRes(res, "Invalid price type", 400);
     }
 
-    // Validate: category_id must be one of the categories this seller is registered for
-    const [regCheck] = await pool.query(
-      "SELECT 1 FROM seller_categories WHERE seller_id = ?",
-      [seller.id]
+    // Auto-register seller under category if not already registered
+    const [catCheck] = await pool.query(
+      "SELECT 1 FROM seller_categories WHERE seller_id = ? AND category_id = ?",
+      [seller.id, category_id]
     );
-
-    if (regCheck.length > 0) {
-      const [catCheck] = await pool.query(
-        "SELECT 1 FROM seller_categories WHERE seller_id = ? AND category_id = ?",
-        [seller.id, category_id]
-      );
-      if (catCheck.length === 0) {
-        return errorRes(res, "Category must be one of your registered categories", 400);
-      }
-    } else {
-      // Self-healing: if they have no categories registered, register this category for them!
+    if (catCheck.length === 0) {
       await pool.query(
         "INSERT INTO seller_categories (seller_id, category_id) VALUES (?, ?)",
         [seller.id, category_id]
       );
-      console.log(`[Self-Healing] Registering category ${category_id} for seller ${seller.id} as they had none registered.`);
+      console.log(`[Auto-Register] Registered category ${category_id} for seller ${seller.id}`);
     }
 
     const images = req.files ? req.files.map((f) => `/uploads/services/${f.filename}`) : [];
@@ -65,6 +55,7 @@ exports.createService = async (req, res) => {
     const serviceId = await ServiceModel.create({
       seller_id: seller.id,
       category_id,
+      sub_service_id: sub_service_id || null,
       title,
       description: description || null,
       price: numPrice,
@@ -143,8 +134,10 @@ exports.updateService = async (req, res) => {
       return errorRes(res, "Service not found or unauthorized", 403);
     }
 
-    const { title, description, price, price_type, duration_hrs, category_id } = req.body;
+    const { title, description, price, price_type, duration_hrs, category_id, sub_service_id } = req.body;
     const fields = {};
+
+    if (sub_service_id !== undefined) fields.sub_service_id = sub_service_id || null;
 
     if (title !== undefined) {
       if (!title || !title.trim()) {
@@ -173,27 +166,16 @@ exports.updateService = async (req, res) => {
     if (duration_hrs !== undefined) fields.duration_hrs = duration_hrs;
 
     if (category_id !== undefined) {
-      // Validate: category_id must be one of the categories this seller is registered for
-      const [regCheck] = await pool.query(
-        "SELECT 1 FROM seller_categories WHERE seller_id = ?",
-        [seller.id]
+      const [catCheck] = await pool.query(
+        "SELECT 1 FROM seller_categories WHERE seller_id = ? AND category_id = ?",
+        [seller.id, category_id]
       );
-
-      if (regCheck.length > 0) {
-        const [catCheck] = await pool.query(
-          "SELECT 1 FROM seller_categories WHERE seller_id = ? AND category_id = ?",
-          [seller.id, category_id]
-        );
-        if (catCheck.length === 0) {
-          return errorRes(res, "Category must be one of your registered categories", 400);
-        }
-      } else {
-        // Self-healing: if they have no categories registered, register this category for them!
+      if (catCheck.length === 0) {
         await pool.query(
           "INSERT INTO seller_categories (seller_id, category_id) VALUES (?, ?)",
           [seller.id, category_id]
         );
-        console.log(`[Self-Healing] Registering category ${category_id} for seller ${seller.id} as they had none registered.`);
+        console.log(`[Auto-Register] Registered category ${category_id} for seller ${seller.id} on update`);
       }
       fields.category_id = category_id;
     }
@@ -231,5 +213,20 @@ exports.deleteService = async (req, res) => {
   } catch (err) {
     console.error("Delete service error:", err);
     return errorRes(res, "Failed to delete service");
+  }
+};
+
+// Fetch sub-services for a category
+exports.getSubServicesByCategory = async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+    const [rows] = await pool.query(
+      "SELECT * FROM sub_services WHERE category_id = ? ORDER BY name ASC",
+      [categoryId]
+    );
+    return successRes(res, { sub_services: rows });
+  } catch (err) {
+    console.error("Get sub-services error:", err);
+    return errorRes(res, "Failed to fetch sub-services");
   }
 };

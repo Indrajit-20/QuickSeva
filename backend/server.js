@@ -18,6 +18,7 @@ const reviewRoutes = require("./routes/reviewRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const sellerLocationRoutes = require("./routes/sellerLocationRoutes");
 const leadChargeRoutes = require("./routes/leadChargeRoutes");
+const searchRoutes = require("./routes/searchRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -26,9 +27,27 @@ const PORT = process.env.PORT || 5000;
 connectDB();
 
 // ── Middleware ────────────────────────────────────────────────────────────────
+const allowedOrigins = process.env.FRONTEND_URL
+  ? process.env.FRONTEND_URL.split(",").map((url) => url.trim().replace(/\/$/, ""))
+  : ["http://localhost:5173"];
+
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, curl, postman)
+      if (!origin) return callback(null, true);
+      
+      const isAllowed = allowedOrigins.includes(origin) || 
+                        origin.startsWith("http://localhost:") || 
+                        origin.startsWith("http://127.0.0.1:");
+                        
+      if (isAllowed) {
+        callback(null, true);
+      } else {
+        console.error(`CORS Blocked: Origin ${origin} is not in allowed origins:`, allowedOrigins);
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   }),
 );
@@ -58,6 +77,7 @@ app.use("/api/wallet", walletRoutes);
 app.use("/api/nearby", nearbyRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/search", searchRoutes);
 app.use("/api", sellerLocationRoutes);
 app.use("/api", leadChargeRoutes);
 

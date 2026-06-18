@@ -7,6 +7,7 @@ export const serviceApi = {
   listMyServices: serviceService.getMyServices,
   update: serviceService.updateService,
   delete: serviceService.deleteService,
+  getSubServices: serviceService.getSubServices,
 
   // Public
   getById: async (serviceId) => apiClient.get(`/services/${serviceId}`),

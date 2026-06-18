@@ -8,6 +8,7 @@ const {
   searchServices,
   updateService,
   deleteService,
+  getSubServicesByCategory,
 } = require("../controllers/serviceController");
 const { protect, sellerOnly } = require("../middleware/authMiddleware");
 const { uploadService } = require("../middleware/uploadMiddleware");
@@ -15,6 +16,7 @@ const { uploadService } = require("../middleware/uploadMiddleware");
 // Public
 router.get("/search",                 searchServices);
 router.get("/seller/:sellerId",       getServicesBySeller);
+router.get("/sub-services/:categoryId", getSubServicesByCategory);
 
 // Seller only
 router.post("/",             protect, sellerOnly, uploadService.array("images", 5), createService);

@@ -400,25 +400,10 @@ exports.verifySeller = async (req, res) => {
 
 exports.getMySellerCategories = async (req, res) => {
   try {
-    const seller = await SellerModel.findByUserId(req.user.id);
-    if (!seller) return errorRes(res, "Seller profile not found", 404);
-
-    const [rows] = await pool.query(
-      `SELECT c.* FROM categories c
-       JOIN seller_categories sc ON c.id = sc.category_id
-       WHERE sc.seller_id = ? AND c.is_active = 1`,
-      [seller.id]
+    const [allCats] = await pool.query(
+      "SELECT * FROM categories WHERE is_active = 1 ORDER BY name ASC"
     );
-
-    // If seller has no categories in seller_categories, return all categories as fallback
-    if (rows.length === 0) {
-      const [allCats] = await pool.query(
-        "SELECT * FROM categories WHERE is_active = 1 ORDER BY name ASC"
-      );
-      return successRes(res, { categories: allCats });
-    }
-
-    return successRes(res, { categories: rows });
+    return successRes(res, { categories: allCats });
   } catch (err) {
     console.error("Get my seller categories error:", err);
     return errorRes(res, "Failed to fetch seller categories");
