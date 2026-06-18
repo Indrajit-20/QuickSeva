@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from "react";
-
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import LocationPicker from "../components/LocationPicker";
 import apiClient from "../api/axiosConfig";
@@ -23,30 +22,10 @@ const SellerRegister = () => {
 
   const [apiError, setApiError] = useState("");
 
-  const [categories, setCategories] = useState([]);
-  const [categoriesLoading, setCategoriesLoading] = useState(true);
 
-  // useEffect(() => {
-  //   let isMounted = true;
-  //   const fetchCategories = async () => {
-  //     try {
-  //       // const resp = await apiClient.get("/categories");
-  //       const list = resp?.data?.data || resp?.data?.categories || resp?.data || [];
-  //       if (isMounted) setCategories(Array.isArray(list) ? list : []);
-  //     } catch (err) {
-  //       if (isMounted) setCategories([]);
-  //     } finally {
-  //       if (isMounted) setCategoriesLoading(false);
-  //     }
-  //   };
-  //   fetchCategories();
-  //   return () => {
-  //     isMounted = false;
-  //   };
-  // }, []);
 
   const validateEmail = (email) => {
-    if (!email) return "Email is required";
+    if (!email) return null;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) return "Enter valid email";
     return null;
@@ -121,17 +100,6 @@ const SellerRegister = () => {
   const handleBlur = (e) => {
     const { name } = e.target;
     setTouched((prev) => ({ ...prev, [name]: true }));
-  };
-
-  const handleCategoryToggle = (categoryId) => {
-    setFormData((prev) => {
-      const exists = prev.categoryIds.includes(categoryId);
-      const nextIds = exists
-        ? prev.categoryIds.filter((id) => id !== categoryId)
-        : [...prev.categoryIds, categoryId];
-      return { ...prev, categoryIds: nextIds };
-    });
-    setTouched((prev) => ({ ...prev, categoryIds: true }));
   };
 
   const handleSubmit = async (e) => {

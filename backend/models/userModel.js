@@ -5,9 +5,16 @@ const UserModel = {
   // Create a new user
   create: async ({ name, email, phone, hashedPassword, role = "buyer" }) => {
     const normalizedPhone = normalizeIndianMobile(phone);
+    let passHash = hashedPassword;
+    if (!passHash) {
+      const crypto = require("crypto");
+      const bcrypt = require("bcryptjs");
+      const randomPassword = crypto.randomBytes(16).toString("hex");
+      passHash = await bcrypt.hash(randomPassword, 12);
+    }
     const [result] = await pool.query(
       `INSERT INTO users (name, email, phone, password, role) VALUES (?, ?, ?, ?, ?)`,
-      [name, email || null, normalizedPhone, hashedPassword, role],
+      [name, email || null, normalizedPhone, passHash, role],
     );
     return result.insertId;
   },

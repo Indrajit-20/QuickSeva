@@ -106,6 +106,54 @@ const SERVICE_FILTERS = [
   "Appliance Repair",
 ];
 
+const SERVICE_DISPLAY = {
+  All: { label: "🌐 All Services / सभी", icon: "🌐" },
+  Cleaning: { label: "🧹 Cleaning / सफ़ाई", icon: "🧹" },
+  Electrical: { label: "⚡ Electrical / बिजली काम", icon: "⚡" },
+  Plumbing: { label: "🚰 Plumbing / नलसाजी", icon: "🚰" },
+  Carpentry: { label: "🪚 Carpentry / बढ़ई", icon: "🪚" },
+  "AC Repair": { label: "❄️ AC Repair / एसी काम", icon: "❄️" },
+  "Pest Control": { label: "🐜 Pest Control / कीटनाशक", icon: "🐜" },
+  "Home Painting": { label: "🎨 Painting / पुताई", icon: "🎨" },
+  "Appliance Repair": { label: "🔌 Appliance / उपकरण", icon: "🔌" },
+};
+
+function getDistanceGuide(distKm) {
+  if (typeof distKm !== "number") return "";
+  if (distKm < 1) {
+    return `🚶 ~${Math.round(distKm * 12) || 5} min walk / पैदल रास्ता`;
+  }
+  if (distKm <= 5) {
+    return `🏍️ ~${Math.round(distKm * 2) + 2} min ride / बाइक से ५-१० मिनट`;
+  }
+  return `🚗 ~${Math.round(distKm * 2.5) + 3} min drive / वाहन से १५+ मिनट`;
+}
+
+function getRadiusVisualGuide(radius) {
+  if (radius <= 2) {
+    return {
+      icon: "🚶",
+      text: "Very Close / बहुत पास (Walking distance / पैदल दूरी)",
+    };
+  }
+  if (radius <= 5) {
+    return {
+      icon: "🏍️",
+      text: "Nearby / पास में (Quick ride / बाइक से 5-10 मिनट)",
+    };
+  }
+  if (radius <= 10) {
+    return {
+      icon: "🚗",
+      text: "Medium / थोड़ा दूर (15-20 min ride / गाड़ी से 15-20 मिनट)",
+    };
+  }
+  return {
+    icon: "🚛",
+    text: "Far away / काफ़ी दूर (Long drive / 20 मिनट से ज़्यादा)",
+  };
+}
+
 function getDistanceKm(lat1, lng1, lat2, lng2) {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -556,7 +604,7 @@ export default function NearbyServices({
       setApiLoading(true);
       try {
         const res = await fetch(
-          `http://localhost:5000/api/search/nearby?lat=${encodeURIComponent(buyerPos.lat)}&lng=${encodeURIComponent(buyerPos.lng)}&radius=${encodeURIComponent(radiusKm)}`
+          `http://localhost:5000/api/search/nearby?lat=${encodeURIComponent(buyerPos.lat)}&lng=${encodeURIComponent(buyerPos.lng)}&radius=${encodeURIComponent(radiusKm)}`,
         );
         if (!res.ok) throw new Error("Failed to fetch nearby services");
         const data = await res.json();
@@ -815,10 +863,10 @@ export default function NearbyServices({
           className="relative z-10"
         >
           <label className="mb-2.5 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-indigo-100">
-            <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-indigo-500/30 text-indigo-200 font-extrabold">
-              1
+            <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-indigo-500/30 text-indigo-200 font-extrabold text-sm">
+              📍
             </span>
-            Step 1: Where are you? (Enter Area or Pincode below)
+            Step 1: Where are you? / अपनी जगह बताएं
           </label>
 
           <div className="flex flex-col gap-2.5 sm:flex-row">
@@ -845,7 +893,7 @@ export default function NearbyServices({
                   onChange={(e) => setLocationQuery(e.target.value)}
                   autoComplete="off"
                   className="qs-input peer w-full rounded-xl border border-indigo-400/20 bg-indigo-950/40 py-3 pl-10 pr-4 text-sm font-medium text-white placeholder-indigo-300/60 transition-all duration-300 focus:border-indigo-400/60 focus:bg-indigo-950/60 focus:outline-none focus:ring-4 focus:ring-indigo-500/20"
-                  placeholder="Search area (e.g., Bopal, SG Highway, your office)"
+                  placeholder="Search area, colony or landmark (इलाका या दुकान का नाम डालें)"
                 />
                 <span className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-inset ring-white/5" />
               </div>
@@ -861,7 +909,7 @@ export default function NearbyServices({
                   Searching
                 </>
               ) : (
-                <>Search</>
+                <>Search / खोजें</>
               )}
             </button>
 
@@ -870,9 +918,8 @@ export default function NearbyServices({
               onClick={handleUseMyLocation}
               className={`qs-btn-locate inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold text-white ${geoLoading ? "qs-pulse" : ""}`}
             >
-              <span className="text-base leading-none">📍</span>
-              <span className="hidden sm:inline">Use My Location</span>
-              <span className="sm:hidden">My Location</span>
+              <span className="text-base leading-none">🎯</span>
+              <span>Find Me / मेरी जगह</span>
             </button>
           </div>
 
@@ -923,11 +970,10 @@ export default function NearbyServices({
 
           {/* ── Pincode Badge / Inline Search ── */}
           <div className="mt-2.5">
-            {/**
-             * Desktop: show pincode as a right-side chip aligned with the search input row.
-             * Mobile: it naturally wraps under due to flex behavior in the parent.
-             */}
             <div className="hidden sm:flex items-center justify-end">
+              <span className="text-xs font-bold text-indigo-200 mr-2">
+                Or enter Pincode / पिनकोड डालें:
+              </span>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-indigo-400/20 bg-indigo-950/40 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm backdrop-blur">
                 <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-indigo-500/15">
                   📮
@@ -956,13 +1002,16 @@ export default function NearbyServices({
                 {pincodeLoading ? (
                   <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
                 ) : (
-                  "Go →"
+                  "Go / आगे →"
                 )}
               </button>
             </div>
 
             {/** Mobile + fallback row */}
             <div className="sm:hidden">
+              <div className="text-xs font-bold text-indigo-200 mb-1">
+                Or enter Pincode / पिनकोड डालें:
+              </div>
               <div className="flex items-center gap-2">
                 <div className="relative flex-1 min-w-0">
                   <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-indigo-300/70 text-sm">
@@ -981,7 +1030,7 @@ export default function NearbyServices({
                     onKeyDown={(e) =>
                       e.key === "Enter" && handlePincodeSearch()
                     }
-                    placeholder="Enter 6-digit pincode"
+                    placeholder="Enter 6-digit Pincode / ६-अंक पिनकोड"
                     className="w-full rounded-xl border border-indigo-400/20 bg-indigo-950/40 py-2.5 pl-9 pr-4 text-sm font-medium text-white placeholder-indigo-300/50 focus:border-indigo-400/60 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                   />
                 </div>
@@ -994,7 +1043,7 @@ export default function NearbyServices({
                   {pincodeLoading ? (
                     <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
                   ) : (
-                    "Go →"
+                    "Go / आगे →"
                   )}
                 </button>
               </div>
@@ -1011,15 +1060,19 @@ export default function NearbyServices({
         {/* ============ CATEGORY CHIPS ============ */}
         <div className="relative z-10 mt-5">
           <label className="mb-2.5 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-indigo-100">
-            <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-indigo-500/30 text-indigo-200 font-extrabold">
-              2
+            <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-indigo-500/30 text-indigo-200 font-extrabold text-sm">
+              🧹
             </span>
-            Step 2: Choose the Service you need
+            Step 2: Choose the Service you need / क्या काम करवाना है?
           </label>
           <div className="qs-chip-row flex gap-2 overflow-x-auto pb-1.5 scrollbar-none snap-x snap-mandatory">
             {SERVICE_FILTERS.map((serviceFilter) => {
               const active =
                 serviceFilter === "All" ? !search : search === serviceFilter;
+              const displayInfo = SERVICE_DISPLAY[serviceFilter] || {
+                label: serviceFilter,
+                icon: "🛠️",
+              };
               return (
                 <button
                   key={serviceFilter}
@@ -1027,9 +1080,9 @@ export default function NearbyServices({
                   onClick={() =>
                     setSearch(serviceFilter === "All" ? "" : serviceFilter)
                   }
-                  className={`qs-chip snap-start ${active ? "qs-chip-active" : ""}`}
+                  className={`qs-chip snap-start flex items-center gap-1.5 ${active ? "qs-chip-active" : ""}`}
                 >
-                  {serviceFilter}
+                  <span>{displayInfo.label}</span>
                 </button>
               );
             })}
@@ -1038,12 +1091,12 @@ export default function NearbyServices({
 
         {/* ============ RADIUS SLIDER ============ */}
         <div className="relative z-10 mt-5 rounded-xl border border-indigo-400/15 bg-indigo-950/30 p-3.5">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-indigo-100">
-              <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-indigo-500/30 text-indigo-200 font-extrabold">
-                3
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-indigo-500/30 text-indigo-200 font-extrabold text-sm">
+                🚗
               </span>
-              Step 3: How far should we look? (Distance)
+              Step 3: How far should we look? / कितनी दूर खोजना है?
             </span>
             <span className="qs-radius-badge">{radiusKm} km</span>
           </div>
@@ -1061,9 +1114,17 @@ export default function NearbyServices({
               }}
             />
             <div className="mt-1 flex justify-between text-[10px] font-medium text-indigo-300/70">
-              <span>1 km</span>
-              <span>10 km</span>
-              <span>20 km</span>
+              <span>1 km (Pass / पास)</span>
+              <span>10 km (Medium)</span>
+              <span>20 km (Far / दूर)</span>
+            </div>
+
+            {/* Visual representation / description of radius */}
+            <div className="mt-3.5 flex items-center gap-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20 px-3 py-2 text-xs font-bold text-indigo-200">
+              <span className="text-base">
+                {getRadiusVisualGuide(radiusKm).icon}
+              </span>
+              <span>{getRadiusVisualGuide(radiusKm).text}</span>
             </div>
           </div>
         </div>
@@ -1365,7 +1426,12 @@ export default function NearbyServices({
                           },
                         }}
                       >
-                        <Tooltip direction="top" offset={[0, -25]} opacity={0.95} permanent={false}>
+                        <Tooltip
+                          direction="top"
+                          offset={[0, -25]}
+                          opacity={0.95}
+                          permanent={false}
+                        >
                           <div className="font-bold text-xs text-indigo-950 bg-white px-2 py-1 rounded shadow-md border border-indigo-100/50">
                             <strong>{seller.name}</strong> — {seller.service}
                           </div>
@@ -1381,12 +1447,16 @@ export default function NearbyServices({
                             <div className="space-y-1 text-[11px] text-slate-500 mb-3">
                               <div className="flex items-center gap-1 font-semibold text-slate-600">
                                 <span>📍</span>
-                                <span>{formatDistance(seller.distanceKm)}</span>
+                                <span>
+                                  {formatDistance(seller.distanceKm)} (
+                                  {getDistanceGuide(seller.distanceKm)})
+                                </span>
                               </div>
                               <div className="flex items-center gap-1 font-semibold text-amber-600">
                                 <span>⭐</span>
                                 <span>
-                                  {Number(seller.rating || 0).toFixed(1)} ({seller.reviews || 0} reviews)
+                                  {Number(seller.rating || 0).toFixed(1)} (
+                                  {seller.reviews || 0} reviews)
                                 </span>
                               </div>
                             </div>
@@ -1394,7 +1464,7 @@ export default function NearbyServices({
                               href={`/seller/${sId}`}
                               className="block w-full text-center text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 py-2 rounded-lg transition-colors shadow-md shadow-indigo-600/20"
                             >
-                              View Provider Profile
+                              View Profile / प्रोफ़ाइल देखें →
                             </a>
                           </div>
                         </Popup>
@@ -1480,11 +1550,6 @@ export default function NearbyServices({
                         <h4 className="truncate text-sm font-bold text-white">
                           {seller.name}
                         </h4>
-                        {packageRank > 0 && (
-                          <span className="qs-verified-tick" title="Verified">
-                            ✓
-                          </span>
-                        )}
                       </div>
                       <div className="truncate text-xs font-medium text-indigo-300/90">
                         {seller.service}
@@ -1514,9 +1579,11 @@ export default function NearbyServices({
 
                   {/* Distance */}
                   {buyerPos && (
-                    <div className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-indigo-300/80">
-                      <span>📍</span>
-                      <span>{formatDistance(seller.distanceKm)}</span>
+                    <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs font-semibold text-indigo-200">
+                      <span>📍 {formatDistance(seller.distanceKm)}</span>
+                      <span className="text-indigo-300/80">
+                        ({getDistanceGuide(seller.distanceKm)})
+                      </span>
                     </div>
                   )}
 
@@ -1564,33 +1631,20 @@ export default function NearbyServices({
                       <span className="qs-tag qs-tag-gold">⭐ Top Rated</span>
                     )}
 
-                    {/* Verified (keep premium tick + add text badge) */}
-                    {packageRank > 0 && (
-                      <span className="qs-tag qs-tag-green">✓ Verified</span>
-                    )}
-
-                    {packageRank >= 3 && (
-                      <span className="qs-tag qs-tag-gold">⭐ Gold</span>
-                    )}
-                    {packageRank === 2 && (
-                      <span className="qs-tag qs-tag-emerald">⭐ Featured</span>
-                    )}
-                    {packageRank === 1 && (
-                      <span className="qs-tag qs-tag-indigo">⭐ Top</span>
-                    )}
+                    {/* Verification-related UI temporarily hidden */}
                     {packageRank >= 2 && (
                       <span className="qs-tag qs-tag-amber">
                         ⚡ Fast Response
                       </span>
                     )}
-                    <span className="qs-tag qs-tag-green">
+                    <span className="qs-tag qs-tag-green inline-flex items-center gap-1 font-bold">
                       <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
-                      Available
+                      🟢 Available Now / तैयार हैं
                     </span>
                   </div>
 
                   {/* Contact row */}
-                  <div className="mt-3">
+                  {/* <div className="mt-3">
                     {packageRank > 0 ? (
                       <div className="text-xs">
                         {revealedContacts.has(sId) ? (
@@ -1643,7 +1697,7 @@ export default function NearbyServices({
                               });
                             }}
                           >
-                            📞 View Contact
+                            📞 Call / फ़ोन नंबर देखें
                           </button>
                         )}
                       </div>
@@ -1652,7 +1706,7 @@ export default function NearbyServices({
                         📞 Contact available on booking
                       </div>
                     )}
-                  </div>
+                  </div> */}
 
                   {/* CTA */}
                   <a
@@ -1660,10 +1714,7 @@ export default function NearbyServices({
                     onClick={(e) => handleViewDetailsClick(seller, e)}
                     className="qs-cta mt-3 block w-full rounded-xl py-2.5 text-center text-xs font-bold text-white"
                   >
-                    View Details
-                    <span className="ml-1 inline-block transition-transform duration-200 group-hover:translate-x-1">
-                      →
-                    </span>
+                    View Profile / प्रोफ़ाइल देखें →
                   </a>
                 </div>
               );

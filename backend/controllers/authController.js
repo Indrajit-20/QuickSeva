@@ -249,11 +249,11 @@ exports.sendOTP = async (req, res) => {
         "[sendOTP] LOGIN existingUser=",
         existing
           ? {
-              id: existing.id,
-              role: existing.role,
-              is_active: existing.is_active,
-              phone: existing.phone,
-            }
+            id: existing.id,
+            role: existing.role,
+            is_active: existing.is_active,
+            phone: existing.phone,
+          }
           : null,
       );
       if (!existing) return errorRes(res, "User not found", 404);
@@ -347,12 +347,11 @@ exports.verifyOTP = async (req, res) => {
       const { name, email, role = "buyer" } = req.body || {};
 
       if (!name) return errorRes(res, "name is required", 400);
-      if (!email) return errorRes(res, "email is required", 400);
 
       const userId = await UserModel.create({
         name,
         phone,
-        email,
+        email: email || null,
         role,
       });
 
@@ -390,7 +389,6 @@ exports.verifyOTP = async (req, res) => {
 
       const name = `${firstName || ""} ${lastName || ""}`.trim();
       if (!name) return errorRes(res, "Seller name is required", 400);
-      if (!email) return errorRes(res, "email is required", 400);
 
       // Create user with role=seller.
       const userId = await UserModel.create({
@@ -423,11 +421,11 @@ exports.verifyOTP = async (req, res) => {
         "[verifyOTP seller-register] CREATED user=",
         user
           ? {
-              id: user.id,
-              phone: user.phone,
-              role: user.role,
-              is_active: user.is_active,
-            }
+            id: user.id,
+            phone: user.phone,
+            role: user.role,
+            is_active: user.is_active,
+          }
           : null,
       );
 

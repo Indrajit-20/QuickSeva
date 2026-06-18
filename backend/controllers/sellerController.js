@@ -216,10 +216,7 @@ exports.registerSeller = async (req, res) => {
 
     const trimmedEmail = typeof email === "string" ? email.trim() : "";
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!trimmedEmail) {
-      return errorRes(res, "Email is required", 400);
-    }
-    if (!emailRegex.test(trimmedEmail)) {
+    if (trimmedEmail && !emailRegex.test(trimmedEmail)) {
       return errorRes(res, "Email is invalid", 400);
     }
 
@@ -272,13 +269,15 @@ exports.registerSeller = async (req, res) => {
     await conn.beginTransaction();
 
     // Duplicate checks
-    const [existingEmailRows] = await conn.query(
-      `SELECT id FROM users WHERE email = ? LIMIT 1`,
-      [trimmedEmail],
-    );
-    if (existingEmailRows?.length) {
-      await conn.rollback();
-      return errorRes(res, "Email already registered", 409);
+    if (trimmedEmail) {
+      const [existingEmailRows] = await conn.query(
+        `SELECT id FROM users WHERE email = ? LIMIT 1`,
+        [trimmedEmail],
+      );
+      if (existingEmailRows?.length) {
+        await conn.rollback();
+        return errorRes(res, "Email already registered", 409);
+      }
     }
 
     const [existingPhoneRows] = await conn.query(
@@ -298,7 +297,7 @@ exports.registerSeller = async (req, res) => {
        VALUES (?, ?, ?, ?, 'seller', ?, ?, ?, ?, ?, ?)`,
       [
         ownerName.trim(),
-        trimmedEmail,
+        trimmedEmail || null,
         normalizedPhone,
         hashedPassword,
         String(address).trim(),

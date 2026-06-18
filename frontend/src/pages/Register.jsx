@@ -21,10 +21,11 @@ const InputField = ({
   onBlur,
   prefix,
   disabled,
+  required = true,
 }) => (
   <div>
     <label className="block text-xs font-semibold text-indigo-200 mb-2">
-      {label} <span className="text-red-400">*</span>
+      {label} {required && <span className="text-red-400">*</span>}
     </label>
     <div className="relative">
       {prefix && (
@@ -150,7 +151,7 @@ const Register = () => {
     lastName: (v) =>
       !v ? "Last name is required" : v.length < 2 ? "At least 2 characters required" : null,
     email: (v) => {
-      if (!v) return "Email address is required";
+      if (!v) return null;
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return "Enter a valid email address";
       return null;
     },
@@ -397,6 +398,7 @@ const Register = () => {
               onChange={handleChange}
               onBlur={handleBlur}
               disabled={isLoading}
+              required={false}
             />
 
             {/* Mobile — with +91 prefix, uses InputField for consistency */}
