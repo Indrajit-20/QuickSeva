@@ -1,10 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "../config/api";
 
-// Strip trailing /api so it's never doubled regardless of .env value
-// e.g. "http://localhost:5000/api" → "http://localhost:5000"
-const API_BASE = (import.meta.env.VITE_API_URL || "http://localhost:5000")
-  .replace(/\/api\/?$/, "");
 
 // ─── Shared Input Component ───────────────────────────────────────────────────
 // Kept outside Register so it doesn't re-mount on every parent render.
@@ -219,7 +216,7 @@ const Register = () => {
 
     setIsLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/auth/send-otp`, {
+      const res = await fetch(`${API_BASE_URL}/auth/send-otp`, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({
@@ -249,7 +246,7 @@ const Register = () => {
     setOtpError("");
     setIsLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/auth/send-otp`, {
+      const res = await fetch(`${API_BASE_URL}/auth/send-otp`, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({
@@ -286,7 +283,7 @@ const Register = () => {
 
     setIsLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/auth/verify-otp`, {
+      const res = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({

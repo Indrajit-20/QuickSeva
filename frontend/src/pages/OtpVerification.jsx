@@ -1,10 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { API_BASE_URL } from "../config/api";
 
-// Base URL without double /api
-const API_BASE = (
-  import.meta.env.VITE_API_URL || "http://localhost:5000"
-).replace(/\/api\/?$/, "");
 
 const isValidOTP = (otp) => /^\d{6}$/.test(otp);
 
@@ -164,7 +161,7 @@ const OtpVerification = () => {
       setResendDisabled(true);
       setLoading(true);
 
-      const res = await fetch(`${API_BASE}/api/auth/send-otp`, {
+      const res = await fetch(`${API_BASE_URL}/auth/send-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -321,7 +318,7 @@ const OtpVerification = () => {
     try {
       setLoading(true);
 
-      const res = await fetch(`${API_BASE}/api/auth/verify-otp`, {
+      const res = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

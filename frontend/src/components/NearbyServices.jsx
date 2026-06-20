@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { API_BASE_URL } from "../config/api";
 
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -589,6 +590,7 @@ export default function NearbyServices({
 
   const [sellers, setSellers] = useState([]);
   const [apiLoading, setApiLoading] = useState(false);
+  const [apiError, setApiError] = useState("");
 
   useEffect(() => {
     try {
@@ -602,9 +604,10 @@ export default function NearbyServices({
     let active = true;
     const fetchNearby = async () => {
       setApiLoading(true);
+      setApiError("");
       try {
         const res = await fetch(
-          `http://localhost:5000/api/search/nearby?lat=${encodeURIComponent(buyerPos.lat)}&lng=${encodeURIComponent(buyerPos.lng)}&radius=${encodeURIComponent(radiusKm)}`,
+          `${API_BASE_URL}/search/nearby?lat=${encodeURIComponent(buyerPos.lat)}&lng=${encodeURIComponent(buyerPos.lng)}&radius=${encodeURIComponent(radiusKm)}`,
         );
         if (!res.ok) throw new Error("Failed to fetch nearby services");
         const data = await res.json();
@@ -613,6 +616,9 @@ export default function NearbyServices({
         }
       } catch (err) {
         console.error("Fetch nearby error:", err);
+        if (active) {
+          setApiError("Unable to load nearby services. Please try again later.");
+        }
       } finally {
         if (active) setApiLoading(false);
       }
@@ -1480,6 +1486,14 @@ export default function NearbyServices({
         {/* ============ PROVIDER LIST ============ */}
         <div className="w-full lg:w-[42%]">
           <div className="qs-list flex gap-3 overflow-x-auto pb-2 pr-1 snap-x snap-mandatory lg:block lg:h-[520px] lg:space-y-3 lg:overflow-y-auto lg:overflow-x-hidden lg:pb-0 lg:snap-none">
+            {apiError && (
+              <div className="qs-glass-panel w-full py-8 px-4 text-center text-red-300 border border-red-500/30">
+                <div className="text-3xl mb-2">⚠️</div>
+                <p className="text-sm font-semibold text-white">
+                  {apiError}
+                </p>
+              </div>
+            )}
             {apiLoading && nearby.length === 0 && (
               <div className="qs-glass-panel w-full py-14 text-center text-indigo-300">
                 <div className="flex justify-center items-center">
