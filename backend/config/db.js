@@ -1,5 +1,7 @@
 const mysql = require("mysql2/promise");
-require("dotenv").config();
+require('dotenv').config({
+  path: process.env.USE_RAILWAY === 'true' ? '.env.railway' : '.env.local'
+});
 
 const pool = mysql.createPool({
   host: process.env.DB_HOST || "localhost",

@@ -432,7 +432,7 @@ export default function SellerPublicProfile() {
 
               {contactError && (
                 <p className="mt-3 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm font-bold text-red-200">
-                  {contactError}
+                   login required to view contact
                 </p>
               )}
             </div>

@@ -1,5 +1,6 @@
 node_modules/
-.env
+.env.local
+.env.railway
 uploads/*
 !uploads/.gitkeep
 *.log
