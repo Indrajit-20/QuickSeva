@@ -262,8 +262,8 @@ exports.registerSeller = async (req, res) => {
     // categoryIds are optional for registration.
     const normalizedCategoryIds = Array.isArray(categoryIds)
       ? Array.from(new Set(categoryIds))
-          .map((c) => parseInt(c, 10))
-          .filter((id) => Number.isFinite(id))
+        .map((c) => parseInt(c, 10))
+        .filter((id) => Number.isFinite(id))
       : [];
 
     await conn.beginTransaction();
@@ -315,7 +315,7 @@ exports.registerSeller = async (req, res) => {
     const [sellerResult] = await conn.query(
       `INSERT INTO sellers (user_id, business_name, bio, experience_yrs, avg_rating, total_reviews, total_orders,
                               is_verified, is_available, working_radius, documents, gst_number, profile_completed)
-       VALUES (?, ?, ?, ?, 0.00, 0, 0, 0, 1, 10, NULL, NULL, 0)`,
+       VALUES (?, ?, ?, ?, 0.00, 0, 0, 0, 1, 10, NULL, NULL, 1)`,
       [userId, businessName.trim(), bio || null, experience_yrs || 0],
     );
     const sellerId = sellerResult.insertId;
@@ -417,8 +417,8 @@ exports.getSellerAvailability = async (req, res) => {
 
     let availableDays = [];
     if (seller.available_days) {
-      availableDays = typeof seller.available_days === "string" 
-        ? JSON.parse(seller.available_days) 
+      availableDays = typeof seller.available_days === "string"
+        ? JSON.parse(seller.available_days)
         : seller.available_days;
     } else {
       availableDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -504,4 +504,9 @@ exports.updateSellerAvailability = async (req, res) => {
     console.error("updateSellerAvailability error:", err);
     return errorRes(res, "Failed to update availability");
   }
+};
+  } catch (err) {
+  console.error("updateSellerAvailability error:", err);
+  return errorRes(res, "Failed to update availability");
+}
 };

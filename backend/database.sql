@@ -71,31 +71,55 @@
     is_available    TINYINT(1) DEFAULT 1,
     working_radius  INT DEFAULT 10,         -- in km
     documents       JSON,                    -- ID proof, certificates
+    gst_number      VARCHAR(15) DEFAULT NULL,
     created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
   );
 
+  CREATE TABLE IF NOT EXISTS seller_categories (
+    seller_id   INT NOT NULL,
+    category_id INT NOT NULL,
+    PRIMARY KEY (seller_id, category_id),
+    FOREIGN KEY (seller_id) REFERENCES sellers(id) ON DELETE CASCADE,
+    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
+  );
+
+  -- ─────────────────────────────────────────────
+  -- SUB SERVICES (extends categories)
+  -- ─────────────────────────────────────────────
+  CREATE TABLE IF NOT EXISTS sub_services (
+    id            INT AUTO_INCREMENT PRIMARY KEY,
+    category_id   INT NOT NULL,
+    name          VARCHAR(150) NOT NULL,
+    description   TEXT,
+    default_price DECIMAL(10,2) DEFAULT NULL,
+    created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
+  );
+
   -- ─────────────────────────────────────────────
   -- SERVICES
   -- ─────────────────────────────────────────────
   CREATE TABLE IF NOT EXISTS services (
-    id           INT AUTO_INCREMENT PRIMARY KEY,
-    seller_id    INT NOT NULL,
-    category_id  INT,
-    title        VARCHAR(200) NOT NULL,
-    description  TEXT,
-    price        DECIMAL(10,2) NOT NULL,
-    price_type   ENUM('fixed','hourly','negotiable') DEFAULT 'fixed',
-    duration_hrs DECIMAL(4,1),
-    images       JSON,
-    tags         JSON,
-    is_active    TINYINT(1) DEFAULT 1,
-    created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    id             INT AUTO_INCREMENT PRIMARY KEY,
+    seller_id      INT NOT NULL,
+    category_id    INT,
+    sub_service_id INT,
+    title          VARCHAR(200) NOT NULL,
+    description    TEXT,
+    price          DECIMAL(10,2) NOT NULL,
+    price_type     ENUM('fixed','hourly','negotiable') DEFAULT 'fixed',
+    duration_hrs   DECIMAL(4,1),
+    images         JSON,
+    tags           JSON,
+    is_active      TINYINT(1) DEFAULT 1,
+    created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (seller_id) REFERENCES sellers(id) ON DELETE CASCADE,
-    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
+    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL,
+    FOREIGN KEY (sub_service_id) REFERENCES sub_services(id) ON DELETE SET NULL
   );
 
   -- ─────────────────────────────────────────────

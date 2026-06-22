@@ -9,10 +9,11 @@ const SellerModel = {
     bio,
     experience_yrs,
     phone,
+    profile_completed = 1,
   }) => {
     const [result] = await pool.query(
-      `INSERT INTO sellers (user_id, business_name, category_id, bio, experience_yrs, phone)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO sellers (user_id, business_name, category_id, bio, experience_yrs, phone, profile_completed)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
         user_id,
         business_name,
@@ -20,6 +21,7 @@ const SellerModel = {
         bio,
         experience_yrs || 0,
         phone || null,
+        profile_completed,
       ],
     );
     return result.insertId;

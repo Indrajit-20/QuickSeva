@@ -3,6 +3,13 @@ const path = require("path");
 const bcrypt = require("bcryptjs");
 const { pool } = require("./config/db");
 
+function cleanSqlStatement(stmt) {
+  return stmt
+    .replace(/--.*$/gm, "")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .trim();
+}
+
 async function executeSqlFile(filePath) {
   console.log(`Running SQL file: ${filePath}`);
   const sql = fs.readFileSync(filePath, "utf8");
@@ -13,11 +20,18 @@ async function executeSqlFile(filePath) {
     .filter(s => s.length > 0);
 
   for (let statement of statements) {
-    if (statement.toUpperCase().startsWith("USE ")) {
+    const cleanStatement = cleanSqlStatement(statement);
+    if (!cleanStatement) {
+      continue;
+    }
+    if (
+      cleanStatement.toUpperCase().startsWith("USE ") ||
+      cleanStatement.toUpperCase().startsWith("CREATE DATABASE ")
+    ) {
       continue;
     }
     try {
-      await pool.query(statement);
+      await pool.query(cleanStatement);
     } catch (err) {
       if (
         err.code === 'ER_DUP_FIELDNAME' ||
@@ -35,6 +49,11 @@ async function executeSqlFile(filePath) {
 
 async function run() {
   try {
+    console.log("DIAGNOSTICS - USE_RAILWAY:", process.env.USE_RAILWAY);
+    console.log("DIAGNOSTICS - DB_NAME:", process.env.DB_NAME);
+    console.log("DIAGNOSTICS - DB_HOST:", process.env.DB_HOST);
+    const [dbNameRows] = await pool.query("SELECT DATABASE() AS db");
+    console.log("ACTIVE DATABASE IN MYSQL:", dbNameRows[0].db);
     const baseDir = __dirname;
 
     // 1. Run database.sql
@@ -63,27 +82,32 @@ async function run() {
       if (err.code !== 'ER_DUP_FIELDNAME') console.error(err);
     }
     try {
-      await pool.query("ALTER TABLE sellers ADD COLUMN IF NOT EXISTS service_mode VARCHAR(20) DEFAULT 'offline'");
+      await pool.query("ALTER TABLE sellers ADD COLUMN service_mode VARCHAR(20) DEFAULT 'offline'");
     } catch (err) {
       if (err.code !== 'ER_DUP_FIELDNAME') console.error(err);
     }
     try {
-      await pool.query("ALTER TABLE sellers ADD COLUMN IF NOT EXISTS instant_service TINYINT(1) DEFAULT 0");
+      await pool.query("ALTER TABLE sellers ADD COLUMN instant_service TINYINT(1) DEFAULT 0");
     } catch (err) {
       if (err.code !== 'ER_DUP_FIELDNAME') console.error(err);
     }
     try {
-      await pool.query("ALTER TABLE sellers ADD COLUMN IF NOT EXISTS is_premium TINYINT(1) DEFAULT 0");
+      await pool.query("ALTER TABLE sellers ADD COLUMN is_premium TINYINT(1) DEFAULT 0");
     } catch (err) {
       if (err.code !== 'ER_DUP_FIELDNAME') console.error(err);
     }
     try {
-      await pool.query("ALTER TABLE sellers ADD COLUMN IF NOT EXISTS plan VARCHAR(50) NULL");
+      await pool.query("ALTER TABLE sellers ADD COLUMN plan VARCHAR(50) NULL");
     } catch (err) {
       if (err.code !== 'ER_DUP_FIELDNAME') console.error(err);
     }
     try {
-      await pool.query("ALTER TABLE sellers ADD COLUMN IF NOT EXISTS premium_expires_at TIMESTAMP NULL");
+      await pool.query("ALTER TABLE sellers ADD COLUMN premium_expires_at TIMESTAMP NULL");
+    } catch (err) {
+      if (err.code !== 'ER_DUP_FIELDNAME') console.error(err);
+    }
+    try {
+      await pool.query("ALTER TABLE sellers ADD COLUMN gst_number VARCHAR(15) NULL");
     } catch (err) {
       if (err.code !== 'ER_DUP_FIELDNAME') console.error(err);
     }
@@ -91,17 +115,17 @@ async function run() {
     // Ensure services table has sub_service_id, is_instant, and duration columns
     console.log("Ensuring required columns exist on services table...");
     try {
-      await pool.query("ALTER TABLE services ADD COLUMN IF NOT EXISTS sub_service_id INT NULL");
+      await pool.query("ALTER TABLE services ADD COLUMN sub_service_id INT NULL");
     } catch (err) {
       if (err.code !== 'ER_DUP_FIELDNAME') console.error(err);
     }
     try {
-      await pool.query("ALTER TABLE services ADD COLUMN IF NOT EXISTS is_instant TINYINT(1) DEFAULT 0");
+      await pool.query("ALTER TABLE services ADD COLUMN is_instant TINYINT(1) DEFAULT 0");
     } catch (err) {
       if (err.code !== 'ER_DUP_FIELDNAME') console.error(err);
     }
     try {
-      await pool.query("ALTER TABLE services ADD COLUMN IF NOT EXISTS duration VARCHAR(50) NULL");
+      await pool.query("ALTER TABLE services ADD COLUMN duration VARCHAR(50) NULL");
     } catch (err) {
       if (err.code !== 'ER_DUP_FIELDNAME') console.error(err);
     }
@@ -114,6 +138,8 @@ async function run() {
     await pool.query("TRUNCATE TABLE sellers");
     await pool.query("TRUNCATE TABLE wallets");
     await pool.query("TRUNCATE TABLE users");
+    await pool.query("TRUNCATE TABLE sub_services");
+    await pool.query("TRUNCATE TABLE seller_categories");
     await pool.query("TRUNCATE TABLE categories");
     await pool.query("SET FOREIGN_KEY_CHECKS = 1");
 
@@ -137,6 +163,65 @@ async function run() {
         [cat.name, cat.icon, cat.description]
       );
       categoryMap[cat.name] = res.insertId;
+    }
+
+    console.log("Seeding sub-services...");
+    const subServices = [
+      // Cleaning
+      { category: "Cleaning", name: "Deep House Cleaning / पूरे घर की गहरी सफाई", description: "Thorough cleaning of all rooms, bathrooms, and kitchen / सभी कमरों, बाथरूम और रसोई की गहरी सफाई", default_price: 2999.00 },
+      { category: "Cleaning", name: "Bathroom Cleaning / बाथरूम की सफाई", description: "Deep stain removal, disinfection, and washing of bathrooms / बाथरूम की गहरी सफाई और कीटाणुशोधन", default_price: 499.00 },
+      { category: "Cleaning", name: "Kitchen Cleaning / रसोई की सफाई", description: "Degreasing of slab, cabinets, and deep cleaning / रसोई के स्लैब, कैबिनेट और टाइल्स की गहरी सफाई", default_price: 1199.00 },
+      { category: "Cleaning", name: "Sofa & Carpet Cleaning / सोफा और कालीन की सफाई", description: "Dry vacuuming and wet shampooing of sofas/carpets / सोफा और कालीन की ड्राई वैक्यूमिंग और शैम्पू धुलाई", default_price: 799.00 },
+
+      // Electrical
+      { category: "Electrical", name: "Fan Installation & Repair / पंखा लगाना और सुधारना", description: "Installation of ceiling/exhaust fans or repair / पंखा लगाना, मरम्मत या कंडेंसर बदलना", default_price: 199.00 },
+      { category: "Electrical", name: "Light Fitting & Repair / लाइट लगाना और सुधारना", description: "Fitting bulbs, tubes, fancy lights, or holder repair / नए बल्ब, ट्यूबलाइट लगाना या होल्डर ठीक करना", default_price: 149.00 },
+      { category: "Electrical", name: "Switchboard Repair / स्विचबोर्ड की मरम्मत", description: "Fixing switches, sockets, regulators, or main board / बटन, सॉकेट, रेगुलेटर या मेन बोर्ड बदलना", default_price: 179.00 },
+      { category: "Electrical", name: "House Wiring Inspection / घर की वायरिंग की जांच", description: "Detecting short circuits and inspecting complete house wiring / शॉर्ट सर्किट की जांच और वायरिंग मरम्मत", default_price: 499.00 },
+
+      // Plumbing
+      { category: "Plumbing", name: "Tap Leakage Repair / नल टपकना ठीक करना", description: "Fixing water leaks in bathroom, kitchen, or balcony taps / नल या वाल्व से पानी का रिसाव ठीक करना", default_price: 149.00 },
+      { category: "Plumbing", name: "Washbasin & Sink Repair / वाशबेसिन और सिंक सुधारना", description: "Fixing pipe blockages, drain issues, or basin installation / वाशबेसिन, सिंक की पाइप ब्लॉकेज और लीकेज ठीक करना", default_price: 249.00 },
+      { category: "Plumbing", name: "Toilet & Flush Repair / टॉयलेट और फ्लश सुधारना", description: "Fixing flush tank, seat replacement, or leakage / फ्लश टैंक, सीट रिप्लेसमेंट या लीकेज ठीक करना", default_price: 299.00 },
+      { category: "Plumbing", name: "Water Tank Cleaning / पानी की टंकी की सफाई", description: "Scrubbing and chemical disinfection of water storage tanks / पानी के टैंक की पूरी सफाई और कीटाणुशोधन", default_price: 999.00 },
+
+      // Carpentry
+      { category: "Carpentry", name: "Door Lock & Latch Fitting / ताला और कुंडी लगाना", description: "Fitting locks, latches, handles, or eye-pieces / दरवाजे में नया हैंडल, ताला या कुंडी लगाना", default_price: 249.00 },
+      { category: "Carpentry", name: "Furniture Assembly / फर्नीचर जोड़ना और मरम्मत", description: "Assembling beds, tables, wardrobes, or general repair / बेड, मेज, अलमारी फिटिंग या मरम्मत", default_price: 599.00 },
+      { category: "Carpentry", name: "Drawer & Cabinet Repair / दराज और अलमारी सुधारना", description: "Fixing slider channels, hinges, handles / दराज के चैनल, कब्जे या हैंडल ठीक करना", default_price: 199.00 },
+      { category: "Carpentry", name: "Wooden Polish / लकड़ी की पॉलिश", description: "Polishing doors, beds, or tables for new look / दरवाजे या फर्नीचर की वारनिश और पॉलिश", default_price: 1499.00 },
+
+      // AC Repair
+      { category: "AC Repair", name: "AC Service & Cleaning / एसी सर्विस और धुलाई", description: "Deep cleaning filter, coils, and outdoor unit / एसी फिल्टर, कॉइल और आउटडोर यूनिट की पूरी धुलाई", default_price: 599.00 },
+      { category: "AC Repair", name: "AC Gas Refill / एसी गैस चार्जिंग", description: "Detecting leaks and refilling AC cooling gas / गैस लीकेज चेक करना और नई गैस भरना", default_price: 2199.00 },
+      { category: "AC Repair", name: "AC Installation / एसी फिटिंग", description: "Installing split/window AC at your home / स्प्लिट या विंडो एसी लगाना", default_price: 1199.00 },
+      { category: "AC Repair", name: "AC Not Cooling Repair / एसी कूलिंग ठीक करना", description: "Troubleshooting compressor, fan, or sensor problems / एसी कंप्रेसर, कंडेंसर या कूलिंग खराबी ठीक करना", default_price: 399.00 },
+
+      // Pest Control
+      { category: "Pest Control", name: "General Pest Control / सामान्य कीटनाशक उपचार", description: "Spray treatment for ants, spiders, and crawling insects / चींटी, मकड़ी और रेंगने वाले कीड़ों के लिए स्प्रे", default_price: 799.00 },
+      { category: "Pest Control", name: "Cockroach Control / कॉकरोच नियंत्रण", description: "Gel and spray treatment for complete cockroach removal / कॉकरोच भगाने के लिए विशेष जेल और स्प्रे", default_price: 899.00 },
+      { category: "Pest Control", name: "Bed Bugs Control / खटमल नियंत्रण", description: "Two-stage chemical spray treatment for bed bugs / खटमल खत्म करने के लिए दो बार स्प्रे उपचार", default_price: 1199.00 },
+      { category: "Pest Control", name: "Termite Control / दीमक नियंत्रण", description: "Drill and inject chemical treatment for termites / दीमक नियंत्रण के लिए दीमक नियंत्रण", default_price: 2499.00 },
+
+      // Home Painting
+      { category: "Home Painting", name: "One Wall Texture Painting / एक दीवार की टेक्सचर पेंटिंग", description: "Adding design or texture to a highlight wall / एक खास दीवार पर सुंदर डिजाइन पेंटिंग", default_price: 3499.00 },
+      { category: "Home Painting", name: "Complete House Painting / पूरे घर का पेंट", description: "Wall putty, primer, and double coat paint / दीवार की पुट्टी, प्राइमर और डबल कोट पुताई", default_price: 15000.00 },
+      { category: "Home Painting", name: "Wall Waterproofing / दीवार की वॉटरप्रूफिंग", description: "Treating wall dampness and water seepage / दीवार की सीलन और रिसाव रोकना", default_price: 2499.00 },
+      { category: "Home Painting", name: "Door & Window Painting / दरवाजे और खिड़की की पेंटिंग", description: "Enamel paint or varnish on doors and windows / लकड़ी/लोहे के दरवाजे-खिड़कियों का पेंट", default_price: 699.00 },
+
+      // Appliance Repair
+      { category: "Appliance Repair", name: "Washing Machine Repair / वाशिंग मशीन सुधारना", description: "Fixing drum, motor, spin, or drainage errors / वाशिंग मशीन के ड्रम, मोटर, स्पिन या ड्रेनेज की मरम्मत", default_price: 349.00 },
+      { category: "Appliance Repair", name: "Refrigerator Repair / फ्रिज सुधारना", description: "Fixing gas refill, thermostat, or compressor issues / फ्रिज की गैस भरना, थर्मोस्टेट या कंप्रेसर ठीक करना", default_price: 399.00 },
+      { category: "Appliance Repair", name: "Geyser Installation & Repair / गीजर लगाना और सुधारना", description: "Fixing heating element, thermostat, or installing new geyser / गीजर का एलिमेंट, ऑटो-कट बदलना या नया लगाना", default_price: 299.00 },
+      { category: "Appliance Repair", name: "Microwave Oven Repair / माइक्रोवेव ओवन सुधारना", description: "Fixing heating, touch panel, or power issues / ओवन की हीटिंग, पैनल या स्विच ठीक करना", default_price: 349.00 },
+    ];
+
+    for (let sub of subServices) {
+      const categoryId = categoryMap[sub.category];
+      await pool.query(
+        "INSERT INTO sub_services (category_id, name, description, default_price) VALUES (?, ?, ?, ?)",
+        [categoryId, sub.name, sub.description, sub.default_price]
+      );
     }
 
     // 6. Generate 100 sellers from frontend logic

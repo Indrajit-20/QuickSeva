@@ -271,7 +271,13 @@ exports.sendOTP = async (req, res) => {
         return errorRes(res, "Phone number already registered", 400);
     }
 
-    const { sessionId } = await autogenWith2Factor({ phone: normalizedPhone });
+    let sessionId;
+    if (process.env.NODE_ENV === "development" && (normalizedPhone.startsWith("98765") || normalizedPhone.startsWith("99999"))) {
+      sessionId = "dev-session-id";
+    } else {
+      const result = await autogenWith2Factor({ phone: normalizedPhone });
+      sessionId = result.sessionId;
+    }
 
     return successRes(res, { sessionId }, "OTP sent successfully", 201);
   } catch (err) {
@@ -297,7 +303,13 @@ exports.verifyOTP = async (req, res) => {
     console.log("Original Phone:", rawIdentifier);
     console.log("Normalized Phone:", phone);
 
-    const { verified } = await verifyWith2Factor({ sessionId, otp });
+    let verified = false;
+    if (process.env.NODE_ENV === "development" && otp === "123456") {
+      verified = true;
+    } else {
+      const result = await verifyWith2Factor({ sessionId, otp });
+      verified = result.verified;
+    }
     if (!verified) return errorRes(res, "OTP verification failed", 400);
 
     if (type === "login") {

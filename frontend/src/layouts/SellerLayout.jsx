@@ -11,6 +11,7 @@ import {
   X,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import WorkspaceSwitcher from "../components/WorkspaceSwitcher";
 
 const navItems = [
   { label: "Dashboard", path: "/seller/dashboard", icon: LayoutDashboard },
@@ -32,11 +33,10 @@ function SellerNavLink({ item, onClick }) {
     <NavLink
       to={item.path}
       onClick={onClick}
-      className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-all ${
-        active
+      className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-all ${active
           ? "bg-indigo-500/20 text-white shadow-[inset_3px_0_0_#6366f1]"
           : "text-slate-300 hover:bg-white/5 hover:text-white"
-      }`}
+        }`}
     >
       <Icon size={18} />
       <span>{item.label}</span>
@@ -74,6 +74,7 @@ function SellerSidebar({ user, onLogout, onNavigate }) {
             </div>
           </div>
         </div>
+        <WorkspaceSwitcher />
         <button
           type="button"
           onClick={onLogout}

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import WorkspaceSwitcher from "./WorkspaceSwitcher";
 
 const getInitials = (name) => {
   if (!name) return "U";
@@ -169,6 +170,8 @@ export default function ProfileDropdown({ user, onLogout }) {
                 </div>
               </div>
 
+              <WorkspaceSwitcher />
+
               <div className="px-4 pb-5 space-y-3">
                 {isSeller ? (
                   <>
@@ -271,6 +274,8 @@ export default function ProfileDropdown({ user, onLogout }) {
                   )}
                 </div>
               </div>
+
+              <WorkspaceSwitcher />
 
               <div className="p-3">
                 {isSeller ? (

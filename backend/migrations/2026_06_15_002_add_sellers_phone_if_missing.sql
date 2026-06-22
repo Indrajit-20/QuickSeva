@@ -2,7 +2,7 @@
 -- Authentication continues to use users.phone.
 
 ALTER TABLE sellers
-  ADD COLUMN IF NOT EXISTS phone VARCHAR(20) NULL;
+  ADD COLUMN phone VARCHAR(20) NULL;
 
 -- Keep existing constraints/indexes untouched.
 

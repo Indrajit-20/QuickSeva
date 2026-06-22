@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Clock, IndianRupee, Pencil, Plus, Trash2, CalendarDays } from "lucide-react";
 import { Calendar } from "react-multi-date-picker";
 import { days, formatCurrency, serviceOptions } from "./sellerData";
@@ -34,6 +35,7 @@ const extractYMD = (dt) => {
 
 export default function SellerServices() {
   const { user, updateUser } = useAuth();
+  const navigate = useNavigate();
 
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -249,9 +251,13 @@ export default function SellerServices() {
                         <h3 className="font-bold text-white text-base">
                           {service.title || service.name}
                         </h3>
-                        {service.sub_service_name && (
+                        {service.sub_service_name ? (
                           <span className="text-[10px] bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1 mt-1 shadow-inner">
                             🎯 {service.sub_service_name}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] bg-indigo-500/5 border border-indigo-500/10 text-indigo-400 font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1 mt-1 shadow-inner">
+                            ✨ Custom Service / अन्य काम
                           </span>
                         )}
                         {service.description && (
@@ -916,13 +922,22 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
           )}
 
           <div className="flex justify-between pt-4 border-t border-indigo-500/10">
-            <button
-              type="button"
-              onClick={() => setStep(1)}
-              className="px-5 py-2.5 rounded-xl border border-slate-500/30 text-slate-300 hover:bg-white/5 font-black transition text-sm active:scale-95 cursor-pointer"
-            >
-              Back / पीछे
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={onCancel}
+                className="px-4 py-2.5 rounded-xl border border-red-500/30 text-red-300 hover:bg-red-500/10 font-bold transition text-xs active:scale-95 cursor-pointer"
+              >
+                Cancel / रद्द करें
+              </button>
+              <button
+                type="button"
+                onClick={() => setStep(1)}
+                className="px-5 py-2.5 rounded-xl border border-slate-500/30 text-slate-300 hover:bg-white/5 font-black transition text-sm active:scale-95 cursor-pointer"
+              >
+                Back / पीछे
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1012,13 +1027,22 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
           </div>
 
           <div className="flex justify-between pt-6 border-t border-indigo-500/10">
-            <button
-              type="button"
-              onClick={() => setStep(2)}
-              className="px-5 py-2.5 rounded-xl border border-slate-500/30 text-slate-300 hover:bg-white/5 font-black transition text-sm active:scale-95 cursor-pointer"
-            >
-              Back / पीछे
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={onCancel}
+                className="px-4 py-2.5 rounded-xl border border-red-500/30 text-red-300 hover:bg-red-500/10 font-bold transition text-xs active:scale-95 cursor-pointer"
+              >
+                Cancel / रद्द करें
+              </button>
+              <button
+                type="button"
+                onClick={() => setStep(2)}
+                className="px-5 py-2.5 rounded-xl border border-slate-500/30 text-slate-300 hover:bg-white/5 font-black transition text-sm active:scale-95 cursor-pointer"
+              >
+                Back / पीछे
+              </button>
+            </div>
             <button
               type="button"
               onClick={() => setStep(4)}
@@ -1048,6 +1072,9 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
                 placeholder="E.g. Tap repair, Fan fitting / जैसे: नल रिपेयर, पंखा लगाना"
                 className="w-full rounded-xl border border-indigo-500/20 bg-[#0f0e1a] px-4 py-3.5 text-sm text-white outline-none transition focus:border-indigo-500 placeholder:text-slate-500 font-semibold"
               />
+              <span className="text-[10px] text-slate-400 mt-1 block">
+                💡 You can type in English, Hindi, or your preferred language / आप इसे इंग्लिश, हिंदी या अपनी भाषा में लिख सकते हैं
+              </span>
             </div>
 
             <div>
@@ -1086,13 +1113,22 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
           </div>
 
           <div className="flex justify-between pt-6 border-t border-indigo-500/10">
-            <button
-              type="button"
-              onClick={() => setStep(3)}
-              className="px-5 py-2.5 rounded-xl border border-slate-500/30 text-slate-300 hover:bg-white/5 font-black transition text-sm active:scale-95 cursor-pointer"
-            >
-              Back / पीछे
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={onCancel}
+                className="px-4 py-2.5 rounded-xl border border-red-500/30 text-red-300 hover:bg-red-500/10 font-bold transition text-xs active:scale-95 cursor-pointer"
+              >
+                Cancel / रद्द करें
+              </button>
+              <button
+                type="button"
+                onClick={() => setStep(3)}
+                className="px-5 py-2.5 rounded-xl border border-slate-500/30 text-slate-300 hover:bg-white/5 font-black transition text-sm active:scale-95 cursor-pointer"
+              >
+                Back / पीछे
+              </button>
+            </div>
             <div className="flex gap-2">
               <button
                 type="button"
@@ -1136,9 +1172,13 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
                 <span className="text-lg font-black text-white block mt-0.5">
                   {title || (selectedCategory?.name + " Service")}
                 </span>
-                {selectedSubService && (
+                {selectedSubService ? (
                   <span className="text-[10px] bg-indigo-500/20 text-indigo-200 font-bold px-2 py-0.5 rounded-full inline-block mt-1">
                     🎯 {selectedSubService.name.split("/")[0].trim()}
+                  </span>
+                ) : (
+                  <span className="text-[10px] bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 font-bold px-2 py-0.5 rounded-full inline-block mt-1 shadow-inner">
+                    ✨ Custom Service / अन्य काम
                   </span>
                 )}
               </div>
@@ -1166,14 +1206,23 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
           )}
 
           <div className="flex justify-between pt-6 border-t border-indigo-500/10">
-            <button
-              type="button"
-              onClick={() => setStep(4)}
-              disabled={isSubmitting}
-              className="px-5 py-2.5 rounded-xl border border-slate-500/30 text-slate-300 hover:bg-white/5 font-black transition text-sm disabled:opacity-50 active:scale-95 cursor-pointer"
-            >
-              Back / पीछे
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={onCancel}
+                className="px-4 py-2.5 rounded-xl border border-red-500/30 text-red-300 hover:bg-red-500/10 font-bold transition text-xs active:scale-95 cursor-pointer"
+              >
+                Cancel / रद्द करें
+              </button>
+              <button
+                type="button"
+                onClick={() => setStep(4)}
+                disabled={isSubmitting}
+                className="px-5 py-2.5 rounded-xl border border-slate-500/30 text-slate-300 hover:bg-white/5 font-black transition text-sm disabled:opacity-50 active:scale-95 cursor-pointer"
+              >
+                Back / पीछे
+              </button>
+            </div>
             <button
               type="button"
               onClick={handleSubmit}

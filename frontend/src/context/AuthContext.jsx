@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 import {
   getMe,
@@ -52,6 +53,14 @@ const mapAuthErrorToUserMessage = (message) => {
 };
 
 export const AuthProvider = ({ children }) => {
+  const navigate = useNavigate();
+
+  // New state
+  const [isSeller, setIsSeller] = useState(false);
+  const [activeRole, setActiveRole] = useState(
+    localStorage.getItem("activeRole") || "user"
+  );
+
   // ========================================
   // AUTH STATE
   // ========================================
@@ -81,6 +90,13 @@ export const AuthProvider = ({ children }) => {
         setUser(data.user || null);
         setIsAuthenticated(Boolean(data?.user));
         setAuthError(null);
+
+        setIsSeller(data.isSeller);
+        // If saved role is "seller" but user is not a seller, reset to "user"
+        if (!data.isSeller && localStorage.getItem("activeRole") === "seller") {
+          setActiveRole("user");
+          localStorage.setItem("activeRole", "user");
+        }
       } catch (err) {
         console.error("Auth init failed:", err);
         const status = err?.response?.status;
@@ -155,6 +171,15 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // New function
+  const switchRole = (role) => {
+    if (role === "seller" && !isSeller) return; // do nothing if not a seller
+    setActiveRole(role);
+    localStorage.setItem("activeRole", role);
+    if (role === "seller") navigate("/seller/dashboard");
+    if (role === "user") navigate("/");
+  };
+
   // ========================================
   // LOGOUT
   // ========================================
@@ -163,6 +188,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem("userRole");
     localStorage.removeItem("otpTimerExpiry");
     localStorage.removeItem("otpResendCount");
+    localStorage.removeItem("activeRole");
 
     setUser(null);
     setIsAuthenticated(false);
@@ -185,12 +211,15 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated,
     isLoading,
     authError,
+    isSeller,
+    activeRole,
 
     // Methods
     sendOtp: sendOtpToPhone,
     loginWithOtp,
     logout,
     updateUser,
+    switchRole,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

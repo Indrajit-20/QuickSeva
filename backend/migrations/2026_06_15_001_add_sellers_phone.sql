@@ -2,5 +2,5 @@
 -- Non-breaking: keeps existing users.phone as authentication source of truth.
 
 ALTER TABLE sellers
-  ADD COLUMN IF NOT EXISTS phone VARCHAR(20) NULL;
+  ADD COLUMN phone VARCHAR(20) NULL;
 

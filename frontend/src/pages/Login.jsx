@@ -287,7 +287,7 @@ const Login = () => {
       console.log("LOGIN USER:", result?.user);
 
       if (role === "seller") {
-        return navigate("/seller/services", { replace: true });
+        return navigate("/seller/dashboard", { replace: true });
       }
       if (role === "admin") {
         return navigate("/admin/dashboard", { replace: true });

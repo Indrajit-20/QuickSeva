@@ -183,11 +183,10 @@ const SellerRegister = () => {
               onChange={handleChange}
               onBlur={handleBlur}
               placeholder="QuickSeva Partner Pvt. Ltd"
-              className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${
-                errors.businessName && touched.businessName
+              className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${errors.businessName && touched.businessName
                   ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
                   : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
-              }`}
+                }`}
             />
             {errors.businessName && touched.businessName && (
               <p className="mt-1 text-xs text-red-300">
@@ -206,11 +205,10 @@ const SellerRegister = () => {
               onChange={handleChange}
               onBlur={handleBlur}
               placeholder="John Doe"
-              className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${
-                errors.ownerName && touched.ownerName
+              className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${errors.ownerName && touched.ownerName
                   ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
                   : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
-              }`}
+                }`}
             />
             {errors.ownerName && touched.ownerName && (
               <p className="mt-1 text-xs text-red-300">⚠ {errors.ownerName}</p>
@@ -228,11 +226,10 @@ const SellerRegister = () => {
               onChange={handleChange}
               onBlur={handleBlur}
               placeholder="you@example.com"
-              className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${
-                errors.email && touched.email
+              className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${errors.email && touched.email
                   ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
                   : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
-              }`}
+                }`}
             />
             {/* {errors.email && touched.email && (
               <p className="mt-1 text-xs text-red-300">⚠ {errors.email}</p>
@@ -251,11 +248,10 @@ const SellerRegister = () => {
               onBlur={handleBlur}
               placeholder="98765 43210"
               maxLength={10}
-              className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${
-                errors.mobileNumber && touched.mobileNumber
+              className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${errors.mobileNumber && touched.mobileNumber
                   ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
                   : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
-              }`}
+                }`}
             />
             {errors.mobileNumber && touched.mobileNumber && (
               <p className="mt-1 text-xs text-red-300">

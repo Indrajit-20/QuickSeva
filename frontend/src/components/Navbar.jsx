@@ -143,7 +143,7 @@ const Navbar = () => {
     return () => document.removeEventListener("mousedown", onDocMouseDown);
   }, [isPartnerOpen]);
 
-return (
+  return (
     <nav className="sticky top-0 z-50 bg-indigo-950 shadow-lg border-b border-indigo-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
@@ -259,19 +259,16 @@ return (
             className="md:hidden flex flex-col items-center justify-center w-10 h-10 rounded-md hover:bg-indigo-900 transition"
           >
             <span
-              className={`block w-6 h-0.5 bg-red-500 mb-1.5 transition-transform duration-300 ${
-                isMenuOpen ? "rotate-45 translate-y-2" : ""
-              }`}
+              className={`block w-6 h-0.5 bg-red-500 mb-1.5 transition-transform duration-300 ${isMenuOpen ? "rotate-45 translate-y-2" : ""
+                }`}
             ></span>
             <span
-              className={`block w-6 h-0.5 bg-red-500 transition-opacity duration-300 ${
-                isMenuOpen ? "opacity-0" : ""
-              }`}
+              className={`block w-6 h-0.5 bg-red-500 transition-opacity duration-300 ${isMenuOpen ? "opacity-0" : ""
+                }`}
             ></span>
             <span
-              className={`block w-6 h-0.5 bg-red-500 transition-transform duration-300 ${
-                isMenuOpen ? "-rotate-45 -translate-y-2" : ""
-              }`}
+              className={`block w-6 h-0.5 bg-red-500 transition-transform duration-300 ${isMenuOpen ? "-rotate-45 -translate-y-2" : ""
+                }`}
             ></span>
           </button>
         </div>
