@@ -17,7 +17,7 @@ const SellerModel = {
       [
         user_id,
         business_name,
-        category_id,
+        category_id || null,
         bio,
         experience_yrs || 0,
         phone || null,

@@ -3,7 +3,7 @@ import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export default function UserRoute({ allowGuests = false, guestOnly = false }) {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, activeRole } = useAuth();
   const [initialLoadDone, setInitialLoadDone] = useState(false);
 
   useEffect(() => {
@@ -34,7 +34,7 @@ export default function UserRoute({ allowGuests = false, guestOnly = false }) {
   }
 
   // Case 3: Authenticated as Seller
-  if (user?.role === "seller") {
+  if (user?.role === "seller" && activeRole === "seller") {
     return <Navigate to="/seller/dashboard" replace />;
   }
 

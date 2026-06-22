@@ -40,7 +40,7 @@ const computeTotalBookings = () => {
 
 export default function ProfileDropdown({ user, onLogout }) {
   const navigate = useNavigate();
-  const { updateUser } = useAuth();
+  const { updateUser, activeRole } = useAuth();
 
   const isSeller = user?.role === "seller";
   const isAdmin = user?.role === "admin";
@@ -170,10 +170,10 @@ export default function ProfileDropdown({ user, onLogout }) {
                 </div>
               </div>
 
-              <WorkspaceSwitcher />
+              <WorkspaceSwitcher layout="dropdown" />
 
               <div className="px-4 pb-5 space-y-3">
-                {isSeller ? (
+                {activeRole === "seller" ? (
                   <>
                     <button
                       type="button"
@@ -275,10 +275,10 @@ export default function ProfileDropdown({ user, onLogout }) {
                 </div>
               </div>
 
-              <WorkspaceSwitcher />
+              <WorkspaceSwitcher layout="dropdown" />
 
               <div className="p-3">
-                {isSeller ? (
+                {activeRole === "seller" ? (
                   <>
                     <div className="flex gap-2 mb-3">
                       <button

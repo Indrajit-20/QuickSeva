@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 import {
   getMe,
@@ -17,6 +17,11 @@ import {
  */
 
 const AuthContext = createContext();
+
+const toast = {
+  error: (msg) => alert(msg),
+  success: (msg) => alert(msg)
+};
 
 const mapAuthErrorToUserMessage = (message) => {
   const normalized = String(message || "").toLowerCase();
@@ -54,6 +59,7 @@ const mapAuthErrorToUserMessage = (message) => {
 
 export const AuthProvider = ({ children }) => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   // New state
   const [isSeller, setIsSeller] = useState(false);
@@ -61,12 +67,44 @@ export const AuthProvider = ({ children }) => {
     localStorage.getItem("activeRole") || "user"
   );
 
+  useEffect(() => {
+    const isSellerWorkspace =
+      location.pathname === "/seller" ||
+      location.pathname.startsWith("/seller/dashboard") ||
+      location.pathname.startsWith("/seller/profile") ||
+      location.pathname.startsWith("/seller/services") ||
+      location.pathname.startsWith("/seller/orders") ||
+      location.pathname.startsWith("/seller/packages") ||
+      location.pathname.startsWith("/seller/wallet");
+
+    if (isSellerWorkspace) {
+      if (activeRole !== "seller") {
+        setActiveRole("seller");
+        localStorage.setItem("activeRole", "seller");
+      }
+    } else if (location.pathname.startsWith("/admin")) {
+      if (activeRole !== "admin") {
+        setActiveRole("admin");
+        localStorage.setItem("activeRole", "admin");
+      }
+    } else {
+      if (activeRole !== "user") {
+        setActiveRole("user");
+        localStorage.setItem("activeRole", "user");
+      }
+    }
+  }, [location.pathname, activeRole]);
+
   // ========================================
   // AUTH STATE
   // ========================================
   // Single source of truth for authorization is data.user from /api/auth/me
   // Do NOT bootstrap from localStorage.userRole or localStorage.user (stale/cross-tab).
   const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    setIsSeller(user?.role === "seller");
+  }, [user]);
 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -91,11 +129,18 @@ export const AuthProvider = ({ children }) => {
         setIsAuthenticated(Boolean(data?.user));
         setAuthError(null);
 
-        setIsSeller(data.isSeller);
-        // If saved role is "seller" but user is not a seller, reset to "user"
-        if (!data.isSeller && localStorage.getItem("activeRole") === "seller") {
+        const isUserSeller = data.user?.role === "seller";
+        setIsSeller(isUserSeller);
+
+        const savedRole = localStorage.getItem("activeRole");
+        if (!savedRole) {
           setActiveRole("user");
           localStorage.setItem("activeRole", "user");
+        } else if (savedRole === "seller" && !isUserSeller) {
+          setActiveRole("user");
+          localStorage.setItem("activeRole", "user");
+        } else {
+          setActiveRole(savedRole);
         }
       } catch (err) {
         console.error("Auth init failed:", err);
@@ -173,11 +218,32 @@ export const AuthProvider = ({ children }) => {
 
   // New function
   const switchRole = (role) => {
-    if (role === "seller" && !isSeller) return; // do nothing if not a seller
+    if (role === "seller" && !isSeller) {
+      toast.error("Register as a seller first");
+      navigate("/become-seller");
+      return;
+    }
     setActiveRole(role);
     localStorage.setItem("activeRole", role);
     if (role === "seller") navigate("/seller/dashboard");
     if (role === "user") navigate("/");
+  };
+
+  const refreshAuth = async () => {
+    try {
+      const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+      if (!token) return;
+      const { data } = await getMe();
+      if (data?.user) {
+        setUser(data.user);
+        setIsSeller(data.user.role === "seller");
+        if (data.user.role) {
+          localStorage.setItem("userRole", data.user.role);
+        }
+      }
+    } catch (err) {
+      console.error("refreshAuth error:", err);
+    }
   };
 
   // ========================================
@@ -189,6 +255,8 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem("otpTimerExpiry");
     localStorage.removeItem("otpResendCount");
     localStorage.removeItem("activeRole");
+    setActiveRole("user");
+    setIsSeller(false);
 
     setUser(null);
     setIsAuthenticated(false);
@@ -220,6 +288,7 @@ export const AuthProvider = ({ children }) => {
     logout,
     updateUser,
     switchRole,
+    refreshAuth,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

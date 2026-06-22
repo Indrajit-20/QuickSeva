@@ -142,7 +142,7 @@ function ServiceIconStrip() {
       </div>
 
       {/* Scrollbar hiding without breaking swipe */}
-      <style jsx>{`
+      <style>{`
         .scrollbar-hide::-webkit-scrollbar {
           display: none;
         }

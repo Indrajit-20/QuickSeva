@@ -74,7 +74,7 @@ function SellerSidebar({ user, onLogout, onNavigate }) {
             </div>
           </div>
         </div>
-        <WorkspaceSwitcher />
+        <WorkspaceSwitcher layout="sidebar" />
         <button
           type="button"
           onClick={onLogout}

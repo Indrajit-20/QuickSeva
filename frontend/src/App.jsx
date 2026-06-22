@@ -25,6 +25,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import OtpVerification from "./pages/OtpVerification";
 import SellerRegister from "./pages/SellerRegister";
+import BecomeSeller from "./pages/BecomeSeller";
 import ServicesPage from "./pages/ServicesPage";
 import BookingPage from "./pages/BookingPage";
 import MyBookings from "./pages/MyBookings";
@@ -75,7 +76,14 @@ function AppRoutes() {
   }, []);
 
   const isAdminRoute = location.pathname.startsWith("/admin");
-  const isSellerRoute = location.pathname.startsWith("/seller");
+  const isSellerRoute =
+    location.pathname === "/seller" ||
+    location.pathname.startsWith("/seller/dashboard") ||
+    location.pathname.startsWith("/seller/profile") ||
+    location.pathname.startsWith("/seller/services") ||
+    location.pathname.startsWith("/seller/orders") ||
+    location.pathname.startsWith("/seller/packages") ||
+    location.pathname.startsWith("/seller/wallet");
   const userRole = user?.role || null;
 
   return (
@@ -104,6 +112,7 @@ function AppRoutes() {
           <Route path="/my-bookings" element={<MyBookings />} />
           <Route path="/booking-history" element={<BookingHistory />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/become-seller" element={<BecomeSeller />} />
         </Route>
 
         {/* Seller (seller only) */}

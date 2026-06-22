@@ -505,8 +505,3 @@ exports.updateSellerAvailability = async (req, res) => {
     return errorRes(res, "Failed to update availability");
   }
 };
-  } catch (err) {
-  console.error("updateSellerAvailability error:", err);
-  return errorRes(res, "Failed to update availability");
-}
-};

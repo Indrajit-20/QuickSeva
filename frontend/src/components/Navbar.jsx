@@ -114,7 +114,7 @@ const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isPartnerOpen, setIsPartnerOpen] = useState(false);
   const partnerRef = useRef(null);
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, logout, activeRole } = useAuth();
   const { address, loading } = useNearbyLocation();
 
   const initials = useMemo(() => getInitials(user?.name), [user?.name]);
@@ -172,7 +172,7 @@ const Navbar = () => {
               Home
             </Link>
 
-            {isAuthenticated && user?.role === "seller" ? (
+            {isAuthenticated && activeRole === "seller" ? (
               <>
                 <Link
                   to="/seller/services"
@@ -196,6 +196,34 @@ const Navbar = () => {
               </Link>
             )}
 
+            {user && (
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "5px",
+                padding: "3px 10px",
+                borderRadius: "999px",
+                background: activeRole === "seller"
+                  ? "rgba(99,102,241,0.15)"
+                  : "rgba(34,197,94,0.15)",
+                border: activeRole === "seller"
+                  ? "1px solid rgba(99,102,241,0.4)"
+                  : "1px solid rgba(34,197,94,0.4)",
+                fontSize: "11px",
+                fontWeight: 600,
+                color: activeRole === "seller" ? "#6366f1" : "#22c55e"
+              }}>
+                <span style={{
+                  width: "6px", height: "6px",
+                  borderRadius: "50%",
+                  background: activeRole === "seller" ? "#6366f1" : "#22c55e",
+                  display: "inline-block"
+                }} />
+                <span className="hidden sm:inline">
+                  {activeRole === "seller" ? "Seller" : "User"}
+                </span>
+              </div>
+            )}
             {user ? (
               <ProfileDropdown user={user} onLogout={handleLogout} />
             ) : (
@@ -289,7 +317,7 @@ const Navbar = () => {
               Home
             </Link>
 
-            {isAuthenticated && user?.role === "seller" ? (
+            {isAuthenticated && activeRole === "seller" ? (
               <>
                 <Link
                   to="/seller/services"

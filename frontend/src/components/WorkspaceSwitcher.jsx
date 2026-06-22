@@ -1,58 +1,88 @@
 import { useAuth } from "../context/AuthContext";
 
-const WorkspaceSwitcher = () => {
+const WorkspaceSwitcher = ({ layout = "dropdown" }) => {
   const { isSeller, activeRole, switchRole } = useAuth();
 
-  if (!isSeller) return null; // hide completely if not a seller
+  const isUserActive = activeRole === "user";
+  const isSellerActive = activeRole === "seller";
+
+  const cardBase = {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: layout === "sidebar" ? "12px 16px" : "10px 14px",
+    borderRadius: "10px",
+    marginBottom: "8px",
+    transition: "all 0.2s ease",
+    width: "100%"
+  };
 
   return (
-    <div style={{
-      display: "flex",
-      flexDirection: "column",
-      gap: "8px",
-      padding: "12px"
-    }}>
+    <div style={{ padding: layout === "dropdown" ? "10px 16px" : "4px 0" }}>
+
+      <p style={{
+        fontSize: "10px",
+        color: "rgba(255,255,255,0.3)",
+        textTransform: "uppercase",
+        letterSpacing: "0.08em",
+        marginBottom: "8px"
+      }}>
+        Workspace
+      </p>
 
       {/* Customer Card */}
       <div
-        onClick={() => activeRole !== "user" && switchRole("user")}
+        onClick={() => !isUserActive && switchRole("user")}
         style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "10px 14px",
-          borderRadius: "10px",
-          cursor: activeRole === "user" ? "default" : "pointer",
-          background: activeRole === "user" ? "rgba(34,197,94,0.1)" : "transparent",
-          border: activeRole === "user" ? "1px solid #22c55e" : "1px solid rgba(255,255,255,0.1)"
+          ...cardBase,
+          cursor: isUserActive ? "default" : "pointer",
+          background: isUserActive
+            ? "rgba(34,197,94,0.08)"
+            : "transparent",
+          border: isUserActive
+            ? "1px solid rgba(34,197,94,0.6)"
+            : "1px solid rgba(255,255,255,0.08)"
         }}
       >
-        <span>👤 Customer</span>
-        {activeRole === "user"
-          ? <span style={{ color: "#22c55e", fontSize: "12px" }}>Active</span>
-          : <span style={{ color: "#aaa", fontSize: "12px" }}>Switch</span>
+        <span style={{ fontSize: "13px", color: "#fff" }}>
+          👤 Customer
+        </span>
+        {isUserActive
+          ? <span style={{ fontSize:"11px", color:"#22c55e", fontWeight:600 }}>Active</span>
+          : <span style={{ fontSize:"11px", color:"rgba(255,255,255,0.4)" }}>Switch</span>
         }
       </div>
 
       {/* Seller Card */}
       <div
-        onClick={() => activeRole !== "seller" && switchRole("seller")}
+        onClick={() => {
+          if (!isSeller) {
+            switchRole("seller");
+          } else if (!isSellerActive) {
+            switchRole("seller");
+          }
+        }}
         style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "10px 14px",
-          borderRadius: "10px",
-          cursor: activeRole === "seller" ? "default" : "pointer",
-          background: activeRole === "seller" ? "rgba(99,102,241,0.1)" : "transparent",
-          border: activeRole === "seller" ? "1px solid #6366f1" : "1px solid rgba(255,255,255,0.1)"
+          ...cardBase,
+          cursor: isSellerActive ? "default" : "pointer",
+          background: isSellerActive
+            ? "rgba(99,102,241,0.08)"
+            : "transparent",
+          border: isSellerActive
+            ? "1px solid rgba(99,102,241,0.6)"
+            : "1px solid rgba(255,255,255,0.08)"
         }}
       >
-        <span>🏪 Seller</span>
-        {activeRole === "seller"
-          ? <span style={{ color: "#6366f1", fontSize: "12px" }}>Active</span>
-          : <span style={{ color: "#aaa", fontSize: "12px" }}>Switch</span>
-        }
+        <span style={{ fontSize: "13px", color: "#fff" }}>
+          🏪 {isSeller ? "Seller" : "Become a Seller"}
+        </span>
+        {isSeller ? (
+          isSellerActive
+            ? <span style={{ fontSize:"11px", color:"#6366f1", fontWeight:600 }}>Active</span>
+            : <span style={{ fontSize:"11px", color:"rgba(255,255,255,0.4)" }}>Switch</span>
+        ) : (
+          <span style={{ fontSize:"11px", color:"#f43f5e", fontWeight:600 }}>Join</span>
+        )}
       </div>
 
     </div>
