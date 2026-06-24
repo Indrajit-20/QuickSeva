@@ -380,23 +380,44 @@ Here are the features planned for future updates:
 
 ---
 
-## 📸 Screenshots
+## 📸 Screenshots & Application Tour
 
-> *Add application screenshots showcasing the interactive map, seller dashboard, and transaction history below.*
+### 🏠 Landing Page & Search
+A modern, responsive landing page featuring location selection, category chips, search flow guidance, and service provider lookup.
 
-| Search Page & Map | Seller Dashboard | User Profile & Wallet |
+![Landing Page](screenshots/home_page.png)
+
+---
+
+### 🗺️ Service Discovery & Booking Flow
+Browse services by category, find verified nearby professionals, and view interactive profile details with map integration.
+
+| 1. Services Category Grid | 2. Nearby Service Providers |
+| :---: | :---: |
+| ![Plumbing Services](screenshots/services_plumbing.png) | ![Service Providers List](screenshots/service_providers_list.png) |
+
+| 3. Detailed Provider Profile & Location Map |
+| :---: |
+| ![Seller Profile Page](screenshots/seller_profile_page.png) |
+
+---
+
+### 🔐 Authentication & Onboarding
+Passwordless authentication using secure OTP verification, and specialized profile/seller registration.
+
+| User Registration | OTP Login | Partner Registration |
 | :---: | :---: | :---: |
-| ![Interactive Map Grid](https://via.placeholder.com/400x250?text=Interactive+Map+With+Markers) | ![Dashboard Overview](https://via.placeholder.com/400x250?text=Seller+Dashboard+Analytics) | ![Wallet Interface](https://via.placeholder.com/400x250?text=Built-in+Wallet+Topup) |
+| ![Register Page](screenshots/register_page.png) | ![Login Page](screenshots/login_page.png) | ![Seller Register Page](screenshots/seller_register_page.png) |
 
 ---
 
 ## 👥 Author Information
 
-*   **Your Name / Developer Portfolio**
-*   🎓 Final Year BCA/MCA Portfolio Project
-*   📧 Email: [your.email@domain.com](mailto:your.email@domain.com)
-*   🔗 LinkedIn: [linkedin.com/in/yourprofile](https://linkedin.com/in/yourprofile)
-*   🐙 GitHub: [github.com/your-username](https://github.com/your-username)
+*   **Indrajit Rathod / Developer Portfolio**
+*   🎓 completed BCA now doing MCA
+*   📧 Email: [indrajitrathod970@gmail.com](mailto:[indrajitrathod970@gmail.com])
+*   🔗 LinkedIn: [linkedin.com/in/indrajit-rathod](https://linkedin.com/in/indrajit-rathod)
+*   🐙 GitHub: [github.com/indrajit-20](https://github.com/indrajit-20)
 
 ---
 <div align="center">
