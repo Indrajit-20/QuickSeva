@@ -416,7 +416,7 @@ Passwordless authentication using secure OTP verification, and specialized profi
 *   **Indrajit Rathod / Developer Portfolio**
 *   🎓 completed BCA now doing MCA
 *   📧 Email: [indrajitrathod970@gmail.com](mailto:[indrajitrathod970@gmail.com])
-*   🔗 LinkedIn: [linkedin.com/in/indrajit-rathod](https://linkedin.com/in/indrajit-rathod)
+*   🔗 LinkedIn: [indrajitrathod](https://www.linkedin.com/in/indrajitrathod/)
 *   🐙 GitHub: [github.com/indrajit-20](https://github.com/indrajit-20)
 
 ---
