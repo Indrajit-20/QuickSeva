@@ -95,10 +95,12 @@ const SellerModel = {
         u.city,
         c.name AS category_name,
         c.icon AS category_icon,
+        COALESCE(s.latitude, u.lat) AS lat,
+        COALESCE(s.longitude, u.lng) AS lng,
         (6371 * ACOS(
-          COS(RADIANS(?)) * COS(RADIANS(u.lat)) *
-          COS(RADIANS(u.lng) - RADIANS(?)) +
-          SIN(RADIANS(?)) * SIN(RADIANS(u.lat))
+          COS(RADIANS(?)) * COS(RADIANS(COALESCE(s.latitude, u.lat))) *
+          COS(RADIANS(COALESCE(s.longitude, u.lng)) - RADIANS(?)) +
+          SIN(RADIANS(?)) * SIN(RADIANS(COALESCE(s.latitude, u.lat)))
         )) AS distance_km,
         JSON_ARRAYAGG(
           JSON_OBJECT(
@@ -116,7 +118,7 @@ const SellerModel = {
       LEFT JOIN services sv
         ON sv.seller_id = s.id
         AND sv.is_active = 1
-      WHERE u.lat IS NOT NULL AND u.lng IS NOT NULL
+      WHERE (s.latitude IS NOT NULL OR u.lat IS NOT NULL)
         AND u.is_active = 1 AND s.is_available = 1
         ${catFilter}
       HAVING distance_km <= ?

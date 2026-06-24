@@ -1,5 +1,6 @@
 const { successRes, errorRes } = require("../utils/helpers");
 const { chargeSellerForLead } = require("../services/leadChargeService");
+const LeadChargeModel = require("../models/leadChargeModel");
 
 exports.chargeLead = async (req, res) => {
   try {
@@ -24,5 +25,28 @@ exports.chargeLead = async (req, res) => {
       return errorRes(res, "Insufficient wallet balance", 400);
     }
     return errorRes(res, "Failed to charge lead");
+  }
+};
+
+exports.checkLeadCharge = async (req, res) => {
+  try {
+    const { sellerId, serviceId } = req.query;
+
+    if (!sellerId || !serviceId) {
+      return errorRes(res, "sellerId and serviceId are required", 400);
+    }
+
+    const buyerId = req.user.id;
+
+    const existing = await LeadChargeModel.existsFor({
+      buyer_id: buyerId,
+      seller_id: sellerId,
+      service_id: serviceId,
+    });
+
+    return successRes(res, { exists: !!existing }, "Lead check processed");
+  } catch (err) {
+    console.error("checkLeadCharge error:", err);
+    return errorRes(res, "Failed to check lead status");
   }
 };

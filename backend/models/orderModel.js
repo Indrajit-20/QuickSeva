@@ -64,8 +64,8 @@ const OrderModel = {
 
     const [rows] = await pool.query(
       `SELECT o.id, o.order_number, o.status, o.total_amount, o.payment_method,
-              o.scheduled_at, o.created_at,
-              s.business_name, su.profile_pic AS seller_pic, sv.title AS service_title
+              o.scheduled_at, o.created_at, o.address,
+              s.business_name, s.id AS seller_id, su.profile_pic AS seller_pic, sv.title AS service_title
        FROM orders o
        JOIN sellers s ON o.seller_id = s.id
        JOIN users su ON s.user_id = su.id

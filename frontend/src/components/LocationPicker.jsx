@@ -67,6 +67,7 @@ export default function LocationPicker({ onChange }) {
   const abortCtrlRef = useRef(null);
   const locationSearchRef = useRef(null);
   const suppressNextSearchRef = useRef(false);
+  const searchCache = useRef({});
 
   const center = useMemo(
     () => [position.lat, position.lng],
@@ -83,7 +84,7 @@ export default function LocationPicker({ onChange }) {
 
       const url = `https://nominatim.openstreetmap.org/reverse?lat=${encodeURIComponent(
         lat,
-      )}&lon=${encodeURIComponent(lng)}&format=json`;
+      )}&lon=${encodeURIComponent(lng)}&format=json&email=support@quickseva.com`;
 
       const res = await fetch(url, {
         signal: ctrl.signal,
@@ -148,7 +149,7 @@ export default function LocationPicker({ onChange }) {
 
   async function nominatimSearch(q) {
     const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&countrycodes=in`,
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&countrycodes=in&email=support@quickseva.com`,
       {
         headers: {
           Accept: "application/json",
@@ -161,20 +162,33 @@ export default function LocationPicker({ onChange }) {
 
   const searchLocation = async (query) => {
     const trimmed = query.trim();
-    if (trimmed.length < 2) {
+    if (trimmed.length < 3) {
       setLocationResults([]);
       setLocationNotFoundMsg("");
       return;
     }
 
+    const cacheKey = trimmed.toLowerCase();
+    if (searchCache.current[cacheKey]) {
+      setLocationResults(searchCache.current[cacheKey]);
+      setLocationNotFoundMsg(
+        searchCache.current[cacheKey].length === 0
+          ? "No results found. Try clicking the map directly."
+          : "",
+      );
+      return;
+    }
+
     try {
       const results = await nominatimSearch(trimmed);
-      if (!Array.isArray(results) || results.length === 0) {
+      const data = Array.isArray(results) ? results : [];
+      searchCache.current[cacheKey] = data;
+      if (data.length === 0) {
         setLocationResults([]);
         setLocationNotFoundMsg("No results found. Try clicking the map directly.");
         return;
       }
-      setLocationResults(results);
+      setLocationResults(data);
       setLocationNotFoundMsg("");
     } catch {
       setLocationResults([]);
@@ -205,8 +219,13 @@ export default function LocationPicker({ onChange }) {
         suppressNextSearchRef.current = false;
         return;
       }
-      searchLocation(locationQuery);
-    }, 400);
+      if (locationQuery.trim().length >= 3) {
+        searchLocation(locationQuery);
+      } else {
+        setLocationResults([]);
+        setLocationNotFoundMsg("");
+      }
+    }, 800);
     return () => clearTimeout(timer);
   }, [locationQuery]);
 

@@ -64,7 +64,16 @@ exports.getSellerById = async (req, res) => {
   try {
     const seller = await SellerModel.findById(req.params.id);
     if (!seller) return errorRes(res, "Seller not found", 404);
-    return successRes(res, { seller });
+
+    const wallet = await WalletModel.findByUserId(seller.user_id);
+    const balance = wallet ? parseFloat(wallet.balance) : 0.00;
+
+    const sellerWithBalanceStatus = {
+      ...seller,
+      hasSufficientBalance: balance >= 1.00,
+    };
+
+    return successRes(res, { seller: sellerWithBalanceStatus });
   } catch (err) {
     return errorRes(res, "Failed to fetch seller");
   }

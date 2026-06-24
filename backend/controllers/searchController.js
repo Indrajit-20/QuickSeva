@@ -10,7 +10,12 @@ exports.searchNearby = async (req, res) => {
     const radius = parseFloat(req.query.radius || 5);
 
     if (isNaN(lat) || isNaN(lng)) {
-      return res.status(400).json({ success: false, message: "lat and lng are required and must be numbers" });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "lat and lng are required and must be numbers",
+        });
     }
 
     // 1. Fetch nearby sellers
@@ -23,8 +28,8 @@ exports.searchNearby = async (req, res) => {
         u.name AS ownerName,
         c.name AS categoryName,
         c.name AS service,
-        s.lat AS lat,
-        s.lng AS lng,
+        COALESCE(s.latitude, u.lat) AS lat,
+        COALESCE(s.longitude, u.lng) AS lng,
         s.avg_rating AS rating,
         s.total_reviews AS reviews,
         s.service_mode AS serviceMode,
@@ -38,19 +43,19 @@ exports.searchNearby = async (req, res) => {
           6371 *
           ACOS(
             COS(RADIANS(?))
-            * COS(RADIANS(s.lat))
-            * COS(RADIANS(s.lng) - RADIANS(?))
+            * COS(RADIANS(COALESCE(s.latitude, u.lat)))
+            * COS(RADIANS(COALESCE(s.longitude, u.lng)) - RADIANS(?))
             + SIN(RADIANS(?))
-            * SIN(RADIANS(s.lat))
+            * SIN(RADIANS(COALESCE(s.latitude, u.lat)))
           )
         ) AS distance
       FROM sellers s
       JOIN users u ON s.user_id = u.id
       LEFT JOIN categories c ON s.category_id = c.id
-      WHERE s.is_available = 1 AND u.is_active = 1 AND s.lat IS NOT NULL AND s.lng IS NOT NULL
+      WHERE s.is_available = 1 AND u.is_active = 1 AND (s.latitude IS NOT NULL OR u.lat IS NOT NULL)
       HAVING distance <= ?
       ORDER BY distance ASC`,
-      [lat, lng, lat, radius]
+      [lat, lng, lat, radius],
     );
 
     if (sellers.length === 0) {
@@ -58,17 +63,17 @@ exports.searchNearby = async (req, res) => {
     }
 
     // 2. Fetch services for these sellers
-    const sellerIds = sellers.map(s => s.id);
+    const sellerIds = sellers.map((s) => s.id);
     const [services] = await pool.query(
       `SELECT id, seller_id, title AS name, description, price, duration, is_instant
        FROM services
        WHERE seller_id IN (?) AND is_active = 1`,
-      [sellerIds]
+      [sellerIds],
     );
 
     // Group services by seller_id
     const servicesBySeller = {};
-    services.forEach(svc => {
+    services.forEach((svc) => {
       if (!servicesBySeller[svc.seller_id]) {
         servicesBySeller[svc.seller_id] = [];
       }
@@ -78,12 +83,12 @@ exports.searchNearby = async (req, res) => {
         description: svc.description,
         price: parseFloat(svc.price),
         duration: svc.duration,
-        is_instant: Boolean(svc.is_instant)
+        is_instant: Boolean(svc.is_instant),
       });
     });
 
     // 3. Attach services and complete mapping
-    const result = sellers.map(s => {
+    const result = sellers.map((s) => {
       const distanceKm = parseFloat(s.distance || 0);
       return {
         id: s.id,
@@ -98,7 +103,7 @@ exports.searchNearby = async (req, res) => {
         lng: parseFloat(s.lng),
         rating: parseFloat(s.rating || 0),
         reviews: parseInt(s.reviews || 0),
-        serviceMode: s.serviceMode || 'offline',
+        serviceMode: s.serviceMode || "offline",
         instantService: s.instantService ? true : false,
         isPremium: s.isPremium ? true : false,
         plan: s.plan,
@@ -107,13 +112,15 @@ exports.searchNearby = async (req, res) => {
         phone: s.phone,
         distanceKm: distanceKm,
         distance: distanceKm,
-        services: servicesBySeller[s.id] || []
+        services: servicesBySeller[s.id] || [],
       };
     });
 
     return res.json(result);
   } catch (err) {
     console.error("searchNearby error:", err);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };

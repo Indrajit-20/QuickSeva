@@ -13,6 +13,7 @@ import {
   Navigation,
   Phone,
 } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -101,6 +102,7 @@ function defaultServicesForSeller(seller) {
 export default function SellerPublicProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [selectedService, setSelectedService] = useState(null);
   const [bookingError, setBookingError] = useState("");
   const [distanceLabel, setDistanceLabel] = useState("");
@@ -140,6 +142,7 @@ export default function SellerPublicProfile() {
               address: rawSeller.address || rawSeller.city || "",
               lat: rawSeller.lat != null ? Number(rawSeller.lat) : undefined,
               lng: rawSeller.lng != null ? Number(rawSeller.lng) : undefined,
+              hasSufficientBalance: rawSeller.hasSufficientBalance,
             }
           : null;
         const svc =
@@ -222,6 +225,44 @@ export default function SellerPublicProfile() {
     return undefined;
   }, [seller]);
 
+  // Check if lead has already been charged whenever selectedService, seller or auth status changes.
+  // This ensures that refreshing the page retains access if already paid.
+  useEffect(() => {
+    if (!selectedService || !seller?.id || !isAuthenticated) {
+      setShowContact(false);
+      return;
+    }
+
+    let active = true;
+    (async () => {
+      try {
+        const apiClient = (await import("../api/axiosConfig.js")).default;
+        const res = await apiClient.get(`/leads/check`, {
+          params: {
+            sellerId: seller.id,
+            serviceId: selectedService.id,
+          },
+        });
+        if (active) {
+          if (res?.data?.data?.exists || res?.data?.exists) {
+            setShowContact(true);
+            setContactError("");
+          } else {
+            setShowContact(false);
+          }
+        }
+      } catch (err) {
+        if (active) {
+          setShowContact(false);
+        }
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [selectedService, seller, isAuthenticated]);
+
   if (sellerLoading) {
     return (
       <main className="min-h-screen bg-[#0d0d1a] px-4 py-10 text-white">
@@ -275,6 +316,10 @@ export default function SellerPublicProfile() {
   };
 
   const chargeAndRevealContact = async () => {
+    if (!isAuthenticated) {
+      setContactError("Login is required to view contact details.");
+      return;
+    }
     if (!selectedService) {
       setContactError("Select a service first.");
       return;
@@ -357,7 +402,7 @@ export default function SellerPublicProfile() {
               <div className="flex items-start gap-3 rounded-xl border border-indigo-500/20 bg-[#0f1024] p-4">
                 <Phone size={18} className="mt-0.5 text-purple-300" />
                 <span className="text-sm font-semibold text-slate-200">
-                  **********
+                  {showContact ? seller.phone || "Phone not available" : "**********"}
                 </span>
               </div>
             </div>
@@ -412,6 +457,10 @@ export default function SellerPublicProfile() {
                       WhatsApp
                     </a>
                   </>
+                ) : seller?.hasSufficientBalance === false ? (
+                  <div className="w-full text-center rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-3 font-bold text-red-200 text-sm">
+                    Contact details unavailable (Seller is inactive/offline)
+                  </div>
                 ) : (
                   <button
                     type="button"
@@ -432,7 +481,7 @@ export default function SellerPublicProfile() {
 
               {contactError && (
                 <p className="mt-3 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm font-bold text-red-200">
-                   login required to view contact
+                  {contactError}
                 </p>
               )}
             </div>

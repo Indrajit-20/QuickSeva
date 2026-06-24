@@ -230,7 +230,7 @@ const getShortAddress = (data) => {
 const reverseGeocode = async (lat, lng) => {
   const url = `https://nominatim.openstreetmap.org/reverse?lat=${encodeURIComponent(
     lat,
-  )}&lon=${encodeURIComponent(lng)}&format=json`;
+  )}&lon=${encodeURIComponent(lng)}&format=json&email=support@quickseva.com`;
   const res = await fetch(url, {
     headers: {
       Accept: "application/json",
@@ -242,11 +242,32 @@ const reverseGeocode = async (lat, lng) => {
 };
 
 export function useNearbyLocation() {
-  const [address, setAddress] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [address, setAddress] = useState(() => {
+    try {
+      return sessionStorage.getItem("qs_cached_address") || "";
+    } catch {
+      return "";
+    }
+  });
+  const [loading, setLoading] = useState(() => {
+    try {
+      return !sessionStorage.getItem("qs_cached_address");
+    } catch {
+      return true;
+    }
+  });
 
   useEffect(() => {
     let cancelled = false;
+
+    try {
+      const cached = sessionStorage.getItem("qs_cached_address");
+      if (cached) {
+        setAddress(cached);
+        setLoading(false);
+        return;
+      }
+    } catch {}
 
     if (!navigator.geolocation) {
       setLoading(false);
@@ -262,7 +283,12 @@ export function useNearbyLocation() {
 
         try {
           const nextAddress = await reverseGeocode(lat, lng);
-          if (!cancelled) setAddress(nextAddress || "");
+          if (!cancelled) {
+            setAddress(nextAddress || "");
+            try {
+              sessionStorage.setItem("qs_cached_address", nextAddress || "");
+            } catch {}
+          }
         } catch {
           if (!cancelled) setAddress("");
         } finally {
@@ -424,12 +450,13 @@ export default function NearbyServices({
   const gpsPosRef = useRef(null);
   const locationSearchRef = useRef(null);
   const portalDropdownRef = useRef(null);
+  const searchCache = useRef({});
 
   const nominatimSearch = async (q) => {
     const res = await fetch(
       `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
         q,
-      )}&format=json&limit=5&countrycodes=in`,
+      )}&format=json&limit=5&countrycodes=in&email=support@quickseva.com`,
       {
         headers: {
           Accept: "application/json",
@@ -444,29 +471,21 @@ export default function NearbyServices({
 
   const smartSearch = async (query) => {
     const trimmed = query.trim();
-    if (trimmed.length < 2) return [];
+    if (trimmed.length < 3) return [];
 
-    let results = await nominatimSearch(trimmed);
-    if (results.length > 0) return results;
-
-    results = await nominatimSearch(`${trimmed}, India`);
-    if (results.length > 0) return results;
-
-    results = await nominatimSearch(`${trimmed}, Gujarat, India`);
-    if (results.length > 0) return results;
-
-    if (trimmed.length > 4) {
-      results = await nominatimSearch(`${trimmed.slice(0, -2)}, India`);
-      console.log("Smart search fallback results:", results);
-      if (results.length > 0) return results;
+    const cacheKey = trimmed.toLowerCase();
+    if (searchCache.current[cacheKey]) {
+      return searchCache.current[cacheKey];
     }
 
-    return [];
+    const results = await nominatimSearch(trimmed);
+    searchCache.current[cacheKey] = results;
+    return results;
   };
 
   const searchLocation = async (query) => {
     const trimmed = query.trim();
-    if (trimmed.length < 2) {
+    if (trimmed.length < 3) {
       setLocationResults([]);
       setLocationNotFoundMsg("");
       return;
@@ -572,13 +591,13 @@ export default function NearbyServices({
   useEffect(() => {
     const timer = setTimeout(() => {
       if (locationMode !== "area") return;
-      if (locationQuery.trim().length >= 2) {
+      if (locationQuery.trim().length >= 3) {
         searchLocation(locationQuery);
       } else {
         setLocationResults([]);
         setLocationNotFoundMsg("");
       }
-    }, 400);
+    }, 800);
     return () => clearTimeout(timer);
   }, [locationQuery, locationMode]);
 

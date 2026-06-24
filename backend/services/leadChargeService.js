@@ -1,9 +1,17 @@
 const WalletModel = require("../models/walletModel");
 const LeadChargeModel = require("../models/leadChargeModel");
+const SellerModel = require("../models/sellerModel");
 
 // Reusable service to charge seller ₹1 once per buyer->seller->service.
 async function chargeSellerForLead(sellerId, buyerId, serviceId, source) {
   const amount = 1;
+
+  // Fetch the seller profile to get their user_id
+  const seller = await SellerModel.findById(sellerId);
+  if (!seller) {
+    throw new Error("Seller not found");
+  }
+  const sellerUserId = seller.user_id;
 
   // 1) Prevent duplicate charge by checking existing lead record.
   const existing = await LeadChargeModel.existsFor({
@@ -16,10 +24,10 @@ async function chargeSellerForLead(sellerId, buyerId, serviceId, source) {
     return { charged: false };
   }
 
-  // 2) Deduct ₹1 only once.
+  // 2) Deduct ₹1 only once from the seller's wallet.
   // If wallet is insufficient, propagate error.
   await WalletModel.debit(
-    buyerId,
+    sellerUserId,
     amount,
     "lead_charge",
     null,

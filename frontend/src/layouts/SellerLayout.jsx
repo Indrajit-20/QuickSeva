@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   BriefcaseBusiness,
@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import WorkspaceSwitcher from "../components/WorkspaceSwitcher";
+import { sellerOrdersApi } from "../api/orderApi";
 
 const navItems = [
   { label: "Dashboard", path: "/seller/dashboard", icon: LayoutDashboard },
@@ -24,7 +25,7 @@ const navItems = [
 
 const getInitial = (name) => (name?.trim()?.[0] || "S").toUpperCase();
 
-function SellerNavLink({ item, onClick }) {
+function SellerNavLink({ item, onClick, badgeCount }) {
   const location = useLocation();
   const Icon = item.icon;
   const active = location.pathname === item.path;
@@ -33,18 +34,25 @@ function SellerNavLink({ item, onClick }) {
     <NavLink
       to={item.path}
       onClick={onClick}
-      className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-all ${active
+      className={`flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-semibold transition-all ${active
           ? "bg-indigo-500/20 text-white shadow-[inset_3px_0_0_#6366f1]"
           : "text-slate-300 hover:bg-white/5 hover:text-white"
         }`}
     >
-      <Icon size={18} />
-      <span>{item.label}</span>
+      <div className="flex items-center gap-3">
+        <Icon size={18} />
+        <span>{item.label}</span>
+      </div>
+      {item.label === "Orders" && badgeCount > 0 && (
+        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-gradient-to-r from-red-500 to-amber-500 px-1.5 text-xs font-bold text-white shadow-[0_0_8px_rgba(239,68,68,0.5)] animate-pulse">
+          {badgeCount}
+        </span>
+      )}
     </NavLink>
   );
 }
 
-function SellerSidebar({ user, onLogout, onNavigate }) {
+function SellerSidebar({ user, onLogout, onNavigate, pendingOrdersCount }) {
   return (
     <div className="flex h-full flex-col bg-[#1e1b4b] px-4 py-5 text-white">
       <div className="mb-8">
@@ -56,7 +64,7 @@ function SellerSidebar({ user, onLogout, onNavigate }) {
 
       <nav className="flex-1 space-y-2">
         {navItems.map((item) => (
-          <SellerNavLink key={item.path} item={item} onClick={onNavigate} />
+          <SellerNavLink key={item.path} item={item} onClick={onNavigate} badgeCount={pendingOrdersCount} />
         ))}
       </nav>
 
@@ -92,6 +100,27 @@ export default function SellerLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [pendingOrdersCount, setPendingOrdersCount] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    const fetchPendingCount = async () => {
+      try {
+        const res = await sellerOrdersApi.list();
+        const list = res?.data?.orders || res?.orders || [];
+        const count = Array.isArray(list) ? list.filter(o => o.status === "pending").length : 0;
+        if (active) setPendingOrdersCount(count);
+      } catch (err) {
+        console.error("Failed to fetch pending orders count:", err);
+      }
+    };
+    fetchPendingCount();
+    const interval = setInterval(fetchPendingCount, 15000); // Poll every 15 seconds
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -101,7 +130,7 @@ export default function SellerLayout() {
   return (
     <div className="min-h-screen bg-[#0f0e1a] text-white">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 lg:block">
-        <SellerSidebar user={user} onLogout={handleLogout} />
+        <SellerSidebar user={user} onLogout={handleLogout} pendingOrdersCount={pendingOrdersCount} />
       </aside>
 
       <header className="sticky top-0 z-20 border-b border-indigo-500/20 bg-[#0f0e1a]/95 px-4 py-3 backdrop-blur lg:hidden">
@@ -147,6 +176,7 @@ export default function SellerLayout() {
               user={user}
               onLogout={handleLogout}
               onNavigate={() => setDrawerOpen(false)}
+              pendingOrdersCount={pendingOrdersCount}
             />
           </div>
         </div>
