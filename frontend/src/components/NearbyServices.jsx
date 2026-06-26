@@ -1,9 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+// QuickSeva - Map Performance Feature
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { API_BASE_URL } from "../config/api";
 
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import "leaflet.markercluster/dist/leaflet.markercluster";
+import "leaflet.markercluster/dist/MarkerCluster.css";
+import "leaflet.markercluster/dist/MarkerCluster.Default.css";
+import { getUserLocation } from "../utils/getLocation";
+
 import {
   deductContactView,
   deductSearchImpression,
@@ -22,8 +28,6 @@ import {
   useMap,
   useMapEvents,
 } from "react-leaflet";
-import "leaflet.markercluster/dist/MarkerCluster.css";
-import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import MarkerClusterGroup from "react-leaflet-markercluster";
 
 // Fix Leaflet marker icon URLs in this map component
@@ -199,6 +203,30 @@ function MapClickHandler({ onMapClick }) {
   return null;
 }
 
+// QuickSeva - Map Performance Feature
+function MapEventTracker({ mapRef, onMapReady, fetchSellersInView }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!map) return;
+    mapRef.current = map;
+    onMapReady(map);
+
+    const onMoveEnd = () => fetchSellersInView(map);
+    const onZoomEnd = () => fetchSellersInView(map);
+
+    map.on("moveend", onMoveEnd);
+    map.on("zoomend", onZoomEnd);
+
+    return () => {
+      map.off("moveend", onMoveEnd);
+      map.off("zoomend", onZoomEnd);
+    };
+  }, [map, mapRef, onMapReady, fetchSellersInView]);
+
+  return null;
+}
+
 function isSellerPackageActive(seller) {
   if (!seller?.isPremium || !seller?.premiumExpiresAt) return false;
   const expiresAt = new Date(seller.premiumExpiresAt);
@@ -326,6 +354,17 @@ export default function NearbyServices({
   const [locationResults, setLocationResults] = useState([]);
   const [locationLoading, setLocationLoading] = useState(false);
   const [geoLoading, setGeoLoading] = useState(false);
+
+  // QuickSeva - Map Performance Feature
+  const mapRef = useRef(null);
+  const [mapInitialized, setMapInitialized] = useState(false);
+  const [toastMessage, setToastMessage] = useState(null);
+  const toast = useMemo(() => ({
+    info: (msg) => {
+      setToastMessage(msg);
+      setTimeout(() => setToastMessage(null), 4000);
+    }
+  }), []);
 
   const [locationMode, setLocationMode] = useState("area"); // "area" | "pincode"
   const [pincode, setPincode] = useState("");
@@ -513,28 +552,7 @@ export default function NearbyServices({
     }
   };
 
-  useEffect(() => {
-    if (!navigator.geolocation) {
-      setGeoError("Please allow location access to find nearby services");
-      return;
-    }
 
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const nextPos = {
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-        };
-        gpsPosRef.current = nextPos;
-        setBuyerPos(nextPos);
-        setMapFlyTrigger((prev) => prev + 1);
-      },
-      () => {
-        setGeoError("Please allow location access to find nearby services");
-      },
-      { enableHighAccuracy: true, timeout: 10000 },
-    );
-  }, []);
 
   useEffect(() => {
     const handleMouseDown = (e) => {
@@ -617,57 +635,126 @@ export default function NearbyServices({
     } catch (e) {}
   }, []);
 
-  useEffect(() => {
-    if (!buyerPos) return;
+  // QuickSeva - Map Performance Feature
+  const fetchSellersInView = useCallback(async (map) => {
+    setApiLoading(true);
+    setApiError("");
+    try {
+      const bounds = map.getBounds();
+      const minLat = bounds.getSouthWest().lat;
+      const maxLat = bounds.getNorthEast().lat;
+      const minLng = bounds.getSouthWest().lng;
+      const maxLng = bounds.getNorthEast().lng;
 
-    let active = true;
-    const fetchNearby = async () => {
-      setApiLoading(true);
-      setApiError("");
-      try {
-        const res = await fetch(
-          `${API_BASE_URL}/search/nearby?lat=${encodeURIComponent(buyerPos.lat)}&lng=${encodeURIComponent(buyerPos.lng)}&radius=${encodeURIComponent(radiusKm)}`,
-        );
-        if (!res.ok) throw new Error("Failed to fetch nearby services");
-        const data = await res.json();
-        if (active && Array.isArray(data)) {
-          setSellers(data);
-        }
-      } catch (err) {
-        console.error("Fetch nearby error:", err);
-        if (active) {
-          setApiError("Unable to load nearby services. Please try again later.");
-        }
-      } finally {
-        if (active) setApiLoading(false);
+      const res = await fetch(
+        `${API_BASE_URL}/sellers/in-view?minLat=${minLat}&maxLat=${maxLat}&minLng=${minLng}&maxLng=${maxLng}`
+      );
+      if (!res.ok) throw new Error("Failed to fetch sellers in view");
+      const data = await res.json();
+      setSellers(data);
+    } catch (err) {
+      console.error("fetchSellersInView error:", err);
+      setApiError("Unable to load services in view. Please try again later.");
+    } finally {
+      setApiLoading(false);
+    }
+  }, []);
+
+  const onMapReady = useCallback(async (map) => {
+    setMapInitialized(true);
+    setGeoLoading(true);
+    try {
+      const loc = await getUserLocation();
+      setBuyerPos({ lat: loc.lat, lng: loc.lng });
+
+      let zoom = 11;
+      if (loc.source === "gps") zoom = 14;
+      else if (loc.source === "ip") zoom = 12;
+
+      map.setView([loc.lat, loc.lng], zoom);
+
+      if (loc.source === "ip" || loc.source === "default") {
+        toast.info("📍 Approximate location used");
       }
-    };
 
-    const timer = setTimeout(() => {
-      fetchNearby();
-    }, 250);
+      await fetchSellersInView(map);
+    } catch (err) {
+      console.error("Map initialization failed", err);
+    } finally {
+      setGeoLoading(false);
+    }
+  }, [fetchSellersInView, toast]);
 
-    return () => {
-      active = false;
-      clearTimeout(timer);
-    };
-  }, [buyerPos?.lat, buyerPos?.lng, radiusKm]);
+  const clusterGroupRef = useRef(null);
+
+  useEffect(() => {
+    if (!mapRef.current || !sellers) return;
+
+    if (clusterGroupRef.current) {
+      mapRef.current.removeLayer(clusterGroupRef.current);
+    }
+
+    const markerClusterGroup = L.markerClusterGroup();
+    sellers.forEach((seller) => {
+      const lat = parseFloat(seller.lat);
+      const lng = parseFloat(seller.lng);
+      if (isNaN(lat) || isNaN(lng)) return;
+
+      const sId = seller.id || seller.sellerId;
+
+      const popupHtml = `
+        <div style="font-family: sans-serif; padding: 4px; min-width: 180px;">
+          <h4 style="margin: 0 0 4px 0; font-size: 14px; font-weight: bold; color: #1e1b4b;">
+            ${seller.business_name || seller.name || ""}
+          </h4>
+          <p style="margin: 0 0 8px 0; font-size: 12px; font-weight: 600; color: #4f46e5;">
+            ${seller.category || seller.service || ""}
+          </p>
+          <div style="margin-bottom: 8px; font-size: 11px; color: #64748b;">
+            ⭐ ${Number(seller.avg_rating || seller.rating || 0).toFixed(1)} (${seller.reviews || 0} reviews)
+          </div>
+          <a href="/seller/${sId}" 
+             style="display: block; text-align: center; font-size: 11px; font-weight: bold; text-decoration: none; color: #fff; background: #4f46e5; padding: 6px 12px; border-radius: 6px; transition: background 0.2s;"
+          >
+            View Profile / प्रोफ़ाइल देखें →
+          </a>
+        </div>
+      `;
+
+      const marker = L.marker([lat, lng])
+        .bindPopup(popupHtml)
+        .on("click", () => {
+          setSelectedSellerId(sId);
+        });
+      markerClusterGroup.addLayer(marker);
+    });
+
+    clusterGroupRef.current = markerClusterGroup;
+    mapRef.current.addLayer(markerClusterGroup);
+  }, [sellers, mapInitialized]);
 
   const nearby = useMemo(() => {
     if (!buyerPos) return [];
 
     const filteredByDistance = sellers.filter((s) => {
-      if (typeof s?.lat !== "number" || typeof s?.lng !== "number")
-        return false;
+      const lat = parseFloat(s?.lat);
+      const lng = parseFloat(s?.lng);
+      if (isNaN(lat) || isNaN(lng)) return false;
       return (
-        getDistanceKm(buyerPos.lat, buyerPos.lng, s.lat, s.lng) <= radiusKm
+        getDistanceKm(buyerPos.lat, buyerPos.lng, lat, lng) <= radiusKm
       );
     });
 
-    const withDistance = filteredByDistance.map((s) => ({
-      ...s,
-      distanceKm: getDistanceKm(buyerPos.lat, buyerPos.lng, s.lat, s.lng),
-    }));
+    const withDistance = filteredByDistance.map((s) => {
+      const lat = parseFloat(s.lat);
+      const lng = parseFloat(s.lng);
+      return {
+        ...s,
+        lat,
+        lng,
+        distanceKm: getDistanceKm(buyerPos.lat, buyerPos.lng, lat, lng),
+      };
+    });
 
     const normalizedSearch = search.trim().toLowerCase();
     const filteredBySearch = normalizedSearch
@@ -874,6 +961,19 @@ export default function NearbyServices({
   // ============================================================
   return (
     <div className="flex flex-col gap-6 animate-fade-in">
+      {/* QuickSeva - Map Performance Feature: Floating Toast Message */}
+      {toastMessage && (
+        <div className="fixed top-20 right-4 z-[9999] flex items-center gap-2 rounded-xl bg-indigo-900/90 border border-indigo-500/50 px-4 py-3 text-sm font-semibold text-white shadow-[0_0_20px_rgba(99,102,241,0.5)] backdrop-blur-md">
+          <span>{toastMessage}</span>
+          <button
+            type="button"
+            onClick={() => setToastMessage(null)}
+            className="ml-2 text-indigo-300 hover:text-white font-bold text-lg leading-none"
+          >
+            &times;
+          </button>
+        </div>
+      )}
       {/* =================== SEARCH / FILTER / RADIUS GLASS CARD =================== */}
       <div className="qs-glass-panel relative p-5 sm:p-6">
         {/* decorative glow blobs — own overflow-hidden so they don't clip the dropdown */}
@@ -1394,6 +1494,11 @@ export default function NearbyServices({
               style={{ height: "100%", width: "100%" }}
               scrollWheelZoom
             >
+              <MapEventTracker
+                mapRef={mapRef}
+                onMapReady={onMapReady}
+                fetchSellersInView={fetchSellersInView}
+              />
               <MapController
                 center={buyerPos ? [buyerPos.lat, buyerPos.lng] : null}
                 flyTrigger={mapFlyTrigger}
@@ -1423,76 +1528,6 @@ export default function NearbyServices({
                     icon={USER_ICON}
                   />
                 </>
-              )}
-
-              {buyerPos && nearby.length > 0 && (
-                <MarkerClusterGroup chunkedLoading>
-                  {nearby.map((seller) => {
-                    const packageRank = getSellerPackageRank(seller);
-
-                    const sId = seller.id || seller.sellerId;
-
-                    return (
-                      <Marker
-                        key={sId}
-                        position={[seller.lat, seller.lng]}
-                        icon={getSellerPinIcon(seller)}
-                        eventHandlers={{
-                          click: (e) => {
-                            if (e.originalEvent) {
-                              e.originalEvent.stopPropagation();
-                            }
-                            setSelectedSellerId(sId);
-                            e.target.openPopup();
-                          },
-                        }}
-                      >
-                        <Tooltip
-                          direction="top"
-                          offset={[0, -25]}
-                          opacity={0.95}
-                          permanent={false}
-                        >
-                          <div className="font-bold text-xs text-indigo-950 bg-white px-2 py-1 rounded shadow-md border border-indigo-100/50">
-                            <strong>{seller.name}</strong> — {seller.service}
-                          </div>
-                        </Tooltip>
-                        <Popup minWidth={220} className="custom-premium-popup">
-                          <div className="p-1 font-sans">
-                            <h4 className="text-sm font-extrabold text-indigo-950 mb-0.5">
-                              {seller.name}
-                            </h4>
-                            <p className="text-xs font-semibold text-indigo-600 mb-2">
-                              {seller.service}
-                            </p>
-                            <div className="space-y-1 text-[11px] text-slate-500 mb-3">
-                              <div className="flex items-center gap-1 font-semibold text-slate-600">
-                                <span>📍</span>
-                                <span>
-                                  {formatDistance(seller.distanceKm)} (
-                                  {getDistanceGuide(seller.distanceKm)})
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-1 font-semibold text-amber-600">
-                                <span>⭐</span>
-                                <span>
-                                  {Number(seller.rating || 0).toFixed(1)} (
-                                  {seller.reviews || 0} reviews)
-                                </span>
-                              </div>
-                            </div>
-                            <a
-                              href={`/seller/${sId}`}
-                              className="block w-full text-center text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 py-2 rounded-lg transition-colors shadow-md shadow-indigo-600/20"
-                            >
-                              View Profile / प्रोफ़ाइल देखें →
-                            </a>
-                          </div>
-                        </Popup>
-                      </Marker>
-                    );
-                  })}
-                </MarkerClusterGroup>
               )}
             </MapContainer>
           </div>

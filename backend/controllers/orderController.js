@@ -216,16 +216,18 @@ exports.completeOrder = async (req, res) => {
       completed_at: new Date(),
     });
 
-    // Credit seller wallet (amount minus platform fee)
-    const sellerAmount =
-      parseFloat(order.total_amount) - parseFloat(order.platform_fee);
-    await WalletModel.credit(
-      seller.user_id,
-      sellerAmount.toFixed(2),
-      "order",
-      order.order_number,
-      `Payment for order #${order.order_number}`,
-    );
+    // Credit seller wallet (amount minus platform fee) if not cash
+    if (order.payment_method !== "cash") {
+      const sellerAmount =
+        parseFloat(order.total_amount) - parseFloat(order.platform_fee);
+      await WalletModel.credit(
+        seller.user_id,
+        sellerAmount.toFixed(2),
+        "order",
+        order.order_number,
+        `Payment for order #${order.order_number}`,
+      );
+    }
 
     // Update seller order count
     await pool.query(
@@ -264,14 +266,6 @@ exports.cancelOrder = async (req, res) => {
       return errorRes(res, "Unauthorized", 403);
     }
 
-    if (!req.user.role || req.user.role !== "seller") {
-      // Cancel endpoint is seller-only.
-      return errorRes(
-        res,
-        { success: false, message: "Seller access required" },
-        403,
-      );
-    }
 
     if (!["pending", "accepted"].includes(order.status)) {
       return errorRes(res, "Order cannot be cancelled at this stage", 400);

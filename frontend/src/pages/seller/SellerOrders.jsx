@@ -175,14 +175,28 @@ export default function SellerOrders() {
                         </div>
                       </div>
 
-                      {order.status === "completed" && phone && (
-                        <div className="mt-3">
-                          <span className="block text-xs text-[#94a3b8]">
-                            Phone
-                          </span>
-                          <span className="font-semibold text-white">
-                            {maskPhone(phone)}
-                          </span>
+                      {["accepted", "in_progress", "completed"].includes(order.status) && (
+                        <div className="mt-4 grid gap-3 border-t border-indigo-500/10 pt-4 text-sm sm:grid-cols-2">
+                          {phone && (
+                            <div>
+                              <span className="block text-xs text-[#94a3b8]">
+                                Contact Phone
+                              </span>
+                              <span className="font-semibold text-white">
+                                {order.status === "completed" ? maskPhone(phone) : phone}
+                              </span>
+                            </div>
+                          )}
+                          {order.address && (
+                            <div>
+                              <span className="block text-xs text-[#94a3b8]">
+                                Service Address
+                              </span>
+                              <span className="font-semibold text-white">
+                                {order.address}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -230,6 +244,30 @@ export default function SellerOrders() {
                         >
                           <CheckCircle2 size={16} />
                           Mark Complete
+                        </button>
+                      )}
+                      {order.status === "completed" && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const payload = {
+                              ...order,
+                              customer_name: order.customer_name || "Customer",
+                              customer_phone: order.customer_phone || "",
+                              service_name: order.service_name || "Service",
+                              seller_business: order.seller_business || "QuickSeva",
+                              date: order.scheduled_at || order.created_at || order.date
+                            };
+                            import("../../utils/invoiceGenerator").then((m) =>
+                              m.generateInvoicePDF(payload)
+                            );
+                          }}
+                          className="inline-flex items-center gap-2 rounded-lg border border-purple-400/30 bg-purple-500/10 px-3 py-2 text-sm font-bold text-purple-200 transition hover:bg-purple-500/20"
+                        >
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                          </svg>
+                          Download Invoice
                         </button>
                       )}
                     </div>

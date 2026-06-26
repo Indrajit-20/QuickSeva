@@ -65,10 +65,13 @@ const OrderModel = {
     const [rows] = await pool.query(
       `SELECT o.id, o.order_number, o.status, o.total_amount, o.payment_method,
               o.scheduled_at, o.created_at, o.address,
-              s.business_name, s.id AS seller_id, su.profile_pic AS seller_pic, sv.title AS service_title
+              s.business_name, s.id AS seller_id, su.profile_pic AS seller_pic,
+              su.phone AS seller_phone, su.name AS seller_name, sv.title AS service_title,
+              bu.name AS buyer_name, bu.phone AS buyer_phone
        FROM orders o
        JOIN sellers s ON o.seller_id = s.id
        JOIN users su ON s.user_id = su.id
+       JOIN users bu ON o.buyer_id = bu.id
        LEFT JOIN services sv ON o.service_id = sv.id
        WHERE o.buyer_id = ? ${statusFilter}
        ORDER BY o.created_at DESC LIMIT ? OFFSET ?`,
@@ -85,11 +88,16 @@ const OrderModel = {
 
     const [rows] = await pool.query(
       `SELECT
+          o.id AS id,
+          o.order_number AS order_number,
           o.order_number AS order_id,
           o.status,
           o.total_amount,
           o.payment_method,
+          o.created_at AS created_at,
           o.created_at AS date,
+          o.scheduled_at AS scheduled_at,
+          o.address AS address,
           u.name AS customer_name,
           u.phone AS customer_phone,
           sv.title AS service_name,

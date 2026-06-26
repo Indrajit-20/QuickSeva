@@ -458,8 +458,8 @@ export default function SellerPublicProfile() {
                     </a>
                   </>
                 ) : seller?.hasSufficientBalance === false ? (
-                  <div className="w-full text-center rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-3 font-bold text-red-200 text-sm">
-                    Contact details unavailable (Seller is inactive/offline)
+                  <div className="w-full text-center rounded-xl border border-indigo-500/30 bg-indigo-500/10 px-4 py-3 font-bold text-indigo-200 text-sm">
+                    Contact details will be visible after booking.
                   </div>
                 ) : (
                   <button

@@ -19,6 +19,6 @@ router.get("/:id", protect, getOrderById);
 router.patch("/:id/accept", protect, sellerOnly, acceptOrder);
 router.patch("/:id/start", protect, sellerOnly, startOrder);
 router.patch("/:id/complete", protect, sellerOnly, completeOrder);
-router.patch("/:id/cancel", protect, sellerOnly, cancelOrder);
+router.patch("/:id/cancel", protect, cancelOrder);
 
 module.exports = router;

@@ -7,7 +7,7 @@ function safeString(v) {
 
 function formatINR(amount) {
   const num = Number(amount || 0);
-  return `₹${num.toLocaleString("en-IN")}`;
+  return `Rs. ${num.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function formatDate(dateLike) {
@@ -26,88 +26,145 @@ export function generateInvoicePDF(order) {
 
   const doc = new jsPDF();
 
-  // Header
-  doc.setFontSize(22);
-  doc.setTextColor(99, 102, 241);
-  doc.text("QuickSeva", 14, 20);
-
-  doc.setFontSize(10);
-  doc.setTextColor(120, 120, 140);
-  doc.text("quickseva.com | Your Trusted Service Platform", 14, 27);
-
-  doc.setFontSize(18);
-  doc.setTextColor(30, 30, 50);
-  doc.text("INVOICE", 160, 20);
-
-  // Divider
-  doc.setDrawColor(200, 200, 220);
-  doc.line(14, 32, 196, 32);
-
-  // Invoice Meta
-  doc.setFontSize(10);
-  doc.setTextColor(60, 60, 80);
+  const customerName = safeString(order.customer_name || order.buyer_name || "Customer");
+  const customerPhone = safeString(order.customer_phone || order.buyer_phone || "—");
+  const serviceName = safeString(order.service_name || order.service_title || "Service");
+  const sellerBusiness = safeString(order.seller_business || order.business_name || "QuickSeva Partner");
+  const total = order.total_amount !== undefined ? order.total_amount : order.amount;
   const orderId = safeString(order.order_id || order.orderId || order.id);
-  doc.text(`Invoice No: ${orderId}`, 14, 42);
-  doc.text(`Order ID: ${orderId}`, 14, 49);
-  doc.text(`Date: ${formatDate(order.date)}`, 14, 56);
   const statusLabel = safeString(order.status || "").toUpperCase();
-  if (statusLabel) doc.text(`Status: ${statusLabel}`, 14, 63);
-
-  const customerName = safeString(order.customer_name || "");
-  const customerPhone = safeString(order.customer_phone || "");
-  const serviceName = safeString(order.service_name || "");
-  const sellerBusiness = safeString(order.seller_business || "");
-  const total =
-    order.total_amount !== undefined ? order.total_amount : order.amount;
-
-  // Billed To
-  doc.setFontSize(11);
-  doc.setTextColor(99, 102, 241);
-  doc.text("BILLED TO", 14, 72);
-  doc.setTextColor(30, 30, 50);
-  doc.setFontSize(10);
-  doc.text(customerName || "—", 14, 79);
-  doc.text(`📞 ${customerPhone || "—"}`, 14, 86);
-
-  // Service Table
-  const startY = 98;
-  doc.autoTable({
-    startY,
-    head: [["Service", "Qty", "Unit Price", "Total"]],
-    body: [[serviceName || "—", "1", formatINR(total), formatINR(total)]],
-    headStyles: {
-      fillColor: [99, 102, 241],
-      textColor: 255,
-      fontStyle: "bold",
-    },
-    styles: { fontSize: 10 },
-    columnStyles: {
-      0: { cellWidth: 80 },
-      1: { cellWidth: 20, halign: "center" },
-      2: { cellWidth: 35, halign: "right" },
-      3: { cellWidth: 35, halign: "right" },
-    },
-    theme: "striped",
-  });
-
-  const finalY = doc.lastAutoTable.finalY + 10;
-
-  // Totals + Payment
-  doc.setFontSize(12);
-  doc.setTextColor(30, 30, 50);
-  doc.text(`TOTAL: ${formatINR(total)}`, 140, finalY, { align: "left" });
   const payment = safeString(order.payment_method || "");
-  if (payment) {
-    doc.setFontSize(10);
-    doc.setTextColor(60, 60, 80);
-    doc.text(`Payment Method: ${payment}`, 14, finalY + 18);
+
+  // 1. Accent Top Header Bar
+  doc.setFillColor(79, 70, 229); // Premium Indigo
+  doc.rect(0, 0, 210, 8, "F");
+
+  // 2. Main Title & Company Brand
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(24);
+  doc.setTextColor(79, 70, 229);
+  doc.text("QuickSeva", 14, 25);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(107, 114, 128);
+  doc.text("Your Trusted Doorstep Service Platform", 14, 30);
+
+  // 3. Invoice Header Title
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(18);
+  doc.setTextColor(31, 41, 55); // Dark Charcoal
+  doc.text("INVOICE", 196, 25, { align: "right" });
+
+  // Divider Line
+  doc.setDrawColor(229, 231, 235);
+  doc.setLineWidth(0.5);
+  doc.line(14, 36, 196, 36);
+
+  // 4. Metadata Details Grid (Billed To vs Invoice Details)
+  // Left Column - Billed To
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(79, 70, 229);
+  doc.text("BILLED TO", 14, 46);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.setTextColor(31, 41, 55);
+  doc.text(customerName, 14, 53);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9.5);
+  doc.setTextColor(75, 85, 99);
+  doc.text(`Phone: ${customerPhone}`, 14, 59);
+
+  if (order.address) {
+    const splitAddress = doc.splitTextToSize(`Address: ${order.address}`, 90);
+    doc.text(splitAddress, 14, 65);
   }
 
-  // Footer
-  doc.setFontSize(9);
-  doc.setTextColor(120, 120, 140);
-  doc.text(`Provided by: ${sellerBusiness || "QuickSeva"}`, 14, finalY + 26);
-  doc.text("Thank you for your business!", 14, finalY + 33);
+  // Right Column - Invoice Details
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(79, 70, 229);
+  doc.text("INVOICE DETAILS", 120, 46);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9.5);
+  doc.setTextColor(75, 85, 99);
+  doc.text(`Invoice No:     ${orderId}`, 120, 53);
+  doc.text(`Order ID:       ${orderId}`, 120, 59);
+  doc.text(`Date:            ${formatDate(order.date || order.scheduled_at || order.created_at)}`, 120, 65);
+  if (statusLabel) {
+    doc.text(`Status:          ${statusLabel}`, 120, 71);
+  }
+
+  // 5. Line Items Table
+  const startY = 85;
+  autoTable(doc, {
+    startY,
+    head: [["Service Description", "Qty", "Unit Price", "Total Price"]],
+    body: [[serviceName, "1", formatINR(total), formatINR(total)]],
+    headStyles: {
+      fillColor: [79, 70, 229],
+      textColor: [255, 255, 255],
+      fontStyle: "bold",
+      fontSize: 9.5,
+    },
+    styles: {
+      fontSize: 9,
+      textColor: [55, 65, 81],
+    },
+    columnStyles: {
+      0: { cellWidth: 100 },
+      1: { cellWidth: 20, halign: "center" },
+      2: { cellWidth: 31, halign: "right" },
+      3: { cellWidth: 31, halign: "right" },
+    },
+    theme: "striped",
+    margin: { left: 14, right: 14 },
+  });
+
+  const finalY = doc.lastAutoTable.finalY + 12;
+
+  // 6. Totals Box block
+  doc.setFillColor(249, 250, 251); // Light warm gray background
+  doc.setDrawColor(229, 231, 235);
+  doc.rect(120, finalY - 4, 76, 16, "FD");
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.setTextColor(79, 70, 229);
+  doc.text("GRAND TOTAL:", 124, finalY + 6);
+  doc.setTextColor(31, 41, 55);
+  doc.text(formatINR(total), 192, finalY + 6, { align: "right" });
+
+  // 7. Payment Information Block
+  if (payment) {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9.5);
+    doc.setTextColor(79, 70, 229);
+    doc.text("PAYMENT INFORMATION", 14, finalY + 4);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(75, 85, 99);
+    doc.text(`Payment Method: ${payment.toUpperCase()}`, 14, finalY + 10);
+  }
+
+  // 8. Footer Line and Text
+  doc.setDrawColor(243, 244, 246);
+  doc.line(14, finalY + 28, 196, finalY + 28);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8.5);
+  doc.setTextColor(75, 85, 99);
+  doc.text(`Fulfillment Partner: ${sellerBusiness}`, 14, finalY + 35);
+
+  doc.setFont("helvetica", "italic");
+  doc.setFontSize(8.5);
+  doc.setTextColor(156, 163, 175);
+  doc.text("Thank you for using QuickSeva! For any billing queries, email support@quickseva.com.", 14, finalY + 41);
 
   doc.save(`Invoice_${orderId}.pdf`);
 }
@@ -115,7 +172,7 @@ export function generateInvoicePDF(order) {
 export function openWhatsAppInvoice(order) {
   if (!order) return;
 
-  const phoneRaw = safeString(order.customer_phone || "");
+  const phoneRaw = safeString(order.customer_phone || order.buyer_phone || "");
   if (!phoneRaw) return;
 
   const phoneDigits = phoneRaw.replace(/\D/g, "");
@@ -127,13 +184,12 @@ export function openWhatsAppInvoice(order) {
 
   if (!indiaPhone) return;
 
-  const customerName = safeString(order.customer_name || "");
+  const customerName = safeString(order.customer_name || order.buyer_name || "Customer");
   const orderId = safeString(order.order_id || order.orderId || order.id);
-  const serviceName = safeString(order.service_name || "");
-  const total =
-    order.total_amount !== undefined ? order.total_amount : order.amount;
+  const serviceName = safeString(order.service_name || order.service_title || "Service");
+  const total = order.total_amount !== undefined ? order.total_amount : order.amount;
   const payment = safeString(order.payment_method || "");
-  const sellerBusiness = safeString(order.seller_business || "QuickSeva");
+  const sellerBusiness = safeString(order.seller_business || order.business_name || "QuickSeva Partner");
 
   const message = encodeURIComponent(
     `Hello ${customerName},\n\n` +

@@ -214,6 +214,18 @@ export default function MyBookings() {
                             </span>
                           </p>
 
+                          {booking.seller_phone && (
+                            <p className="flex items-center text-sm text-indigo-200/70">
+                              <svg className="h-4 w-4 text-indigo-400/80 mr-2.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                              </svg>
+                              <span className="font-medium flex-shrink-0">Seller Contact:</span>
+                              <a href={`tel:${booking.seller_phone}`} className="ml-1.5 text-indigo-300 font-bold hover:underline">
+                                {booking.seller_phone}
+                              </a>
+                            </p>
+                          )}
+
                           <p className="flex items-center text-sm text-indigo-200/70">
                             <svg className="h-4 w-4 text-indigo-400/80 mr-2.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M9 8h6m-5 0a3 3 0 110 6H9l3 3m-3-6h6m6 1a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -264,6 +276,30 @@ export default function MyBookings() {
                               Cancel Booking
                             </>
                           )}
+                        </button>
+                      )}
+                      {booking.status === "completed" && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const payload = {
+                              ...booking,
+                              customer_name: booking.buyer_name || "Customer",
+                              customer_phone: booking.buyer_phone || "",
+                              service_name: booking.service_title || booking.service_name || "Service",
+                              seller_business: booking.business_name || booking.seller_business_name || booking.seller_name || "QuickSeva",
+                              date: booking.scheduled_at || booking.created_at || booking.date
+                            };
+                            import("../utils/invoiceGenerator").then((m) =>
+                              m.generateInvoicePDF(payload)
+                            );
+                          }}
+                          className="flex items-center justify-center gap-1.5 rounded-xl border border-purple-500/20 bg-purple-500/10 hover:bg-purple-500/25 px-4 py-2.5 text-xs font-bold text-purple-200 hover:text-purple-100 transition duration-300 w-full text-center shadow-lg shadow-purple-950/40"
+                        >
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                          </svg>
+                          Download Invoice
                         </button>
                       )}
                     </div>
