@@ -169,7 +169,7 @@
     type           ENUM('credit','debit') NOT NULL,
     amount         DECIMAL(10,2) NOT NULL,
     balance_after  DECIMAL(10,2) NOT NULL,
-    source         ENUM('order','refund','topup','withdrawal','bonus') NOT NULL,
+    source         VARCHAR(50) NOT NULL,
     reference_id   VARCHAR(100),
     description    VARCHAR(255),
     created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

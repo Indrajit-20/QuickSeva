@@ -30,8 +30,8 @@ function getDistanceKm(lat1, lng1, lat2, lng2) {
   const a =
     Math.sin(dLat / 2) ** 2 +
     Math.cos(lat1 * (Math.PI / 180)) *
-      Math.cos(lat2 * (Math.PI / 180)) *
-      Math.sin(dLng / 2) ** 2;
+    Math.cos(lat2 * (Math.PI / 180)) *
+    Math.sin(dLng / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
@@ -133,17 +133,17 @@ export default function SellerPublicProfile() {
         // Normalize backend shape → legacy keys used by existing JSX.
         const s = rawSeller
           ? {
-              ...rawSeller,
-              name: rawSeller.business_name || rawSeller.name || "Seller",
-              service:
-                rawSeller.category_name ||
-                rawSeller.service ||
-                "Service Provider",
-              address: rawSeller.address || rawSeller.city || "",
-              lat: rawSeller.lat != null ? Number(rawSeller.lat) : undefined,
-              lng: rawSeller.lng != null ? Number(rawSeller.lng) : undefined,
-              hasSufficientBalance: rawSeller.hasSufficientBalance,
-            }
+            ...rawSeller,
+            name: rawSeller.business_name || rawSeller.name || "Seller",
+            service:
+              rawSeller.category_name ||
+              rawSeller.service ||
+              "Service Provider",
+            address: rawSeller.address || rawSeller.city || "",
+            lat: rawSeller.lat != null ? Number(rawSeller.lat) : undefined,
+            lng: rawSeller.lng != null ? Number(rawSeller.lng) : undefined,
+            hasSufficientBalance: rawSeller.hasSufficientBalance,
+          }
           : null;
         const svc =
           servicesRes?.data?.data?.services ||
@@ -218,7 +218,7 @@ export default function SellerPublicProfile() {
         );
         setDistanceLabel(`${km.toFixed(1)} km away`);
       },
-      () => {},
+      () => { },
       { enableHighAccuracy: true, timeout: 10000 },
     );
 
@@ -407,7 +407,7 @@ export default function SellerPublicProfile() {
               </div>
             </div>
 
-            <div className="mt-5">
+            {/* <div className="mt-5">
               <MiniMap lat={seller.lat} lng={seller.lng} />
               <a
                 href={directionsHref}
@@ -418,7 +418,7 @@ export default function SellerPublicProfile() {
                 <Navigation size={17} />
                 Get Directions
               </a>
-            </div>
+            </div> */}
           </div>
 
           <aside className="rounded-2xl border border-indigo-500/20 bg-[#1a1a2e] p-5 shadow-2xl shadow-black/20">
@@ -506,11 +506,10 @@ export default function SellerPublicProfile() {
                   key={service.id}
                   type="button"
                   onClick={() => handleSelectService(service)}
-                  className={`rounded-2xl border p-4 text-left transition ${
-                    active
+                  className={`rounded-2xl border p-4 text-left transition ${active
                       ? "border-purple-400 bg-purple-500/10 shadow-[0_0_0_3px_rgba(168,85,247,0.18)]"
                       : "border-indigo-500/20 bg-[#0f1024] hover:border-indigo-400/50"
-                  }`}
+                    }`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -527,11 +526,10 @@ export default function SellerPublicProfile() {
                       </p>
                     </div>
                     <span
-                      className={`mt-1 h-4 w-4 rounded-full border ${
-                        active
+                      className={`mt-1 h-4 w-4 rounded-full border ${active
                           ? "border-purple-300 bg-purple-400"
                           : "border-slate-500"
-                      }`}
+                        }`}
                     />
                   </div>
 

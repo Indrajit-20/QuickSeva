@@ -50,13 +50,13 @@ function LocationClickAndDragHandler({ onUpdate }) {
  * Props:
  * - onChange({ lat, lng, address })
  */
-export default function LocationPicker({ onChange }) {
+export default function LocationPicker({ onChange, initialLocation }) {
   const [position, setPosition] = useState({
-    lat: INDIA_DEFAULT.lat,
-    lng: INDIA_DEFAULT.lng,
+    lat: initialLocation?.lat ? Number(initialLocation.lat) : INDIA_DEFAULT.lat,
+    lng: initialLocation?.lng ? Number(initialLocation.lng) : INDIA_DEFAULT.lng,
   });
-  const [zoom, setZoom] = useState(INDIA_DEFAULT.zoom);
-  const [address, setAddress] = useState("");
+  const [zoom, setZoom] = useState(initialLocation?.lat ? 15 : INDIA_DEFAULT.zoom);
+  const [address, setAddress] = useState(initialLocation?.address || "");
   const [geoLoading, setGeoLoading] = useState(false);
   const [locationQuery, setLocationQuery] = useState("");
   const [locationResults, setLocationResults] = useState([]);
@@ -197,10 +197,24 @@ export default function LocationPicker({ onChange }) {
   };
 
   useEffect(() => {
-    // Initial reverse geocode once on mount (so address input isn't empty)
-    reverseGeocode(position.lat, position.lng);
+    if (initialLocation?.lat && initialLocation?.lng) {
+      const lat = Number(initialLocation.lat);
+      const lng = Number(initialLocation.lng);
+      setPosition({ lat, lng });
+      setZoom(15);
+      setFlyTarget({ center: [lat, lng], zoom: 15 });
+      if (initialLocation.address) {
+        setAddress(initialLocation.address);
+        suppressNextSearchRef.current = true;
+        setLocationQuery(initialLocation.address);
+      } else {
+        reverseGeocode(lat, lng);
+      }
+    } else {
+      reverseGeocode(position.lat, position.lng);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [initialLocation?.lat, initialLocation?.lng]);
 
   useEffect(() => {
     const handleMouseDown = (e) => {

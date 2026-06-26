@@ -24,6 +24,14 @@ async function chargeSellerForLead(sellerId, buyerId, serviceId, source) {
     return { charged: false };
   }
 
+  const UserModel = require("../models/userModel");
+  const Service = require("../models/Service");
+
+  const buyer = await UserModel.findById(buyerId);
+  const serviceDetail = await Service.findById(serviceId);
+  const buyerName = buyer ? buyer.name : "Unknown Customer";
+  const serviceName = serviceDetail ? serviceDetail.title : "Service";
+
   // 2) Deduct ₹1 only once from the seller's wallet.
   // If wallet is insufficient, propagate error.
   await WalletModel.debit(
@@ -31,7 +39,7 @@ async function chargeSellerForLead(sellerId, buyerId, serviceId, source) {
     amount,
     "lead_charge",
     null,
-    `Lead charge (${source})`,
+    `Contact viewed by ${buyerName} - ${serviceName}`,
   );
 
   // 3) Insert lead record.

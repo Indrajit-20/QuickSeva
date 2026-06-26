@@ -130,7 +130,13 @@ async function run() {
       if (err.code !== 'ER_DUP_FIELDNAME') console.error(err);
     }
 
-    // 4. Clear existing sellers, services, users
+    // Ensure wallet_transactions.source is VARCHAR(50) instead of ENUM
+    console.log("Ensuring wallet_transactions.source column is VARCHAR...");
+    try {
+      await pool.query("ALTER TABLE wallet_transactions MODIFY COLUMN source VARCHAR(50) NOT NULL");
+    } catch (err) {
+      console.error("Failed to alter wallet_transactions.source:", err);
+    }
     console.log("Cleaning database tables...");
     await pool.query("SET FOREIGN_KEY_CHECKS = 0");
     await pool.query("TRUNCATE TABLE reviews");

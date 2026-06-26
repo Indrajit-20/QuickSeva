@@ -39,6 +39,7 @@ exports.searchNearby = async (req, res) => {
         s.premium_expires_at AS premiumExpiresAt,
         s.location_address AS address,
         u.phone AS phone,
+        w.balance AS walletBalance,
         (
           6371 *
           ACOS(
@@ -52,6 +53,7 @@ exports.searchNearby = async (req, res) => {
       FROM sellers s
       JOIN users u ON s.user_id = u.id
       LEFT JOIN categories c ON s.category_id = c.id
+      LEFT JOIN wallets w ON s.user_id = w.user_id
       WHERE s.is_available = 1 AND u.is_active = 1 AND (s.latitude IS NOT NULL OR u.lat IS NOT NULL)
       HAVING distance <= ?
       ORDER BY distance ASC`,
@@ -105,7 +107,7 @@ exports.searchNearby = async (req, res) => {
         reviews: parseInt(s.reviews || 0),
         serviceMode: s.serviceMode || "offline",
         instantService: s.instantService ? true : false,
-        isPremium: s.isPremium ? true : false,
+        isPremium: (s.isPremium && Number(s.walletBalance || 0) > 0) ? true : false,
         plan: s.plan,
         premiumExpiresAt: s.premiumExpiresAt,
         address: s.address,

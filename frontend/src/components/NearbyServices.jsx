@@ -1430,10 +1430,6 @@ export default function NearbyServices({
                   {nearby.map((seller) => {
                     const packageRank = getSellerPackageRank(seller);
 
-                    if (packageRank > 0 && !isWalletSufficient()) {
-                      return null;
-                    }
-
                     const sId = seller.id || seller.sellerId;
 
                     return (
@@ -1554,10 +1550,6 @@ export default function NearbyServices({
 
             {nearby.map((seller, idx) => {
               const packageRank = getSellerPackageRank(seller);
-
-              if (packageRank > 0 && !isWalletSufficient()) {
-                return null;
-              }
 
               const sId = seller.id || seller.sellerId;
               const isSelected = selectedSellerId === sId;

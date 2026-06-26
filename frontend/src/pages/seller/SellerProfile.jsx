@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Save } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import apiClient from "../../api/axiosConfig";
+import LocationPicker from "../../components/LocationPicker";
 
 const inputClass =
   "w-full rounded-lg border border-indigo-500/20 bg-[#0f0e1a] px-3 py-2.5 text-sm font-medium text-white outline-none transition placeholder:text-slate-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20";
@@ -23,6 +24,10 @@ export default function SellerProfile() {
     serviceMode: "online",
     serviceModeLabel: "Online Only",
     instantService: false,
+
+    lat: null,
+    lng: null,
+    address: "",
   });
 
   const [saved, setSaved] = useState(false);
@@ -42,6 +47,9 @@ export default function SellerProfile() {
             gstnumber: seller.gst_number || prev.gstnumber,
             bio: seller.bio || prev.bio,
             experience: seller.experience_yrs !== undefined ? seller.experience_yrs : prev.experience,
+            lat: seller.lat || seller.latitude || null,
+            lng: seller.lng || seller.longitude || null,
+            address: seller.location_address || seller.address || "",
           }));
         }
       } catch (err) {

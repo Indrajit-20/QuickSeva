@@ -45,18 +45,22 @@ export default function AddFundsModal({
     setProcessing(true);
 
     // Fake payment delay
-    window.setTimeout(() => {
-      const nextWallet = addFundsToWallet(amount);
-      setPaidAmount(amount);
-      setProcessing(false);
+    window.setTimeout(async () => {
+      try {
+        const nextWallet = await addFundsToWallet(amount);
+        setPaidAmount(amount);
+        setProcessing(false);
 
-      if (typeof onSuccess === "function") {
-        onSuccess({ amount, walletBalance: nextWallet?.balance || 0 });
-      }
+        if (typeof onSuccess === "function") {
+          onSuccess({ amount, walletBalance: nextWallet?.balance || 0 });
+        }
 
-      if (closeOnSuccess) {
-        // keep for completeness; default false so user clicks continue
-        onClose?.();
+        if (closeOnSuccess) {
+          // keep for completeness; default false so user clicks continue
+          onClose?.();
+        }
+      } catch (err) {
+        setProcessing(false);
       }
     }, 900);
   };

@@ -126,7 +126,7 @@ function AppRoutes() {
             <Route path="profile" element={<SellerProfile />} />
             <Route path="services" element={<SellerServices />} />
             <Route path="orders" element={<SellerOrders />} />
-            <Route path="packages" element={<SellerPackages />} />
+            {/* <Route path="packages" element={<SellerPackages />} /> */}
             <Route path="wallet" element={<SellerWallet />} />
           </Route>
         </Route>

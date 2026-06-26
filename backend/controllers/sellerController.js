@@ -113,6 +113,9 @@ exports.updateSellerProfile = async (req, res) => {
       is_available,
       gst_number,
       profile_completed,
+      lat,
+      lng,
+      address,
     } = req.body;
 
     // Keep sellers.phone synchronized with users.phone
@@ -129,7 +132,29 @@ exports.updateSellerProfile = async (req, res) => {
     if (profile_completed !== undefined)
       fields.profile_completed = profile_completed;
 
+    if (lat !== undefined && lat !== null) {
+      fields.latitude = Number(lat);
+      fields.lat = Number(lat);
+    }
+    if (lng !== undefined && lng !== null) {
+      fields.longitude = Number(lng);
+      fields.lng = Number(lng);
+    }
+    if (address !== undefined && address !== null) {
+      fields.location_address = String(address).trim();
+    }
+
     await SellerModel.update(seller.id, fields);
+
+    if (lat !== undefined || lng !== undefined || address !== undefined) {
+      const userFields = {};
+      if (lat !== undefined && lat !== null) userFields.lat = Number(lat);
+      if (lng !== undefined && lng !== null) userFields.lng = Number(lng);
+      if (address !== undefined && address !== null) userFields.address = String(address).trim();
+      
+      await UserModel.update(req.user.id, userFields);
+    }
+
     const updated = await SellerModel.findById(seller.id);
     return successRes(res, { seller: updated }, "Seller profile updated");
   } catch (err) {
@@ -323,9 +348,20 @@ exports.registerSeller = async (req, res) => {
     // Create seller row
     const [sellerResult] = await conn.query(
       `INSERT INTO sellers (user_id, business_name, bio, experience_yrs, avg_rating, total_reviews, total_orders,
-                              is_verified, is_available, working_radius, documents, gst_number, profile_completed)
-       VALUES (?, ?, ?, ?, 0.00, 0, 0, 0, 1, 10, NULL, NULL, 1)`,
-      [userId, businessName.trim(), bio || null, experience_yrs || 0],
+                              is_verified, is_available, working_radius, documents, gst_number, profile_completed,
+                              latitude, longitude, lat, lng, location_address)
+       VALUES (?, ?, ?, ?, 0.00, 0, 0, 0, 1, 10, NULL, NULL, 1, ?, ?, ?, ?, ?)`,
+      [
+        userId,
+        businessName.trim(),
+        bio || null,
+        experience_yrs || 0,
+        latNum,
+        lngNum,
+        latNum,
+        lngNum,
+        String(address).trim(),
+      ],
     );
     const sellerId = sellerResult.insertId;
 
