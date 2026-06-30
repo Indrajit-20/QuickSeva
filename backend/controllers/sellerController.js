@@ -550,3 +550,202 @@ exports.updateSellerAvailability = async (req, res) => {
     return errorRes(res, "Failed to update availability");
   }
 };
+
+// Purchase premium package
+exports.purchasePackage = async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const { planId } = req.body;
+    
+    // Validate plan
+    const planPrices = {
+      basic: { price: 55, days: 7, name: "Basic" },
+      standard: { price: 155, days: 15, name: "Standard" },
+      pro: { price: 355, days: 30, name: "Pro" }
+    };
+    
+    if (!planPrices[planId]) {
+      await conn.rollback();
+      return errorRes(res, "Invalid plan ID", 400);
+    }
+    
+    const plan = planPrices[planId];
+    
+    // Get seller profile
+    const [[seller]] = await conn.query(
+      "SELECT * FROM sellers WHERE user_id = ? FOR UPDATE",
+      [req.user.id]
+    );
+    
+    if (!seller) {
+      await conn.rollback();
+      return errorRes(res, "Seller profile not found", 404);
+    }
+    
+    // Get wallet
+    const [[wallet]] = await conn.query(
+      "SELECT id, balance FROM wallets WHERE user_id = ? FOR UPDATE",
+      [req.user.id]
+    );
+    
+    if (!wallet) {
+      await conn.rollback();
+      return errorRes(res, "Wallet not found", 404);
+    }
+    
+    if (parseFloat(wallet.balance) < plan.price) {
+      await conn.rollback();
+      return errorRes(res, "Insufficient wallet balance", 400);
+    }
+    
+    // Calculate new expiration date and purchase type
+    let purchaseType = "new";
+    let expiresAt;
+    let forfeitedDays = 0;
+    const now = new Date();
+    
+    const currentExpiry = seller.premium_expires_at ? new Date(seller.premium_expires_at) : null;
+    const isCurrentActive = currentExpiry && currentExpiry.getTime() > now.getTime();
+    
+    if (isCurrentActive && seller.plan) {
+      const getPlanRank = (pid) => {
+        if (pid === "basic") return 1;
+        if (pid === "standard") return 2;
+        if (pid === "pro") return 3;
+        return 0;
+      };
+      
+      const currentRank = getPlanRank(seller.plan);
+      const selectedRank = getPlanRank(planId);
+      
+      if (selectedRank === currentRank) {
+        purchaseType = "extend";
+        expiresAt = new Date(currentExpiry.getTime() + plan.days * 24 * 60 * 60 * 1000);
+      } else {
+        if (selectedRank > currentRank) {
+          purchaseType = "upgrade";
+        } else {
+          purchaseType = "downgrade";
+        }
+        // upgrades/downgrades start immediately, forfeiting remaining days
+        forfeitedDays = Math.ceil((currentExpiry.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
+        expiresAt = new Date(now.getTime() + plan.days * 24 * 60 * 60 * 1000);
+      }
+    } else {
+      expiresAt = new Date(now.getTime() + plan.days * 24 * 60 * 60 * 1000);
+    }
+    
+    // 1. Debit wallet
+    const newBalance = parseFloat(wallet.balance) - plan.price;
+    await conn.query(
+      "UPDATE wallets SET balance = ? WHERE id = ?",
+      [newBalance, wallet.id]
+    );
+    
+    // 2. Insert wallet transaction
+    const descriptionObj = {
+      planId: planId,
+      expiresAt: expiresAt.toISOString(),
+      purchaseType: purchaseType,
+      price: plan.price,
+      forfeitedDays: forfeitedDays
+    };
+    
+    const [txResult] = await conn.query(
+      `INSERT INTO wallet_transactions (wallet_id, type, amount, balance_after, source, reference_id, description)
+       VALUES (?, 'debit', ?, ?, 'package_purchase', ?, ?)`,
+      [wallet.id, plan.price, newBalance, planId, JSON.stringify(descriptionObj)]
+    );
+    
+    // 3. Update seller premium info
+    await conn.query(
+      `UPDATE sellers 
+       SET is_premium = 1, plan = ?, premium_expires_at = ? 
+       WHERE id = ?`,
+      [planId, expiresAt, seller.id]
+    );
+    
+    await conn.commit();
+    
+    // Get updated transaction info to return
+    const [[transaction]] = await pool.query(
+      "SELECT * FROM wallet_transactions WHERE id = ?",
+      [txResult.insertId]
+    );
+    
+    return successRes(res, {
+      premium: {
+        plan: planId,
+        premium_expires_at: expiresAt.toISOString(),
+        is_premium: 1
+      },
+      walletBalance: newBalance,
+      transaction: transaction
+    }, "Plan purchased successfully");
+    
+  } catch (err) {
+    await conn.rollback();
+    console.error("Error purchasing package:", err);
+    return errorRes(res, "Failed to complete package purchase");
+  } finally {
+    conn.release();
+  }
+};
+
+// Get package purchase history
+exports.getPackageHistory = async (req, res) => {
+  try {
+    // Find seller
+    const [sellers] = await pool.query(
+      "SELECT id FROM sellers WHERE user_id = ?",
+      [req.user.id]
+    );
+    if (sellers.length === 0) {
+      return errorRes(res, "Seller profile not found", 404);
+    }
+    
+    // Fetch wallet transactions for package_purchase source
+    const [transactions] = await pool.query(
+      `SELECT wt.* FROM wallet_transactions wt
+       JOIN wallets w ON wt.wallet_id = w.id
+       WHERE w.user_id = ? AND wt.source = 'package_purchase'
+       ORDER BY wt.created_at DESC`,
+      [req.user.id]
+    );
+    
+    const history = transactions.map(tx => {
+      let details = {};
+      try {
+        details = JSON.parse(tx.description);
+      } catch (err) {
+        // Fallback for simple/legacy descriptions
+        details = {
+          planId: tx.reference_id || 'basic',
+          price: tx.amount,
+          expiresAt: new Date(new Date(tx.created_at).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          purchaseType: 'new'
+        };
+      }
+      
+      return {
+        receiptId: `QS-PKG-${tx.id}`,
+        plan: details.planId || tx.reference_id,
+        price: Number(tx.amount),
+        purchasedAt: tx.created_at,
+        expiresAt: details.expiresAt,
+        type: details.purchaseType || 'new',
+        walletTransactionId: tx.id,
+        balanceAfter: Number(tx.balance_after),
+        forfeitedDays: details.forfeitedDays || 0
+      };
+    });
+    
+    return successRes(res, history);
+  } catch (err) {
+    console.error("Error fetching package history:", err);
+    return errorRes(res, "Failed to fetch package history");
+  }
+};
+

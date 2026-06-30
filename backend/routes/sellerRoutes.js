@@ -13,6 +13,8 @@ const {
   getMySellerCategories,
   getSellerAvailability,
   updateSellerAvailability,
+  purchasePackage,
+  getPackageHistory,
 } = require("../controllers/sellerController");
 
 const {
@@ -38,6 +40,8 @@ router.get("/me/availability", protect, sellerOnly, getSellerAvailability);
 router.patch("/me/availability", protect, sellerOnly, updateSellerAvailability);
 router.get("/me/profile", protect, getMySellerProfile);
 router.put("/me/profile", protect, sellerOnly, updateSellerProfile);
+router.post("/packages/purchase", protect, sellerOnly, purchasePackage);
+router.get("/packages/history", protect, sellerOnly, getPackageHistory);
 router.patch(
   "/me/toggle-availability",
   protect,
@@ -111,7 +115,7 @@ router.get("/in-view", async (req, res) => {
       avg_rating: r.avg_rating !== null && r.avg_rating !== undefined ? parseFloat(r.avg_rating) : 0,
       reviews: r.reviews !== null && r.reviews !== undefined ? parseInt(r.reviews) : 0,
       walletBalance: r.walletBalance !== null && r.walletBalance !== undefined ? parseFloat(r.walletBalance) : 0,
-      isPremium: (r.isPremium && Number(r.walletBalance || 0) > 0) ? true : false,
+      isPremium: (r.isPremium && Number(r.walletBalance || 0) > 0 && r.premiumExpiresAt && new Date(r.premiumExpiresAt) > new Date()) ? true : false,
       instantService: r.instantService ? true : false,
     }));
 

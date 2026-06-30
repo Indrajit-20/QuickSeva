@@ -40,7 +40,7 @@ export default function BookingHistory() {
   );
 
   return (
-    <main className="min-h-screen bg-brand-bg px-4 py-10">
+    <main className="min-h-screen bg-slate-50 px-4 py-10">
       <div className="mx-auto max-w-4xl">
         <div className="mb-6">
           <p className="text-sm font-bold text-indigo-600">QuickSeva</p>

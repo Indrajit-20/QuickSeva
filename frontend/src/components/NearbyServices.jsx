@@ -9,6 +9,17 @@ import "leaflet.markercluster/dist/leaflet.markercluster";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import { getUserLocation } from "../utils/getLocation";
+import {
+  Sparkles,
+  Zap,
+  Droplets,
+  Hammer,
+  Snowflake,
+  Bug,
+  Palette,
+  Tv,
+  Wrench
+} from "lucide-react";
 
 import {
   deductContactView,
@@ -29,6 +40,7 @@ import {
   useMapEvents,
 } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-markercluster";
+import { ALL_SERVICE_SUGGESTIONS } from "../data/servicesData";
 
 // Fix Leaflet marker icon URLs in this map component
 delete L.Icon.Default.prototype._getIconUrl;
@@ -96,8 +108,20 @@ const USER_ICON = L.divIcon({
   className: "user-location-pin",
   html: USER_PIN_HTML,
   iconSize: [24, 24],
-  iconAnchor: [12, 12],
 });
+
+function getServiceIcon(name) {
+  const lowered = name.toLowerCase();
+  if (lowered.includes("clean")) return Sparkles;
+  if (lowered.includes("ac") || lowered.includes("cool")) return Snowflake;
+  if (lowered.includes("electric") || lowered.includes("fan") || lowered.includes("wiring") || lowered.includes("switch") || lowered.includes("mcb") || lowered.includes("inverter")) return Zap;
+  if (lowered.includes("plumb") || lowered.includes("leak") || lowered.includes("toilet") || lowered.includes("clog") || lowered.includes("sink") || lowered.includes("drain") || lowered.includes("water") || lowered.includes("faucet")) return Droplets;
+  if (lowered.includes("pest") || lowered.includes("cockroach") || lowered.includes("bug") || lowered.includes("rodent") || lowered.includes("termite")) return Bug;
+  if (lowered.includes("carpen") || lowered.includes("door") || lowered.includes("drawer") || lowered.includes("furnit") || lowered.includes("wood") || lowered.includes("shelf")) return Hammer;
+  if (lowered.includes("appliance") || lowered.includes("wash") || lowered.includes("refrig") || lowered.includes("micro") || lowered.includes("ro ")) return Tv;
+  if (lowered.includes("paint")) return Palette;
+  return Wrench;
+}
 
 const SERVICE_FILTERS = [
   "All",
@@ -166,8 +190,8 @@ function getDistanceKm(lat1, lng1, lat2, lng2) {
   const a =
     Math.sin(dLat / 2) ** 2 +
     Math.cos(lat1 * (Math.PI / 180)) *
-      Math.cos(lat2 * (Math.PI / 180)) *
-      Math.sin(dLng / 2) ** 2;
+    Math.cos(lat2 * (Math.PI / 180)) *
+    Math.sin(dLng / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
@@ -295,7 +319,7 @@ export function useNearbyLocation() {
         setLoading(false);
         return;
       }
-    } catch {}
+    } catch { }
 
     if (!navigator.geolocation) {
       setLoading(false);
@@ -315,7 +339,7 @@ export function useNearbyLocation() {
             setAddress(nextAddress || "");
             try {
               sessionStorage.setItem("qs_cached_address", nextAddress || "");
-            } catch {}
+            } catch { }
           }
         } catch {
           if (!cancelled) setAddress("");
@@ -349,8 +373,45 @@ export default function NearbyServices({
   const [buyerPos, setBuyerPos] = useState(null);
   const [mapFlyTrigger, setMapFlyTrigger] = useState(0);
   const [geoError, setGeoError] = useState("");
+  const [showMap, setShowMap] = useState(true);
   const [search, setSearch] = useState(initialSearch);
   const [locationQuery, setLocationQuery] = useState("");
+  const [showServiceDrop, setShowServiceDrop] = useState(false);
+  const serviceDropRef = useRef(null);
+
+  const filteredServiceSuggestions = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) {
+      return ["Cleaning", "Electrical", "Plumbing", "Carpentry", "AC Repair", "Appliance Repair"];
+    }
+    return ALL_SERVICE_SUGGESTIONS.filter((s) =>
+      s.toLowerCase().includes(query)
+    ).slice(0, 8);
+  }, [search]);
+
+  const handleServiceSelect = (item) => {
+    setSearch(item);
+    setShowServiceDrop(false);
+  };
+
+  useEffect(() => {
+    const handleMouseDown = (e) => {
+      if (serviceDropRef.current && !serviceDropRef.current.contains(e.target)) {
+        setShowServiceDrop(false);
+      }
+    };
+    document.addEventListener("mousedown", handleMouseDown);
+    return () => document.removeEventListener("mousedown", handleMouseDown);
+  }, []);
+
+  const { address: detectedAddress } = useNearbyLocation();
+
+  useEffect(() => {
+    if (detectedAddress && !locationQuery) {
+      setLocationQuery(detectedAddress);
+    }
+  }, [detectedAddress]);
+
   const [locationResults, setLocationResults] = useState([]);
   const [locationLoading, setLocationLoading] = useState(false);
   const [geoLoading, setGeoLoading] = useState(false);
@@ -632,7 +693,7 @@ export default function NearbyServices({
   useEffect(() => {
     try {
       localStorage.removeItem("sellers");
-    } catch (e) {}
+    } catch (e) { }
   }, []);
 
   // QuickSeva - Map Performance Feature
@@ -759,23 +820,23 @@ export default function NearbyServices({
     const normalizedSearch = search.trim().toLowerCase();
     const filteredBySearch = normalizedSearch
       ? withDistance.filter((s) =>
-          (s?.service || "").toLowerCase().includes(normalizedSearch),
-        )
+        (s?.service || "").toLowerCase().includes(normalizedSearch),
+      )
       : withDistance;
 
     const filteredByServiceMode =
       filterServiceMode === "All"
         ? filteredBySearch
         : filteredBySearch.filter((s) => {
-            const mode = s?.serviceMode;
-            if (!mode) return false;
-            if (filterServiceMode === "Online")
-              return mode === "online" || mode === "both";
-            if (filterServiceMode === "Offline")
-              return mode === "offline" || mode === "both";
-            if (filterServiceMode === "Both") return mode === "both";
-            return true;
-          });
+          const mode = s?.serviceMode;
+          if (!mode) return false;
+          if (filterServiceMode === "Online")
+            return mode === "online" || mode === "both";
+          if (filterServiceMode === "Offline")
+            return mode === "offline" || mode === "both";
+          if (filterServiceMode === "Both") return mode === "both";
+          return true;
+        });
 
     const filteredByAvailability =
       filterAvailability === "All"
@@ -786,40 +847,40 @@ export default function NearbyServices({
       filterRating === "All"
         ? filteredByAvailability
         : filteredByAvailability.filter((s) => {
-            const r = Number(s?.rating || 0);
-            if (filterRating === "4") return r >= 4;
-            if (filterRating === "4.5") return r >= 4.5;
-            return true;
-          });
+          const r = Number(s?.rating || 0);
+          if (filterRating === "4") return r >= 4;
+          if (filterRating === "4.5") return r >= 4.5;
+          return true;
+        });
 
     // ── NEW: price range filter ──────────────────────────────────────────
     const filteredByPrice =
       filterPrice === "all"
         ? filteredByRating
         : filteredByRating.filter((s) => {
-            const svcs = Array.isArray(s?.services) ? s.services : [];
-            if (!svcs.length) return false;
-            return svcs.some((svc) => {
-              const p = Number(svc?.price || 0);
-              if (filterPrice === "under500") return p > 0 && p < 500;
-              if (filterPrice === "500-1000") return p >= 500 && p <= 1000;
-              if (filterPrice === "1000-2000") return p > 1000 && p <= 2000;
-              if (filterPrice === "2000+") return p > 2000;
-              return true;
-            });
+          const svcs = Array.isArray(s?.services) ? s.services : [];
+          if (!svcs.length) return false;
+          return svcs.some((svc) => {
+            const p = Number(svc?.price || 0);
+            if (filterPrice === "under500") return p > 0 && p < 500;
+            if (filterPrice === "500-1000") return p >= 500 && p <= 1000;
+            if (filterPrice === "1000-2000") return p > 1000 && p <= 2000;
+            if (filterPrice === "2000+") return p > 2000;
+            return true;
           });
+        });
 
     // ── NEW: duration bucket filter ──────────────────────────────────────
     const filteredByDuration =
       filterDuration === "all"
         ? filteredByPrice
         : filteredByPrice.filter((s) => {
-            const svcs = Array.isArray(s?.services) ? s.services : [];
-            if (!svcs.length) return false;
-            return svcs.some(
-              (svc) => getDurationBucket(svc?.duration) === filterDuration,
-            );
-          });
+          const svcs = Array.isArray(s?.services) ? s.services : [];
+          if (!svcs.length) return false;
+          return svcs.some(
+            (svc) => getDurationBucket(svc?.duration) === filterDuration,
+          );
+        });
 
     // ── NEW: booking type filter ─────────────────────────────────────────
     // Uses service-level is_instant if available; falls back to seller.instantService
@@ -827,20 +888,20 @@ export default function NearbyServices({
       filterBooking === "all"
         ? filteredByDuration
         : filteredByDuration.filter((s) => {
-            const svcs = Array.isArray(s?.services) ? s.services : [];
-            const sellerInstant = Boolean(s?.instantService);
+          const svcs = Array.isArray(s?.services) ? s.services : [];
+          const sellerInstant = Boolean(s?.instantService);
 
-            if (filterBooking === "instant") {
-              if (svcs.length > 0)
-                return svcs.some((svc) => Boolean(svc?.is_instant));
-              return sellerInstant;
-            }
-            if (filterBooking === "scheduled") {
-              if (svcs.length > 0) return svcs.every((svc) => !svc?.is_instant);
-              return !sellerInstant;
-            }
-            return true;
-          });
+          if (filterBooking === "instant") {
+            if (svcs.length > 0)
+              return svcs.some((svc) => Boolean(svc?.is_instant));
+            return sellerInstant;
+          }
+          if (filterBooking === "scheduled") {
+            if (svcs.length > 0) return svcs.every((svc) => !svc?.is_instant);
+            return !sellerInstant;
+          }
+          return true;
+        });
 
     return filteredByBooking.sort((a, b) => {
       const rankA = getSellerPackageRank(a);
@@ -861,10 +922,35 @@ export default function NearbyServices({
     filterBooking,
   ]);
 
-  const handleLocationSubmit = (e) => {
+  const handleLocationSearchSubmit = async (e) => {
     e.preventDefault();
-    if (locationMode !== "area") return;
-    searchLocation(locationQuery);
+    const val = locationQuery.trim();
+    if (!val) return;
+    if (/^\d{6}$/.test(val)) {
+      setPincode(val);
+      setPincodeLoading(true);
+      setPincodeError("");
+      try {
+        const results = await nominatimSearch(`${val}, India`);
+        if (results.length > 0) {
+          const r = results[0];
+          setBuyerPos({ lat: parseFloat(r.lat), lng: parseFloat(r.lon) });
+          setMapFlyTrigger((prev) => prev + 1);
+          setLocationQuery(r.display_name.split(",")[0] + " - " + val);
+          setLocationResults([]);
+          setLocationNotFoundMsg("");
+          setGeoError("");
+        } else {
+          setPincodeError("Pincode not found. Try a nearby pincode.");
+        }
+      } catch {
+        setPincodeError("Search failed. Try again.");
+      } finally {
+        setPincodeLoading(false);
+      }
+    } else {
+      searchLocation(val);
+    }
   };
 
   const handleResultClick = (result) => {
@@ -956,9 +1042,7 @@ export default function NearbyServices({
     );
   };
 
-  // ============================================================
-  // ====================== REDESIGNED UI =======================
-  // ============================================================
+  // =================== STEP-BY-STEP SEARCH & FINDER PANEL ===================
   return (
     <div className="flex flex-col gap-6 animate-fade-in">
       {/* QuickSeva - Map Performance Feature: Floating Toast Message */}
@@ -968,339 +1052,210 @@ export default function NearbyServices({
           <button
             type="button"
             onClick={() => setToastMessage(null)}
-            className="ml-2 text-indigo-300 hover:text-white font-bold text-lg leading-none"
+            className="ml-2 text-indigo-300 hover:text-white font-bold text-lg leading-none cursor-pointer"
           >
             &times;
           </button>
         </div>
       )}
-      {/* =================== SEARCH / FILTER / RADIUS GLASS CARD =================== */}
-      <div className="qs-glass-panel relative p-5 sm:p-6">
-        {/* decorative glow blobs — own overflow-hidden so they don't clip the dropdown */}
-        <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]">
-          <div className="absolute -top-24 -left-24 h-56 w-56 rounded-full bg-indigo-500/20 blur-3xl" />
-          <div className="absolute -bottom-24 -right-24 h-56 w-56 rounded-full bg-fuchsia-500/10 blur-3xl" />
-        </div>
 
-        <form
-          ref={locationSearchRef}
-          onSubmit={handleLocationSubmit}
-          className="relative z-10"
-        >
-          <label className="mb-2.5 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-indigo-100">
-            <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-indigo-500/30 text-indigo-200 font-extrabold text-sm">
-              📍
-            </span>
-            Step 1: Where are you? / अपनी जगह बताएं
-          </label>
-
-          <div className="flex flex-col gap-2.5 sm:flex-row">
-            {/* Input with animated focus ring + dropdown overlay */}
-            <div className="relative min-w-0 flex-1">
-              <div className="qs-input-wrap group relative">
-                <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-indigo-300/70 transition-colors group-focus-within:text-indigo-200">
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <circle cx="11" cy="11" r="7" />
-                    <path d="m20 20-3.5-3.5" />
-                  </svg>
-                </span>
-                <input
-                  value={locationQuery}
-                  onChange={(e) => setLocationQuery(e.target.value)}
-                  autoComplete="off"
-                  className="qs-input peer w-full rounded-xl border border-indigo-400/20 bg-indigo-950/40 py-3 pl-10 pr-4 text-sm font-medium text-white placeholder-indigo-300/60 transition-all duration-300 focus:border-indigo-400/60 focus:bg-indigo-950/60 focus:outline-none focus:ring-4 focus:ring-indigo-500/20"
-                  placeholder="Search area, colony or landmark (इलाका या दुकान का नाम डालें)"
-                />
-                <span className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-inset ring-white/5" />
-              </div>
+      <div className="relative p-0">
+        <div className="relative z-10 flex flex-col gap-5">
+          {/* STEP 1: Service search (What service do you need?) */}
+          <div className="relative" ref={serviceDropRef}>
+            <label className="mb-1.5 flex items-center gap-2 text-xs font-semibold tracking-wider text-indigo-200">
+              Service / सेवा
+            </label>
+            <div className="relative">
+              <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-indigo-300/70">
+                🔍
+              </span>
+              <input
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setShowServiceDrop(true);
+                }}
+                onFocus={() => setShowServiceDrop(true)}
+                placeholder="Search services (e.g. Plumber, AC Repair, Cleaning...)"
+                className="w-full rounded-full border border-indigo-500/30 bg-transparent py-3 pl-10 pr-10 text-sm font-medium text-white placeholder-indigo-300/50 transition-all duration-300 focus:border-indigo-400 focus:outline-none focus:ring-4 focus:ring-indigo-500/10"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-indigo-300 hover:text-white cursor-pointer"
+                >
+                  ✕
+                </button>
+              )}
             </div>
 
-            <button
-              type="submit"
-              className="qs-btn-primary inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold text-white"
-            >
-              {locationLoading ? (
-                <>
-                  <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-                  Searching
-                </>
-              ) : (
-                <>Search / खोजें</>
-              )}
-            </button>
-
-            <button
-              type="button"
-              onClick={handleUseMyLocation}
-              className={`qs-btn-locate inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold text-white ${geoLoading ? "qs-pulse" : ""}`}
-            >
-              <span className="text-base leading-none">🎯</span>
-              <span>Find Me / मेरी जगह</span>
-            </button>
+            {/* Service Dropdown Suggestions */}
+            {showServiceDrop && filteredServiceSuggestions.length > 0 && (
+              <div className="absolute left-0 right-0 top-full z-[1000] mt-2 max-h-[220px] overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl p-1.5 scrollbar-none">
+                {filteredServiceSuggestions.map((item) => {
+                  const IconComponent = getServiceIcon(item);
+                  return (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => handleServiceSelect(item)}
+                      className="w-full rounded-xl px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-100 hover:text-indigo-600 transition-colors duration-200 cursor-pointer flex items-center gap-2.5"
+                    >
+                      <IconComponent className="h-4 w-4 text-indigo-500 shrink-0" />
+                      <span>{item}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
-          {/* Portal dropdown — renders at body level so it never clips or overlaps siblings */}
-          {locationResults.length > 0 &&
-            dropdownStyle &&
-            createPortal(
-              <div
-                ref={portalDropdownRef}
-                style={dropdownStyle}
-                className="max-h-[300px] overflow-y-auto overflow-x-hidden rounded-xl border border-indigo-400/30 bg-[#0a0918] shadow-2xl"
-              >
-                {locationResults.map((result) => (
-                  <button
-                    key={`${result.place_id}-${result.lat}-${result.lon}`}
-                    type="button"
-                    onClick={() => handleResultClick(result)}
-                    className="block w-full border-b border-indigo-400/10 px-4 py-3 text-left text-sm text-indigo-100 transition-colors hover:bg-indigo-500/15"
-                  >
-                    <span className="flex items-start gap-3">
-                      <span className="mt-0.5 inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-lg border border-indigo-400/20 bg-indigo-500/10 text-indigo-200">
-                        📍
-                      </span>
-                      <span className="flex-1 min-w-0">
-                        <span className="block font-semibold text-white">
-                          {result.display_name.split(",")[0]}
-                        </span>
-                        <span className="block truncate text-xs text-indigo-300/80">
-                          {result.display_name
-                            .split(",")
-                            .slice(1, 3)
-                            .join(",")
-                            .trim()}
-                        </span>
-                      </span>
-                    </span>
-                  </button>
-                ))}
-              </div>,
-              document.body,
-            )}
-
-          {locationNotFoundMsg && (
-            <p className="mt-2.5 text-sm text-indigo-200/90">
-              {locationNotFoundMsg}
-            </p>
-          )}
-
-          {/* ── Pincode Badge / Inline Search ── */}
-          <div className="mt-2.5">
-            <div className="hidden sm:flex items-center justify-end">
-              <span className="text-xs font-bold text-indigo-200 mr-2">
-                Or enter Pincode / पिनकोड डालें:
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-indigo-400/20 bg-indigo-950/40 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm backdrop-blur">
-                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-indigo-500/15">
-                  📮
-                </span>
-                <input
-                  className="w-24 bg-transparent text-center text-sm font-extrabold tracking-widest outline-none"
-                  inputMode="numeric"
-                  maxLength={6}
-                  value={pincode}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/\D/g, "").slice(0, 6);
-                    setPincode(val);
-                    setPincodeError("");
-                  }}
-                  onKeyDown={(e) => e.key === "Enter" && handlePincodeSearch()}
-                  placeholder="389320"
-                />
-              </span>
-
-              <button
-                type="button"
-                onClick={handlePincodeSearch}
-                disabled={pincode.length !== 6 || pincodeLoading}
-                className="ml-3 inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white transition-all hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {pincodeLoading ? (
-                  <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-                ) : (
-                  "Go / आगे →"
-                )}
-              </button>
-            </div>
-
-            {/** Mobile + fallback row */}
-            <div className="sm:hidden">
-              <div className="text-xs font-bold text-indigo-200 mb-1">
-                Or enter Pincode / पिनकोड डालें:
+          {/* STEP 2: Location selection & Pincode */}
+          <form
+            ref={locationSearchRef}
+            onSubmit={handleLocationSearchSubmit}
+            className="relative"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Location Input */}
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold tracking-wider text-indigo-200">
+                  Location (Area / Landmark) / जगह
+                </label>
+                <div className="relative">
+                  <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-indigo-300/70">
+                    📍
+                  </span>
+                  <input
+                    value={locationQuery}
+                    onChange={(e) => setLocationQuery(e.target.value)}
+                    autoComplete="off"
+                    className="w-full rounded-full border border-indigo-500/30 bg-transparent py-3 pl-10 pr-24 text-sm font-medium text-white placeholder-indigo-300/50 transition-all duration-300 focus:border-indigo-400 focus:outline-none focus:ring-4 focus:ring-indigo-500/10"
+                    placeholder="Search Area or Landmark (e.g. Nikol)"
+                  />
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={handleUseMyLocation}
+                      className={`p-1.5 rounded-full text-indigo-300 hover:text-white hover:bg-white/10 transition cursor-pointer ${geoLoading ? "qs-pulse" : ""}`}
+                      title="Find Me"
+                    >
+                      🎯
+                    </button>
+                    <button
+                      type="submit"
+                      className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-full px-3 py-1 text-xs font-bold transition cursor-pointer"
+                    >
+                      {locationLoading ? "..." : "Search"}
+                    </button>
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="relative flex-1 min-w-0">
-                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-indigo-300/70 text-sm">
+
+              {/* Pincode Input */}
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold tracking-wider text-indigo-200">
+                  Pincode / पिनकोड
+                </label>
+                <div className="relative">
+                  <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-indigo-300/70">
                     📮
                   </span>
                   <input
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={6}
                     value={pincode}
                     onChange={(e) => {
                       const val = e.target.value.replace(/\D/g, "").slice(0, 6);
                       setPincode(val);
                       setPincodeError("");
                     }}
-                    onKeyDown={(e) =>
-                      e.key === "Enter" && handlePincodeSearch()
-                    }
-                    placeholder="Enter 6-digit Pincode / ६-अंक पिनकोड"
-                    className="w-full rounded-xl border border-indigo-400/20 bg-indigo-950/40 py-2.5 pl-9 pr-4 text-sm font-medium text-white placeholder-indigo-300/50 focus:border-indigo-400/60 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                    onKeyDown={(e) => e.key === "Enter" && handlePincodeSearch()}
+                    className="w-full rounded-full border border-indigo-500/30 bg-transparent py-3 pl-10 pr-20 text-sm font-medium text-white placeholder-indigo-300/50 transition-all duration-300 focus:border-indigo-400 focus:outline-none focus:ring-4 focus:ring-indigo-500/10"
+                    placeholder="Enter 6-digit Pincode (e.g. 382350)"
+                    maxLength={6}
                   />
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                    <button
+                      type="button"
+                      onClick={handlePincodeSearch}
+                      disabled={pincode.length !== 6 || pincodeLoading}
+                      className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-full px-3 py-1 text-xs font-bold transition cursor-pointer"
+                    >
+                      {pincodeLoading ? "..." : "Go"}
+                    </button>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={handlePincodeSearch}
-                  disabled={pincode.length !== 6 || pincodeLoading}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white transition-all hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  {pincodeLoading ? (
-                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-                  ) : (
-                    "Go / आगे →"
-                  )}
-                </button>
               </div>
             </div>
 
+            {locationNotFoundMsg && (
+              <p className="mt-2 text-sm text-indigo-200/90">
+                ⚠ {locationNotFoundMsg}
+              </p>
+            )}
+
             {pincodeError && (
-              <p className="mt-1.5 text-xs font-medium text-red-300">
+              <p className="mt-2 text-sm font-medium text-red-300">
                 ⚠ {pincodeError}
               </p>
             )}
-          </div>
-        </form>
+          </form>
 
-        {/* ============ CATEGORY CHIPS ============ */}
-        <div className="relative z-10 mt-5">
-          <label className="mb-2.5 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-indigo-100">
-            <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-indigo-500/30 text-indigo-200 font-extrabold text-sm">
-              🧹
-            </span>
-            Step 2: Choose the Service you need / क्या काम करवाना है?
-          </label>
-          <div className="qs-chip-row flex gap-2 overflow-x-auto pb-1.5 scrollbar-none snap-x snap-mandatory">
-            {SERVICE_FILTERS.map((serviceFilter) => {
-              const active =
-                serviceFilter === "All" ? !search : search === serviceFilter;
-              const displayInfo = SERVICE_DISPLAY[serviceFilter] || {
-                label: serviceFilter,
-                icon: "🛠️",
-              };
-              return (
-                <button
-                  key={serviceFilter}
-                  type="button"
-                  onClick={() =>
-                    setSearch(serviceFilter === "All" ? "" : serviceFilter)
-                  }
-                  className={`qs-chip snap-start flex items-center gap-1.5 ${active ? "qs-chip-active" : ""}`}
-                >
-                  <span>{displayInfo.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* ============ RADIUS SLIDER ============ */}
-        <div className="relative z-10 mt-5 rounded-xl border border-indigo-400/15 bg-indigo-950/30 p-3.5">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-indigo-100">
-              <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-indigo-500/30 text-indigo-200 font-extrabold text-sm">
-                🚗
-              </span>
-              Step 3: How far should we look? / कितनी दूर खोजना है?
-            </span>
-            <span className="qs-radius-badge">{radiusKm} km</span>
-          </div>
-          <div className="mt-3">
-            <input
-              type="range"
-              min={1}
-              max={20}
-              step={1}
-              value={radiusKm}
-              onChange={(e) => setRadiusKm(parseInt(e.target.value || "5", 10))}
-              className="qs-range w-full"
-              style={{
-                background: `linear-gradient(to right, #818cf8 0%, #6366f1 ${((radiusKm - 1) / 19) * 100}%, rgba(99,102,241,0.18) ${((radiusKm - 1) / 19) * 100}%, rgba(99,102,241,0.18) 100%)`,
-              }}
-            />
-            <div className="mt-1 flex justify-between text-[10px] font-medium text-indigo-300/70">
-              <span>1 km (Pass / पास)</span>
-              <span>10 km (Medium)</span>
-              <span>20 km (Far / दूर)</span>
+          {/* STEP 3: Range Slider and Filters */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-[#110e30]/40 border border-indigo-500/10 rounded-2xl p-4 gap-4">
+            {/* Range Slider */}
+            <div className="flex-1 max-w-md">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-bold text-indigo-200 uppercase tracking-wider">
+                  Distance Range
+                </span>
+                <span className="text-xs font-bold bg-indigo-500/20 px-2 py-0.5 rounded text-indigo-200">{radiusKm} km</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="range"
+                  min={1}
+                  max={20}
+                  step={1}
+                  value={radiusKm}
+                  onChange={(e) => setRadiusKm(parseInt(e.target.value || "5", 10))}
+                  className="qs-range flex-1"
+                  style={{
+                    background: `linear-gradient(to right, #818cf8 0%, #6366f1 ${((radiusKm - 1) / 19) * 100}%, rgba(99,102,241,0.18) ${((radiusKm - 1) / 19) * 100}%, rgba(99,102,241,0.18) 100%)`,
+                  }}
+                />
+                <span className="text-[10px] text-indigo-300 font-medium whitespace-nowrap">
+                  ({getRadiusVisualGuide(radiusKm).icon} {radiusKm <= 5 ? "Nearby" : "Far"})
+                </span>
+              </div>
             </div>
 
-            {/* Visual representation / description of radius */}
-            <div className="mt-3.5 flex items-center gap-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20 px-3 py-2 text-xs font-bold text-indigo-200">
-              <span className="text-base">
-                {getRadiusVisualGuide(radiusKm).icon}
+            {/* Refine Filters Toggle Button */}
+            <div className="flex flex-col gap-1 sm:w-auto min-w-[150px] border-t border-indigo-400/10 pt-3 sm:border-t-0 sm:pt-0">
+              <span className="text-[10px] font-semibold text-indigo-300/80 mb-0.5">
+                Filters / फ़िल्टर:
               </span>
-              <span>{getRadiusVisualGuide(radiusKm).text}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* ============ REFINE RESULTS FILTER PANEL ============ */}
-        <div className="relative z-10 mt-4">
-          {/* Toggle button */}
-          <button
-            type="button"
-            onClick={() => setFiltersOpen((prev) => !prev)}
-            className="inline-flex items-center gap-2 rounded-xl border border-indigo-400/25 bg-indigo-950/40 px-4 py-2 text-sm font-semibold text-indigo-200 transition-all hover:border-indigo-400/50 hover:bg-indigo-950/60"
-          >
-            <svg
-              width="15"
-              height="15"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <line x1="4" y1="6" x2="20" y2="6" />
-              <line x1="8" y1="12" x2="16" y2="12" />
-              <line x1="11" y1="18" x2="13" y2="18" />
-            </svg>
-            Refine Results
-            {activeFilterCount > 0 && (
-              <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-indigo-500 text-[11px] font-bold text-white">
-                {activeFilterCount}
-              </span>
-            )}
-            <span
-              className={`ml-auto transition-transform duration-200 ${filtersOpen ? "rotate-180" : ""}`}
-            >
-              <svg
-                width="13"
-                height="13"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
+              <button
+                type="button"
+                onClick={() => setFiltersOpen((prev) => !prev)}
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-indigo-400/25 bg-[#1b1850]/40 px-4 py-2 text-sm font-semibold text-indigo-200 transition-all hover:border-indigo-400/50 hover:bg-[#1b1850]/80 cursor-pointer"
               >
-                <path d="M6 9l6 6 6-6" />
-              </svg>
-            </span>
-          </button>
+                <span>⚙️</span>
+                Refine Results
+                {activeFilterCount > 0 && (
+                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-indigo-500 text-[11px] font-bold text-white">
+                    {activeFilterCount}
+                  </span>
+                )}
+                <span>▼</span>
+              </button>
+            </div>
+          </div>
 
-          {/* Collapsible panel */}
+          {/* Collapsible Refine Results filter options */}
           {filtersOpen && (
-            <div className="mt-2 rounded-xl border border-indigo-400/20 bg-indigo-950/30 p-4 space-y-4">
+            <div className="rounded-xl border border-indigo-400/20 bg-indigo-950/30 p-4 space-y-4">
               {/* Price Range */}
               <div>
                 <p className="mb-2 text-xs font-bold uppercase tracking-wider text-indigo-300/80">
@@ -1312,11 +1267,10 @@ export default function NearbyServices({
                       key={opt.value}
                       type="button"
                       onClick={() => setFilterPrice(opt.value)}
-                      className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all ${
-                        filterPrice === opt.value
-                          ? "border-indigo-400/60 bg-indigo-500 text-white shadow-lg shadow-indigo-500/25"
-                          : "border-indigo-400/20 bg-white/5 text-indigo-200 hover:border-indigo-400/40 hover:bg-white/10"
-                      }`}
+                      className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${filterPrice === opt.value
+                        ? "border-indigo-400/60 bg-indigo-500 text-white shadow-lg shadow-indigo-500/25"
+                        : "border-indigo-400/20 bg-white/5 text-indigo-200 hover:border-indigo-400/40 hover:bg-white/10"
+                        }`}
                     >
                       {opt.label}
                     </button>
@@ -1335,11 +1289,10 @@ export default function NearbyServices({
                       key={opt.value}
                       type="button"
                       onClick={() => setFilterDuration(opt.value)}
-                      className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all ${
-                        filterDuration === opt.value
-                          ? "border-indigo-400/60 bg-indigo-500 text-white shadow-lg shadow-indigo-500/25"
-                          : "border-indigo-400/20 bg-white/5 text-indigo-200 hover:border-indigo-400/40 hover:bg-white/10"
-                      }`}
+                      className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${filterDuration === opt.value
+                        ? "border-indigo-400/60 bg-indigo-500 text-white shadow-lg shadow-indigo-500/25"
+                        : "border-indigo-400/20 bg-white/5 text-indigo-200 hover:border-indigo-400/40 hover:bg-white/10"
+                        }`}
                     >
                       {opt.label}
                     </button>
@@ -1358,13 +1311,12 @@ export default function NearbyServices({
                       key={opt.value}
                       type="button"
                       onClick={() => setFilterBooking(opt.value)}
-                      className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all ${
-                        filterBooking === opt.value
-                          ? opt.value === "instant"
-                            ? "border-emerald-400/60 bg-emerald-500 text-white shadow-lg shadow-emerald-500/25"
-                            : "border-indigo-400/60 bg-indigo-500 text-white shadow-lg shadow-indigo-500/25"
-                          : "border-indigo-400/20 bg-white/5 text-indigo-200 hover:border-indigo-400/40 hover:bg-white/10"
-                      }`}
+                      className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${filterBooking === opt.value
+                        ? opt.value === "instant"
+                          ? "border-emerald-400/60 bg-emerald-500 text-white shadow-lg shadow-emerald-500/25"
+                          : "border-indigo-400/60 bg-indigo-500 text-white shadow-lg shadow-indigo-500/25"
+                        : "border-indigo-400/20 bg-white/5 text-indigo-200 hover:border-indigo-400/40 hover:bg-white/10"
+                        }`}
                     >
                       {opt.label}
                     </button>
@@ -1378,7 +1330,7 @@ export default function NearbyServices({
                   <button
                     type="button"
                     onClick={clearAllFilters}
-                    className="text-xs font-semibold text-red-300 hover:text-red-200 transition-colors"
+                    className="text-xs font-semibold text-red-300 hover:text-red-200 transition-colors cursor-pointer"
                   >
                     ✕ Clear All Filters
                   </button>
@@ -1388,31 +1340,6 @@ export default function NearbyServices({
           )}
         </div>
 
-        {buyerPos && (
-          <div className="relative z-10 mt-4 flex flex-wrap items-center gap-2 text-xs">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2.5 py-1 font-semibold text-emerald-200">
-              <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-              Live
-            </span>
-            <span className="text-indigo-200/90">
-              <strong className="font-bold text-white">{nearby.length}</strong>{" "}
-              provider{nearby.length !== 1 ? "s" : ""} within{" "}
-              <strong className="font-bold text-white">{radiusKm}km</strong>
-            </span>
-            {search && (
-              <span className="rounded-md bg-indigo-500/15 px-2 py-0.5 text-indigo-200">
-                for "{search}"
-              </span>
-            )}
-            {activeFilterCount > 0 && (
-              <span className="rounded-md bg-indigo-500/20 px-2 py-0.5 font-semibold text-indigo-300">
-                · {activeFilterCount} filter{activeFilterCount > 1 ? "s" : ""}{" "}
-                active
-              </span>
-            )}
-          </div>
-        )}
-
         {geoError && (
           <p className="relative z-10 mt-3 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
             ⚠ {geoError}
@@ -1420,156 +1347,192 @@ export default function NearbyServices({
         )}
       </div>
 
-      {/* =================== MAP + PROVIDER LIST =================== */}
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
-        {/* ============ MAP ============ */}
-        <div className="w-full lg:w-[58%]">
-          <div
-            className="qs-map-frame relative isolate overflow-hidden rounded-3xl"
-            style={{ height: 520 }}
-          >
-            {/* Top-left: providers count */}
-            <div className="pointer-events-none absolute left-3 top-3 z-[600]">
-              <div className="qs-map-pill flex items-center gap-2">
-                <span className="text-base">🛠️</span>
-                <div className="leading-tight">
-                  <div className="text-[10px] uppercase tracking-wider text-indigo-200/80">
-                    Providers
-                  </div>
-                  <div className="text-sm font-bold text-white">
-                    {nearby.length} found
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Top-right: live radius badge */}
-            <div className="pointer-events-none absolute right-3 top-3 z-[600]">
-              <div className="qs-map-pill flex items-center gap-2">
-                <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.9)]" />
-                <div className="leading-tight">
-                  <div className="text-[10px] uppercase tracking-wider text-indigo-200/80">
-                    Live Radius
-                  </div>
-                  <div className="text-sm font-bold text-white">
-                    {radiusKm} km
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Bottom: user location badge */}
-            {buyerPos && (
-              <div className="pointer-events-none absolute bottom-3 left-1/2 z-[600] -translate-x-1/2">
-                <div className="qs-map-pill flex items-center gap-2">
-                  <span className="text-base">📍</span>
-                  <span className="text-xs font-semibold text-indigo-100">
-                    You are here
-                  </span>
-                  <span className="text-[10px] text-indigo-300/80">
-                    {buyerPos.lat.toFixed(3)}, {buyerPos.lng.toFixed(3)}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Loading overlay */}
-            {!buyerPos && (
-              <div className="absolute inset-0 z-[500] flex flex-col items-center justify-center bg-indigo-950/80 backdrop-blur-sm">
-                <div className="relative h-12 w-12">
-                  <div className="absolute inset-0 animate-ping rounded-full bg-indigo-500/40" />
-                  <div className="absolute inset-2 rounded-full bg-indigo-500 shadow-[0_0_30px_rgba(99,102,241,0.8)]" />
-                </div>
-                <p className="mt-4 text-sm font-semibold text-indigo-200">
-                  Locating you on the map…
-                </p>
-              </div>
-            )}
-
-            <MapContainer
-              center={
-                buyerPos ? [buyerPos.lat, buyerPos.lng] : [20.5937, 78.9629]
-              }
-              zoom={buyerPos ? 14 : 5}
-              style={{ height: "100%", width: "100%" }}
-              scrollWheelZoom
-            >
-              <MapEventTracker
-                mapRef={mapRef}
-                onMapReady={onMapReady}
-                fetchSellersInView={fetchSellersInView}
-              />
-              <MapController
-                center={buyerPos ? [buyerPos.lat, buyerPos.lng] : null}
-                flyTrigger={mapFlyTrigger}
-              />
-              <MapClickHandler onMapClick={handleMapClick} />
-
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
-
-              {buyerPos && (
-                <>
-                  <Circle
-                    center={[buyerPos.lat, buyerPos.lng]}
-                    radius={radiusKm * 1000}
-                    pathOptions={{
-                      color: "#818cf8",
-                      weight: 2,
-                      fillColor: "#6366f1",
-                      fillOpacity: 0.12,
-                    }}
-                  />
-
-                  <Marker
-                    position={[buyerPos.lat, buyerPos.lng]}
-                    icon={USER_ICON}
-                  />
-                </>
-              )}
-            </MapContainer>
-          </div>
+      {/* Results Header: Stats and Map Option Toggle */}
+      <div className="flex flex-wrap items-center justify-between gap-4 border-t border-indigo-500/10 pt-4 mt-2">
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2.5 py-1 font-semibold text-emerald-200">
+            <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+            Live
+          </span>
+          <span className="text-indigo-200/90">
+            <strong className="font-bold text-white">{nearby.length}</strong>{" "}
+            provider{nearby.length !== 1 ? "s" : ""} within{" "}
+            <strong className="font-bold text-white">{radiusKm}km</strong>
+          </span>
+          {search && (
+            <span className="rounded-md bg-indigo-500/15 px-2 py-0.5 text-indigo-200">
+              for "{search}"
+            </span>
+          )}
+          {activeFilterCount > 0 && (
+            <span className="rounded-md bg-indigo-500/20 px-2 py-0.5 font-semibold text-indigo-300">
+              · {activeFilterCount} filter{activeFilterCount > 1 ? "s" : ""} active
+            </span>
+          )}
         </div>
 
+        {/* Map Option Toggle Button on the Top Side */}
+        <button
+          type="button"
+          onClick={() => setShowMap((prev) => !prev)}
+          className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-full border transition-all cursor-pointer ${showMap
+            ? "bg-[#6366f1] border-[#6366f1] text-white shadow-lg shadow-indigo-600/20"
+            : "bg-indigo-950/40 border-indigo-500/20 text-indigo-200 hover:border-indigo-500/50"
+            }`}
+        >
+          <span>🗺️</span>
+          <span>{showMap ? "Hide Map / नक्शा छुपाएं" : "Show Map / नक्शा दिखाएं"}</span>
+        </button>
+      </div>
+
+      {/* =================== MAP + PROVIDER LIST =================== */}
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start mt-2">
+        {/* ============ MAP ============ */}
+        {showMap && (
+          <div className="w-full lg:w-[58%]">
+            <div
+              className="qs-map-frame relative isolate overflow-hidden rounded-3xl"
+              style={{ height: 520 }}
+            >
+              {/* Top-left: providers count */}
+              <div className="pointer-events-none absolute left-3 top-3 z-[600]">
+                <div className="qs-map-pill flex items-center gap-2">
+                  <span className="text-base">🛠️</span>
+                  <div className="leading-tight">
+                    <div className="text-[10px] uppercase tracking-wider text-indigo-200/80">
+                      Providers
+                    </div>
+                    <div className="text-sm font-bold text-white">
+                      {nearby.length} found
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Top-right: live radius badge */}
+              <div className="pointer-events-none absolute right-3 top-3 z-[600]">
+                <div className="qs-map-pill flex items-center gap-2">
+                  <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.9)]" />
+                  <div className="leading-tight">
+                    <div className="text-[10px] uppercase tracking-wider text-indigo-200/80">
+                      Live Radius
+                    </div>
+                    <div className="text-sm font-bold text-white">
+                      {radiusKm} km
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom: user location badge */}
+              {buyerPos && (
+                <div className="pointer-events-none absolute bottom-3 left-1/2 z-[600] -translate-x-1/2">
+                  <div className="qs-map-pill flex items-center gap-2">
+                    <span className="text-base">📍</span>
+                    <span className="text-xs font-semibold text-indigo-100">
+                      You are here
+                    </span>
+                    <span className="text-[10px] text-indigo-300/80">
+                      {buyerPos.lat.toFixed(3)}, {buyerPos.lng.toFixed(3)}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Loading overlay */}
+              {!buyerPos && (
+                <div className="absolute inset-0 z-[500] flex flex-col items-center justify-center bg-indigo-950/80 backdrop-blur-sm">
+                  <div className="relative h-12 w-12">
+                    <div className="absolute inset-0 animate-ping rounded-full bg-indigo-500/40" />
+                    <div className="absolute inset-2 rounded-full bg-indigo-500 shadow-[0_0_30px_rgba(99,102,241,0.8)]" />
+                  </div>
+                  <p className="mt-4 text-sm font-semibold text-indigo-200">
+                    Locating you on the map…
+                  </p>
+                </div>
+              )}
+
+              <MapContainer
+                center={
+                  buyerPos ? [buyerPos.lat, buyerPos.lng] : [20.5937, 78.9629]
+                }
+                zoom={buyerPos ? 14 : 5}
+                style={{ height: "100%", width: "100%" }}
+                scrollWheelZoom
+              >
+                <MapEventTracker
+                  mapRef={mapRef}
+                  onMapReady={onMapReady}
+                  fetchSellersInView={fetchSellersInView}
+                />
+                <MapController
+                  center={buyerPos ? [buyerPos.lat, buyerPos.lng] : null}
+                  flyTrigger={mapFlyTrigger}
+                />
+                <MapClickHandler onMapClick={handleMapClick} />
+
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+
+                {buyerPos && (
+                  <>
+                    <Circle
+                      center={[buyerPos.lat, buyerPos.lng]}
+                      radius={radiusKm * 1000}
+                      pathOptions={{
+                        color: "#818cf8",
+                        weight: 2,
+                        fillColor: "#6366f1",
+                        fillOpacity: 0.12,
+                      }}
+                    />
+
+                    <Marker
+                      position={[buyerPos.lat, buyerPos.lng]}
+                      icon={USER_ICON}
+                    />
+                  </>
+                )}
+              </MapContainer>
+            </div>
+          </div>
+        )}
+
         {/* ============ PROVIDER LIST ============ */}
-        <div className="w-full lg:w-[42%]">
-          <div className="qs-list flex gap-3 overflow-x-auto pb-2 pr-1 snap-x snap-mandatory lg:block lg:h-[520px] lg:space-y-3 lg:overflow-y-auto lg:overflow-x-hidden lg:pb-0 lg:snap-none">
+        <div className={`w-full ${showMap ? "lg:w-[42%]" : "lg:w-full"}`}>
+          <div className={`qs-list pb-2 pr-1 ${showMap
+            ? "flex gap-3 overflow-x-auto snap-x snap-mandatory lg:block lg:h-[520px] lg:space-y-3 lg:overflow-y-auto lg:overflow-x-hidden lg:pb-0 lg:snap-none"
+            : "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:max-h-[520px] lg:overflow-y-auto"
+            }`}>
             {apiError && (
               <div className="qs-glass-panel w-full py-8 px-4 text-center text-red-300 border border-red-500/30">
-                <div className="text-3xl mb-2">⚠️</div>
-                <p className="text-sm font-semibold text-white">
-                  {apiError}
-                </p>
+                {apiError}
               </div>
             )}
-            {apiLoading && nearby.length === 0 && (
+
+            {apiLoading && sellers.length === 0 && (
               <div className="qs-glass-panel w-full py-14 text-center text-indigo-300">
-                <div className="flex justify-center items-center">
-                  <div className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-500/30 border-t-indigo-500" />
-                </div>
-                <p className="mt-4 text-base font-semibold text-white">
-                  Loading providers…
-                </p>
-                <p className="mt-1 text-xs text-indigo-300/80">
-                  Fetching services near you from MySQL database
+                <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-indigo-400 border-t-white" />
+                <p className="mt-2 text-sm font-semibold">Loading local service partners…</p>
+              </div>
+            )}
+
+            {!apiLoading && sellers.length === 0 && (
+              <div className="qs-glass-panel w-full py-14 text-center text-indigo-300">
+                <p className="text-sm font-semibold">No service providers registered on map yet.</p>
+                <p className="text-xs text-indigo-300/60 mt-1">
+                  Be the first to register as a service partner!
                 </p>
               </div>
             )}
 
-            {!apiLoading && nearby.length === 0 && buyerPos && (
+            {!apiLoading && sellers.length > 0 && nearby.length === 0 && (
               <div className="qs-glass-panel w-full py-14 text-center text-indigo-300">
-                <div className="text-5xl">🔍</div>
-                <p className="mt-3 text-base font-semibold text-white">
-                  {activeFilterCount > 0
-                    ? "No providers match your filters"
-                    : "No providers found"}
-                </p>
-                <p className="mt-1 text-xs text-indigo-300/80">
-                  {activeFilterCount > 0
-                    ? "Try adjusting your price, duration, or booking type filters."
-                    : "Try increasing radius or changing service"}
+                <p className="text-sm font-semibold">No services found within {radiusKm}km.</p>
+                <p className="text-xs text-indigo-300/60 mt-1">
+                  Try expanding the distance range or clear your search query.
                 </p>
                 {activeFilterCount > 0 && (
                   <button
@@ -1596,7 +1559,8 @@ export default function NearbyServices({
                   id={`seller-card-${sId}`}
                   onClick={() => handlePremiumSellerClick(seller)}
                   style={{ animationDelay: `${Math.min(idx * 50, 400)}ms` }}
-                  className={`qs-card group w-[290px] flex-shrink-0 cursor-pointer snap-start lg:w-auto ${isSelected ? "qs-card-active" : ""}`}
+                  className={`qs-card group cursor-pointer snap-start ${showMap ? "w-[290px] flex-shrink-0 lg:w-auto" : "w-full"
+                    } ${isSelected ? "qs-card-active" : ""}`}
                 >
                   {/* Header: avatar + name + distance */}
                   <div className="flex items-center gap-3">
@@ -1618,13 +1582,13 @@ export default function NearbyServices({
                     <div className="qs-distance-badge">
                       <span className="text-[10px] opacity-80">
                         {seller?.serviceMode === "online" ||
-                        seller?.serviceMode === "both"
+                          seller?.serviceMode === "both"
                           ? "🌐"
                           : "📍"}
                       </span>
                       <span>
                         {seller?.serviceMode === "online" ||
-                        seller?.serviceMode === "both"
+                          seller?.serviceMode === "both"
                           ? "Works Across India"
                           : `${distanceLabel}km away`}
                       </span>
@@ -1702,71 +1666,6 @@ export default function NearbyServices({
                       🟢 Available Now / तैयार हैं
                     </span>
                   </div>
-
-                  {/* Contact row */}
-                  {/* <div className="mt-3">
-                    {packageRank > 0 ? (
-                      <div className="text-xs">
-                        {revealedContacts.has(sId) ? (
-                          <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-2.5 py-1 font-semibold text-emerald-200">
-                            📞 {seller.phone}
-                          </span>
-                        ) : (
-                          <button
-                            type="button"
-                            className="qs-contact-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              e.preventDefault();
-
-                              if (viewedContacts.current.has(sId)) {
-                                setRevealedContacts((prev) => {
-                                  const next = new Set(prev);
-                                  next.add(sId);
-                                  return next;
-                                });
-                                return;
-                              }
-
-                              if (packageRank <= 0) return;
-
-                              if (
-                                Number(
-                                  localStorage.getItem("sellerWallet")
-                                    ? JSON.parse(
-                                        localStorage.getItem("sellerWallet"),
-                                      ).balance
-                                    : 0,
-                                ) <= 0
-                              ) {
-                                setRevealedContacts((prev) => {
-                                  const next = new Set(prev);
-                                  next.add(sId);
-                                  return next;
-                                });
-                                viewedContacts.current.add(sId);
-                                return;
-                              }
-
-                              viewedContacts.current.add(sId);
-                              deductContactView(sId, seller.service);
-                              setRevealedContacts((prev) => {
-                                const next = new Set(prev);
-                                next.add(sId);
-                                return next;
-                              });
-                            }}
-                          >
-                            📞 Call / फ़ोन नंबर देखें
-                          </button>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="text-xs text-indigo-300/70 italic">
-                        📞 Contact available on booking
-                      </div>
-                    )}
-                  </div> */}
 
                   {/* CTA */}
                   <a

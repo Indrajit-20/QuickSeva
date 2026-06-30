@@ -21,12 +21,13 @@ import {
 import { deductPackagePurchase } from "../../utils/wallet";
 import AddFundsModal from "../../components/AddFundsModal";
 import { useWallet } from "../../context/WalletContext";
+import apiClient from "../../api/axiosConfig";
 
 const plans = [
   {
     id: "basic",
     name: "Basic",
-    price: 10,
+    price: 55,
     days: 7,
     highlight: "Top search placement",
     features: ["Top results", "Contact visible"],
@@ -34,7 +35,7 @@ const plans = [
   {
     id: "standard",
     name: "Standard",
-    price: 20,
+    price: 155,
     days: 15,
     highlight: "Highlighted map pin",
     features: ["Top results", "Contact visible", "Highlighted pin"],
@@ -42,7 +43,7 @@ const plans = [
   {
     id: "pro",
     name: "Pro",
-    price: 30,
+    price: 355,
     days: 30,
     highlight: "Gold badge and support",
     features: [
@@ -218,7 +219,8 @@ export default function SellerPackages() {
   const { user } = useAuth();
   const { walletBalance, refreshWallet } = useWallet();
 
-  const [premium, setPremium] = useState(readPremium);
+  const [premium, setPremium] = useState(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
 
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [toast, setToast] = useState("");
@@ -228,9 +230,33 @@ export default function SellerPackages() {
   const [invoice, setInvoice] = useState(null);
   const [invoicePrinting, setInvoicePrinting] = useState(false);
 
+  const [history, setHistory] = useState([]);
+
   useEffect(() => {
-    cleanupExpiredPremium();
-    setPremium(readPremium());
+    const fetchProfileAndHistory = async () => {
+      try {
+        setLoadingProfile(true);
+        const profileResp = await apiClient.get("/sellers/me/profile");
+        const seller = profileResp.data?.data?.seller || profileResp.data?.seller;
+        if (seller) {
+          setPremium({
+            plan: seller.plan,
+            expiresAt: seller.premium_expires_at,
+            isPremium: seller.is_premium === 1 || seller.is_premium === true
+          });
+        }
+        
+        const historyResp = await apiClient.get("/sellers/packages/history");
+        const histData = historyResp.data?.data || historyResp.data?.history || historyResp.data || [];
+        setHistory(Array.isArray(histData) ? histData : []);
+      } catch (err) {
+        console.error("Failed to fetch seller package info:", err);
+      } finally {
+        setLoadingProfile(false);
+      }
+    };
+
+    fetchProfileAndHistory();
     refreshWallet();
   }, [refreshWallet]);
 
@@ -281,14 +307,6 @@ export default function SellerPackages() {
     };
   }, [activePremium, remainingDays, selectedPlan, walletBalance]);
 
-  const [history, setHistory] = useState(() =>
-    readArray(STORAGE_KEYS.premiumHistory),
-  );
-
-  useEffect(() => {
-    setHistory(readArray(STORAGE_KEYS.premiumHistory));
-  }, [premium]);
-
   const openConfirmation = (plan) => {
     setToast("");
     setSelectedPlan(plan);
@@ -315,7 +333,7 @@ export default function SellerPackages() {
     setInvoicePrinting(false);
     const sellerIdentity = {
       name: user?.name || "User",
-      phone: "8160977394",
+      phone: user?.phone || "8160977394",
       purchasedAt: entry?.purchasedAt,
     };
 
@@ -341,7 +359,7 @@ export default function SellerPackages() {
     setInvoice(null);
   };
 
-  const handleConfirmPurchase = useCallback(() => {
+  const handleConfirmPurchase = useCallback(async () => {
     if (!selectedPlan || !purchasePreview || processing) return;
 
     // If wallet is insufficient, do not allow deduction flow here.
@@ -349,71 +367,59 @@ export default function SellerPackages() {
 
     setProcessing(true);
 
-    const debit = deductPackagePurchase(selectedPlan);
-    if (!debit.ok) {
-      // Wallet state is managed by WalletContext (localStorage).
-      refreshWallet();
-      setToast(
-        debit.reason === "insufficient_balance"
-          ? "Insufficient wallet balance. Please recharge your wallet."
-          : debit.message,
-      );
+    try {
+      const resp = await apiClient.post("/sellers/packages/purchase", {
+        planId: selectedPlan.id,
+      });
+
+      if (resp.data?.success) {
+        const { premium: updatedPremium, walletBalance: newWalletBalance, transaction } = resp.data.data;
+        
+        setPremium({
+          plan: updatedPremium.plan,
+          expiresAt: updatedPremium.premium_expires_at,
+          isPremium: updatedPremium.is_premium === 1 || updatedPremium.is_premium === true
+        });
+
+        // Add history entry
+        const historyEntry = {
+          receiptId: transaction.id || `QS-PKG-${Date.now()}`,
+          plan: updatedPremium.plan,
+          price: selectedPlan.price,
+          purchasedAt: transaction.created_at || new Date().toISOString(),
+          expiresAt: updatedPremium.premium_expires_at,
+          type: purchasePreview.type,
+          walletTransactionId: transaction.id,
+          balanceAfter: newWalletBalance,
+        };
+        setHistory(prev => [historyEntry, ...prev]);
+        
+        await refreshWallet();
+        setSelectedPlan(null);
+        setToast(
+          `✅ ${selectedPlan.name} plan active until ${formatDate(updatedPremium.premium_expires_at)}. Wallet: Rs ${newWalletBalance}`,
+        );
+      } else {
+        setToast(resp.data?.message || "Failed to purchase plan");
+      }
+    } catch (err) {
+      console.error("Error purchasing plan:", err);
+      setToast(err.response?.data?.message || "Error processing package purchase");
+    } finally {
       setProcessing(false);
-      return;
     }
-
-    const premiumData = {
-      plan: selectedPlan.id,
-      price: selectedPlan.price,
-      purchasedAt: new Date().toISOString(),
-      expiresAt: purchasePreview.expiresAt,
-      isPremium: true,
-      type: purchasePreview.type,
-      upgradeFrom:
-        purchasePreview.type === "upgrade" ||
-        purchasePreview.type === "downgrade"
-          ? activePremium?.plan
-          : null,
-      upgradeTo: selectedPlan.id,
-      forfeitedDays: purchasePreview.forfeitedDays,
-      walletTransactionId: debit.transaction.id,
-    };
-
-    localStorage.setItem(STORAGE_KEYS.premium, JSON.stringify(premiumData));
-    updateSellerPremium(user, premiumData);
-
-    const historyEntry = {
-      receiptId: `QS-PKG-${Date.now()}`,
-      plan: selectedPlan.id,
-      price: selectedPlan.price,
-      purchasedAt: premiumData.purchasedAt,
-      expiresAt: premiumData.expiresAt,
-      type: premiumData.type,
-      walletTransactionId: debit.transaction.id,
-      balanceAfter: debit.wallet.balance,
-      forfeitedDays: premiumData.forfeitedDays,
-      upgradeFrom: premiumData.upgradeFrom,
-      upgradeTo: premiumData.upgradeTo,
-    };
-
-    localStorage.setItem(
-      STORAGE_KEYS.premiumHistory,
-      JSON.stringify([historyEntry, ...history]),
-    );
-    setHistory([historyEntry, ...history]);
-
-    refreshWallet();
-    setPremium(premiumData);
-
-    setSelectedPlan(null);
-    setProcessing(false);
-    setToast(
-      `✅ ${selectedPlan.name} plan active until ${formatDate(premiumData.expiresAt)}. Wallet: Rs ${debit.wallet.balance}`,
-    );
-  });
+  }, [selectedPlan, purchasePreview, processing, refreshWallet, activePremium]);
 
   // Flag for UI: whether current wallet balance can cover selected plan price
   const insufficient = purchasePreview?.balanceAfter < 0;
+
+  if (loadingProfile) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-400" />
+      </div>
+    );
+  }
 
   return (
     <div className="animate-fade-in space-y-6">

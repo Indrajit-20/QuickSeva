@@ -236,7 +236,7 @@ export default function ServicesPage() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-gray-50 flex flex-col">
       <section className="border-b border-indigo-100 bg-white py-10">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           {/* minimal header removed (kept filter chips + map section) */}
@@ -246,11 +246,10 @@ export default function ServicesPage() {
             <button
               type="button"
               onClick={() => navigate("/services")}
-              className={`rounded-full border px-4 py-2 text-sm font-bold transition ${
-                !category
+              className={`rounded-full border px-4 py-2 text-sm font-bold transition ${!category
                   ? "border-indigo-600 bg-indigo-600 text-white"
                   : "border-indigo-300 bg-white text-indigo-700 hover:bg-indigo-50"
-              }`}
+                }`}
             >
               All
             </button>
@@ -269,11 +268,10 @@ export default function ServicesPage() {
                       `/services?category=${encodeURIComponent(cat.title)}${query ? `&q=${encodeURIComponent(query)}` : ""}`,
                     )
                   }
-                  className={`rounded-full border px-4 py-2 text-sm font-bold transition ${
-                    active
+                  className={`rounded-full border px-4 py-2 text-sm font-bold transition ${active
                       ? "border-indigo-600 bg-indigo-600 text-white"
                       : "border-indigo-300 bg-white text-indigo-700 hover:bg-indigo-50"
-                  }`}
+                    }`}
                 >
                   {cat.title}
                 </button>
@@ -367,7 +365,7 @@ export default function ServicesPage() {
         )}
       </section>
 
-      <section ref={mapRef} className="bg-indigo-950 py-10">
+      <section ref={mapRef} className="bg-indigo-950 py-10 flex-grow">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-6">
             <h2 className="text-2xl font-bold text-white">View on Map</h2>

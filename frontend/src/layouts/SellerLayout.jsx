@@ -20,7 +20,7 @@ const navItems = [
   { label: "My Services", path: "/seller/services", icon: BriefcaseBusiness },
   { label: "Orders", path: "/seller/orders", icon: ClipboardList },
   { label: "Wallet", path: "/seller/wallet", icon: BriefcaseBusiness },
-  // { label: "Packages", path: "/seller/packages", icon: Crown },
+  { label: "Packages", path: "/seller/packages", icon: Crown },
 ];
 
 const getInitial = (name) => (name?.trim()?.[0] || "S").toUpperCase();
