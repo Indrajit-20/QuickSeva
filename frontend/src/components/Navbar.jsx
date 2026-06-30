@@ -23,89 +23,31 @@ const getInitials = (name) => {
   return (parts[0][0] + parts[1][0]).toUpperCase();
 };
 
-function NavbarSearch({ className = "", onNavigate }) {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isOpen, setIsOpen] = useState(false);
-  const searchRef = useRef(null);
-  const navigate = useNavigate();
+import SearchOverlay from "./SearchOverlay";
 
-  const suggestions = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    if (!query) return [];
-    return ALL_SERVICES.filter((service) =>
-      service.toLowerCase().includes(query),
-    ).slice(0, 5);
-  }, [searchQuery]);
-
-  const goToServices = (value = searchQuery) => {
-    const category = value.trim();
-    if (!category) return;
-    navigate(`/services?category=${encodeURIComponent(category)}`);
-    setIsOpen(false);
-    setSearchQuery("");
-    onNavigate?.();
-  };
-
-  useEffect(() => {
-    const onDocMouseDown = (e) => {
-      if (!searchRef.current) return;
-      if (searchRef.current.contains(e.target)) return;
-      setIsOpen(false);
-    };
-
-    document.addEventListener("mousedown", onDocMouseDown);
-    return () => document.removeEventListener("mousedown", onDocMouseDown);
-  }, []);
-
+function NavbarSearch({ className = "", onTriggerSearch }) {
   return (
-    <div ref={searchRef} className={`relative ${className}`}>
+    <div className={`relative ${className}`}>
       <div className="relative w-full">
         <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-indigo-200">
           🔍
         </span>
         <input
-          value={searchQuery}
-          onChange={(e) => {
-            setSearchQuery(e.target.value);
-            setIsOpen(true);
-          }}
-          onFocus={() => setIsOpen(true)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") goToServices();
-          }}
-          placeholder="Search services (e.g. Plumber, AC Repair...)"
-          className="h-9 w-full rounded-full border border-indigo-500/30 bg-indigo-950/40 py-2 pl-9 pr-10 text-sm text-white placeholder-indigo-300 focus:outline-none"
+          readOnly
+          onClick={onTriggerSearch}
+          onFocus={onTriggerSearch}
+          placeholder="Search services e.g. Plumber, AC"
+          className="h-9 w-full rounded-full border border-indigo-500/30 bg-indigo-950/40 py-2 pl-9 pr-10 text-sm text-white placeholder-indigo-300 focus:outline-none cursor-pointer"
         />
         <button
           type="button"
-          onClick={() => goToServices()}
-          className="absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-xs text-indigo-100 hover:bg-indigo-800/60"
+          onClick={onTriggerSearch}
+          className="absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-xs text-indigo-100 hover:bg-indigo-800/60 cursor-pointer"
           aria-label="Search services"
         >
           ↵
         </button>
       </div>
-
-      {isOpen && suggestions.length > 0 && (
-        <div
-          className="absolute left-0 right-0 top-full z-[1100] mt-2 overflow-hidden rounded-xl shadow-xl"
-          style={{
-            background: "#1e1b4b",
-            border: "1px solid rgba(99,102,241,0.3)",
-          }}
-        >
-          {suggestions.map((service) => (
-            <button
-              key={service}
-              type="button"
-              onClick={() => goToServices(service)}
-              className="block w-full px-3 py-2 text-left text-sm text-white hover:bg-indigo-800/60"
-            >
-              {service}
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
@@ -113,6 +55,7 @@ function NavbarSearch({ className = "", onNavigate }) {
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isPartnerOpen, setIsPartnerOpen] = useState(false);
+  const [isSearchOverlayOpen, setIsSearchOverlayOpen] = useState(false);
   const partnerRef = useRef(null);
   const { user, isAuthenticated, logout, activeRole } = useAuth();
   const { address, loading } = useNearbyLocation();
@@ -143,6 +86,14 @@ const Navbar = () => {
     return () => document.removeEventListener("mousedown", onDocMouseDown);
   }, [isPartnerOpen]);
 
+  useEffect(() => {
+    const handleOpenGlobalSearch = () => {
+      setIsSearchOverlayOpen(true);
+    };
+    window.addEventListener("open-global-search", handleOpenGlobalSearch);
+    return () => window.removeEventListener("open-global-search", handleOpenGlobalSearch);
+  }, []);
+
   return (
     <nav className="sticky top-0 z-50 bg-indigo-950 shadow-lg border-b border-indigo-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -161,7 +112,7 @@ const Navbar = () => {
             </span>
           </div>
 
-          <NavbarSearch className="hidden sm:flex w-[280px]" />
+          <NavbarSearch className="hidden sm:flex w-[280px]" onTriggerSearch={() => setIsSearchOverlayOpen(true)} />
 
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center space-x-6">
@@ -306,7 +257,10 @@ const Navbar = () => {
           <div className="md:hidden py-4 space-y-3 animate-fade-in-down">
             <NavbarSearch
               className="flex w-full"
-              onNavigate={() => setIsMenuOpen(false)}
+              onTriggerSearch={() => {
+                setIsMenuOpen(false);
+                setIsSearchOverlayOpen(true);
+              }}
             />
 
             <Link
@@ -386,6 +340,7 @@ const Navbar = () => {
           </div>
         )}
       </div>
+      <SearchOverlay isOpen={isSearchOverlayOpen} onClose={() => setIsSearchOverlayOpen(false)} />
     </nav>
   );
 };

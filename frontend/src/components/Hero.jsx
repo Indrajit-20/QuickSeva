@@ -1,158 +1,79 @@
-import { useRef } from "react";
-import { useNavigate } from "react-router-dom";
-import {
-  Wind,
-  Droplets,
-  Sparkles,
-  Zap,
-  Paintbrush,
-  Hammer,
-  Bug,
-  Wrench,
-} from "lucide-react";
-
-const services = [
-  {
-    name: "AC Repair",
-    icon: Wind,
-    category: "AC Repair",
-  },
-  {
-    name: "Plumbing",
-    icon: Droplets,
-    category: "Plumbing",
-  },
-  {
-    name: "Cleaning",
-    icon: Sparkles,
-    category: "Cleaning Essentials",
-  },
-  {
-    name: "Electrician",
-    icon: Zap,
-    category: "Electrician",
-  },
-  {
-    name: "Home Painting",
-    icon: Paintbrush,
-    category: "Home Painting",
-  },
-  {
-    name: "Carpentry",
-    icon: Hammer,
-    category: "Carpentry",
-  },
-  {
-    name: "Pest Control",
-    icon: Bug,
-    category: "Pest Control",
-  },
-  {
-    name: "Appliance Repair",
-    icon: Wrench,
-    category: "Appliance Repair & Service",
-  },
-];
+import React from "react";
+import { Search } from "lucide-react";
 
 export default function Hero() {
-  return <ServiceIconStrip />;
-}
-
-function ServiceIconStrip() {
-  const navigate = useNavigate();
-  const scrollRef = useRef(null);
-
-  const scroll = (direction) => {
-    if (!scrollRef.current) return;
-
-    const scrollAmount = 200;
-    const newScrollLeft =
-      scrollRef.current.scrollLeft +
-      (direction === "left" ? -scrollAmount : scrollAmount);
-
-    scrollRef.current.scrollTo({
-      left: newScrollLeft,
-      behavior: "smooth",
-    });
+  const triggerSearch = () => {
+    window.dispatchEvent(new CustomEvent("open-global-search"));
   };
 
   return (
-    <div className="bg-[#1a2056] border-b border-white/10 w-full flex items-center px-1 sm:px-2 gap-1 overflow-x-hidden">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full max-w-full overflow-hidden">
-        <div className="relative flex items-center w-full max-w-full overflow-hidden">
-          {/* Left Arrow - Hidden on mobile */}
+    <section className="relative overflow-hidden bg-gradient-to-b from-[#15123a] to-[#0f0d2b] py-20 sm:py-28 border-b border-indigo-950">
+      {/* Background Decorative Glow Elements */}
+      <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-72 h-72 rounded-full bg-[#4f46e5]/10 blur-[80px] pointer-events-none" />
+      <div className="absolute top-1/3 right-1/4 -translate-y-1/2 w-80 h-80 rounded-full bg-[#1fbf75]/5 blur-[100px] pointer-events-none" />
+
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
+        {/* Welcome Tag */}
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold tracking-widest uppercase bg-[#4f46e5]/10 text-indigo-300 border border-[#4f46e5]/25 mb-5 select-none animate-pulse">
+          ⚡ On-Demand Home Services
+        </span>
+
+        {/* Hero Title */}
+        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-none mb-6">
+          Find the Best Local Services,{" "}
+          <span className="bg-gradient-to-r from-indigo-300 via-emerald-400 to-indigo-200 bg-clip-text text-transparent">
+            Instantly
+          </span>
+        </h1>
+
+        {/* Subtitle */}
+        <p className="text-base sm:text-lg lg:text-xl text-slate-300 max-w-2xl mx-auto leading-relaxed mb-8">
+          Connect with trusted, verified local professionals for plumbing, electrical, cleaning, painting, and appliance repairs in your neighborhood.
+        </p>
+
+        {/* Primary Search Container Trigger */}
+        <div
+          onClick={triggerSearch}
+          className="max-w-2xl mx-auto w-full bg-[#1b1850]/40 backdrop-blur-md border border-[#4f46e5]/30 hover:border-[#4f46e5]/75 hover:shadow-2xl hover:shadow-[#4f46e5]/10 hover:-translate-y-0.5 rounded-full p-1.5 pl-5 sm:pl-6 flex items-center gap-3 cursor-pointer transition-all duration-300 group"
+        >
+          <Search className="w-5 h-5 text-indigo-300 group-hover:text-white transition-colors flex-shrink-0" />
+          <span className="text-sm sm:text-base text-indigo-200/50 text-left select-none truncate">
+            Search for services (e.g. Plumber, AC Repair, Electrician...)
+          </span>
           <button
             type="button"
-            onClick={() => scroll("left")}
-            className="hidden sm:flex items-center justify-center w-10 h-12 bg-white border border-gray-200 rounded-r-lg hover:bg-gray-50 hover:text-emerald-600 transition flex-shrink-0 z-10"
-            aria-label="Scroll left"
+            className="hidden sm:inline-flex items-center justify-center bg-[#1fbf75] hover:bg-[#1bc678] text-[#15123a] font-bold text-sm px-6 py-3 rounded-full shadow-lg transition-colors cursor-pointer ml-auto"
           >
-            <span className="text-xl font-bold">‹</span>
-          </button>
-
-          {/* Dedicated horizontal scrolling container (mobile swipe supported) */}
-          <div
-            className="w-full max-w-full overflow-hidden"
-            /* keeps arrows from causing horizontal overflow */
-          >
-            <div
-              ref={scrollRef}
-              className="flex gap-1 sm:gap-2 overflow-x-auto overflow-y-hidden whitespace-nowrap flex-nowrap scrollbar-hide py-2 px-1 touch-pan-x"
-              style={{
-                scrollbarWidth: "none",
-                msOverflowStyle: "none",
-                WebkitOverflowScrolling: "touch",
-                touchAction: "pan-x",
-              }}
-            >
-              {services.map(({ name, icon: Icon, category }) => (
-                <button
-                  type="button"
-                  key={name}
-                  onClick={() =>
-                    navigate(`/services?category=${encodeURIComponent(category)}`)
-                  }
-                  className="flex flex-col items-center gap-2 rounded-xl cursor-pointer flex-shrink-0 w-[84px] sm:w-[96px] py-3 hover:bg-white/5 transition-colors"
-                >
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center flex-shrink-0">
-                    <Icon
-                      className="w-[22px] h-[22px] sm:w-[24px] sm:h-[24px] text-green-400 flex-shrink-0"
-                      strokeWidth={1.5}
-                    />
-                  </div>
-
-                  <span className="text-[11px] sm:text-[12px] text-slate-400 text-center leading-tight whitespace-nowrap">
-                    {name}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Right Arrow - Hidden on mobile */}
-          <button
-            type="button"
-            onClick={() => scroll("right")}
-            className="hidden sm:flex items-center justify-center w-10 h-12 bg-white border border-gray-200 rounded-l-lg hover:bg-gray-50 hover:text-emerald-600 transition flex-shrink-0 z-10"
-            aria-label="Scroll right"
-          >
-            <span className="text-xl font-bold">›</span>
+            Search
           </button>
         </div>
-      </div>
 
-      {/* Scrollbar hiding without breaking swipe */}
-      <style>{`
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-        }
-        .scrollbar-hide {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-      `}</style>
-    </div>
+        {/* Mobile Search Button Fallback */}
+        <div className="mt-4 sm:hidden flex justify-center">
+          <button
+            type="button"
+            onClick={triggerSearch}
+            className="w-full max-w-[200px] py-3 bg-[#1fbf75] hover:bg-[#1bc678] text-[#15123a] font-bold text-sm rounded-full shadow-lg transition-colors cursor-pointer"
+          >
+            Search Services
+          </button>
+        </div>
+
+        {/* Popular Tags Indicator */}
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-2.5 text-xs text-slate-400 select-none">
+          <span className="font-semibold uppercase tracking-wider text-[10px] text-indigo-300/80">Try searching:</span>
+          {["Plumber", "Electrician", "AC Repair", "Cleaning"].map((tag) => (
+            <button
+              key={tag}
+              type="button"
+              onClick={triggerSearch}
+              className="px-3 py-1 bg-[#1b1850]/30 hover:bg-[#4f46e5]/25 border border-indigo-900 rounded-full text-indigo-200 hover:text-white transition-all cursor-pointer"
+            >
+              {tag}
+            </button>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
-
-

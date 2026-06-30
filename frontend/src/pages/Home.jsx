@@ -10,13 +10,17 @@ const Home = () => {
       <Hero />
 
       {/* Services Near You */}
-      <section className="bg-indigo-950 py-16">
+      <section className="bg-indigo-950 py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mb-8">
-            <h2 className="text-3xl font-bold text-white">Services Near You</h2>
-            <p className="text-indigo-200 mt-2">
-              Showing verified providers within 5km of your location — search by
-              area or service type
+          <div className="flex flex-col items-center text-center mb-12">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold tracking-widest uppercase bg-[#1fbf75]/10 text-[#1fbf75] border border-[#1fbf75]/25 mb-3 select-none">
+              📍 Location Radar
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+              Services Near You
+            </h2>
+            <p className="text-indigo-200 mt-3 max-w-2xl text-sm sm:text-base leading-relaxed">
+              Showing verified providers within 5km of your location — search by area, pincode, or service type
             </p>
           </div>
           <NearbyServices />
