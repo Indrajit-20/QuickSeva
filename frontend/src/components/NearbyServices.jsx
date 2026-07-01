@@ -1,5 +1,5 @@
 // QuickSeva - Map Performance Feature
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { Component, useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { API_BASE_URL } from "../config/api";
 
@@ -18,7 +18,13 @@ import {
   Bug,
   Palette,
   Tv,
-  Wrench
+  Wrench,
+  Crosshair,
+  X,
+  ArrowUpDown,
+  Clock3,
+  BadgeCheck,
+  Star,
 } from "lucide-react";
 
 import {
@@ -41,6 +47,7 @@ import {
 } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-markercluster";
 import { ALL_SERVICE_SUGGESTIONS } from "../data/servicesData";
+import NoProvidersLeadForm from "./NoProvidersLeadForm";
 
 // Fix Leaflet marker icon URLs in this map component
 delete L.Icon.Default.prototype._getIconUrl;
@@ -109,6 +116,56 @@ const USER_ICON = L.divIcon({
   html: USER_PIN_HTML,
   iconSize: [24, 24],
 });
+
+const normalizeServiceName = (value) =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+
+const sellerMatchesCategory = (seller, selectedCategory) => {
+  const normalized = normalizeServiceName(selectedCategory);
+  if (!normalized) return true;
+
+  return [
+    seller?.category,
+    seller?.categoryName,
+    seller?.service,
+    seller?.serviceName,
+  ].some((value) => normalizeServiceName(value) === normalized);
+};
+
+class MapErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, info) {
+    console.error("QuickSeva map crashed:", error, info);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex h-full min-h-[320px] items-center justify-center rounded-3xl border border-red-400/25 bg-red-500/10 p-6 text-center">
+          <div>
+            <p className="text-sm font-bold text-red-100">Map could not load safely.</p>
+            <p className="mt-1 text-xs text-red-200/75">
+              The provider list and lead form are still available.
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 
 function getServiceIcon(name) {
   const lowered = name.toLowerCase();
@@ -228,25 +285,35 @@ function MapClickHandler({ onMapClick }) {
 }
 
 // QuickSeva - Map Performance Feature
-function MapEventTracker({ mapRef, onMapReady, fetchSellersInView }) {
+function MapEventTracker({ mapRef, onMapReady, fetchSellersInView, onMapAreaChanged }) {
   const map = useMap();
+  const initializedRef = useRef(false);
 
   useEffect(() => {
     if (!map) return;
     mapRef.current = map;
-    onMapReady(map);
+    if (!initializedRef.current) {
+      initializedRef.current = true;
+      onMapReady(map);
+    }
 
-    const onMoveEnd = () => fetchSellersInView(map);
-    const onZoomEnd = () => fetchSellersInView(map);
+    const syncMapArea = () => {
+      const center = map.getCenter();
+      onMapAreaChanged?.({ lat: center.lat, lng: center.lng });
+      fetchSellersInView(map);
+    };
 
-    map.on("moveend", onMoveEnd);
-    map.on("zoomend", onZoomEnd);
+    map.on("moveend", syncMapArea);
+    map.on("zoomend", syncMapArea);
 
     return () => {
-      map.off("moveend", onMoveEnd);
-      map.off("zoomend", onZoomEnd);
+      map.off("moveend", syncMapArea);
+      map.off("zoomend", syncMapArea);
+      if (mapRef.current === map) {
+        mapRef.current = null;
+      }
     };
-  }, [map, mapRef, onMapReady, fetchSellersInView]);
+  }, [map, mapRef, onMapReady, fetchSellersInView, onMapAreaChanged]);
 
   return null;
 }
@@ -415,6 +482,7 @@ export default function NearbyServices({
   const [locationResults, setLocationResults] = useState([]);
   const [locationLoading, setLocationLoading] = useState(false);
   const [geoLoading, setGeoLoading] = useState(false);
+  const [mapToggleLocked, setMapToggleLocked] = useState(false);
 
   // QuickSeva - Map Performance Feature
   const mapRef = useRef(null);
@@ -454,6 +522,12 @@ export default function NearbyServices({
   const [filterDuration, setFilterDuration] = useState("all");
   const [filterBooking, setFilterBooking] = useState("all");
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [quickFilters, setQuickFilters] = useState({
+    nearest: false,
+    openNow: false,
+    verified: false,
+    rating45: false,
+  });
 
   const PRICE_OPTIONS = [
     { value: "all", label: "All" },
@@ -508,13 +582,31 @@ export default function NearbyServices({
   const activeFilterCount =
     (filterPrice !== "all" ? 1 : 0) +
     (filterDuration !== "all" ? 1 : 0) +
-    (filterBooking !== "all" ? 1 : 0);
+    (filterBooking !== "all" ? 1 : 0) +
+    Object.values(quickFilters).filter(Boolean).length;
 
   const clearAllFilters = () => {
     setFilterPrice("all");
     setFilterDuration("all");
     setFilterBooking("all");
+    setQuickFilters({
+      nearest: false,
+      openNow: false,
+      verified: false,
+      rating45: false,
+    });
   };
+
+  const toggleQuickFilter = (key) => {
+    setQuickFilters((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const quickFilterItems = [
+    { key: "nearest", label: "Sort: Nearest", Icon: ArrowUpDown },
+    { key: "openNow", label: "Open now", Icon: Clock3 },
+    { key: "verified", label: "Verified", Icon: BadgeCheck },
+    { key: "rating45", label: "4.5+", Icon: Star },
+  ];
 
   const clickedSellers = useRef(new Set());
 
@@ -551,6 +643,7 @@ export default function NearbyServices({
   const locationSearchRef = useRef(null);
   const portalDropdownRef = useRef(null);
   const searchCache = useRef({});
+  const suppressNextLocationSearchRef = useRef(false);
 
   const nominatimSearch = async (q) => {
     const res = await fetch(
@@ -603,6 +696,7 @@ export default function NearbyServices({
         return;
       }
       setLocationResults(results);
+      setLocationNotFoundMsg("");
     } catch {
       setLocationResults([]);
       setLocationNotFoundMsg(
@@ -635,7 +729,10 @@ export default function NearbyServices({
 
   // Position the portal dropdown and close it when user scrolls
   useEffect(() => {
-    if (locationResults.length === 0) return;
+    if (locationResults.length === 0) {
+      setDropdownStyle(null);
+      return;
+    }
 
     const updatePos = () => {
       if (!locationSearchRef.current) return;
@@ -647,7 +744,7 @@ export default function NearbyServices({
         top,
         left: rect.left,
         width: rect.width,
-        zIndex: 45, // below navbar (z-50 = 50) but above page content
+        zIndex: 1000,
       });
     };
 
@@ -670,6 +767,10 @@ export default function NearbyServices({
   useEffect(() => {
     const timer = setTimeout(() => {
       if (locationMode !== "area") return;
+      if (suppressNextLocationSearchRef.current) {
+        suppressNextLocationSearchRef.current = false;
+        return;
+      }
       if (locationQuery.trim().length >= 3) {
         searchLocation(locationQuery);
       } else {
@@ -746,6 +847,21 @@ export default function NearbyServices({
     }
   }, [fetchSellersInView, toast]);
 
+  const selectedCategory = useMemo(() => {
+    const query = search.trim();
+    if (!query) return "";
+    const exact = ALL_SERVICE_SUGGESTIONS.find(
+      (item) => normalizeServiceName(item) === normalizeServiceName(query),
+    );
+    return exact || query;
+  }, [search]);
+
+  const targetPincode = useMemo(() => {
+    if (pincode.trim()) return pincode.trim();
+    const match = locationQuery.match(/\b\d{6}\b/);
+    return match?.[0] || "";
+  }, [locationQuery, pincode]);
+
   const clusterGroupRef = useRef(null);
 
   useEffect(() => {
@@ -756,7 +872,11 @@ export default function NearbyServices({
     }
 
     const markerClusterGroup = L.markerClusterGroup();
-    sellers.forEach((seller) => {
+    const markerSellers = selectedCategory
+      ? sellers.filter((seller) => sellerMatchesCategory(seller, selectedCategory))
+      : sellers;
+
+    markerSellers.forEach((seller) => {
       const lat = parseFloat(seller.lat);
       const lng = parseFloat(seller.lng);
       if (isNaN(lat) || isNaN(lng)) return;
@@ -792,7 +912,7 @@ export default function NearbyServices({
 
     clusterGroupRef.current = markerClusterGroup;
     mapRef.current.addLayer(markerClusterGroup);
-  }, [sellers, mapInitialized]);
+  }, [sellers, mapInitialized, selectedCategory]);
 
   const nearby = useMemo(() => {
     if (!buyerPos) return [];
@@ -817,10 +937,9 @@ export default function NearbyServices({
       };
     });
 
-    const normalizedSearch = search.trim().toLowerCase();
-    const filteredBySearch = normalizedSearch
-      ? withDistance.filter((s) =>
-        (s?.service || "").toLowerCase().includes(normalizedSearch),
+    const filteredBySearch = selectedCategory
+      ? withDistance.filter((seller) =>
+        sellerMatchesCategory(seller, selectedCategory),
       )
       : withDistance;
 
@@ -903,7 +1022,25 @@ export default function NearbyServices({
           return true;
         });
 
-    return filteredByBooking.sort((a, b) => {
+    const filteredByQuick = filteredByBooking.filter((s) => {
+      const rating = Number(s?.rating || s?.avg_rating || 0);
+      const isOpen =
+        Boolean(s?.is_available) ||
+        Boolean(s?.isAvailable) ||
+        Boolean(s?.instantService);
+      const isVerified =
+        Boolean(s?.is_verified) ||
+        Boolean(s?.isVerified) ||
+        Boolean(s?.verified);
+
+      if (quickFilters.openNow && !isOpen) return false;
+      if (quickFilters.verified && !isVerified) return false;
+      if (quickFilters.rating45 && rating < 4.5) return false;
+      return true;
+    });
+
+    return filteredByQuick.sort((a, b) => {
+      if (quickFilters.nearest) return a.distanceKm - b.distanceKm;
       const rankA = getSellerPackageRank(a);
       const rankB = getSellerPackageRank(b);
       if (rankA !== rankB) return rankB - rankA;
@@ -913,6 +1050,7 @@ export default function NearbyServices({
     buyerPos,
     sellers,
     search,
+    selectedCategory,
     radiusKm,
     filterServiceMode,
     filterAvailability,
@@ -920,6 +1058,7 @@ export default function NearbyServices({
     filterPrice,
     filterDuration,
     filterBooking,
+    quickFilters,
   ]);
 
   const handleLocationSearchSubmit = async (e) => {
@@ -927,23 +1066,28 @@ export default function NearbyServices({
     const val = locationQuery.trim();
     if (!val) return;
     if (/^\d{6}$/.test(val)) {
+      suppressNextLocationSearchRef.current = true;
       setPincode(val);
       setPincodeLoading(true);
       setPincodeError("");
+      setLocationNotFoundMsg("");
       try {
         const results = await nominatimSearch(`${val}, India`);
         if (results.length > 0) {
           const r = results[0];
           setBuyerPos({ lat: parseFloat(r.lat), lng: parseFloat(r.lon) });
           setMapFlyTrigger((prev) => prev + 1);
+          suppressNextLocationSearchRef.current = true;
           setLocationQuery(r.display_name.split(",")[0] + " - " + val);
           setLocationResults([]);
           setLocationNotFoundMsg("");
           setGeoError("");
         } else {
+          suppressNextLocationSearchRef.current = false;
           setPincodeError("Pincode not found. Try a nearby pincode.");
         }
       } catch {
+        suppressNextLocationSearchRef.current = false;
         setPincodeError("Search failed. Try again.");
       } finally {
         setPincodeLoading(false);
@@ -954,6 +1098,7 @@ export default function NearbyServices({
   };
 
   const handleResultClick = (result) => {
+    suppressNextLocationSearchRef.current = true;
     setBuyerPos({
       lat: parseFloat(result.lat),
       lng: parseFloat(result.lon),
@@ -973,22 +1118,27 @@ export default function NearbyServices({
       setPincodeError("Enter a valid 6-digit pincode");
       return;
     }
+    suppressNextLocationSearchRef.current = true;
     setPincodeLoading(true);
     setPincodeError("");
+    setLocationNotFoundMsg("");
     try {
       const results = await nominatimSearch(`${trimmed}, India`);
       if (results.length > 0) {
         const r = results[0];
         setBuyerPos({ lat: parseFloat(r.lat), lng: parseFloat(r.lon) });
         setMapFlyTrigger((prev) => prev + 1);
+        suppressNextLocationSearchRef.current = true;
         setLocationQuery(r.display_name.split(",")[0] + " - " + trimmed);
         setLocationResults([]);
         setLocationNotFoundMsg("");
         setGeoError("");
       } else {
+        suppressNextLocationSearchRef.current = false;
         setPincodeError("Pincode not found. Try a nearby pincode.");
       }
     } catch {
+      suppressNextLocationSearchRef.current = false;
       setPincodeError("Search failed. Try again.");
     } finally {
       setPincodeLoading(false);
@@ -1008,6 +1158,23 @@ export default function NearbyServices({
     setGeoError("");
   };
 
+  const handleMapAreaChanged = useCallback((nextCenter) => {
+    if (!nextCenter) return;
+    setBuyerPos((prev) => {
+      if (
+        prev &&
+        Math.abs(prev.lat - nextCenter.lat) < 0.00001 &&
+        Math.abs(prev.lng - nextCenter.lng) < 0.00001
+      ) {
+        return prev;
+      }
+      return nextCenter;
+    });
+    setLocationResults([]);
+    setLocationNotFoundMsg("");
+    setGeoError("");
+  }, []);
+
   const handleUseMyLocation = () => {
     if (gpsPosRef.current) {
       setBuyerPos(gpsPosRef.current);
@@ -1015,6 +1182,7 @@ export default function NearbyServices({
       setLocationResults([]);
       setLocationNotFoundMsg("");
       setPincodeResults([]);
+      setPincode("");
       setPincodeError("");
       setGeoError("");
       return;
@@ -1031,6 +1199,11 @@ export default function NearbyServices({
         gpsPosRef.current = nextPos;
         setBuyerPos(nextPos);
         setMapFlyTrigger((prev) => prev + 1);
+        setLocationResults([]);
+        setLocationNotFoundMsg("");
+        setPincodeResults([]);
+        setPincode("");
+        setPincodeError("");
         setGeoError("");
         setGeoLoading(false);
       },
@@ -1041,6 +1214,43 @@ export default function NearbyServices({
       { enableHighAccuracy: true, timeout: 10000 },
     );
   };
+
+  const handleMapToggle = useCallback(() => {
+    if (mapToggleLocked) return;
+    setMapToggleLocked(true);
+    setShowMap((prev) => !prev);
+    window.setTimeout(() => setMapToggleLocked(false), 300);
+  }, [mapToggleLocked]);
+
+  useEffect(() => {
+    if (!showMap || !mapRef.current) return;
+    const timer = window.setTimeout(() => {
+      mapRef.current?.invalidateSize?.();
+    }, 60);
+    return () => window.clearTimeout(timer);
+  }, [showMap]);
+
+  const clearLocationInput = () => {
+    suppressNextLocationSearchRef.current = true;
+    setLocationQuery("");
+    setLocationResults([]);
+    setLocationNotFoundMsg("");
+    setGeoError("");
+    setDropdownStyle(null);
+  };
+
+  const clearPincodeInput = () => {
+    setPincode("");
+    setPincodeResults([]);
+    setPincodeError("");
+    setLocationNotFoundMsg("");
+    setGeoError("");
+  };
+
+  const showLocationDropdown =
+    locationMode === "area" &&
+    dropdownStyle &&
+    locationResults.length > 0;
 
   // =================== STEP-BY-STEP SEARCH & FINDER PANEL ===================
   return (
@@ -1058,6 +1268,34 @@ export default function NearbyServices({
           </button>
         </div>
       )}
+
+      {showLocationDropdown &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            ref={portalDropdownRef}
+            style={dropdownStyle}
+            className="max-h-72 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-1.5 text-slate-800 shadow-2xl scrollbar-none"
+          >
+            {locationResults.map((result) => (
+              <button
+                key={`${result.place_id}-${result.lat}-${result.lon}`}
+                type="button"
+                onClick={() => handleResultClick(result)}
+                className="block w-full rounded-xl px-4 py-3 text-left text-sm transition-colors hover:bg-indigo-50 hover:text-indigo-700"
+              >
+                <span className="block font-semibold text-slate-900">
+                  {(result.display_name || "").split(",")[0]}
+                </span>
+                <span className="mt-0.5 block text-xs leading-snug text-slate-500">
+                  {result.display_name}
+                </span>
+              </button>
+            ))}
+
+          </div>,
+          document.body,
+        )}
 
       <div className="relative p-0">
         <div className="relative z-10 flex flex-col gap-5">
@@ -1116,32 +1354,50 @@ export default function NearbyServices({
           <form
             ref={locationSearchRef}
             onSubmit={handleLocationSearchSubmit}
-            className="relative"
+            className="relative isolate z-[70]"
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Location Input */}
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold tracking-wider text-indigo-200">
+              <div className="relative z-[2]">
+                <label className="relative z-[2] mb-1.5 block text-xs font-semibold tracking-wider text-indigo-200">
                   Location (Area / Landmark) / जगह
                 </label>
-                <div className="relative">
+                <div className="relative z-[2]">
                   <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-indigo-300/70">
                     📍
                   </span>
                   <input
                     value={locationQuery}
                     onChange={(e) => setLocationQuery(e.target.value)}
+                    onFocus={() => {
+                      if (locationQuery.trim().length >= 3) {
+                        searchLocation(locationQuery);
+                      }
+                    }}
                     autoComplete="off"
-                    className="w-full rounded-full border border-indigo-500/30 bg-transparent py-3 pl-10 pr-24 text-sm font-medium text-white placeholder-indigo-300/50 transition-all duration-300 focus:border-indigo-400 focus:outline-none focus:ring-4 focus:ring-indigo-500/10"
+                    className="w-full rounded-full border border-indigo-500/30 bg-transparent py-3 pl-10 pr-32 text-sm font-medium text-white placeholder-indigo-300/50 transition-all duration-300 focus:border-indigo-400 focus:outline-none focus:ring-4 focus:ring-indigo-500/10"
                     placeholder="Search Area or Landmark (e.g. Nikol)"
                   />
                   <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+                    {locationQuery && (
+                      <button
+                        type="button"
+                        onClick={clearLocationInput}
+                        className="inline-flex h-7 w-7 items-center justify-center rounded-full text-indigo-300 transition hover:bg-white/10 hover:text-white"
+                        aria-label="Clear location"
+                        title="Clear location"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={handleUseMyLocation}
-                      className={`p-1.5 rounded-full text-indigo-300 hover:text-white hover:bg-white/10 transition cursor-pointer ${geoLoading ? "qs-pulse" : ""}`}
-                      title="Find Me"
+                      className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-[0px] text-emerald-300 transition hover:bg-emerald-400/10 hover:text-emerald-100 cursor-pointer ${geoLoading ? "qs-pulse" : ""}`}
+                      aria-label="Use current location"
+                      title="Use current location"
                     >
+                      <Crosshair className="h-4 w-4" />
                       🎯
                     </button>
                     <button
@@ -1152,6 +1408,14 @@ export default function NearbyServices({
                     </button>
                   </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={handleUseMyLocation}
+                  className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-300 transition hover:text-emerald-100"
+                >
+                  <Crosshair className="h-3.5 w-3.5" />
+                  Use Current Location
+                </button>
               </div>
 
               {/* Pincode Input */}
@@ -1169,13 +1433,25 @@ export default function NearbyServices({
                       const val = e.target.value.replace(/\D/g, "").slice(0, 6);
                       setPincode(val);
                       setPincodeError("");
+                      setLocationNotFoundMsg("");
                     }}
                     onKeyDown={(e) => e.key === "Enter" && handlePincodeSearch()}
-                    className="w-full rounded-full border border-indigo-500/30 bg-transparent py-3 pl-10 pr-20 text-sm font-medium text-white placeholder-indigo-300/50 transition-all duration-300 focus:border-indigo-400 focus:outline-none focus:ring-4 focus:ring-indigo-500/10"
+                    className="w-full rounded-full border border-indigo-500/30 bg-transparent py-3 pl-10 pr-24 text-sm font-medium text-white placeholder-indigo-300/50 transition-all duration-300 focus:border-indigo-400 focus:outline-none focus:ring-4 focus:ring-indigo-500/10"
                     placeholder="Enter 6-digit Pincode (e.g. 382350)"
                     maxLength={6}
                   />
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+                    {pincode && (
+                      <button
+                        type="button"
+                        onClick={clearPincodeInput}
+                        className="inline-flex h-7 w-7 items-center justify-center rounded-full text-indigo-300 transition hover:bg-white/10 hover:text-white"
+                        aria-label="Clear pincode"
+                        title="Clear pincode"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={handlePincodeSearch}
@@ -1190,22 +1466,22 @@ export default function NearbyServices({
             </div>
 
             {locationNotFoundMsg && (
-              <p className="mt-2 text-sm text-indigo-200/90">
+              <div className="mt-3 rounded-xl border border-amber-400/25 bg-amber-500/10 px-3 py-2 text-sm font-medium text-amber-100">
                 ⚠ {locationNotFoundMsg}
-              </p>
+              </div>
             )}
 
             {pincodeError && (
-              <p className="mt-2 text-sm font-medium text-red-300">
+              <div className="mt-3 rounded-xl border border-red-400/25 bg-red-500/10 px-3 py-2 text-sm font-medium text-red-200">
                 ⚠ {pincodeError}
-              </p>
+              </div>
             )}
           </form>
 
           {/* STEP 3: Range Slider and Filters */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-[#110e30]/40 border border-indigo-500/10 rounded-2xl p-4 gap-4">
+          <div className="flex flex-row flex-wrap items-center justify-between gap-4 rounded-2xl border border-indigo-500/10 bg-[#110e30]/40 p-4">
             {/* Range Slider */}
-            <div className="flex-1 max-w-md">
+            <div className="min-w-[240px] flex-1 max-w-md">
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-xs font-bold text-indigo-200 uppercase tracking-wider">
                   Distance Range
@@ -1231,8 +1507,31 @@ export default function NearbyServices({
               </div>
             </div>
 
+            {/* Quick Filters */}
+            <div className="order-3 flex w-full flex-wrap items-center justify-start gap-2 md:order-none md:w-auto md:flex-1 md:justify-center">
+              {quickFilterItems.map(({ key, label, Icon }) => {
+                const active = quickFilters[key];
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => toggleQuickFilter(key)}
+                    aria-pressed={active}
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold transition-all ${
+                      active
+                        ? "border-indigo-300/60 bg-indigo-500/30 text-white shadow-[0_0_18px_rgba(99,102,241,0.22)]"
+                        : "border-slate-700/50 bg-white/10 text-slate-200 hover:border-indigo-400/40 hover:bg-white/15 hover:text-white"
+                    }`}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    <span className="whitespace-nowrap">{label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
             {/* Refine Filters Toggle Button */}
-            <div className="flex flex-col gap-1 sm:w-auto min-w-[150px] border-t border-indigo-400/10 pt-3 sm:border-t-0 sm:pt-0">
+            <div className="ml-auto flex min-w-[150px] flex-col gap-1 sm:w-auto">
               <span className="text-[10px] font-semibold text-indigo-300/80 mb-0.5">
                 Filters / फ़िल्टर:
               </span>
@@ -1374,8 +1673,9 @@ export default function NearbyServices({
         {/* Map Option Toggle Button on the Top Side */}
         <button
           type="button"
-          onClick={() => setShowMap((prev) => !prev)}
-          className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-full border transition-all cursor-pointer ${showMap
+          onClick={handleMapToggle}
+          disabled={mapToggleLocked}
+          className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-full border transition-all ${mapToggleLocked ? "cursor-wait opacity-70" : "cursor-pointer"} ${showMap
             ? "bg-[#6366f1] border-[#6366f1] text-white shadow-lg shadow-indigo-600/20"
             : "bg-indigo-950/40 border-indigo-500/20 text-indigo-200 hover:border-indigo-500/50"
             }`}
@@ -1388,8 +1688,11 @@ export default function NearbyServices({
       {/* =================== MAP + PROVIDER LIST =================== */}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start mt-2">
         {/* ============ MAP ============ */}
-        {showMap && (
-          <div className="w-full lg:w-[58%]">
+        <div
+          className={`w-full lg:w-[58%] ${showMap ? "block" : "hidden"}`}
+          aria-hidden={!showMap}
+        >
+          <MapErrorBoundary>
             <div
               className="qs-map-frame relative isolate overflow-hidden rounded-3xl"
               style={{ height: 520 }}
@@ -1464,6 +1767,7 @@ export default function NearbyServices({
                   mapRef={mapRef}
                   onMapReady={onMapReady}
                   fetchSellersInView={fetchSellersInView}
+                  onMapAreaChanged={handleMapAreaChanged}
                 />
                 <MapController
                   center={buyerPos ? [buyerPos.lat, buyerPos.lng] : null}
@@ -1497,8 +1801,8 @@ export default function NearbyServices({
                 )}
               </MapContainer>
             </div>
-          </div>
-        )}
+          </MapErrorBoundary>
+        </div>
 
         {/* ============ PROVIDER LIST ============ */}
         <div className={`w-full ${showMap ? "lg:w-[42%]" : "lg:w-full"}`}>
@@ -1519,7 +1823,7 @@ export default function NearbyServices({
               </div>
             )}
 
-            {!apiLoading && sellers.length === 0 && (
+            {!apiLoading && !buyerPos && sellers.length === 0 && (
               <div className="qs-glass-panel w-full py-14 text-center text-indigo-300">
                 <p className="text-sm font-semibold">No service providers registered on map yet.</p>
                 <p className="text-xs text-indigo-300/60 mt-1">
@@ -1528,17 +1832,19 @@ export default function NearbyServices({
               </div>
             )}
 
-            {!apiLoading && sellers.length > 0 && nearby.length === 0 && (
-              <div className="qs-glass-panel w-full py-14 text-center text-indigo-300">
-                <p className="text-sm font-semibold">No services found within {radiusKm}km.</p>
-                <p className="text-xs text-indigo-300/60 mt-1">
-                  Try expanding the distance range or clear your search query.
-                </p>
+            {!apiLoading && buyerPos && nearby.length === 0 && (
+              <div className="w-full">
+                <NoProvidersLeadForm
+                  category={selectedCategory || search.trim()}
+                  pincode={targetPincode}
+                  radiusKm={radiusKm}
+                  buyerPos={buyerPos}
+                />
                 {activeFilterCount > 0 && (
                   <button
                     type="button"
                     onClick={clearAllFilters}
-                    className="mt-4 rounded-xl border border-indigo-400/30 bg-indigo-500/15 px-5 py-2 text-sm font-semibold text-indigo-200 transition hover:bg-indigo-500/25"
+                    className="mt-3 rounded-xl border border-indigo-400/30 bg-indigo-500/15 px-5 py-2 text-sm font-semibold text-indigo-200 transition hover:bg-indigo-500/25"
                   >
                     ✕ Clear All Filters
                   </button>

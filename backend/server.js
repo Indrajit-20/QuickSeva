@@ -19,6 +19,7 @@ const notificationRoutes = require("./routes/notificationRoutes");
 const sellerLocationRoutes = require("./routes/sellerLocationRoutes");
 const leadChargeRoutes = require("./routes/leadChargeRoutes");
 const searchRoutes = require("./routes/searchRoutes");
+const leadRoutes = require("./routes/leadRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -80,6 +81,7 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/search", searchRoutes);
 app.use("/api", sellerLocationRoutes);
 app.use("/api", leadChargeRoutes);
+app.use("/api", leadRoutes);
 
 // ── Error Handling ────────────────────────────────────────────────────────────
 app.use(notFound);

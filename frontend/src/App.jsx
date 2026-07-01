@@ -41,6 +41,7 @@ import SellerServices from "./pages/seller/SellerServices";
 import SellerOrders from "./pages/seller/SellerOrders";
 import SellerPackages from "./pages/seller/SellerPackages";
 import SellerWallet from "./pages/seller/SellerWallet";
+import SellerLeads from "./pages/seller/SellerLeads";
 import SellerPublicProfile from "./pages/SellerPublicProfile";
 
 // Backward-compatibility: kept empty. SellerRoute/AdminRoute/UserRoute are the source of truth.
@@ -125,6 +126,7 @@ function AppRoutes() {
             <Route path="dashboard" element={<SellerDashboard />} />
             <Route path="profile" element={<SellerProfile />} />
             <Route path="services" element={<SellerServices />} />
+            <Route path="dashboard/leads" element={<SellerLeads />} />
             <Route path="orders" element={<SellerOrders />} />
             <Route path="packages" element={<SellerPackages />} />
             <Route path="wallet" element={<SellerWallet />} />

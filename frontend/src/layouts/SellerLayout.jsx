@@ -4,6 +4,7 @@ import {
   BriefcaseBusiness,
   ClipboardList,
   Crown,
+  Megaphone,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -16,6 +17,7 @@ import { sellerOrdersApi } from "../api/orderApi";
 
 const navItems = [
   { label: "Dashboard", path: "/seller/dashboard", icon: LayoutDashboard },
+  { label: "Leads", path: "/seller/dashboard/leads", icon: Megaphone },
   { label: "Profile", path: "/seller/profile", icon: User },
   { label: "My Services", path: "/seller/services", icon: BriefcaseBusiness },
   { label: "Orders", path: "/seller/orders", icon: ClipboardList },
