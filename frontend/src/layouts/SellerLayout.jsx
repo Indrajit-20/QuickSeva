@@ -14,6 +14,14 @@ import {
 import { useAuth } from "../context/AuthContext";
 import WorkspaceSwitcher from "../components/WorkspaceSwitcher";
 import { sellerOrdersApi } from "../api/orderApi";
+import apiClient from "../api/axiosConfig";
+
+const getImageUrl = (url) => {
+  if (!url) return "";
+  if (url.startsWith("http")) return url;
+  const base = apiClient.defaults.baseURL ? apiClient.defaults.baseURL.replace("/api", "") : "http://localhost:5000";
+  return `${base}${url}`;
+};
 
 const navItems = [
   { label: "Dashboard", path: "/seller/dashboard", icon: LayoutDashboard },
@@ -72,9 +80,17 @@ function SellerSidebar({ user, onLogout, onNavigate, pendingOrdersCount }) {
 
       <div className="border-t border-[#e5e7eb] pt-4">
         <div className="mb-4 flex items-center gap-3 rounded-lg border border-[#e5e7eb] bg-[#f8f9fb] p-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#185FA5] text-sm font-bold text-white">
-            {getInitial(user?.name)}
-          </div>
+          {user?.profile_pic ? (
+            <img
+              src={getImageUrl(user.profile_pic)}
+              alt="Profile"
+              className="h-10 w-10 shrink-0 rounded-full object-cover border border-[#e5e7eb]"
+            />
+          ) : (
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#185FA5] text-sm font-bold text-white">
+              {getInitial(user?.name)}
+            </div>
+          )}
           <div className="min-w-0">
             <div className="truncate text-sm font-bold text-[#1a1a1a]">
               {user?.name || "Seller"}
@@ -151,9 +167,17 @@ export default function SellerLayout() {
             </div>
             <div className="text-xs text-[#6b7280]">QuickSeva Seller</div>
           </div>
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#185FA5] text-sm font-bold text-white">
-            {getInitial(user?.name)}
-          </div>
+          {user?.profile_pic ? (
+            <img
+              src={getImageUrl(user.profile_pic)}
+              alt="Profile"
+              className="h-10 w-10 rounded-full object-cover border border-[#e5e7eb]"
+            />
+          ) : (
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#185FA5] text-sm font-bold text-white">
+              {getInitial(user?.name)}
+            </div>
+          )}
         </div>
       </header>
 

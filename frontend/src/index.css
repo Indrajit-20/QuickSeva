@@ -100,6 +100,29 @@ h6,
   color: var(--qs-text) !important;
 }
 
+/* Force white text on elements with dark backgrounds (e.g. buttons, dark cards) */
+.force-text-white,
+.force-text-white * {
+  color: #ffffff !important;
+}
+
+/* Active / Selected item state - lightweight soft blue background and corporate border */
+.qs-selected-active,
+.selected,
+.active-item,
+.selected-item,
+[aria-selected="true"] {
+  background: rgba(24, 95, 165, 0.08) !important;
+  border-color: var(--qs-primary) !important;
+  border-width: 2px !important;
+}
+
+.qs-selected-dot {
+  background-color: var(--qs-primary) !important;
+  border-color: var(--qs-primary) !important;
+}
+
+
 p,
 [class*="text-slate-300"],
 [class*="text-slate-400"],

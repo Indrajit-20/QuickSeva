@@ -15,6 +15,9 @@ const {
   updateSellerAvailability,
   purchasePackage,
   getPackageHistory,
+  uploadProfilePic,
+  uploadWorkImages,
+  deleteWorkImage,
 } = require("../controllers/sellerController");
 
 const {
@@ -23,6 +26,8 @@ const {
   adminOnly,
 } = require("../middleware/authMiddleware");
 const {
+  uploadProfile,
+  uploadWork,
   uploadDocuments: uploadDocs,
 } = require("../middleware/uploadMiddleware");
 
@@ -40,6 +45,9 @@ router.get("/me/availability", protect, sellerOnly, getSellerAvailability);
 router.patch("/me/availability", protect, sellerOnly, updateSellerAvailability);
 router.get("/me/profile", protect, getMySellerProfile);
 router.put("/me/profile", protect, sellerOnly, updateSellerProfile);
+router.post("/me/profile-pic", protect, sellerOnly, uploadProfile.single("profile_pic"), uploadProfilePic);
+router.post("/me/work-images", protect, sellerOnly, uploadWork.array("work_images", 10), uploadWorkImages);
+router.delete("/me/work-images/:imageId", protect, sellerOnly, deleteWorkImage);
 router.post("/packages/purchase", protect, sellerOnly, purchasePackage);
 router.get("/packages/history", protect, sellerOnly, getPackageHistory);
 router.patch(

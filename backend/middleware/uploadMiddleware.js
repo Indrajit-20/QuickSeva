@@ -28,5 +28,6 @@ const maxSize = parseInt(process.env.MAX_FILE_SIZE) || 5 * 1024 * 1024; // 5MB
 const uploadProfile   = multer({ storage: createStorage("profiles"),  fileFilter, limits: { fileSize: maxSize } });
 const uploadService   = multer({ storage: createStorage("services"),  fileFilter, limits: { fileSize: maxSize } });
 const uploadDocuments = multer({ storage: createStorage("documents"), fileFilter, limits: { fileSize: maxSize } });
+const uploadWork      = multer({ storage: createStorage("work"),      fileFilter, limits: { fileSize: maxSize } });
 
-module.exports = { uploadProfile, uploadService, uploadDocuments };
+module.exports = { uploadProfile, uploadService, uploadDocuments, uploadWork };

@@ -52,6 +52,14 @@ exports.getMySellerProfile = async (req, res) => {
       });
       seller = await SellerModel.findById(sellerId);
     }
+    
+    // Fetch work images
+    const [images] = await pool.query(
+      "SELECT id, image_url, uploaded_at FROM seller_work_images WHERE seller_id = ?",
+      [seller.id]
+    );
+    seller.work_images = images || [];
+
     return successRes(res, { seller });
   } catch (err) {
     console.error("getMySellerProfile error:", err);
@@ -68,13 +76,21 @@ exports.getSellerById = async (req, res) => {
     const wallet = await WalletModel.findByUserId(seller.user_id);
     const balance = wallet ? parseFloat(wallet.balance) : 0.00;
 
+    // Fetch work images
+    const [images] = await pool.query(
+      "SELECT id, image_url, uploaded_at FROM seller_work_images WHERE seller_id = ?",
+      [seller.id]
+    );
+
     const sellerWithBalanceStatus = {
       ...seller,
       hasSufficientBalance: balance >= 1.00,
+      work_images: images || [],
     };
 
     return successRes(res, { seller: sellerWithBalanceStatus });
   } catch (err) {
+    console.error("getSellerById error:", err);
     return errorRes(res, "Failed to fetch seller");
   }
 };
@@ -746,6 +762,98 @@ exports.getPackageHistory = async (req, res) => {
   } catch (err) {
     console.error("Error fetching package history:", err);
     return errorRes(res, "Failed to fetch package history");
+  }
+};
+
+// Upload seller profile picture
+exports.uploadProfilePic = async (req, res) => {
+  try {
+    if (!req.file) {
+      return errorRes(res, "No file uploaded", 400);
+    }
+
+    const seller = await SellerModel.findByUserId(req.user.id);
+    if (!seller) return errorRes(res, "Seller profile not found", 404);
+
+    const relativePath = `/uploads/profiles/${req.file.filename}`;
+    
+    // Update profile_picture_url in sellers table
+    await SellerModel.update(seller.id, { profile_picture_url: relativePath });
+
+    // Update profile_pic in users table so user session avatar updates
+    await UserModel.update(req.user.id, { profile_pic: relativePath });
+
+    return successRes(res, { profile_picture_url: relativePath }, "Profile picture updated successfully");
+  } catch (err) {
+    console.error("uploadProfilePic error:", err);
+    return errorRes(res, "Failed to upload profile picture");
+  }
+};
+
+// Upload work portfolio images
+exports.uploadWorkImages = async (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return errorRes(res, "No files uploaded", 400);
+    }
+
+    const seller = await SellerModel.findByUserId(req.user.id);
+    if (!seller) return errorRes(res, "Seller profile not found", 404);
+
+    const insertedImages = [];
+    for (const file of req.files) {
+      const relativePath = `/uploads/work/${file.filename}`;
+      const [result] = await pool.query(
+        "INSERT INTO seller_work_images (seller_id, image_url) VALUES (?, ?)",
+        [seller.id, relativePath]
+      );
+      insertedImages.push({
+        id: result.insertId,
+        image_url: relativePath,
+      });
+    }
+
+    return successRes(res, { work_images: insertedImages }, "Work images uploaded successfully");
+  } catch (err) {
+    console.error("uploadWorkImages error:", err);
+    return errorRes(res, "Failed to upload work images");
+  }
+};
+
+// Delete a work portfolio image
+exports.deleteWorkImage = async (req, res) => {
+  try {
+    const { imageId } = req.params;
+    const seller = await SellerModel.findByUserId(req.user.id);
+    if (!seller) return errorRes(res, "Seller profile not found", 404);
+
+    // Verify ownership of the image
+    const [rows] = await pool.query(
+      "SELECT * FROM seller_work_images WHERE id = ? AND seller_id = ?",
+      [imageId, seller.id]
+    );
+
+    if (rows.length === 0) {
+      return errorRes(res, "Image not found or access denied", 404);
+    }
+
+    const img = rows[0];
+
+    // Remove from database
+    await pool.query("DELETE FROM seller_work_images WHERE id = ?", [imageId]);
+
+    // Delete physical file from file system
+    const fs = require("fs");
+    const path = require("path");
+    const filePath = path.join(__dirname, "..", img.image_url);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    return successRes(res, null, "Portfolio image deleted successfully");
+  } catch (err) {
+    console.error("deleteWorkImage error:", err);
+    return errorRes(res, "Failed to delete portfolio image");
   }
 };
 

@@ -12,7 +12,10 @@ import {
   MessageCircle,
   Navigation,
   Phone,
+  Eye,
+  X,
 } from "lucide-react";
+import apiClient from "../api/axiosConfig";
 import { useAuth } from "../context/AuthContext";
 
 delete L.Icon.Default.prototype._getIconUrl;
@@ -115,13 +118,21 @@ export default function SellerPublicProfile() {
   const [seller, setSeller] = useState(null);
   const [sellerLoading, setSellerLoading] = useState(true);
   const [savedServices, setSavedServices] = useState([]);
+  
+  // Lightbox & image helper
+  const [lightboxImage, setLightboxImage] = useState(null);
+  const getImageUrl = (url) => {
+    if (!url) return "";
+    if (url.startsWith("http")) return url;
+    const base = apiClient.defaults.baseURL ? apiClient.defaults.baseURL.replace("/api", "") : "http://localhost:5000";
+    return `${base}${url}`;
+  };
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         setSellerLoading(true);
-        const apiClient = (await import("../api/axiosConfig.js")).default;
         const [sellerRes, servicesRes] = await Promise.all([
           apiClient.get(`/sellers/${id}`),
           apiClient.get(`/services/seller/${id}`).catch(() => ({ data: {} })),
@@ -236,7 +247,6 @@ export default function SellerPublicProfile() {
     let active = true;
     (async () => {
       try {
-        const apiClient = (await import("../api/axiosConfig.js")).default;
         const res = await apiClient.get(`/leads/check`, {
           params: {
             sellerId: seller.id,
@@ -333,9 +343,6 @@ export default function SellerPublicProfile() {
     setContactError("");
 
     try {
-      // Use same axios config style as other API files
-      const apiClient = (await import("../api/axiosConfig.js")).default;
-
       const res = await apiClient.post("/leads/charge", {
         sellerId: seller.id,
         serviceId: selectedService.id,
@@ -358,81 +365,117 @@ export default function SellerPublicProfile() {
   };
 
   return (
-    <main className="min-h-screen bg-[#0d0d1a] px-4 py-8 text-white">
+    <main className="min-h-screen bg-slate-50 px-4 py-8 text-slate-800">
       <div className="mx-auto max-w-6xl space-y-5">
         <button
           type="button"
           onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-2 rounded-lg border border-indigo-400/30 bg-[#1a1a2e] px-4 py-2 text-sm font-bold text-indigo-100 hover:bg-indigo-500/10"
+          className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 transition shadow-sm"
         >
           <ArrowLeft size={16} />
           Back
         </button>
 
         <section className="grid gap-5 lg:grid-cols-[1fr_380px]">
-          <div className="rounded-2xl border border-indigo-500/20 bg-[#1a1a2e] p-5 shadow-2xl shadow-black/20">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-              <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 text-3xl font-black">
+          <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm text-center flex flex-col items-center">
+            {/* Centered Profile Avatar */}
+            {seller.profile_picture_url || seller.profile_pic ? (
+              <img
+                src={getImageUrl(seller.profile_picture_url || seller.profile_pic)}
+                alt="Profile"
+                className="h-24 w-24 rounded-full border-4 border-indigo-500/10 object-cover shadow-xl cursor-pointer hover:scale-105 transition duration-200"
+                onClick={() => setLightboxImage(seller.profile_picture_url || seller.profile_pic)}
+              />
+            ) : (
+              <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 text-3xl font-black text-white force-text-white shadow-xl">
                 {avatarLetter}
               </div>
+            )}
 
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-3">
-                  <h1 className="truncate text-3xl font-black text-white">
-                    {seller.name}
-                  </h1>
-                  <span className="rounded-full border border-purple-400/30 bg-purple-500/10 px-3 py-1 text-xs font-black text-purple-200">
-                    {seller.service || "Service Provider"}
-                  </span>
-                </div>
-                <p className="mt-2 text-sm font-semibold text-indigo-200">
-                  {distanceLabel ||
-                    "Distance will appear after location access"}
-                </p>
-              </div>
+            {/* Center-aligned Name and Category */}
+            <h1 className="mt-4 text-3xl font-black text-slate-800 flex items-center gap-2 justify-center">
+              {seller.name}
+            </h1>
+            
+            <div className="mt-2 flex flex-wrap gap-2 justify-center items-center">
+              <span className="rounded-full border border-purple-200 bg-purple-50 px-3 py-1 text-xs font-black text-purple-700">
+                {seller.service || "Service Provider"}
+              </span>
+              {seller.experience_yrs !== undefined && (
+                <span className="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">
+                  {seller.experience_yrs} Years Experience
+                </span>
+              )}
             </div>
 
-            <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              <div className="flex items-start gap-3 rounded-xl border border-indigo-500/20 bg-[#0f1024] p-4">
-                <MapPin size={18} className="mt-0.5 text-purple-300" />
-                <span className="text-sm font-semibold text-slate-200">
+            <p className="mt-3 text-sm font-semibold text-indigo-600">
+              {distanceLabel || "Distance will appear after location access"}
+            </p>
+
+            {/* Address and Phone Grid */}
+            <div className="mt-6 w-full grid gap-3 sm:grid-cols-2 text-left">
+              <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
+                <MapPin size={18} className="mt-0.5 text-[#185FA5] shrink-0" />
+                <span className="text-sm font-semibold text-slate-700">
                   {seller.address || "Address not available"}
                 </span>
               </div>
-              <div className="flex items-start gap-3 rounded-xl border border-indigo-500/20 bg-[#0f1024] p-4">
-                <Phone size={18} className="mt-0.5 text-purple-300" />
-                <span className="text-sm font-semibold text-slate-200">
+              <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
+                <Phone size={18} className="mt-0.5 text-[#185FA5] shrink-0" />
+                <span className="text-sm font-semibold text-slate-700">
                   {showContact ? seller.phone || "Phone not available" : "**********"}
                 </span>
               </div>
             </div>
 
-            {/* <div className="mt-5">
-              <MiniMap lat={seller.lat} lng={seller.lng} />
-              <a
-                href={directionsHref}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-3 inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-black text-white hover:bg-indigo-700"
-              >
-                <Navigation size={17} />
-                Get Directions
-              </a>
-            </div> */}
+            {/* About Me Section */}
+            {seller.bio && (
+              <div className="mt-6 w-full text-left border-t border-slate-100 pt-6">
+                <h3 className="text-lg font-bold text-slate-800 mb-2">About Me</h3>
+                <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap">
+                  {seller.bio}
+                </p>
+              </div>
+            )}
+
+            {/* Work Portfolio Section */}
+            {seller.work_images && seller.work_images.length > 0 && (
+              <div className="mt-6 w-full text-left border-t border-slate-100 pt-6">
+                <h3 className="text-lg font-bold text-slate-800 mb-4">Work Portfolio</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                  {seller.work_images.map((img) => (
+                    <div
+                      key={img.id}
+                      className="relative aspect-square rounded-lg overflow-hidden border border-slate-200 cursor-pointer group shadow-md"
+                      onClick={() => setLightboxImage(img.image_url)}
+                    >
+                      <img
+                        src={getImageUrl(img.image_url)}
+                        alt="Portfolio item"
+                        className="w-full h-full object-cover transition duration-300 group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition duration-200">
+                        <Eye size={20} className="text-white" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
-          <aside className="rounded-2xl border border-indigo-500/20 bg-[#1a1a2e] p-5 shadow-2xl shadow-black/20">
-            <h2 className="text-xl font-black text-white">Contact / Action</h2>
+          <aside className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm h-fit">
+            <h2 className="text-xl font-black text-slate-800">Contact / Action</h2>
             <div className="mt-4 space-y-3">
               <button
                 type="button"
                 onClick={handleBook}
-                className="w-full rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 px-4 py-3 text-base font-black text-white shadow-lg shadow-purple-950/40 hover:from-purple-500 hover:to-indigo-500"
+                className="w-full rounded-xl bg-[#185FA5] hover:bg-[#155391] px-4 py-3 text-base font-black text-white force-text-white shadow-lg shadow-indigo-100 transition duration-150 active:scale-[0.98]"
               >
                 Book This Service
               </button>
               {bookingError && (
-                <p className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm font-bold text-red-200">
+                <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
                   {bookingError}
                 </p>
               )}
@@ -442,7 +485,7 @@ export default function SellerPublicProfile() {
                   <>
                     <a
                       href={`tel:${seller.phone || ""}`}
-                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 font-black text-emerald-200 hover:bg-emerald-500/20"
+                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 font-black text-emerald-700 hover:bg-emerald-100/50 transition"
                     >
                       <Phone size={17} />
                       Call Now
@@ -451,14 +494,14 @@ export default function SellerPublicProfile() {
                       href={whatsappHref}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-green-400/30 bg-green-500/10 px-4 py-3 font-black text-green-200 hover:bg-green-500/20"
+                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-3 font-black text-green-700 hover:bg-green-100/50 transition"
                     >
                       <MessageCircle size={17} />
                       WhatsApp
                     </a>
                   </>
                 ) : seller?.hasSufficientBalance === false ? (
-                  <div className="w-full text-center rounded-xl border border-indigo-500/30 bg-indigo-500/10 px-4 py-3 font-bold text-indigo-200 text-sm">
+                  <div className="w-full text-center rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold text-slate-600 text-sm">
                     Contact details will be visible after booking.
                   </div>
                 ) : (
@@ -472,7 +515,7 @@ export default function SellerPublicProfile() {
                       chargeAndRevealContact();
                     }}
                     disabled={contactLoading}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-indigo-400/30 bg-indigo-500/10 px-4 py-3 font-black text-indigo-200 hover:bg-indigo-500/20 disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-black text-slate-700 hover:bg-slate-100 transition disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {contactLoading ? "Connecting…" : "View Contact"}
                   </button>
@@ -480,7 +523,7 @@ export default function SellerPublicProfile() {
               </div>
 
               {contactError && (
-                <p className="mt-3 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm font-bold text-red-200">
+                <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
                   {contactError}
                 </p>
               )}
@@ -488,11 +531,11 @@ export default function SellerPublicProfile() {
           </aside>
         </section>
 
-        <section className="rounded-2xl border border-indigo-500/20 bg-[#1a1a2e] p-5 shadow-2xl shadow-black/20">
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="mb-4 flex items-center justify-between gap-3">
-            <h2 className="text-2xl font-black text-white">Services Offered</h2>
+            <h2 className="text-2xl font-black text-slate-800">Services Offered</h2>
             {selectedService && (
-              <span className="rounded-full border border-purple-400/30 bg-purple-500/10 px-3 py-1 text-xs font-black text-purple-200">
+              <span className="rounded-full border border-purple-200 bg-purple-50 px-3 py-1 text-xs font-black text-purple-700">
                 Selected: {selectedService.name}
               </span>
             )}
@@ -506,43 +549,47 @@ export default function SellerPublicProfile() {
                   key={service.id}
                   type="button"
                   onClick={() => handleSelectService(service)}
-                  className={`rounded-2xl border p-4 text-left transition ${active
-                      ? "border-purple-400 bg-purple-500/10 shadow-[0_0_0_3px_rgba(168,85,247,0.18)]"
-                      : "border-indigo-500/20 bg-[#0f1024] hover:border-indigo-400/50"
+                  className={`rounded-2xl border-2 p-4 text-left transition duration-200 ${active
+                      ? "qs-selected-active shadow-md"
+                      : "border-slate-200 bg-white hover:border-[#185FA5]/30 shadow-sm"
                     }`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <h3 className="text-lg font-black text-white">
+                      <h3 className="text-lg font-black text-slate-800">
                         {service.name}
                       </h3>
                       {service.sub_service_name && (
-                        <span className="text-[10px] bg-purple-500/10 border border-purple-500/25 text-purple-300 font-bold px-2 py-0.5 rounded-full inline-block mt-1">
+                        <span className="text-[10px] bg-purple-50 border border-purple-200 text-purple-700 font-bold px-2 py-0.5 rounded-full inline-block mt-1">
                           🎯 {service.sub_service_name}
                         </span>
                       )}
-                      <p className="mt-2 text-sm font-medium text-slate-300">
+                      <p className="mt-2 text-sm font-medium text-slate-600">
                         {service.description}
                       </p>
                     </div>
-                    <span
-                      className={`mt-1 h-4 w-4 rounded-full border ${active
-                          ? "border-purple-300 bg-purple-400"
-                          : "border-slate-500"
+                    <div
+                      className={`mt-1 h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition duration-150 ${active
+                          ? "qs-selected-dot border-[#185FA5]"
+                          : "border-slate-300 bg-white"
                         }`}
-                    />
+                    >
+                      {active && (
+                        <div className="h-2 w-2 rounded-full bg-white force-text-white" />
+                      )}
+                    </div>
                   </div>
 
-                  <div className="mt-4 grid gap-2 text-sm font-bold text-indigo-100 sm:grid-cols-3">
-                    <span className="inline-flex items-center gap-1 text-amber-300">
+                  <div className="mt-4 grid gap-2 text-sm font-bold text-slate-600 sm:grid-cols-3">
+                    <span className="inline-flex items-center gap-1 text-[#D85A30]">
                       <IndianRupee size={15} />
                       {formatPrice(service.price).replace(/^Rs\s?/, "")}
                     </span>
-                    <span className="inline-flex items-center gap-1 text-slate-300">
+                    <span className="inline-flex items-center gap-1 text-slate-500">
                       <Clock size={15} />
                       {service.duration}
                     </span>
-                    <span className="inline-flex items-center gap-1 text-slate-300">
+                    <span className="inline-flex items-center gap-1 text-slate-500">
                       <CalendarDays size={15} />
                       {service.availability.join(", ")}
                     </span>
@@ -553,6 +600,26 @@ export default function SellerPublicProfile() {
           </div>
         </section>
       </div>
+
+      {/* Lightbox Modal */}
+      {lightboxImage && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
+          onClick={() => setLightboxImage(null)}
+        >
+          <button 
+            className="absolute top-4 right-4 text-white hover:text-slate-300"
+            onClick={() => setLightboxImage(null)}
+          >
+            <X size={28} />
+          </button>
+          <img 
+            src={getImageUrl(lightboxImage)} 
+            alt="Portfolio Lightbox" 
+            className="max-w-full max-h-[90vh] object-contain rounded shadow-2xl"
+          />
+        </div>
+      )}
     </main>
   );
 }

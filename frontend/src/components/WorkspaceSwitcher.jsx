@@ -22,10 +22,11 @@ const WorkspaceSwitcher = ({ layout = "dropdown" }) => {
 
       <p style={{
         fontSize: "10px",
-        color: "rgba(255,255,255,0.3)",
+        color: "rgba(26,26,26,0.4)",
         textTransform: "uppercase",
         letterSpacing: "0.08em",
-        marginBottom: "8px"
+        marginBottom: "8px",
+        fontWeight: "bold"
       }}>
         Workspace
       </p>
@@ -40,16 +41,16 @@ const WorkspaceSwitcher = ({ layout = "dropdown" }) => {
             ? "rgba(34,197,94,0.08)"
             : "transparent",
           border: isUserActive
-            ? "1px solid rgba(34,197,94,0.6)"
-            : "1px solid rgba(255,255,255,0.08)"
+            ? "1px solid rgba(34,197,94,0.4)"
+            : "1px solid #e5e7eb"
         }}
       >
-        <span style={{ fontSize: "13px", color: "#fff" }}>
+        <span style={{ fontSize: "13px", color: "#1a1a1a", fontWeight: "bold" }}>
           👤 Customer
         </span>
         {isUserActive
-          ? <span style={{ fontSize:"11px", color:"#22c55e", fontWeight:600 }}>Active</span>
-          : <span style={{ fontSize:"11px", color:"rgba(255,255,255,0.4)" }}>Switch</span>
+          ? <span style={{ fontSize:"11px", color:"#22c55e", fontWeight:700 }}>Active</span>
+          : <span style={{ fontSize:"11px", color:"rgba(26,26,26,0.4)", fontWeight: "bold" }}>Switch</span>
         }
       </div>
 
@@ -66,22 +67,22 @@ const WorkspaceSwitcher = ({ layout = "dropdown" }) => {
           ...cardBase,
           cursor: isSellerActive ? "default" : "pointer",
           background: isSellerActive
-            ? "rgba(99,102,241,0.08)"
+            ? "rgba(24,95,165,0.08)"
             : "transparent",
           border: isSellerActive
-            ? "1px solid rgba(99,102,241,0.6)"
-            : "1px solid rgba(255,255,255,0.08)"
+            ? "1px solid rgba(24,95,165,0.4)"
+            : "1px solid #e5e7eb"
         }}
       >
-        <span style={{ fontSize: "13px", color: "#fff" }}>
+        <span style={{ fontSize: "13px", color: "#1a1a1a", fontWeight: "bold" }}>
           🏪 {isSeller ? "Seller" : "Become a Seller"}
         </span>
         {isSeller ? (
           isSellerActive
-            ? <span style={{ fontSize:"11px", color:"#6366f1", fontWeight:600 }}>Active</span>
-            : <span style={{ fontSize:"11px", color:"rgba(255,255,255,0.4)" }}>Switch</span>
+            ? <span style={{ fontSize:"11px", color:"#185FA5", fontWeight:700 }}>Active</span>
+            : <span style={{ fontSize:"11px", color:"rgba(26,26,26,0.4)", fontWeight: "bold" }}>Switch</span>
         ) : (
-          <span style={{ fontSize:"11px", color:"#f43f5e", fontWeight:600 }}>Join</span>
+          <span style={{ fontSize:"11px", color:"#f43f5e", fontWeight:700 }}>Join</span>
         )}
       </div>
 
