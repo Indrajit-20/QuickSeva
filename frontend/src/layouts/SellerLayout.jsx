@@ -37,8 +37,8 @@ function SellerNavLink({ item, onClick, badgeCount }) {
       to={item.path}
       onClick={onClick}
       className={`flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-semibold transition-all ${active
-          ? "bg-indigo-500/20 text-white shadow-[inset_3px_0_0_#6366f1]"
-          : "text-slate-300 hover:bg-white/5 hover:text-white"
+          ? "bg-[#185FA5]/10 text-[#185FA5] shadow-[inset_3px_0_0_#185FA5]"
+          : "text-[#6b7280] hover:bg-[#f8f9fb] hover:text-[#185FA5]"
         }`}
     >
       <div className="flex items-center gap-3">
@@ -46,7 +46,7 @@ function SellerNavLink({ item, onClick, badgeCount }) {
         <span>{item.label}</span>
       </div>
       {item.label === "Orders" && badgeCount > 0 && (
-        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-gradient-to-r from-red-500 to-amber-500 px-1.5 text-xs font-bold text-white shadow-[0_0_8px_rgba(239,68,68,0.5)] animate-pulse">
+        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#D85A30] px-1.5 text-xs font-bold text-white shadow-none">
           {badgeCount}
         </span>
       )}
@@ -56,12 +56,12 @@ function SellerNavLink({ item, onClick, badgeCount }) {
 
 function SellerSidebar({ user, onLogout, onNavigate, pendingOrdersCount }) {
   return (
-    <div className="flex h-full flex-col bg-[#1e1b4b] px-4 py-5 text-white">
+    <div className="flex h-full flex-col border-r border-[#e5e7eb] bg-white px-4 py-5 text-[#1a1a1a]">
       <div className="mb-8">
-        <div className="text-2xl font-black tracking-normal text-white">
-          Quick<span className="text-indigo-300">Seva</span>
+        <div className="text-2xl font-black tracking-normal text-[#1a1a1a]">
+          Quick<span className="text-[#185FA5]">Seva</span>
         </div>
-        <p className="mt-1 text-xs font-medium text-slate-400">Seller Panel</p>
+        <p className="mt-1 text-xs font-medium text-[#6b7280]">Seller Panel</p>
       </div>
 
       <nav className="flex-1 space-y-2">
@@ -70,16 +70,16 @@ function SellerSidebar({ user, onLogout, onNavigate, pendingOrdersCount }) {
         ))}
       </nav>
 
-      <div className="border-t border-indigo-400/20 pt-4">
-        <div className="mb-4 flex items-center gap-3 rounded-lg bg-white/5 p-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-sm font-bold text-white">
+      <div className="border-t border-[#e5e7eb] pt-4">
+        <div className="mb-4 flex items-center gap-3 rounded-lg border border-[#e5e7eb] bg-[#f8f9fb] p-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#185FA5] text-sm font-bold text-white">
             {getInitial(user?.name)}
           </div>
           <div className="min-w-0">
-            <div className="truncate text-sm font-bold text-white">
+            <div className="truncate text-sm font-bold text-[#1a1a1a]">
               {user?.name || "Seller"}
             </div>
-            <div className="truncate text-xs text-slate-400">
+            <div className="truncate text-xs text-[#6b7280]">
               {user?.email || user?.phone || "QuickSeva partner"}
             </div>
           </div>
@@ -88,7 +88,7 @@ function SellerSidebar({ user, onLogout, onNavigate, pendingOrdersCount }) {
         <button
           type="button"
           onClick={onLogout}
-          className="flex w-full items-center justify-center gap-2 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2.5 text-sm font-semibold text-red-200 transition hover:bg-red-500/20"
+          className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#D85A30]/30 bg-[#D85A30]/10 px-3 py-2.5 text-sm font-semibold text-[#D85A30] transition hover:-translate-y-0.5 hover:bg-[#D85A30]/15 hover:shadow-[0_10px_22px_-14px_#D85A30]"
         >
           <LogOut size={17} />
           Logout
@@ -130,28 +130,28 @@ export default function SellerLayout() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0f0e1a] text-white">
+    <div className="min-h-screen bg-[#f8f9fb] text-[#1a1a1a]">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 lg:block">
         <SellerSidebar user={user} onLogout={handleLogout} pendingOrdersCount={pendingOrdersCount} />
       </aside>
 
-      <header className="sticky top-0 z-20 border-b border-indigo-500/20 bg-[#0f0e1a]/95 px-4 py-3 backdrop-blur lg:hidden">
+      <header className="sticky top-0 z-20 border-b border-[#e5e7eb] bg-white px-4 py-3 lg:hidden">
         <div className="flex items-center justify-between">
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
-            className="rounded-lg border border-indigo-500/30 bg-[#1a1830] p-2 text-white"
+            className="rounded-lg border border-[#e5e7eb] bg-white p-2 text-[#185FA5]"
             aria-label="Open seller navigation"
           >
             <Menu size={20} />
           </button>
           <div className="text-center">
-            <div className="text-sm font-bold text-white">
+            <div className="text-sm font-bold text-[#1a1a1a]">
               {user?.name || "Seller"}
             </div>
-            <div className="text-xs text-slate-400">QuickSeva Seller</div>
+            <div className="text-xs text-[#6b7280]">QuickSeva Seller</div>
           </div>
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-sm font-bold">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#185FA5] text-sm font-bold text-white">
             {getInitial(user?.name)}
           </div>
         </div>
@@ -162,14 +162,14 @@ export default function SellerLayout() {
           <button
             type="button"
             aria-label="Close seller navigation"
-            className="absolute inset-0 bg-black/60"
+            className="absolute inset-0 bg-[#1a1a1a]/35"
             onClick={() => setDrawerOpen(false)}
           />
           <div className="relative h-full w-80 max-w-[85vw] animate-slide-in-right">
             <button
               type="button"
               onClick={() => setDrawerOpen(false)}
-              className="absolute right-3 top-3 z-10 rounded-lg bg-white/10 p-2 text-white"
+              className="absolute right-3 top-3 z-10 rounded-lg border border-[#e5e7eb] bg-white p-2 text-[#1a1a1a]"
               aria-label="Close menu"
             >
               <X size={18} />

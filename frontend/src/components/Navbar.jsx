@@ -29,7 +29,7 @@ function NavbarSearch({ className = "", onTriggerSearch }) {
   return (
     <div className={`relative ${className}`}>
       <div className="relative w-full">
-        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-indigo-200">
+        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#6b7280]">
           🔍
         </span>
         <input
@@ -37,12 +37,12 @@ function NavbarSearch({ className = "", onTriggerSearch }) {
           onClick={onTriggerSearch}
           onFocus={onTriggerSearch}
           placeholder="Search services e.g. Plumber, AC"
-          className="h-9 w-full rounded-full border border-indigo-500/30 bg-indigo-950/40 py-2 pl-9 pr-10 text-sm text-white placeholder-indigo-300 focus:outline-none cursor-pointer"
+          className="h-9 w-full cursor-pointer rounded-full border border-[#e5e7eb] bg-white py-2 pl-9 pr-10 text-sm text-[#1a1a1a] placeholder-[#6b7280] focus:border-[#185FA5] focus:outline-none"
         />
         <button
           type="button"
           onClick={onTriggerSearch}
-          className="absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-xs text-indigo-100 hover:bg-indigo-800/60 cursor-pointer"
+          className="absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-xs text-[#185FA5] hover:bg-[#185FA5]/10"
           aria-label="Search services"
         >
           ↵
@@ -95,17 +95,17 @@ const Navbar = () => {
   }, []);
 
   return (
-    <nav className="sticky top-0 z-50 bg-indigo-950 shadow-lg border-b border-indigo-900">
+    <nav className="sticky top-0 z-50 border-b border-[#e5e7eb] bg-white shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
-            <span className="text-3xl font-bold text-indigo-300">
+            <span className="text-3xl font-bold text-[#185FA5]">
               QuickSeva
             </span>
           </Link>
 
-          <div className="hidden sm:flex items-center gap-1 text-xs text-indigo-300 bg-indigo-950/50 px-3 py-1 rounded-full border border-indigo-500/20 max-w-[260px]">
+          <div className="hidden max-w-[260px] items-center gap-1 rounded-full border border-[#e5e7eb] bg-white px-3 py-1 text-xs text-[#6b7280] sm:flex">
             <span>📍</span>
             <span className="truncate">
               {loading ? "Locating..." : address || "Allow location"}
@@ -118,7 +118,7 @@ const Navbar = () => {
           <div className="hidden md:flex items-center space-x-6">
             <Link
               to="/"
-              className="text-indigo-100 hover:text-red-400 font-semibold transition-colors duration-300"
+              className="font-semibold text-[#1a1a1a] transition-colors duration-300 hover:text-[#185FA5]"
             >
               Home
             </Link>
@@ -127,13 +127,13 @@ const Navbar = () => {
               <>
                 <Link
                   to="/seller/services"
-                  className="text-indigo-100 hover:text-red-400 font-semibold transition-colors duration-300"
+                  className="font-semibold text-[#1a1a1a] transition-colors duration-300 hover:text-[#185FA5]"
                 >
                   My Services
                 </Link>
                 <Link
                   to="/seller/dashboard"
-                  className="text-indigo-100 hover:text-red-400 font-semibold transition-colors duration-300"
+                  className="font-semibold text-[#1a1a1a] transition-colors duration-300 hover:text-[#185FA5]"
                 >
                   Dashboard
                 </Link>
@@ -141,7 +141,7 @@ const Navbar = () => {
             ) : isAuthenticated && (
               <Link
                 to="/my-bookings"
-                className="text-indigo-100 hover:text-red-400 font-semibold transition-colors duration-300"
+                className="font-semibold text-[#1a1a1a] transition-colors duration-300 hover:text-[#185FA5]"
               >
                 My Bookings
               </Link>
@@ -155,19 +155,19 @@ const Navbar = () => {
                 padding: "3px 10px",
                 borderRadius: "999px",
                 background: activeRole === "seller"
-                  ? "rgba(99,102,241,0.15)"
-                  : "rgba(34,197,94,0.15)",
+                  ? "rgba(24,95,165,0.1)"
+                  : "rgba(15,110,86,0.1)",
                 border: activeRole === "seller"
-                  ? "1px solid rgba(99,102,241,0.4)"
-                  : "1px solid rgba(34,197,94,0.4)",
+                  ? "1px solid rgba(24,95,165,0.28)"
+                  : "1px solid rgba(15,110,86,0.28)",
                 fontSize: "11px",
                 fontWeight: 600,
-                color: activeRole === "seller" ? "#6366f1" : "#22c55e"
+                color: activeRole === "seller" ? "#185FA5" : "#0F6E56"
               }}>
                 <span style={{
                   width: "6px", height: "6px",
                   borderRadius: "50%",
-                  background: activeRole === "seller" ? "#6366f1" : "#22c55e",
+                  background: activeRole === "seller" ? "#185FA5" : "#0F6E56",
                   display: "inline-block"
                 }} />
                 <span className="hidden sm:inline">
@@ -181,7 +181,7 @@ const Navbar = () => {
               <>
                 <Link
                   to="/login"
-                  className="text-indigo-100 hover:text-red-400 font-semibold transition-colors duration-300"
+                  className="font-semibold text-[#1a1a1a] transition-colors duration-300 hover:text-[#185FA5]"
                 >
                   Login
                 </Link>
@@ -195,20 +195,20 @@ const Navbar = () => {
                     className="list-none cursor-pointer"
                     onClick={() => setIsPartnerOpen(true)}
                   >
-                    <span className="text-indigo-100 hover:text-red-400 font-semibold transition-colors duration-300">
+                    <span className="font-semibold text-[#1a1a1a] transition-colors duration-300 hover:text-[#185FA5]">
                       Become a partner
                     </span>
                   </button>
 
                   {isPartnerOpen && (
                     <div
-                      className="absolute right-0 mt-2 w-64 rounded-xl bg-indigo-950 border border-indigo-500/30 shadow-lg p-4"
+                      className="absolute right-0 mt-2 w-64 rounded-xl border border-[#e5e7eb] bg-white p-4 shadow-lg"
                       onMouseLeave={() => setIsPartnerOpen(false)}
                     >
-                      <div className="text-indigo-100 font-semibold mb-2">
+                      <div className="mb-2 font-semibold text-[#1a1a1a]">
                         Seller / Partner registration
                       </div>
-                      <div className="text-indigo-200 text-sm leading-relaxed mb-3">
+                      <div className="mb-3 text-sm leading-relaxed text-[#6b7280]">
                         Register, fill your details, and start onboarding with
                         QuickSeva.
                       </div>
@@ -218,7 +218,7 @@ const Navbar = () => {
                           setIsMenuOpen(false);
                           setIsPartnerOpen(false);
                         }}
-                        className="block text-center bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-3 rounded-lg"
+                        className="block rounded-lg bg-[#D85A30] px-3 py-2 text-center font-semibold text-white transition hover:-translate-y-0.5 hover:shadow-[0_10px_22px_-14px_#D85A30]"
                       >
                         Register as Seller
                       </Link>
@@ -235,18 +235,18 @@ const Navbar = () => {
           {/* Mobile Menu Button */}
           <button
             onClick={toggleMenu}
-            className="md:hidden flex flex-col items-center justify-center w-10 h-10 rounded-md hover:bg-indigo-900 transition"
+            className="flex h-10 w-10 flex-col items-center justify-center rounded-md transition hover:bg-[#185FA5]/10 md:hidden"
           >
             <span
-              className={`block w-6 h-0.5 bg-red-500 mb-1.5 transition-transform duration-300 ${isMenuOpen ? "rotate-45 translate-y-2" : ""
+              className={`mb-1.5 block h-0.5 w-6 bg-[#D85A30] transition-transform duration-300 ${isMenuOpen ? "rotate-45 translate-y-2" : ""
                 }`}
             ></span>
             <span
-              className={`block w-6 h-0.5 bg-red-500 transition-opacity duration-300 ${isMenuOpen ? "opacity-0" : ""
+              className={`block h-0.5 w-6 bg-[#D85A30] transition-opacity duration-300 ${isMenuOpen ? "opacity-0" : ""
                 }`}
             ></span>
             <span
-              className={`block w-6 h-0.5 bg-red-500 transition-transform duration-300 ${isMenuOpen ? "-rotate-45 -translate-y-2" : ""
+              className={`block h-0.5 w-6 bg-[#D85A30] transition-transform duration-300 ${isMenuOpen ? "-rotate-45 -translate-y-2" : ""
                 }`}
             ></span>
           </button>
@@ -266,7 +266,7 @@ const Navbar = () => {
             <Link
               to="/"
               onClick={() => setIsMenuOpen(false)}
-              className="block text-indigo-100 hover:text-red-400 font-semibold py-2 px-3 rounded-lg hover:bg-indigo-900 transition-colors"
+              className="block rounded-lg px-3 py-2 font-semibold text-[#1a1a1a] transition-colors hover:bg-[#f8f9fb] hover:text-[#185FA5]"
             >
               Home
             </Link>
@@ -276,14 +276,14 @@ const Navbar = () => {
                 <Link
                   to="/seller/services"
                   onClick={() => setIsMenuOpen(false)}
-                  className="block text-indigo-100 hover:text-red-400 font-semibold py-2 px-3 rounded-lg hover:bg-indigo-900 transition-colors"
+                  className="block rounded-lg px-3 py-2 font-semibold text-[#1a1a1a] transition-colors hover:bg-[#f8f9fb] hover:text-[#185FA5]"
                 >
                   My Services
                 </Link>
                 <Link
                   to="/seller/dashboard"
                   onClick={() => setIsMenuOpen(false)}
-                  className="block text-indigo-100 hover:text-red-400 font-semibold py-2 px-3 rounded-lg hover:bg-indigo-900 transition-colors"
+                  className="block rounded-lg px-3 py-2 font-semibold text-[#1a1a1a] transition-colors hover:bg-[#f8f9fb] hover:text-[#185FA5]"
                 >
                   Dashboard
                 </Link>
@@ -292,7 +292,7 @@ const Navbar = () => {
               <Link
                 to="/my-bookings"
                 onClick={() => setIsMenuOpen(false)}
-                className="block text-indigo-100 hover:text-red-400 font-semibold py-2 px-3 rounded-lg hover:bg-indigo-900 transition-colors"
+                className="block rounded-lg px-3 py-2 font-semibold text-[#1a1a1a] transition-colors hover:bg-[#f8f9fb] hover:text-[#185FA5]"
               >
                 My Bookings
               </Link>
@@ -309,21 +309,21 @@ const Navbar = () => {
                 <Link
                   to="/login"
                   onClick={() => setIsMenuOpen(false)}
-                  className="block text-indigo-100 hover:text-red-400 font-semibold py-2 px-3 rounded-lg hover:bg-indigo-900 transition-colors"
+                  className="block rounded-lg px-3 py-2 font-semibold text-[#1a1a1a] transition-colors hover:bg-[#f8f9fb] hover:text-[#185FA5]"
                 >
                   Login
                 </Link>
-                <div className="rounded-xl border border-indigo-500/30 bg-indigo-950/30 p-3">
-                  <div className="text-indigo-100 font-semibold mb-1">
+                <div className="rounded-xl border border-[#e5e7eb] bg-white p-3">
+                  <div className="mb-1 font-semibold text-[#1a1a1a]">
                     Become a partner
                   </div>
-                  <div className="text-indigo-200 text-xs leading-relaxed mb-2">
+                  <div className="mb-2 text-xs leading-relaxed text-[#6b7280]">
                     Seller registration and onboarding form.
                   </div>
                   <Link
                     to="/seller-register"
                     onClick={() => setIsMenuOpen(false)}
-                    className="block w-full text-center bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-3 rounded-lg"
+                    className="block w-full rounded-lg bg-[#D85A30] px-3 py-2 text-center font-semibold text-white transition hover:-translate-y-0.5 hover:shadow-[0_10px_22px_-14px_#D85A30]"
                   >
                     Register as Seller
                   </Link>
