@@ -450,6 +450,7 @@ export default function SellerProfile() {
             >
               Cancel
             </button>
+          </div>
             {/* Service Settings */}
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
               <div className="mb-3 flex items-center justify-between gap-3">
@@ -718,7 +719,7 @@ export default function SellerProfile() {
               >
                 Cancel
               </button>
-            </div>    </div>
+            </div>
         </form>
       )}
 
