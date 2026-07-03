@@ -581,7 +581,7 @@ export default function SellerPublicProfile() {
                   </div>
 
                   <div className="mt-4 grid gap-2 text-sm font-bold text-slate-600 sm:grid-cols-3">
-                    <span className="inline-flex items-center gap-1 text-[#D85A30]">
+                    <span className="inline-flex items-center gap-1 text-[#e53935]">
                       <IndianRupee size={15} />
                       {formatPrice(service.price).replace(/^Rs\s?/, "")}
                     </span>

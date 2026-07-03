@@ -218,7 +218,7 @@ const Navbar = () => {
                           setIsMenuOpen(false);
                           setIsPartnerOpen(false);
                         }}
-                        className="block rounded-lg bg-[#D85A30] px-3 py-2 text-center font-semibold text-white transition hover:-translate-y-0.5 hover:shadow-[0_10px_22px_-14px_#D85A30]"
+                        className="block rounded-lg bg-[#e53935] px-3 py-2 text-center font-semibold text-white transition hover:-translate-y-0.5 hover:shadow-[0_10px_22px_-14px_#e53935]"
                       >
                         Register as Seller
                       </Link>
@@ -238,15 +238,15 @@ const Navbar = () => {
             className="flex h-10 w-10 flex-col items-center justify-center rounded-md transition hover:bg-[#185FA5]/10 md:hidden"
           >
             <span
-              className={`mb-1.5 block h-0.5 w-6 bg-[#D85A30] transition-transform duration-300 ${isMenuOpen ? "rotate-45 translate-y-2" : ""
+              className={`mb-1.5 block h-0.5 w-6 bg-[#e53935] transition-transform duration-300 ${isMenuOpen ? "rotate-45 translate-y-2" : ""
                 }`}
             ></span>
             <span
-              className={`block h-0.5 w-6 bg-[#D85A30] transition-opacity duration-300 ${isMenuOpen ? "opacity-0" : ""
+              className={`block h-0.5 w-6 bg-[#e53935] transition-opacity duration-300 ${isMenuOpen ? "opacity-0" : ""
                 }`}
             ></span>
             <span
-              className={`block h-0.5 w-6 bg-[#D85A30] transition-transform duration-300 ${isMenuOpen ? "-rotate-45 -translate-y-2" : ""
+              className={`block h-0.5 w-6 bg-[#e53935] transition-transform duration-300 ${isMenuOpen ? "-rotate-45 -translate-y-2" : ""
                 }`}
             ></span>
           </button>
@@ -323,7 +323,7 @@ const Navbar = () => {
                   <Link
                     to="/seller-register"
                     onClick={() => setIsMenuOpen(false)}
-                    className="block w-full rounded-lg bg-[#D85A30] px-3 py-2 text-center font-semibold text-white transition hover:-translate-y-0.5 hover:shadow-[0_10px_22px_-14px_#D85A30]"
+                    className="block w-full rounded-lg bg-[#e53935] px-3 py-2 text-center font-semibold text-white transition hover:-translate-y-0.5 hover:shadow-[0_10px_22px_-14px_#e53935]"
                   >
                     Register as Seller
                   </Link>

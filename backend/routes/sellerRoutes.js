@@ -103,14 +103,15 @@ router.get("/in-view", async (req, res) => {
                u.phone AS phone,
                w.balance AS walletBalance,
                s.is_available,
-               u.profile_pic
+               s.is_available AS isAvailable,
+               u.profile_pic,
+               u.profile_pic AS profilePhotoUrl
         FROM sellers s
         JOIN users u ON s.user_id = u.id
         LEFT JOIN categories c ON s.category_id = c.id
         LEFT JOIN wallets w ON s.user_id = w.user_id
       ) AS sellers_in_view
       WHERE lat BETWEEN ? AND ? AND lng BETWEEN ? AND ?
-        AND is_available = 1
       LIMIT 200`,
       [minLat, maxLat, minLng, maxLng]
     );

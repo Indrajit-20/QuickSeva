@@ -258,7 +258,7 @@ export default function ProfileDropdown({ user, onLogout }) {
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="w-full rounded-xl bg-[#D85A30] text-white force-text-white font-black py-3 hover:bg-[#c24e27] transition"
+                  className="w-full rounded-xl bg-[#e53935] text-white force-text-white font-black py-3 hover:bg-[#cc2f2c] transition"
                 >
                   🚪 Logout
                 </button>
@@ -340,7 +340,7 @@ export default function ProfileDropdown({ user, onLogout }) {
                       <button
                         type="button"
                         onClick={handleLogout}
-                        className="rounded-xl px-3 py-2 text-sm font-black bg-[#D85A30] text-white force-text-white hover:bg-[#c24e27] transition"
+                        className="rounded-xl px-3 py-2 text-sm font-black bg-[#e53935] text-white force-text-white hover:bg-[#cc2f2c] transition"
                       >
                         🚪 Logout
                       </button>
@@ -358,7 +358,7 @@ export default function ProfileDropdown({ user, onLogout }) {
                     <button
                       type="button"
                       onClick={handleLogout}
-                      className="rounded-xl px-3 py-2 text-sm font-black bg-[#D85A30] text-white force-text-white hover:bg-[#c24e27] transition"
+                      className="rounded-xl px-3 py-2 text-sm font-black bg-[#e53935] text-white force-text-white hover:bg-[#cc2f2c] transition"
                     >
                       🚪 Logout
                     </button>
@@ -393,7 +393,7 @@ export default function ProfileDropdown({ user, onLogout }) {
                       <button
                         type="button"
                         onClick={handleLogout}
-                        className="rounded-xl px-3 py-2 text-sm font-black bg-[#D85A30] text-white force-text-white hover:bg-[#c24e27] transition"
+                        className="rounded-xl px-3 py-2 text-sm font-black bg-[#e53935] text-white force-text-white hover:bg-[#cc2f2c] transition"
                       >
                         🚪 Logout
                       </button>

@@ -54,7 +54,7 @@ function SellerNavLink({ item, onClick, badgeCount }) {
         <span>{item.label}</span>
       </div>
       {item.label === "Orders" && badgeCount > 0 && (
-        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#D85A30] px-1.5 text-xs font-bold text-white shadow-none">
+        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#e53935] px-1.5 text-xs font-bold text-white shadow-none">
           {badgeCount}
         </span>
       )}
@@ -104,7 +104,7 @@ function SellerSidebar({ user, onLogout, onNavigate, pendingOrdersCount }) {
         <button
           type="button"
           onClick={onLogout}
-          className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#D85A30]/30 bg-[#D85A30]/10 px-3 py-2.5 text-sm font-semibold text-[#D85A30] transition hover:-translate-y-0.5 hover:bg-[#D85A30]/15 hover:shadow-[0_10px_22px_-14px_#D85A30]"
+          className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#e53935]/30 bg-[#e53935]/10 px-3 py-2.5 text-sm font-semibold text-[#e53935] transition hover:-translate-y-0.5 hover:bg-[#e53935]/15 hover:shadow-[0_10px_22px_-14px_#e53935]"
         >
           <LogOut size={17} />
           Logout

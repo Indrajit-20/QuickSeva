@@ -5,16 +5,12 @@
   body {
     @apply bg-slate-50 text-slate-900 font-sans antialiased;
     background-image:
-      radial-gradient(
-        circle at 0% 0%,
+      radial-gradient(circle at 0% 0%,
         rgba(91, 115, 255, 0.03) 0%,
-        transparent 40%
-      ),
-      radial-gradient(
-        circle at 100% 100%,
+        transparent 40%),
+      radial-gradient(circle at 100% 100%,
         rgba(34, 197, 94, 0.02) 0%,
-        transparent 50%
-      );
+        transparent 50%);
   }
 
   /* Headings */
@@ -54,7 +50,7 @@
    QUICKSEVA CORPORATE THEME OVERRIDES
    Flat professional palette:
    page #f8f9fb, panels #ffffff, primary #185FA5,
-   secondary #0F6E56, accent #D85A30.
+   secondary #0F6E56, accent #e53935.
    This block intentionally overrides legacy dark/glass Tailwind classes
    without changing component structure.
    ================================================================= */
@@ -65,7 +61,7 @@
   --qs-border: #e5e7eb;
   --qs-primary: #185fa5;
   --qs-secondary: #0f6e56;
-  --qs-accent: #d85a30;
+  --qs-accent: #e53935;
   --qs-text: #1a1a1a;
   --qs-muted: #6b7280;
 }
@@ -425,8 +421,8 @@ textarea::placeholder {
 .qs-tag-gold,
 .qs-tag-amber,
 .badge-warning {
-  background: rgba(216, 90, 48, 0.1) !important;
-  border-color: rgba(216, 90, 48, 0.22) !important;
+  background: rgba(229, 57, 53, 0.08) !important;
+  border-color: rgba(229, 57, 53, 0.2) !important;
   color: var(--qs-accent) !important;
 }
 
@@ -502,6 +498,7 @@ textarea::placeholder {
 
 /* ==================== FORM ELEMENTS ==================== */
 @layer components {
+
   /* Form Input - Premium style */
   .form-input {
     @apply w-full px-4 py-2.5 rounded-lg font-medium;
@@ -557,6 +554,7 @@ textarea::placeholder {
 
 /* ==================== BUTTONS ==================== */
 @layer components {
+
   /* Base Button */
   .btn {
     @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg;
@@ -683,6 +681,7 @@ textarea::placeholder {
       opacity: 0;
       transform: translateY(4px);
     }
+
     to {
       opacity: 1;
       transform: translateY(0);
@@ -694,6 +693,7 @@ textarea::placeholder {
       opacity: 0;
       transform: translateX(16px);
     }
+
     to {
       opacity: 1;
       transform: translateX(0);
@@ -734,100 +734,9 @@ textarea::placeholder {
     box-shadow: 0 8px 32px rgba(124, 58, 237, 0.08);
   }
 
-  .gradient-text {
-    background: linear-gradient(135deg, #7c3aed, #10b981);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
 
-  .gradient-text-purple {
-    background: linear-gradient(135deg, #a855f7, #7c3aed);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
 
-  .glow-purple {
-    box-shadow: 0 0 20px rgba(124, 58, 237, 0.35);
-    transition: box-shadow 0.3s ease;
-  }
 
-  .glow-purple:hover {
-    box-shadow: 0 0 35px rgba(124, 58, 237, 0.6);
-  }
-
-  .glow-green {
-    box-shadow: 0 0 20px rgba(16, 185, 129, 0.35);
-    transition: box-shadow 0.3s ease;
-  }
-
-  .glow-green:hover {
-    box-shadow: 0 0 35px rgba(16, 185, 129, 0.6);
-  }
-
-  .btn-premium {
-    background: linear-gradient(135deg, #7c3aed, #6d28d9);
-    border: none;
-    border-radius: 12px;
-    color: white;
-    font-weight: 600;
-    padding: 12px 24px;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4);
-  }
-
-  .btn-premium:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(124, 58, 237, 0.6);
-  }
-
-  .hover-lift {
-    transition:
-      transform 0.3s ease,
-      box-shadow 0.3s ease;
-  }
-
-  .hover-lift:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
-  }
-
-  .animated-bg {
-    background: linear-gradient(135deg, #0f0c29, #1e1b4b, #0f0c29);
-    background-size: 400% 400%;
-    animation: gradientShift 8s ease infinite;
-  }
-
-  @keyframes gradientShift {
-    0% {
-      background-position: 0% 50%;
-    }
-    50% {
-      background-position: 100% 50%;
-    }
-    100% {
-      background-position: 0% 50%;
-    }
-  }
-
-  /* Premium Scrollbar */
-  ::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  ::-webkit-scrollbar-track {
-    background: #1e1b4b;
-  }
-
-  ::-webkit-scrollbar-thumb {
-    background: #7c3aed;
-    border-radius: 3px;
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    background: #6d28d9;
-  }
 
   .focus-ring-emerald {
     @apply focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:ring-offset-2;
@@ -867,132 +776,12 @@ textarea::placeholder {
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
+
 /* =================================================================
-   QUICKSEVA — Premium Marketplace UI styles
-   APPEND this block to the END of your existing src/index.css.
-   It only adds new utilities prefixed with `qs-` and does NOT
-   override any existing class.
+   QUICKSEVA — Marketplace UI Utilities
    ================================================================= */
 
 @layer utilities {
-  /* ---------- Glass panel ---------- */
-  .qs-glass-panel {
-    position: relative;
-    background: linear-gradient(
-      135deg,
-      rgba(99, 102, 241, 0.12),
-      rgba(79, 70, 229, 0.06) 40%,
-      rgba(15, 23, 42, 0.35)
-    );
-    border-radius: 20px;
-    border: 1px solid rgba(165, 180, 252, 0.18);
-    backdrop-filter: blur(18px) saturate(140%);
-    box-shadow:
-      0 10px 40px -10px rgba(15, 23, 42, 0.6),
-      0 0 0 1px rgba(255, 255, 255, 0.02) inset,
-      0 1px 0 rgba(255, 255, 255, 0.06) inset;
-  }
-  .qs-glass-panel::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    padding: 1px;
-    background: linear-gradient(
-      135deg,
-      rgba(165, 180, 252, 0.45),
-      rgba(99, 102, 241, 0.05) 40%,
-      rgba(217, 70, 239, 0.25)
-    );
-    -webkit-mask:
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
-    mask:
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    pointer-events: none;
-  }
-
-  /* ---------- Buttons ---------- */
-  .qs-btn-primary {
-    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-    box-shadow:
-      0 6px 20px -4px rgba(99, 102, 241, 0.55),
-      0 0 0 1px rgba(255, 255, 255, 0.08) inset;
-    transition:
-      transform 0.18s ease,
-      box-shadow 0.25s ease,
-      filter 0.2s ease;
-  }
-  .qs-btn-primary:hover {
-    transform: translateY(-1.5px);
-    box-shadow:
-      0 12px 28px -6px rgba(99, 102, 241, 0.7),
-      0 0 0 1px rgba(255, 255, 255, 0.12) inset;
-    filter: brightness(1.05);
-  }
-  .qs-btn-primary:active {
-    transform: translateY(0) scale(0.98);
-  }
-
-  .qs-btn-locate {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    box-shadow:
-      0 6px 20px -4px rgba(16, 185, 129, 0.5),
-      0 0 0 1px rgba(255, 255, 255, 0.08) inset;
-    transition:
-      transform 0.18s ease,
-      box-shadow 0.25s ease,
-      filter 0.2s ease;
-  }
-  .qs-btn-locate:hover {
-    transform: translateY(-1.5px);
-    box-shadow:
-      0 12px 28px -6px rgba(16, 185, 129, 0.65),
-      0 0 0 1px rgba(255, 255, 255, 0.12) inset;
-    filter: brightness(1.05);
-  }
-  .qs-btn-locate:active {
-    transform: translateY(0) scale(0.98);
-  }
-
-  /* ---------- Category chips ---------- */
-  .qs-chip {
-    flex-shrink: 0;
-    border-radius: 9999px;
-    padding: 8px 16px;
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.2px;
-    color: #c7d2fe;
-    background: rgba(99, 102, 241, 0.08);
-    border: 1px solid rgba(165, 180, 252, 0.18);
-    transition:
-      transform 0.18s ease,
-      background 0.2s ease,
-      box-shadow 0.25s ease,
-      color 0.2s ease;
-    white-space: nowrap;
-  }
-  .qs-chip:hover {
-    transform: translateY(-1.5px) scale(1.03);
-    background: rgba(99, 102, 241, 0.16);
-    color: #fff;
-  }
-  .qs-chip-active {
-    background: linear-gradient(135deg, #6366f1, #4338ca);
-    color: #fff;
-    border-color: rgba(165, 180, 252, 0.5);
-    box-shadow:
-      0 6px 18px -4px rgba(99, 102, 241, 0.55),
-      0 0 0 1px rgba(255, 255, 255, 0.1) inset;
-  }
-  .qs-chip-active:hover {
-    color: #fff;
-    background: linear-gradient(135deg, #6366f1, #4338ca);
-  }
 
   /* ---------- Radius slider ---------- */
   .qs-radius-badge {
@@ -1019,6 +808,7 @@ textarea::placeholder {
     outline: none;
     transition: background 0.2s ease;
   }
+
   .qs-range::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
@@ -1035,12 +825,14 @@ textarea::placeholder {
       transform 0.15s ease,
       box-shadow 0.2s ease;
   }
+
   .qs-range::-webkit-slider-thumb:hover {
     transform: scale(1.15);
     box-shadow:
       0 0 0 6px rgba(99, 102, 241, 0.25),
       0 8px 20px -2px rgba(99, 102, 241, 0.7);
   }
+
   .qs-range::-moz-range-thumb {
     width: 20px;
     height: 20px;
@@ -1061,6 +853,7 @@ textarea::placeholder {
       0 0 0 1px rgba(255, 255, 255, 0.04) inset;
     background: #0f172a;
   }
+
   .qs-map-pill {
     pointer-events: auto;
     padding: 8px 12px;
@@ -1077,17 +870,21 @@ textarea::placeholder {
     scrollbar-width: thin;
     scrollbar-color: rgba(129, 140, 248, 0.5) transparent;
   }
+
   .qs-list::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
+
   .qs-list::-webkit-scrollbar-track {
     background: transparent;
   }
+
   .qs-list::-webkit-scrollbar-thumb {
     background: linear-gradient(180deg, #818cf8, #6366f1);
     border-radius: 9999px;
   }
+
   .qs-list::-webkit-scrollbar-thumb:hover {
     background: linear-gradient(180deg, #a5b4fc, #818cf8);
   }
@@ -1097,89 +894,11 @@ textarea::placeholder {
     position: relative;
     padding: 14px;
     border-radius: 16px;
-    background: linear-gradient(
-      135deg,
-      rgba(99, 102, 241, 0.1),
-      rgba(30, 27, 75, 0.55)
-    );
-    border: 1px solid rgba(165, 180, 252, 0.18);
     transition:
       transform 0.25s ease,
-      box-shadow 0.3s ease,
-      border-color 0.25s ease,
-      background 0.25s ease;
-    animation: qsCardIn 0.45s ease both;
-  }
-  .qs-card:hover {
-    transform: translateY(-3px);
-    border-color: rgba(165, 180, 252, 0.45);
-    background: linear-gradient(
-      135deg,
-      rgba(99, 102, 241, 0.18),
-      rgba(30, 27, 75, 0.7)
-    );
-    box-shadow:
-      0 18px 38px -14px rgba(99, 102, 241, 0.45),
-      0 0 0 1px rgba(165, 180, 252, 0.25) inset;
-  }
-  .qs-card-active {
-    border-color: rgba(165, 180, 252, 0.6) !important;
-    box-shadow:
-      0 0 0 2px rgba(99, 102, 241, 0.55),
-      0 18px 40px -12px rgba(99, 102, 241, 0.55);
-    background: linear-gradient(
-      135deg,
-      rgba(99, 102, 241, 0.22),
-      rgba(30, 27, 75, 0.75)
-    ) !important;
-  }
-
-  .qs-avatar-ring {
-    padding: 2px;
-    border-radius: 9999px;
-    background: linear-gradient(135deg, #818cf8, #6366f1, #d946ef);
-    box-shadow: 0 6px 18px -4px rgba(99, 102, 241, 0.55);
-  }
-  .qs-avatar {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    border-radius: 9999px;
-    background: linear-gradient(135deg, #4f46e5, #312e81);
-    color: #fff;
-    font-weight: 800;
-    font-size: 15px;
-    letter-spacing: 0.5px;
-  }
-
-  .qs-verified-tick {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 16px;
-    height: 16px;
-    border-radius: 9999px;
-    background: linear-gradient(135deg, #34d399, #059669);
-    color: #fff;
-    font-size: 10px;
-    font-weight: 900;
-    box-shadow: 0 0 10px rgba(52, 211, 153, 0.55);
-  }
-
-  .qs-distance-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-    padding: 4px 10px;
-    border-radius: 9999px;
-    font-size: 11px;
-    font-weight: 700;
-    color: #6ee7b7;
-    background: rgba(16, 185, 129, 0.12);
-    border: 1px solid rgba(52, 211, 153, 0.3);
-    white-space: nowrap;
+      box-shadow 0.25s ease,
+      border-color 0.25s ease;
+    animation: qsCardIn 0.3s ease both;
   }
 
   .qs-tag {
@@ -1194,26 +913,31 @@ textarea::placeholder {
     border: 1px solid transparent;
     white-space: nowrap;
   }
+
   .qs-tag-gold {
     color: #fde68a;
     background: rgba(245, 158, 11, 0.14);
     border-color: rgba(252, 211, 77, 0.4);
   }
+
   .qs-tag-emerald {
     color: #a7f3d0;
     background: rgba(16, 185, 129, 0.14);
     border-color: rgba(52, 211, 153, 0.4);
   }
+
   .qs-tag-indigo {
     color: #c7d2fe;
     background: rgba(99, 102, 241, 0.16);
     border-color: rgba(165, 180, 252, 0.4);
   }
+
   .qs-tag-amber {
     color: #fcd34d;
     background: rgba(245, 158, 11, 0.12);
     border-color: rgba(252, 211, 77, 0.35);
   }
+
   .qs-tag-green {
     color: #86efac;
     background: rgba(34, 197, 94, 0.14);
@@ -1236,6 +960,7 @@ textarea::placeholder {
       transform 0.15s ease,
       color 0.2s ease;
   }
+
   .qs-contact-btn:hover {
     background: rgba(99, 102, 241, 0.25);
     color: #fff;
@@ -1252,6 +977,7 @@ textarea::placeholder {
       box-shadow 0.25s ease,
       filter 0.2s ease;
   }
+
   .qs-cta:hover {
     transform: translateY(-1.5px);
     filter: brightness(1.05);
@@ -1259,6 +985,7 @@ textarea::placeholder {
       0 12px 26px -6px rgba(99, 102, 241, 0.7),
       0 0 0 1px rgba(255, 255, 255, 0.12) inset;
   }
+
   .qs-cta:active {
     transform: translateY(0) scale(0.99);
   }
@@ -1269,120 +996,18 @@ textarea::placeholder {
       opacity: 0;
       transform: translateY(8px);
     }
+
     to {
       opacity: 1;
       transform: translateY(0);
     }
   }
-  .qs-pulse {
-    animation: qsPulse 1.6s ease-in-out infinite;
-  }
-  @keyframes qsPulse {
-    0%,
-    100% {
-      box-shadow: 0 6px 20px -4px rgba(16, 185, 129, 0.5);
-    }
-    50% {
-      box-shadow: 0 6px 28px 4px rgba(16, 185, 129, 0.75);
-    }
-  }
 
-  /* ---------- Instant Service Badge (glow + pulse) ---------- */
-  @keyframes qsInstantPulse {
-    0%,
-    100% {
-      box-shadow:
-        0 0 0 0 rgba(16, 185, 129, 0),
-        0 0 18px rgba(16, 185, 129, 0.35);
-      transform: translateY(0);
-    }
-    50% {
-      box-shadow:
-        0 0 0 10px rgba(16, 185, 129, 0.1),
-        0 0 30px rgba(16, 185, 129, 0.7);
-      transform: translateY(-1px);
-    }
-  }
-
-  .qs-instant-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 5px 10px;
-    border-radius: 9999px;
-    font-size: 11px;
-    font-weight: 900;
-    letter-spacing: 0.2px;
-    color: #bfffe0;
-    background: linear-gradient(
-      135deg,
-      rgba(16, 185, 129, 0.18),
-      rgba(5, 150, 105, 0.12)
-    );
-    border: 1px solid rgba(52, 211, 153, 0.45);
-    box-shadow: 0 0 18px rgba(16, 185, 129, 0.35);
-    animation: qsInstantPulse 1.35s ease-in-out infinite;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-  }
-
-  .qs-instant-badge-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 9999px;
-    background: #34d399;
-    box-shadow: 0 0 10px rgba(52, 211, 153, 0.9);
-    animation: qsInstantDot 1.35s ease-in-out infinite;
-  }
-
-  @keyframes qsInstantDot {
-    0%,
-    100% {
-      transform: scale(1);
-      opacity: 0.95;
-    }
-    50% {
-      transform: scale(1.25);
-      opacity: 1;
-    }
-  }
-
-  /* Hide scrollbars for chip row */
-  .scrollbar-none {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-  .scrollbar-none::-webkit-scrollbar {
-    display: none;
-  }
 }
 
 /* =================================================================
    FINAL QUICKSEVA CORPORATE THEME ENFORCEMENT
-   Keep this block last so legacy dark/glass qs-* utilities cannot win.
    ================================================================= */
-
-:root {
-  --qs-bg: #f8f9fb;
-  --qs-surface: #ffffff;
-  --qs-border: #e5e7eb;
-  --qs-primary: #185FA5;
-  --qs-secondary: #0F6E56;
-  --qs-accent: #D85A30;
-  --qs-text: #1a1a1a;
-  --qs-muted: #6b7280;
-}
-
-html,
-body,
-#root {
-  background: var(--qs-bg) !important;
-  color: var(--qs-text) !important;
-}
-
-body {
-  background-image: none !important;
-}
 
 * {
   letter-spacing: 0 !important;
@@ -1619,6 +1244,6 @@ input[type="range"] {
 .qs-error,
 .qs-alert-error {
   background: #fff7ed !important;
-  border: 1px solid rgba(216, 90, 48, 0.25) !important;
+  border: 1px solid rgba(229, 57, 53, 0.2) !important;
   color: var(--qs-accent) !important;
 }

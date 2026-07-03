@@ -260,6 +260,12 @@ function formatDistance(distKm) {
   return `${distKm.toFixed(1)} km away`;
 }
 
+const getImageUrl = (url) => {
+  if (!url) return "";
+  if (url.startsWith("http")) return url;
+  return `${API_BASE_URL.replace("/api", "")}${url}`;
+};
+
 function MapController({ center, flyTrigger }) {
   const map = useMap();
   const lastTriggerRef = useRef(0);
@@ -888,14 +894,14 @@ export default function NearbyServices({
           <h4 style="margin: 0 0 4px 0; font-size: 14px; font-weight: bold; color: #1e1b4b;">
             ${seller.business_name || seller.name || ""}
           </h4>
-          <p style="margin: 0 0 8px 0; font-size: 12px; font-weight: 600; color: #4f46e5;">
+          <p style="margin: 0 0 8px 0; font-size: 12px; font-weight: 600; color: #1565C0;">
             ${seller.category || seller.service || ""}
           </p>
           <div style="margin-bottom: 8px; font-size: 11px; color: #64748b;">
             ⭐ ${Number(seller.avg_rating || seller.rating || 0).toFixed(1)} (${seller.reviews || 0} reviews)
           </div>
           <a href="/seller/${sId}" 
-             style="display: block; text-align: center; font-size: 11px; font-weight: bold; text-decoration: none; color: #fff; background: #4f46e5; padding: 6px 12px; border-radius: 6px; transition: background 0.2s;"
+             style="display: block; text-align: center; font-size: 11px; font-weight: bold; text-decoration: none; color: #fff; background: #1565C0; padding: 6px 12px; border-radius: 6px; transition: background 0.2s;"
           >
             View Profile / प्रोफ़ाइल देखें →
           </a>
@@ -1517,11 +1523,10 @@ export default function NearbyServices({
                     type="button"
                     onClick={() => toggleQuickFilter(key)}
                     aria-pressed={active}
-                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold transition-all ${
-                      active
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold transition-all ${active
                         ? "border-indigo-300/60 bg-indigo-500/30 text-white shadow-[0_0_18px_rgba(99,102,241,0.22)]"
                         : "border-slate-700/50 bg-white/10 text-slate-200 hover:border-indigo-400/40 hover:bg-white/15 hover:text-white"
-                    }`}
+                      }`}
                   >
                     <Icon className="h-3.5 w-3.5" />
                     <span className="whitespace-nowrap">{label}</span>
@@ -1858,6 +1863,7 @@ export default function NearbyServices({
               const sId = seller.id || seller.sellerId;
               const isSelected = selectedSellerId === sId;
               const distanceLabel = Number(seller.distanceKm || 0).toFixed(1);
+              const isAvailable = seller.isAvailable !== undefined ? Boolean(seller.isAvailable) : (seller.is_available !== undefined ? Boolean(seller.is_available) : true);
 
               return (
                 <div
@@ -1870,52 +1876,47 @@ export default function NearbyServices({
                 >
                   {/* Header: avatar + name + distance */}
                   <div className="flex items-center gap-3">
-                    <div className="qs-avatar-ring">
-                      <div className="qs-avatar">
-                        {seller.name?.[0]?.toUpperCase() || "?"}
-                      </div>
+                    <div className="relative h-10 w-10 flex-shrink-0">
+                      {(seller.profilePhotoUrl || seller.profile_pic) ? (
+                        <img
+                          src={getImageUrl(seller.profilePhotoUrl || seller.profile_pic)}
+                          alt={seller.name}
+                          className="h-10 w-10 rounded-full object-cover border border-slate-200"
+                        />
+                      ) : (
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1565C0] font-bold text-white text-sm">
+                          {seller.name?.[0]?.toUpperCase() || "?"}
+                        </div>
+                      )}
+                      {/* Availability status dot badge */}
+                      <span
+                        className={`absolute -bottom-0.5 -right-0.5 block h-3 w-3 rounded-full border-2 border-white shadow-[0_1px_3.5px_rgba(0,0,0,0.15)] ${
+                          isAvailable ? "bg-[#1E8E5A]" : "bg-[#e53935]"
+                        }`}
+                        title={isAvailable ? "Available" : "Unavailable"}
+                      />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
-                        <h4 className="truncate text-sm font-bold text-white">
+                        <h4 className="truncate text-sm font-bold text-slate-800">
                           {seller.name}
                         </h4>
                       </div>
-                      <div className="truncate text-xs font-medium text-indigo-300/90">
+                      <div className="truncate text-xs font-medium text-slate-500">
                         {seller.service}
                       </div>
                     </div>
                     <div className="qs-distance-badge">
-                      <span className="text-[10px] opacity-80">
-                        {seller?.serviceMode === "online" ||
-                          seller?.serviceMode === "both"
-                          ? "🌐"
-                          : "📍"}
-                      </span>
-                      <span>
-                        {seller?.serviceMode === "online" ||
-                          seller?.serviceMode === "both"
-                          ? "Works Across India"
-                          : `${distanceLabel}km away`}
-                      </span>
+                      <span className="text-[10px] opacity-80">📍</span>
+                      <span>{`${distanceLabel}km away`}</span>
                     </div>
                   </div>
 
                   {/* Address */}
-                  <div className="mt-2.5 flex items-start gap-1.5 text-xs text-indigo-300/80">
+                  <div className="mt-2.5 flex items-start gap-1.5 text-xs text-slate-600">
                     <span className="mt-0.5">📌</span>
                     <span className="truncate">{seller.address}</span>
                   </div>
-
-                  {/* Distance */}
-                  {buyerPos && (
-                    <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs font-semibold text-indigo-200">
-                      <span>📍 {formatDistance(seller.distanceKm)}</span>
-                      <span className="text-indigo-300/80">
-                        ({getDistanceGuide(seller.distanceKm)})
-                      </span>
-                    </div>
-                  )}
 
                   {/* Badge row */}
                   <div className="mt-2.5 flex flex-wrap gap-1.5">
@@ -1967,10 +1968,6 @@ export default function NearbyServices({
                         ⚡ Fast Response
                       </span>
                     )}
-                    <span className="qs-tag qs-tag-green inline-flex items-center gap-1 font-bold">
-                      <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
-                      🟢 Available Now / तैयार हैं
-                    </span>
                   </div>
 
                   {/* CTA */}
