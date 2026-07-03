@@ -355,6 +355,96 @@ textarea::placeholder {
   box-shadow: 0 12px 28px rgba(24, 95, 165, 0.12) !important;
 }
 
+/* ── Leaflet marker icon anti-jump fixes ────────────────────────────────────
+   IMPORTANT: Do NOT override `transform` on .leaflet-marker-icon or any
+   Leaflet marker element. Leaflet uses `transform: translate3d(x, y, 0)`
+   to position markers — overriding it resets all markers to (0,0).
+   Only safe to override: outline, box-shadow, transition, pointer-events.
+   ─────────────────────────────────────────────────────────────────────── */
+
+/* Remove focus rings and outlines that cause visible jump on click */
+.leaflet-marker-icon,
+.leaflet-marker-shadow {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Stop focus outline on click */
+.leaflet-marker-icon:focus,
+.leaflet-marker-icon:focus-visible,
+.leaflet-marker-icon:active {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Service pin wrapper classes — NO transform override, just cosmetic fixes */
+.service-pin-green,
+.service-pin-premium,
+.service-pin-gold,
+.user-location-pin,
+.search-center-pin {
+  cursor: pointer !important;
+  outline: none !important;
+  /* No transition on position/transform — prevents any animation-based jump */
+  transition: opacity 0.1s ease !important;
+}
+
+/* SVG children are non-interactive; the wrapper div handles clicks */
+.service-pin-green svg,
+.service-pin-premium svg,
+.service-pin-gold svg {
+  pointer-events: none !important;
+  display: block !important;
+  overflow: visible !important;
+}
+
+/* Cluster markers — default marker-cluster class */
+.marker-cluster,
+.marker-cluster div {
+  outline: none !important;
+  box-sizing: border-box !important;
+}
+.marker-cluster:focus,
+.marker-cluster:active {
+  outline: none !important;
+}
+
+/* Custom QuickSeva cluster icon — completely stable on hover/click */
+.qs-cluster-icon {
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  border: none !important;
+  /* Do NOT set transform here — Leaflet positions this with transform */
+}
+.qs-cluster-icon:focus,
+.qs-cluster-icon:focus-visible,
+.qs-cluster-icon:active {
+  outline: none !important;
+}
+/* The inner div (created by iconCreateFunction) must not shift on hover */
+.qs-cluster-icon div {
+  box-sizing: border-box !important;
+  outline: none !important;
+  /* border and size are set inline in JS — do not override here */
+}
+/* Hide the old default cluster coverage polygon that causes repaints */
+.leaflet-cluster-spider-leg {
+  opacity: 0.4 !important;
+}
+
+/* Popup wrapper — NO transform override (Leaflet positions popups too) */
+.qs-seller-popup .leaflet-popup-content-wrapper {
+  border-radius: 12px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15) !important;
+  border: 1px solid rgba(21, 101, 192, 0.15) !important;
+  overflow: hidden !important;
+}
+.qs-seller-popup .leaflet-popup-tip-container {
+  margin-top: -1px !important;
+}
+
+
 .qs-map-pill {
   background: var(--qs-surface) !important;
   border: 1px solid var(--qs-border) !important;
@@ -881,18 +971,18 @@ textarea::placeholder {
   }
 
   .qs-list::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #818cf8, #6366f1);
+    background: #cbd5e1 !important;
     border-radius: 9999px;
   }
 
   .qs-list::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, #a5b4fc, #818cf8);
+    background: #94a3b8 !important;
   }
 
   /* ---------- Provider card ---------- */
   .qs-card {
     position: relative;
-    padding: 14px;
+    padding: 20px !important;
     border-radius: 16px;
     transition:
       transform 0.25s ease,
@@ -1246,4 +1336,776 @@ input[type="range"] {
   background: #fff7ed !important;
   border: 1px solid rgba(229, 57, 53, 0.2) !important;
   color: var(--qs-accent) !important;
+}
+
+/* Custom Outlined Seller Card Button */
+.qs-seller-card-btn {
+  background: #ffffff !important;
+  background-image: none !important;
+  border: 1.5px solid var(--qs-primary) !important;
+  color: var(--qs-primary) !important;
+  box-shadow: none !important;
+  text-decoration: none !important;
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.qs-seller-card-btn:hover {
+  background: var(--qs-primary) !important;
+  background-image: none !important;
+  background-size: 0 !important;
+  border-color: var(--qs-primary) !important;
+  color: #ffffff !important;
+  box-shadow: 0 8px 20px rgba(24, 95, 165, 0.24) !important;
+  transform: translateY(-1.5px) !important;
+}
+
+.qs-seller-card-btn:active {
+  transform: translateY(0) scale(0.98) !important;
+}
+
+/* Custom Availability Status Badges & Profile Defaults (Overriding global [class*="bg-[#1"] rule) */
+.qs-avatar-default {
+  background-color: #1565C0 !important;
+  color: #ffffff !important;
+}
+
+.qs-status-available {
+  background-color: #1e8e5a !important;
+  border-color: #ffffff !important;
+}
+
+.qs-status-unavailable {
+  background-color: #e53935 !important;
+  border-color: #ffffff !important;
+}
+
+/* Map Toggle Button brand overrides */
+.qs-map-toggle-btn {
+  background: #ffffff !important;
+  background-image: none !important;
+  border: 1.5px solid var(--qs-primary) !important;
+  color: var(--qs-primary) !important;
+  box-shadow: none !important;
+  transition: all 0.22s ease !important;
+}
+
+.qs-map-toggle-btn:hover {
+  background: rgba(24, 95, 165, 0.05) !important;
+  border-color: var(--qs-primary) !important;
+  color: var(--qs-primary) !important;
+}
+
+.qs-map-toggle-btn.active {
+  background: var(--qs-primary) !important;
+  border-color: var(--qs-primary) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(24, 95, 165, 0.22) !important;
+}
+
+.qs-map-toggle-btn.active:hover {
+  background: #124d85 !important;
+  border-color: #124d85 !important;
+  color: #ffffff !important;
+}
+
+/* Custom Distance Badge (Pill Style) */
+.qs-custom-distance-badge {
+  background: rgba(24, 95, 165, 0.06) !important;
+  border: 1.5px solid rgba(24, 95, 165, 0.16) !important;
+  color: var(--qs-primary) !important;
+  padding: 3.5px 12px !important;
+  border-radius: 9999px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+}
+
+/* Custom Instant Service Badge (Pill Style) */
+.qs-custom-instant-badge {
+  background: rgba(217, 119, 6, 0.07) !important;
+  border: 1.5px solid rgba(217, 119, 6, 0.22) !important;
+  color: #d97706 !important;
+  padding: 3.5px 10px !important;
+  border-radius: 9999px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  font-size: 10.5px !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+}
+
+.qs-custom-instant-badge-dot {
+  width: 6px !important;
+  height: 6px !important;
+  background-color: #d97706 !important;
+  border-radius: 50% !important;
+  display: inline-block !important;
+  animation: qsInstantPulse 1.6s infinite ease-in-out !important;
+}
+
+@keyframes qsInstantPulse {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.55;
+  }
+
+  50% {
+    transform: scale(1.25);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(0.85);
+    opacity: 0.55;
+  }
+}
+
+/* Premium Featured Seller Ad Banner */
+.qs-featured-ad-banner {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%) !important;
+  border: 1.5px dashed #0284c7 !important;
+  padding: 24px 28px !important;
+  border-radius: 20px !important;
+  box-shadow: 0 4px 16px rgba(2, 132, 199, 0.05) !important;
+  transition: all 0.25s ease !important;
+}
+
+.qs-featured-ad-banner:hover {
+  border-color: #38bdf8 !important;
+  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%) !important;
+  box-shadow: 0 8px 24px rgba(2, 132, 199, 0.1) !important;
+}
+
+/* Premium Mobile Ad Card */
+.qs-featured-ad-card {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%) !important;
+  border: 1.5px dashed #0284c7 !important;
+  padding: 24px !important;
+  border-radius: 20px !important;
+  min-height: 240px !important;
+  box-shadow: 0 4px 16px rgba(2, 132, 199, 0.05) !important;
+  transition: all 0.25s ease !important;
+}
+
+.qs-featured-ad-card:hover {
+  border-color: #38bdf8 !important;
+  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%) !important;
+  box-shadow: 0 8px 24px rgba(2, 132, 199, 0.1) !important;
+}
+
+/* Focused Search Dashboard Panel */
+.qs-search-panel-card {
+  position: relative !important;
+  background: #ffffff !important;
+  border: 1.5px solid rgba(24, 95, 165, 0.08) !important;
+  border-radius: 24px !important;
+  padding: 28px !important;
+  box-shadow: 0 16px 40px rgba(24, 95, 165, 0.04) !important;
+  margin-bottom: 24px !important;
+}
+
+/* Light inputs inside the card to contrast with the white card background */
+.qs-search-panel-card input {
+  background: #f8fafc !important;
+  /* soft grey-blue */
+  border: 1.5px solid #cbd5e1 !important;
+  color: #1e293b !important;
+}
+
+.qs-search-panel-card input::placeholder {
+  color: #94a3b8 !important;
+  /* slate-400 */
+}
+
+.qs-search-panel-card input:focus {
+  background: #ffffff !important;
+  /* white on focus */
+  border-color: var(--qs-primary) !important;
+  box-shadow: 0 0 0 3.5px rgba(24, 95, 165, 0.15) !important;
+}
+
+/* Fix text labels inside the white card */
+.qs-search-panel-card label {
+  color: #334155 !important;
+  /* dark slate-700 for labels */
+  font-weight: 600 !important;
+}
+
+.qs-search-panel-card span:not(.qs-tag):not(.qs-instant-badge-dot) {
+  color: #475569 !important;
+  /* dark slate-600 for inline text span */
+}
+
+/* Slider and Filters container card */
+.qs-filter-container-card {
+  background: #f8fafc !important;
+  border: 1.5px solid #e2e8f0 !important;
+  padding: 20px !important;
+}
+
+.qs-filter-container-card span {
+  color: #475569 !important;
+}
+
+/* Quick Filter Buttons (Pills) */
+.qs-quick-filter-btn {
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  color: #475569 !important;
+  box-shadow: none !important;
+  cursor: pointer !important;
+}
+
+.qs-quick-filter-btn:hover {
+  background: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #1e293b !important;
+}
+
+.qs-quick-filter-btn.active {
+  background: var(--qs-primary) !important;
+  border-color: var(--qs-primary) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(24, 95, 165, 0.18) !important;
+}
+
+.qs-quick-filter-btn.active:hover {
+  background: #124d85 !important;
+  border-color: #124d85 !important;
+  color: #ffffff !important;
+}
+
+/* Refine Toggle Button */
+.qs-refine-toggle-btn {
+  background: #ffffff !important;
+  border: 1.5px solid var(--qs-primary) !important;
+  color: var(--qs-primary) !important;
+  box-shadow: none !important;
+  transition: all 0.2s ease !important;
+}
+
+.qs-refine-toggle-btn:hover {
+  background: rgba(24, 95, 165, 0.05) !important;
+  border-color: var(--qs-primary) !important;
+  color: var(--qs-primary) !important;
+}
+
+/* Refine collapsible container panel */
+.qs-refine-panel {
+  background: #f8fafc !important;
+  /* light grey-blue background */
+  border: 1.5px solid #e2e8f0 !important;
+}
+
+.qs-refine-panel p {
+  color: #334155 !important;
+  /* dark slate-700 for category titles */
+  font-weight: 700 !important;
+}
+
+/* Refine category option button styling */
+.qs-refine-option-btn {
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  color: #475569 !important;
+  box-shadow: none !important;
+  cursor: pointer !important;
+}
+
+.qs-refine-option-btn:hover {
+  background: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #1e293b !important;
+}
+
+.qs-refine-option-btn.active {
+  background: var(--qs-primary) !important;
+  border-color: var(--qs-primary) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(24, 95, 165, 0.18) !important;
+}
+
+.qs-refine-option-btn.active:hover {
+  background: #124d85 !important;
+  border-color: #124d85 !important;
+  color: #ffffff !important;
+}
+
+/* Clear all link inside refine panel */
+.qs-refine-panel .border-t {
+  border-color: #e2e8f0 !important;
+}
+
+.qs-refine-panel button {
+  color: var(--qs-accent) !important;
+  /* red/accent */
+}
+
+.qs-refine-panel button:hover {
+  color: #b91c1c !important;
+}
+
+/* Location Picker Autocomplete Dropdown */
+.qs-location-dropdown {
+  background: #ffffff !important;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.15) !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+.qs-location-dropdown button {
+  background: #ffffff !important;
+  color: #1e293b !important;
+  border: none !important;
+  box-shadow: none !important;
+  transition: all 0.2s ease !important;
+}
+
+.qs-location-dropdown button:hover {
+  background: #f1f5f9 !important;
+  /* soft hover gray */
+  color: var(--qs-primary) !important;
+}
+
+.qs-location-dropdown button span {
+  color: inherit !important;
+}
+
+.qs-location-dropdown button span.text-slate-500 {
+  color: #64748b !important;
+  /* readable gray text */
+}
+
+/* Premium Lead Form Card */
+.qs-lead-form-card {
+  background: #ffffff !important;
+  border: 1.5px solid rgba(24, 95, 165, 0.08) !important;
+  border-radius: 24px !important;
+  padding: 28px !important;
+  box-shadow: 0 16px 40px rgba(24, 95, 165, 0.04) !important;
+}
+
+.qs-lead-form-card p,
+.qs-lead-form-card label,
+.qs-lead-form-card span {
+  color: #334155 !important;
+  /* dark slate labels and texts */
+}
+
+.qs-lead-form-card p.text-white {
+  color: #1e293b !important;
+  font-weight: 700 !important;
+}
+
+.qs-lead-form-card p.text-indigo-200\/75 {
+  color: #475569 !important;
+}
+
+.qs-lead-form-card input,
+.qs-lead-form-card textarea {
+  background: #f8fafc !important;
+  /* light grey-blue inputs */
+  border: 1.5px solid #cbd5e1 !important;
+  color: #1e293b !important;
+  border-radius: 12px !important;
+}
+
+.qs-lead-form-card input::placeholder,
+.qs-lead-form-card textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+.qs-lead-form-card input:focus,
+.qs-lead-form-card textarea:focus {
+  background: #ffffff !important;
+  border-color: var(--qs-primary) !important;
+  box-shadow: 0 0 0 3.5px rgba(24, 95, 165, 0.15) !important;
+}
+
+.qs-lead-form-card svg {
+  color: var(--qs-primary) !important;
+  /* blue icons */
+}
+
+.qs-lead-form-card button[type="submit"] {
+  background: var(--qs-primary) !important;
+  color: #ffffff !important;
+  border-radius: 12px !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 4px 12px rgba(24, 95, 165, 0.18) !important;
+}
+
+.qs-lead-form-card button[type="submit"]:hover {
+  background: #124d85 !important;
+}
+
+/* Legibility Fix for Map Badges (.qs-map-pill) */
+.qs-map-pill {
+  background: #ffffff !important;
+  border: 1.5px solid rgba(24, 95, 165, 0.1) !important;
+  color: #1e293b !important;
+  box-shadow: 0 4px 12px rgba(24, 95, 165, 0.08) !important;
+  border-radius: 12px !important;
+  padding: 8px 12px !important;
+}
+
+.qs-map-pill div,
+.qs-map-pill span,
+.qs-map-pill strong {
+  color: #1e293b !important;
+  /* override the text-white inside */
+}
+
+/* Specific styling for label inside map pill */
+.qs-map-pill .text-indigo-200\/80,
+.qs-map-pill .text-indigo-300\/80,
+.qs-map-pill div:first-child {
+  color: #64748b !important;
+  /* slate-500 for metadata labels */
+  font-weight: 600 !important;
+}
+
+/* Focused Search Dashboard Panel */
+.qs-search-panel-card {
+  position: relative !important;
+  background: #ffffff !important;
+  border: 1px solid #f1f5f9 !important;
+  border-radius: 32px !important;
+  padding: 32px !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04) !important;
+  margin-bottom: 24px !important;
+}
+
+/* Light inputs inside the card to contrast with the white card background */
+.qs-search-panel-card input {
+  background: #f8fafc !important; /* soft grey-blue */
+  border: 1px solid #f1f5f9 !important;
+  color: #1e293b !important;
+}
+
+.qs-search-panel-card input::placeholder {
+  color: #94a3b8 !important; /* slate-400 */
+}
+
+.qs-search-panel-card input:focus {
+  background: #ffffff !important; /* white on focus */
+  border-color: var(--qs-primary) !important;
+  box-shadow: 0 0 0 3.5px rgba(24, 95, 165, 0.15) !important;
+}
+
+/* Fix text labels inside the white card */
+.qs-search-panel-card label {
+  color: #334155 !important; /* dark slate-700 for labels */
+  font-weight: 600 !important;
+}
+
+.qs-search-panel-card span:not(.qs-tag):not(.qs-instant-badge-dot) {
+  color: #475569 !important; /* dark slate-600 for inline text span */
+}
+
+/* Slider and Filters container card */
+.qs-filter-container-card {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  padding: 20px !important;
+}
+
+.qs-filter-container-card span {
+  color: #475569 !important;
+}
+
+/* Quick Filter Buttons (Pills) */
+.qs-quick-filter-btn {
+  background: #ffffff !important;
+  border: 1.5px solid #e2e8f0 !important;
+  color: #475569 !important;
+  box-shadow: none !important;
+  cursor: pointer !important;
+}
+
+.qs-quick-filter-btn:hover {
+  background: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #1e293b !important;
+}
+
+.qs-quick-filter-btn.active {
+  background: var(--qs-primary) !important;
+  border-color: var(--qs-primary) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(24, 95, 165, 0.18) !important;
+}
+
+.qs-quick-filter-btn.active:hover {
+  background: #124d85 !important;
+  border-color: #124d85 !important;
+  color: #ffffff !important;
+}
+
+/* Refine Toggle Button */
+.qs-refine-toggle-btn {
+  background: #0f172a !important; /* dark slate/black */
+  border: none !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15) !important;
+  transition: all 0.2s ease !important;
+  cursor: pointer !important;
+}
+
+.qs-refine-toggle-btn:hover {
+  background: #1e293b !important;
+  transform: translateY(-1.5px) !important;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.25) !important;
+}
+
+.qs-refine-toggle-btn svg {
+  color: #ffffff !important;
+}
+
+/* Map Option Toggle Button on the Top Side */
+.qs-map-toggle-btn {
+  background: var(--qs-primary) !important; /* brand blue */
+  border: none !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(24, 95, 165, 0.2) !important;
+  transition: all 0.2s ease !important;
+  cursor: pointer !important;
+}
+
+.qs-map-toggle-btn:hover {
+  background: #124d85 !important;
+  transform: translateY(-1.5px) !important;
+  box-shadow: 0 6px 16px rgba(24, 95, 165, 0.28) !important;
+}
+
+.qs-map-toggle-btn svg {
+  color: #ffffff !important;
+}
+
+/* Location Picker Autocomplete Dropdown */
+.qs-location-dropdown {
+  background: #ffffff !important;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.15) !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+.qs-location-dropdown button {
+  background: #ffffff !important;
+  color: #1e293b !important;
+  border: none !important;
+  box-shadow: none !important;
+  transition: all 0.2s ease !important;
+}
+
+.qs-location-dropdown button:hover {
+  background: #f1f5f9 !important;
+  color: var(--qs-primary) !important;
+}
+
+.qs-location-dropdown button span {
+  color: inherit !important;
+}
+
+.qs-location-dropdown button span.text-slate-500 {
+  color: #64748b !important;
+}
+
+/* Leaflet Popup Override Styles to Ensure High Legibility & Dark Text Contrast */
+.leaflet-popup-content-wrapper {
+  background: #ffffff !important;
+  color: #1e293b !important;
+  border-radius: 16px !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15) !important;
+  padding: 4px !important;
+}
+
+.leaflet-popup-content {
+  margin: 12px 16px !important;
+  line-height: 1.4 !important;
+}
+
+.leaflet-popup-content h4,
+.leaflet-popup-content p,
+.leaflet-popup-content div,
+.leaflet-popup-content span,
+.leaflet-popup-content strong {
+  color: #1e293b !important; /* Force dark text color to resolve invisible text issue */
+}
+
+.leaflet-popup-content a {
+  color: #ffffff !important; /* Ensure link text is white */
+}
+
+.leaflet-popup-tip {
+  background: #ffffff !important;
+}
+
+/* ═══════════════════════════════════════════════
+   BOTTOM NAVIGATION BAR
+   ═══════════════════════════════════════════════ */
+
+.bottom-nav-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-around;
+  height: 64px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  border-top: 1px solid rgba(229, 231, 235, 0.7);
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.06), 0 -1px 6px rgba(0, 0, 0, 0.03);
+  padding: 0 4px;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* On large screens with sidebar, offset for seller layout */
+@media (min-width: 1024px) {
+  .bottom-nav-bar:not(.bottom-nav-bar--user) {
+    left: 288px; /* 18rem = w-72 sidebar */
+  }
+}
+
+.bottom-nav-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: 2px;
+  padding: 6px 4px 8px;
+  color: #9ca3af;
+  text-decoration: none;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color 0.2s ease, transform 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+  min-width: 0;
+}
+
+.bottom-nav-item:hover {
+  color: #185FA5;
+}
+
+.bottom-nav-item:active {
+  transform: scale(0.92);
+}
+
+.bottom-nav-item--active {
+  color: #185FA5;
+}
+
+/* Icon wrapper for relative badge positioning */
+.bottom-nav-icon-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 10px;
+  transition: background-color 0.2s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.bottom-nav-item--active .bottom-nav-icon-wrap {
+  background: rgba(24, 95, 165, 0.1);
+  transform: translateY(-2px);
+}
+
+.bottom-nav-item:hover .bottom-nav-icon-wrap {
+  background: rgba(24, 95, 165, 0.06);
+}
+
+/* Label */
+.bottom-nav-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  white-space: nowrap;
+  transition: color 0.2s ease, opacity 0.2s ease;
+}
+
+.bottom-nav-item--active .bottom-nav-label {
+  color: #185FA5;
+  font-weight: 700;
+}
+
+/* Active dot indicator */
+.bottom-nav-indicator {
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 18px;
+  height: 3px;
+  border-radius: 0 0 6px 6px;
+  background: linear-gradient(90deg, #185FA5, #3b82f6);
+  animation: bottom-nav-slide-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Badge for orders etc */
+.bottom-nav-badge {
+  position: absolute;
+  top: -4px;
+  right: -6px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #e53935;
+  color: white;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: 0 2px 6px rgba(229, 57, 53, 0.4);
+  animation: bottom-nav-badge-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* User-variant (for the public/user navbar) */
+.bottom-nav-bar--user {
+  left: 0 !important;
+}
+
+/* Animations */
+@keyframes bottom-nav-slide-in {
+  0% {
+    width: 0;
+    opacity: 0;
+  }
+  100% {
+    width: 18px;
+    opacity: 1;
+  }
+}
+
+@keyframes bottom-nav-badge-pop {
+  0% {
+    transform: scale(0);
+  }
+  60% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Add bottom padding to main content to prevent overlap with bottom nav */
+.bottom-nav-spacer {
+  padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
 }

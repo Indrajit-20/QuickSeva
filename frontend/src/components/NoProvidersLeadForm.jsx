@@ -70,7 +70,7 @@ export default function NoProvidersLeadForm({
   };
 
   return (
-    <div className="rounded-2xl border border-indigo-400/25 bg-[#110e3d] p-5 shadow-[0_18px_45px_-25px_rgba(99,102,241,0.8)]">
+    <div className="qs-lead-form-card">
       <div className="mb-4">
         <p className="text-sm font-bold text-white">No direct providers found</p>
         <p className="mt-1 text-xs text-indigo-200/75">

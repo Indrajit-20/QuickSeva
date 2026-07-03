@@ -1,7 +1,7 @@
 import React, { useMemo, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { useNearbyLocation } from "./NearbyServices";
+import { useNearbyLocation } from "../hooks/useNearbyLocation";
 import ProfileDropdown from "./ProfileDropdown";
 
 const ALL_SERVICES = [
@@ -23,30 +23,22 @@ const getInitials = (name) => {
   return (parts[0][0] + parts[1][0]).toUpperCase();
 };
 
+import { Search } from "lucide-react";
 import SearchOverlay from "./SearchOverlay";
 
 function NavbarSearch({ className = "", onTriggerSearch }) {
   return (
     <div className={`relative ${className}`}>
-      <div className="relative w-full">
-        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#6b7280]">
-          🔍
-        </span>
-        <input
-          readOnly
-          onClick={onTriggerSearch}
-          onFocus={onTriggerSearch}
-          placeholder="Search services e.g. Plumber, AC"
-          className="h-9 w-full cursor-pointer rounded-full border border-[#e5e7eb] bg-white py-2 pl-9 pr-10 text-sm text-[#1a1a1a] placeholder-[#6b7280] focus:border-[#185FA5] focus:outline-none"
-        />
-        <button
-          type="button"
-          onClick={onTriggerSearch}
-          className="absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-xs text-[#185FA5] hover:bg-[#185FA5]/10"
-          aria-label="Search services"
-        >
-          ↵
-        </button>
+      <div
+        onClick={onTriggerSearch}
+        className="group relative flex h-10 w-full cursor-pointer items-center rounded-full border border-slate-200 bg-slate-50 px-4 transition-all duration-200 hover:border-indigo-400 hover:bg-white hover:shadow-md hover:shadow-indigo-500/5"
+      >
+        <div className="flex items-center gap-2">
+          <Search className="h-4 w-4 text-slate-400 group-hover:text-indigo-500 transition-colors" />
+          <span className="text-sm text-slate-400 group-hover:text-slate-600 transition-colors">
+            Search services e.g. Plumber...
+          </span>
+        </div>
       </div>
     </div>
   );

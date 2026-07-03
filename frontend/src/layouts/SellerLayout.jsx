@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import WorkspaceSwitcher from "../components/WorkspaceSwitcher";
+import BottomNavSeller from "../components/BottomNavSeller";
 import { sellerOrdersApi } from "../api/orderApi";
 import apiClient from "../api/axiosConfig";
 
@@ -208,9 +209,11 @@ export default function SellerLayout() {
         </div>
       )}
 
-      <main className="min-h-screen px-4 py-6 sm:px-6 lg:ml-72 lg:px-8">
+      <main className="min-h-screen px-4 py-6 sm:px-6 lg:ml-72 lg:px-8 bottom-nav-spacer">
         <Outlet />
       </main>
+
+      <BottomNavSeller pendingOrdersCount={pendingOrdersCount} />
     </div>
   );
 }

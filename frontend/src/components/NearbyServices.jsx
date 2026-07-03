@@ -2,6 +2,7 @@
 import { Component, useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { API_BASE_URL } from "../config/api";
+import { useNearbyLocation } from "../hooks/useNearbyLocation";
 
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -25,6 +26,15 @@ import {
   Clock3,
   BadgeCheck,
   Star,
+  Footprints,
+  Bike,
+  Car,
+  Radar,
+  Users,
+  MapPin,
+  SlidersHorizontal,
+  ChevronDown,
+  Map,
 } from "lucide-react";
 
 import {
@@ -58,53 +68,58 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
-const GREEN_PIN_HTML =
-  "<svg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0 0 24 24' fill='none' style='filter: drop-shadow(0 4px 6px rgba(0,0,0,0.15));'>" +
+// ── Stable wrapper: filter on the outer div so the SVG has no inline filter.
+// This avoids the SVG filter causing GPU layer promotion on every hover/click.
+const makePinHTML = (svgInner, size) =>
+  `<div style="width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 4px 6px rgba(0,0,0,0.15));">${svgInner}</div>`;
+
+const GREEN_SVG =
+  "<svg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0 0 24 24' fill='none'>" +
   "<path d='M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z' fill='#10b981' stroke='#047857' stroke-width='1.5'/>" +
   "<circle cx='12' cy='9' r='3' fill='#ffffff'/>" +
   "</svg>";
 
 const GREEN_ICON = L.divIcon({
   className: "service-pin-green",
-  html: GREEN_PIN_HTML,
+  html: makePinHTML(GREEN_SVG, 30),
   iconSize: [30, 30],
   iconAnchor: [15, 30],
-  popupAnchor: [0, -30],
-  tooltipAnchor: [0, -30],
+  popupAnchor: [0, -32],
+  tooltipAnchor: [0, -32],
 });
 
-const PREMIUM_PIN_HTML =
-  "<svg xmlns='http://www.w3.org/2000/svg' width='34' height='34' viewBox='0 0 24 24' fill='none' style='filter: drop-shadow(0 4px 6px rgba(0,0,0,0.15));'>" +
+const PREMIUM_SVG =
+  "<svg xmlns='http://www.w3.org/2000/svg' width='34' height='34' viewBox='0 0 24 24' fill='none'>" +
   "<path d='M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z' fill='#6366f1' stroke='#4338ca' stroke-width='1.5'/>" +
   "<polygon points='12,6 13.5,9 16.5,9.5 14,11.5 15,14.5 12,13 9,14.5 10,11.5 7.5,9.5 10.5,9' fill='#ffffff'/>" +
   "</svg>";
 
 const PREMIUM_ICON = L.divIcon({
   className: "service-pin-premium",
-  html: PREMIUM_PIN_HTML,
+  html: makePinHTML(PREMIUM_SVG, 34),
   iconSize: [34, 34],
   iconAnchor: [17, 34],
-  popupAnchor: [0, -34],
-  tooltipAnchor: [0, -34],
+  popupAnchor: [0, -36],
+  tooltipAnchor: [0, -36],
 });
 
-const GOLD_PIN_HTML =
-  "<svg xmlns='http://www.w3.org/2000/svg' width='38' height='38' viewBox='0 0 24 24' fill='none' style='filter: drop-shadow(0 4px 6px rgba(0,0,0,0.25));'>" +
+const GOLD_SVG =
+  "<svg xmlns='http://www.w3.org/2000/svg' width='38' height='38' viewBox='0 0 24 24' fill='none'>" +
   "<path d='M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z' fill='#f59e0b' stroke='#b45309' stroke-width='1.5'/>" +
   "<polygon points='12,5.5 13.8,9.2 17.8,9.8 14.8,12.6 15.5,16.6 12,14.7 8.5,16.6 9.2,12.6 6.2,9.8 10.2,9.2' fill='#ffffff'/>" +
   "</svg>";
 
 const GOLD_ICON = L.divIcon({
   className: "service-pin-gold",
-  html: GOLD_PIN_HTML,
+  html: makePinHTML(GOLD_SVG, 38),
   iconSize: [38, 38],
   iconAnchor: [19, 38],
-  popupAnchor: [0, -38],
-  tooltipAnchor: [0, -38],
+  popupAnchor: [0, -40],
+  tooltipAnchor: [0, -40],
 });
 
 const USER_PIN_HTML =
-  "<div class='relative flex items-center justify-center'>" +
+  "<div class='relative flex items-center justify-center' style='pointer-events:none;'>" +
   "<span class='absolute inline-flex h-6 w-6 animate-ping rounded-full bg-indigo-400 opacity-75'></span>" +
   "<div class='relative flex h-4 w-4 items-center justify-center rounded-full bg-indigo-600 border-2 border-white shadow-[0_0_10px_rgba(99,102,241,0.8)]'>" +
   "<div class='h-1.5 w-1.5 rounded-full bg-white'></div>" +
@@ -115,6 +130,7 @@ const USER_ICON = L.divIcon({
   className: "user-location-pin",
   html: USER_PIN_HTML,
   iconSize: [24, 24],
+  iconAnchor: [12, 12],
 });
 
 const normalizeServiceName = (value) =>
@@ -240,6 +256,13 @@ function getRadiusVisualGuide(radius) {
   };
 }
 
+function getRadiusIcon(radius) {
+  if (radius <= 2) return <Footprints className="h-4 w-4 text-emerald-500 shrink-0" />;
+  if (radius <= 5) return <Bike className="h-4 w-4 text-indigo-500 shrink-0" />;
+  if (radius <= 10) return <Car className="h-4 w-4 text-amber-500 shrink-0" />;
+  return <MapPin className="h-4 w-4 text-red-500 shrink-0" />;
+}
+
 function getDistanceKm(lat1, lng1, lat2, lng2) {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -285,7 +308,27 @@ function MapController({ center, flyTrigger }) {
 
 function MapClickHandler({ onMapClick }) {
   useMapEvents({
-    click: (e) => onMapClick?.(e.latlng),
+    click: (e) => {
+      // Only fire if click target is the map canvas itself (not a marker/popup)
+      const originalTarget = e.originalEvent?.target;
+      if (!originalTarget) return;
+      // Leaflet marker/popup elements have these class prefixes - skip them
+      const cls = originalTarget.className || "";
+      const clsStr = typeof cls === "string" ? cls : (cls.baseVal || "");
+      if (
+        clsStr.includes("leaflet-marker") ||
+        clsStr.includes("leaflet-popup") ||
+        clsStr.includes("leaflet-cluster") ||
+        clsStr.includes("service-pin") ||
+        clsStr.includes("user-location-pin") ||
+        originalTarget.closest?.(".leaflet-popup") ||
+        originalTarget.closest?.(".leaflet-marker-icon") ||
+        originalTarget.closest?.(".leaflet-marker-pane")
+      ) {
+        return;
+      }
+      onMapClick?.(e.latlng);
+    },
   });
   return null;
 }
@@ -366,76 +409,6 @@ const reverseGeocode = async (lat, lng) => {
   return getShortAddress(await res.json());
 };
 
-export function useNearbyLocation() {
-  const [address, setAddress] = useState(() => {
-    try {
-      return sessionStorage.getItem("qs_cached_address") || "";
-    } catch {
-      return "";
-    }
-  });
-  const [loading, setLoading] = useState(() => {
-    try {
-      return !sessionStorage.getItem("qs_cached_address");
-    } catch {
-      return true;
-    }
-  });
-
-  useEffect(() => {
-    let cancelled = false;
-
-    try {
-      const cached = sessionStorage.getItem("qs_cached_address");
-      if (cached) {
-        setAddress(cached);
-        setLoading(false);
-        return;
-      }
-    } catch { }
-
-    if (!navigator.geolocation) {
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        if (cancelled) return;
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-
-        try {
-          const nextAddress = await reverseGeocode(lat, lng);
-          if (!cancelled) {
-            setAddress(nextAddress || "");
-            try {
-              sessionStorage.setItem("qs_cached_address", nextAddress || "");
-            } catch { }
-          }
-        } catch {
-          if (!cancelled) setAddress("");
-        } finally {
-          if (!cancelled) setLoading(false);
-        }
-      },
-      () => {
-        if (!cancelled) {
-          setAddress("");
-          setLoading(false);
-        }
-      },
-      { enableHighAccuracy: true, timeout: 10000 },
-    );
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  return { address, loading };
-}
 
 export default function NearbyServices({
   initialSearch = "",
@@ -443,7 +416,10 @@ export default function NearbyServices({
   centerLon = null,
   locationFilter = "",
 }) {
+  // buyerPos = user's actual GPS/set location (for the "You are here" marker & radius)
+  // searchCenter = the map view center (changes on map pan, does NOT move the user marker)
   const [buyerPos, setBuyerPos] = useState(null);
+  const [searchCenter, setSearchCenter] = useState(null);
   const [mapFlyTrigger, setMapFlyTrigger] = useState(0);
   const [geoError, setGeoError] = useState("");
   const [showMap, setShowMap] = useState(true);
@@ -451,6 +427,8 @@ export default function NearbyServices({
   const [locationQuery, setLocationQuery] = useState("");
   const [showServiceDrop, setShowServiceDrop] = useState(false);
   const serviceDropRef = useRef(null);
+
+  const [visibleCount, setVisibleCount] = useState(5);
 
   const filteredServiceSuggestions = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -621,6 +599,21 @@ export default function NearbyServices({
   const [locationNotFoundMsg, setLocationNotFoundMsg] = useState("");
 
   const deductedSellers = useRef(new Set());
+
+  // Reset pagination when search query, selected category, radius, or filters change
+  useEffect(() => {
+    setVisibleCount(5);
+  }, [
+    search,
+    radiusKm,
+    filterServiceMode,
+    filterAvailability,
+    filterRating,
+    filterPrice,
+    filterDuration,
+    filterBooking,
+    quickFilters
+  ]);
 
   const handlePremiumSellerClick = (seller) => {
     const sId = seller?.id || seller?.sellerId;
@@ -834,6 +827,7 @@ export default function NearbyServices({
     try {
       const loc = await getUserLocation();
       setBuyerPos({ lat: loc.lat, lng: loc.lng });
+      setSearchCenter({ lat: loc.lat, lng: loc.lng });
 
       let zoom = 11;
       if (loc.source === "gps") zoom = 14;
@@ -877,7 +871,41 @@ export default function NearbyServices({
       mapRef.current.removeLayer(clusterGroupRef.current);
     }
 
-    const markerClusterGroup = L.markerClusterGroup();
+    const markerClusterGroup = L.markerClusterGroup({
+      // showCoverageOnHover:true (default) draws a coverage polygon on hover
+      // which triggers a full map repaint — this is what causes the cluster icon to jump.
+      showCoverageOnHover: false,
+      // Disable cluster animation to prevent the expand/collapse jump
+      animate: false,
+      spiderfyOnMaxZoom: true,
+      maxClusterRadius: 60,
+      // Custom cluster icon with stable, explicit sizing to prevent hover layout shifts
+      iconCreateFunction: (cluster) => {
+        const count = cluster.getChildCount();
+        const size = count < 10 ? 36 : count < 100 ? 44 : 52;
+        const bg = count < 10 ? "#1565C0" : count < 100 ? "#6d28d9" : "#b45309";
+        return L.divIcon({
+          html: `<div style="
+            width:${size}px;height:${size}px;
+            background:${bg};
+            border:3px solid rgba(255,255,255,0.85);
+            border-radius:50%;
+            display:flex;align-items:center;justify-content:center;
+            box-shadow:0 2px 8px rgba(0,0,0,0.22);
+            box-sizing:border-box;
+            font-size:${count < 10 ? 13 : 12}px;
+            font-weight:700;
+            color:#fff;
+            font-family:'Inter',sans-serif;
+            pointer-events:none;
+            user-select:none;
+          ">${count}</div>`,
+          className: "qs-cluster-icon",
+          iconSize: L.point(size, size),
+          iconAnchor: L.point(size / 2, size / 2),
+        });
+      },
+    });
     const markerSellers = selectedCategory
       ? sellers.filter((seller) => sellerMatchesCategory(seller, selectedCategory))
       : sellers;
@@ -887,48 +915,87 @@ export default function NearbyServices({
       const lng = parseFloat(seller.lng);
       if (isNaN(lat) || isNaN(lng)) return;
 
-      const sId = seller.id || seller.sellerId;
+      const sId = seller.id || seller.sellerId || seller.seller_id;
+      const name = seller.business_name || seller.name || "";
+      const category = seller.category || seller.service || "";
+      const rating = Number(seller.avg_rating || seller.rating || 0).toFixed(1);
+      const reviews = seller.reviews || 0;
 
       const popupHtml = `
-        <div style="font-family: sans-serif; padding: 4px; min-width: 180px;">
-          <h4 style="margin: 0 0 4px 0; font-size: 14px; font-weight: bold; color: #1e1b4b;">
-            ${seller.business_name || seller.name || ""}
+        <div style="font-family: 'Inter', sans-serif; padding: 6px 4px; min-width: 190px;">
+          <h4 style="margin: 0 0 4px 0; font-size: 14px; font-weight: 700; color: #1e1b4b;">
+            ${name}
           </h4>
           <p style="margin: 0 0 8px 0; font-size: 12px; font-weight: 600; color: #1565C0;">
-            ${seller.category || seller.service || ""}
+            ${category}
           </p>
-          <div style="margin-bottom: 8px; font-size: 11px; color: #64748b;">
-            ⭐ ${Number(seller.avg_rating || seller.rating || 0).toFixed(1)} (${seller.reviews || 0} reviews)
+          <div style="margin-bottom: 10px; font-size: 11px; color: #64748b;">
+            ⭐ ${rating} (${reviews} reviews)
           </div>
-          <a href="/seller/${sId}" 
-             style="display: block; text-align: center; font-size: 11px; font-weight: bold; text-decoration: none; color: #fff; background: #1565C0; padding: 6px 12px; border-radius: 6px; transition: background 0.2s;"
+          <button
+            data-seller-id="${sId}"
+            style="display: block; width: 100%; text-align: center; font-size: 11px; font-weight: bold; border: none; cursor: pointer; color: #fff; background: #1565C0; padding: 7px 12px; border-radius: 6px; transition: background 0.2s;"
+            onmouseover="this.style.background='#1976D2'"
+            onmouseout="this.style.background='#1565C0'"
           >
             View Profile / प्रोफ़ाइल देखें →
-          </a>
+          </button>
         </div>
       `;
 
-      const marker = L.marker([lat, lng])
-        .bindPopup(popupHtml)
-        .on("click", () => {
+      const marker = L.marker([lat, lng], {
+        icon: getSellerPinIcon(seller),
+        keyboard: false,   // prevents Leaflet adding tabindex → no focus-outline jump on click
+        riseOnHover: false, // prevents z-index reorder jump on hover
+      })
+        .bindPopup(popupHtml, {
+          maxWidth: 240,
+          className: "qs-seller-popup",
+          autoPan: false,   // prevents map panning (and scroll-jump) when popup opens
+        })
+        .on("popupopen", () => {
           setSelectedSellerId(sId);
+        })
+        .on("click", (ev) => {
+          // Stop map click handler from firing when a marker is clicked
+          L.DomEvent.stopPropagation(ev);
         });
       markerClusterGroup.addLayer(marker);
     });
 
+    // Delegate popup button clicks to navigate to seller profile
+    const handlePopupClick = (e) => {
+      const btn = e.target.closest?.("[data-seller-id]");
+      if (btn) {
+        const id = btn.getAttribute("data-seller-id");
+        if (id) window.location.href = `/seller/${id}`;
+      }
+    };
+    document.addEventListener("click", handlePopupClick);
+    // Store cleanup for this effect cycle
+    clusterGroupRef._popupClickCleanup?.();
+    clusterGroupRef._popupClickCleanup = () => document.removeEventListener("click", handlePopupClick);
+
     clusterGroupRef.current = markerClusterGroup;
     mapRef.current.addLayer(markerClusterGroup);
+
+    return () => {
+      clusterGroupRef._popupClickCleanup?.();
+      delete clusterGroupRef._popupClickCleanup;
+    };
   }, [sellers, mapInitialized, selectedCategory]);
 
   const nearby = useMemo(() => {
-    if (!buyerPos) return [];
+    // Use searchCenter if set, otherwise fall back to buyerPos
+    const center = searchCenter || buyerPos;
+    if (!center) return [];
 
     const filteredByDistance = sellers.filter((s) => {
       const lat = parseFloat(s?.lat);
       const lng = parseFloat(s?.lng);
       if (isNaN(lat) || isNaN(lng)) return false;
       return (
-        getDistanceKm(buyerPos.lat, buyerPos.lng, lat, lng) <= radiusKm
+        getDistanceKm(center.lat, center.lng, lat, lng) <= radiusKm
       );
     });
 
@@ -939,7 +1006,7 @@ export default function NearbyServices({
         ...s,
         lat,
         lng,
-        distanceKm: getDistanceKm(buyerPos.lat, buyerPos.lng, lat, lng),
+        distanceKm: getDistanceKm(center.lat, center.lng, lat, lng),
       };
     });
 
@@ -1054,6 +1121,7 @@ export default function NearbyServices({
     });
   }, [
     buyerPos,
+    searchCenter,
     sellers,
     search,
     selectedCategory,
@@ -1081,7 +1149,9 @@ export default function NearbyServices({
         const results = await nominatimSearch(`${val}, India`);
         if (results.length > 0) {
           const r = results[0];
-          setBuyerPos({ lat: parseFloat(r.lat), lng: parseFloat(r.lon) });
+          const newPos = { lat: parseFloat(r.lat), lng: parseFloat(r.lon) };
+          setBuyerPos(newPos);
+          setSearchCenter(newPos);
           setMapFlyTrigger((prev) => prev + 1);
           suppressNextLocationSearchRef.current = true;
           setLocationQuery(r.display_name.split(",")[0] + " - " + val);
@@ -1099,16 +1169,41 @@ export default function NearbyServices({
         setPincodeLoading(false);
       }
     } else {
-      searchLocation(val);
+      setLocationLoading(true);
+      setLocationNotFoundMsg("");
+      try {
+        const results = await smartSearch(val);
+        if (results.length > 0) {
+          const r = results[0];
+          const newPos = { lat: parseFloat(r.lat), lng: parseFloat(r.lon) };
+          setBuyerPos(newPos);
+          setSearchCenter(newPos);
+          setMapFlyTrigger((prev) => prev + 1);
+          suppressNextLocationSearchRef.current = true;
+          setLocationQuery(r.display_name.split(",")[0]);
+          setLocationResults([]);
+          setLocationNotFoundMsg("");
+          setGeoError("");
+        } else {
+          setLocationNotFoundMsg("Area not found. Try a nearby landmark.");
+        }
+      } catch {
+        setLocationNotFoundMsg("Search failed. Try again.");
+      } finally {
+        setLocationLoading(false);
+      }
     }
   };
 
   const handleResultClick = (result) => {
     suppressNextLocationSearchRef.current = true;
-    setBuyerPos({
+    const newPos = {
       lat: parseFloat(result.lat),
       lng: parseFloat(result.lon),
-    });
+    };
+    // Location search moves both the user marker and flies the map
+    setBuyerPos(newPos);
+    setSearchCenter(newPos);
     setMapFlyTrigger((prev) => prev + 1);
     setLocationQuery(result.display_name || "");
     setLocationResults([]);
@@ -1132,7 +1227,9 @@ export default function NearbyServices({
       const results = await nominatimSearch(`${trimmed}, India`);
       if (results.length > 0) {
         const r = results[0];
-        setBuyerPos({ lat: parseFloat(r.lat), lng: parseFloat(r.lon) });
+        const newPos = { lat: parseFloat(r.lat), lng: parseFloat(r.lon) };
+        setBuyerPos(newPos);
+        setSearchCenter(newPos);
         setMapFlyTrigger((prev) => prev + 1);
         suppressNextLocationSearchRef.current = true;
         setLocationQuery(r.display_name.split(",")[0] + " - " + trimmed);
@@ -1151,39 +1248,55 @@ export default function NearbyServices({
     }
   };
 
-  const handleMapClick = (latlng) => {
+  const handleMapClick = async (latlng) => {
     if (!latlng) return;
+    // Map click: only move the SEARCH CENTER (radius circle & seller search area).
+    // Do NOT update buyerPos — the "You are here" GPS dot must stay fixed.
     const nextPos = { lat: latlng.lat, lng: latlng.lng };
-    gpsPosRef.current = nextPos;
-    setBuyerPos(nextPos);
-    setMapFlyTrigger((prev) => prev + 1);
+    setSearchCenter(nextPos);
+    // Do NOT call setMapFlyTrigger here — prevents jump/teleport on click
+    // Do NOT call setBuyerPos here — prevents the user icon from moving
     setLocationResults([]);
     setLocationNotFoundMsg("");
     setPincodeResults([]);
     setPincodeError("");
     setGeoError("");
+
+    try {
+      suppressNextLocationSearchRef.current = true;
+      const nextAddress = await reverseGeocode(nextPos.lat, nextPos.lng);
+      setLocationQuery(nextAddress || `${nextPos.lat.toFixed(4)}, ${nextPos.lng.toFixed(4)}`);
+    } catch {
+      setLocationQuery(`${nextPos.lat.toFixed(4)}, ${nextPos.lng.toFixed(4)}`);
+    }
   };
 
   const handleMapAreaChanged = useCallback((nextCenter) => {
-    if (!nextCenter) return;
-    setBuyerPos((prev) => {
-      if (
-        prev &&
-        Math.abs(prev.lat - nextCenter.lat) < 0.00001 &&
-        Math.abs(prev.lng - nextCenter.lng) < 0.00001
-      ) {
-        return prev;
-      }
-      return nextCenter;
-    });
+    // Keep user location marker stable in place instead of moving to the center
     setLocationResults([]);
     setLocationNotFoundMsg("");
     setGeoError("");
   }, []);
 
   const handleUseMyLocation = () => {
+    const updateLocationFromCoords = async (lat, lng) => {
+      suppressNextLocationSearchRef.current = true;
+      setGeoLoading(true);
+      try {
+        const nextAddress = await reverseGeocode(lat, lng);
+        setLocationQuery(nextAddress || `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+        setGeoError("");
+      } catch {
+        setLocationQuery(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+      } finally {
+        setGeoLoading(false);
+      }
+    };
+
     if (gpsPosRef.current) {
+      const { lat, lng } = gpsPosRef.current;
       setBuyerPos(gpsPosRef.current);
+      setSearchCenter(gpsPosRef.current);
       setMapFlyTrigger((prev) => prev + 1);
       setLocationResults([]);
       setLocationNotFoundMsg("");
@@ -1191,6 +1304,7 @@ export default function NearbyServices({
       setPincode("");
       setPincodeError("");
       setGeoError("");
+      updateLocationFromCoords(lat, lng);
       return;
     }
 
@@ -1204,6 +1318,7 @@ export default function NearbyServices({
         };
         gpsPosRef.current = nextPos;
         setBuyerPos(nextPos);
+        setSearchCenter(nextPos);
         setMapFlyTrigger((prev) => prev + 1);
         setLocationResults([]);
         setLocationNotFoundMsg("");
@@ -1211,7 +1326,7 @@ export default function NearbyServices({
         setPincode("");
         setPincodeError("");
         setGeoError("");
-        setGeoLoading(false);
+        updateLocationFromCoords(nextPos.lat, nextPos.lng);
       },
       () => {
         setGeoError("Please allow location access to find nearby services");
@@ -1281,7 +1396,7 @@ export default function NearbyServices({
           <div
             ref={portalDropdownRef}
             style={dropdownStyle}
-            className="max-h-72 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-1.5 text-slate-800 shadow-2xl scrollbar-none"
+            className="qs-location-dropdown max-h-72 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-1.5 text-slate-800 shadow-2xl scrollbar-none"
           >
             {locationResults.map((result) => (
               <button
@@ -1303,15 +1418,15 @@ export default function NearbyServices({
           document.body,
         )}
 
-      <div className="relative p-0">
+      <div className="qs-search-panel-card">
         <div className="relative z-10 flex flex-col gap-5">
           {/* STEP 1: Service search (What service do you need?) */}
           <div className="relative" ref={serviceDropRef}>
-            <label className="mb-1.5 flex items-center gap-2 text-xs font-semibold tracking-wider text-indigo-200">
+            <label className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700">
               Service / सेवा
             </label>
             <div className="relative">
-              <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-indigo-300/70">
+              <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
                 🔍
               </span>
               <input
@@ -1322,13 +1437,13 @@ export default function NearbyServices({
                 }}
                 onFocus={() => setShowServiceDrop(true)}
                 placeholder="Search services (e.g. Plumber, AC Repair, Cleaning...)"
-                className="w-full rounded-full border border-indigo-500/30 bg-transparent py-3 pl-10 pr-10 text-sm font-medium text-white placeholder-indigo-300/50 transition-all duration-300 focus:border-indigo-400 focus:outline-none focus:ring-4 focus:ring-indigo-500/10"
+                className="w-full rounded-xl bg-[#f8fafc] border border-slate-100 py-3.5 pl-11 pr-10 text-sm font-semibold text-slate-800 placeholder-slate-400 focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-indigo-500/10"
               />
               {search && (
                 <button
                   type="button"
                   onClick={() => setSearch("")}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-indigo-300 hover:text-white cursor-pointer"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
                 >
                   ✕
                 </button>
@@ -1358,115 +1473,104 @@ export default function NearbyServices({
 
           {/* STEP 2: Location selection & Pincode */}
           <form
-            ref={locationSearchRef}
             onSubmit={handleLocationSearchSubmit}
             className="relative isolate z-[70]"
           >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-1">
               {/* Location Input */}
-              <div className="relative z-[2]">
-                <label className="relative z-[2] mb-1.5 block text-xs font-semibold tracking-wider text-indigo-200">
+              <div ref={locationSearchRef} className="relative z-[2]">
+                <label className="relative z-[2] mb-2 block text-xs font-bold uppercase tracking-wider text-slate-700">
                   Location (Area / Landmark) / जगह
                 </label>
-                <div className="relative z-[2]">
-                  <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-indigo-300/70">
-                    📍
-                  </span>
-                  <input
-                    value={locationQuery}
-                    onChange={(e) => setLocationQuery(e.target.value)}
-                    onFocus={() => {
-                      if (locationQuery.trim().length >= 3) {
-                        searchLocation(locationQuery);
-                      }
-                    }}
-                    autoComplete="off"
-                    className="w-full rounded-full border border-indigo-500/30 bg-transparent py-3 pl-10 pr-32 text-sm font-medium text-white placeholder-indigo-300/50 transition-all duration-300 focus:border-indigo-400 focus:outline-none focus:ring-4 focus:ring-indigo-500/10"
-                    placeholder="Search Area or Landmark (e.g. Nikol)"
-                  />
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+                <div className="flex gap-2 items-center">
+                  <div className="relative flex-1">
+                    <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-rose-500 text-sm">
+                      📍
+                    </span>
+                    <input
+                      value={locationQuery}
+                      onChange={(e) => setLocationQuery(e.target.value)}
+                      onFocus={() => {
+                        if (locationQuery.trim().length >= 3) {
+                          searchLocation(locationQuery);
+                        }
+                      }}
+                      autoComplete="off"
+                      className="w-full rounded-xl bg-[#f8fafc] border border-slate-100 py-3 pl-11 pr-10 text-sm font-semibold text-slate-800 placeholder-slate-400 focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-indigo-500/10"
+                      placeholder="Search Area or Landmark (e.g. Nikol)"
+                    />
                     {locationQuery && (
                       <button
                         type="button"
                         onClick={clearLocationInput}
-                        className="inline-flex h-7 w-7 items-center justify-center rounded-full text-indigo-300 transition hover:bg-white/10 hover:text-white"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
                         aria-label="Clear location"
                         title="Clear location"
                       >
-                        <X className="h-3.5 w-3.5" />
+                        <X className="h-4 w-4" />
                       </button>
                     )}
-                    <button
-                      type="button"
-                      onClick={handleUseMyLocation}
-                      className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-[0px] text-emerald-300 transition hover:bg-emerald-400/10 hover:text-emerald-100 cursor-pointer ${geoLoading ? "qs-pulse" : ""}`}
-                      aria-label="Use current location"
-                      title="Use current location"
-                    >
-                      <Crosshair className="h-4 w-4" />
-                      🎯
-                    </button>
-                    <button
-                      type="submit"
-                      className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-full px-3 py-1 text-xs font-bold transition cursor-pointer"
-                    >
-                      {locationLoading ? "..." : "Search"}
-                    </button>
                   </div>
+                  <button
+                    type="submit"
+                    className="h-12 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl px-6 text-sm font-bold transition shadow-md shadow-indigo-600/10 cursor-pointer whitespace-nowrap"
+                  >
+                    {locationLoading ? "..." : "Search"}
+                  </button>
                 </div>
                 <button
                   type="button"
                   onClick={handleUseMyLocation}
-                  className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-300 transition hover:text-emerald-100"
+                  className="mt-2.5 inline-flex items-center gap-1.5 text-[10px] font-bold text-indigo-600 uppercase tracking-wider hover:underline"
                 >
-                  <Crosshair className="h-3.5 w-3.5" />
-                  Use Current Location
+                  <Crosshair className="h-3 w-3" />
+                  USE CURRENT LOCATION
                 </button>
               </div>
 
               {/* Pincode Input */}
               <div>
-                <label className="mb-1.5 block text-xs font-semibold tracking-wider text-indigo-200">
+                <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-700">
                   Pincode / पिनकोड
                 </label>
-                <div className="relative">
-                  <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-indigo-300/70">
-                    📮
-                  </span>
-                  <input
-                    value={pincode}
-                    onChange={(e) => {
-                      const val = e.target.value.replace(/\D/g, "").slice(0, 6);
-                      setPincode(val);
-                      setPincodeError("");
-                      setLocationNotFoundMsg("");
-                    }}
-                    onKeyDown={(e) => e.key === "Enter" && handlePincodeSearch()}
-                    className="w-full rounded-full border border-indigo-500/30 bg-transparent py-3 pl-10 pr-24 text-sm font-medium text-white placeholder-indigo-300/50 transition-all duration-300 focus:border-indigo-400 focus:outline-none focus:ring-4 focus:ring-indigo-500/10"
-                    placeholder="Enter 6-digit Pincode (e.g. 382350)"
-                    maxLength={6}
-                  />
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+                <div className="flex gap-2 items-center">
+                  <div className="relative flex-1">
+                    <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
+                      📋
+                    </span>
+                    <input
+                      value={pincode}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, "").slice(0, 6);
+                        setPincode(val);
+                        setPincodeError("");
+                        setLocationNotFoundMsg("");
+                      }}
+                      onKeyDown={(e) => e.key === "Enter" && handlePincodeSearch()}
+                      className="w-full rounded-xl bg-[#f8fafc] border border-slate-100 py-3 pl-11 pr-10 text-sm font-semibold text-slate-800 placeholder-slate-400 focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-indigo-500/10"
+                      placeholder="Enter 6-digit Pincode (e.g. 382350)"
+                      maxLength={6}
+                    />
                     {pincode && (
                       <button
                         type="button"
                         onClick={clearPincodeInput}
-                        className="inline-flex h-7 w-7 items-center justify-center rounded-full text-indigo-300 transition hover:bg-white/10 hover:text-white"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
                         aria-label="Clear pincode"
                         title="Clear pincode"
                       >
-                        <X className="h-3.5 w-3.5" />
+                        <X className="h-4 w-4" />
                       </button>
                     )}
-                    <button
-                      type="button"
-                      onClick={handlePincodeSearch}
-                      disabled={pincode.length !== 6 || pincodeLoading}
-                      className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-full px-3 py-1 text-xs font-bold transition cursor-pointer"
-                    >
-                      {pincodeLoading ? "..." : "Go"}
-                    </button>
                   </div>
+                  <button
+                    type="button"
+                    onClick={handlePincodeSearch}
+                    disabled={pincode.length !== 6 || pincodeLoading}
+                    className="h-12 bg-slate-100 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed text-slate-600 rounded-xl px-6 text-sm font-bold transition cursor-pointer"
+                  >
+                    {pincodeLoading ? "..." : "Go"}
+                  </button>
                 </div>
               </div>
             </div>
@@ -1484,17 +1588,20 @@ export default function NearbyServices({
             )}
           </form>
 
+          {/* Divider Line */}
+          <div className="border-t border-slate-100 my-4" />
+
           {/* STEP 3: Range Slider and Filters */}
-          <div className="flex flex-row flex-wrap items-center justify-between gap-4 rounded-2xl border border-indigo-500/10 bg-[#110e30]/40 p-4">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             {/* Range Slider */}
-            <div className="min-w-[240px] flex-1 max-w-md">
+            <div className="min-w-[240px] flex-1 max-w-xs">
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs font-bold text-indigo-200 uppercase tracking-wider">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                   Distance Range
                 </span>
-                <span className="text-xs font-bold bg-indigo-500/20 px-2 py-0.5 rounded text-indigo-200">{radiusKm} km</span>
+                <span className="text-[10px] font-bold bg-[#185fa5] px-2 py-0.5 rounded-md text-white">{radiusKm} km</span>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col">
                 <input
                   type="range"
                   min={1}
@@ -1502,64 +1609,64 @@ export default function NearbyServices({
                   step={1}
                   value={radiusKm}
                   onChange={(e) => setRadiusKm(parseInt(e.target.value || "5", 10))}
-                  className="qs-range flex-1"
+                  className="qs-range w-full"
                   style={{
-                    background: `linear-gradient(to right, #818cf8 0%, #6366f1 ${((radiusKm - 1) / 19) * 100}%, rgba(99,102,241,0.18) ${((radiusKm - 1) / 19) * 100}%, rgba(99,102,241,0.18) 100%)`,
+                    background: `linear-gradient(to right, #185fa5 0%, #185fa5 ${((radiusKm - 1) / 19) * 100}%, rgba(24,95,165,0.08) ${((radiusKm - 1) / 19) * 100}%, rgba(24,95,165,0.08) 100%)`,
                   }}
                 />
-                <span className="text-[10px] text-indigo-300 font-medium whitespace-nowrap">
-                  ({getRadiusVisualGuide(radiusKm).icon} {radiusKm <= 5 ? "Nearby" : "Far"})
+                <span className="text-[9px] text-slate-400 mt-1 font-semibold">
+                  → {radiusKm <= 5 ? "Nearby" : "Far"}
                 </span>
               </div>
             </div>
 
-            {/* Quick Filters */}
-            <div className="order-3 flex w-full flex-wrap items-center justify-start gap-2 md:order-none md:w-auto md:flex-1 md:justify-center">
-              {quickFilterItems.map(({ key, label, Icon }) => {
-                const active = quickFilters[key];
-                return (
+            {/* Quick Filters & Refine button group */}
+            <div className="flex flex-wrap items-center gap-4 lg:ml-auto">
+              <div className="flex flex-col gap-1">
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                  Filters / फ़िल्टर:
+                </span>
+                <div className="flex flex-wrap items-center gap-2">
+                  {quickFilterItems.map(({ key, label, Icon }) => {
+                    const active = quickFilters[key];
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => toggleQuickFilter(key)}
+                        aria-pressed={active}
+                        className={`qs-quick-filter-btn inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-xs font-semibold transition-all ${
+                          active ? "active" : ""
+                        }`}
+                      >
+                        <Icon className="h-3.5 w-3.5" />
+                        <span className="whitespace-nowrap">{label}</span>
+                      </button>
+                    );
+                  })}
+                  
                   <button
-                    key={key}
                     type="button"
-                    onClick={() => toggleQuickFilter(key)}
-                    aria-pressed={active}
-                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold transition-all ${active
-                        ? "border-indigo-300/60 bg-indigo-500/30 text-white shadow-[0_0_18px_rgba(99,102,241,0.22)]"
-                        : "border-slate-700/50 bg-white/10 text-slate-200 hover:border-indigo-400/40 hover:bg-white/15 hover:text-white"
-                      }`}
+                    onClick={() => setFiltersOpen((prev) => !prev)}
+                    className="qs-refine-toggle-btn inline-flex items-center justify-center gap-2 rounded-full px-5 py-2 text-xs font-bold cursor-pointer whitespace-nowrap ml-1"
                   >
-                    <Icon className="h-3.5 w-3.5" />
-                    <span className="whitespace-nowrap">{label}</span>
+                    <SlidersHorizontal className="h-3.5 w-3.5 shrink-0" />
+                    <span>Refine Results</span>
+                    {activeFilterCount > 0 && (
+                      <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-white text-[10px] font-extrabold text-[#0f172a]">
+                        {activeFilterCount}
+                      </span>
+                    )}
+                    <ChevronDown className="h-3.5 w-3.5 shrink-0 transition-transform duration-200" style={{ transform: filtersOpen ? "rotate(180deg)" : "none" }} />
                   </button>
-                );
-              })}
-            </div>
-
-            {/* Refine Filters Toggle Button */}
-            <div className="ml-auto flex min-w-[150px] flex-col gap-1 sm:w-auto">
-              <span className="text-[10px] font-semibold text-indigo-300/80 mb-0.5">
-                Filters / फ़िल्टर:
-              </span>
-              <button
-                type="button"
-                onClick={() => setFiltersOpen((prev) => !prev)}
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-indigo-400/25 bg-[#1b1850]/40 px-4 py-2 text-sm font-semibold text-indigo-200 transition-all hover:border-indigo-400/50 hover:bg-[#1b1850]/80 cursor-pointer"
-              >
-                <span>⚙️</span>
-                Refine Results
-                {activeFilterCount > 0 && (
-                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-indigo-500 text-[11px] font-bold text-white">
-                    {activeFilterCount}
-                  </span>
-                )}
-                <span>▼</span>
-              </button>
+                </div>
+              </div>
             </div>
           </div>
 
           {/* Collapsible Refine Results filter options */}
           {filtersOpen && (
-            <div className="rounded-xl border border-indigo-400/20 bg-indigo-950/30 p-4 space-y-4">
+            <div className="qs-refine-panel rounded-xl border p-4 space-y-4">
               {/* Price Range */}
               <div>
                 <p className="mb-2 text-xs font-bold uppercase tracking-wider text-indigo-300/80">
@@ -1571,9 +1678,7 @@ export default function NearbyServices({
                       key={opt.value}
                       type="button"
                       onClick={() => setFilterPrice(opt.value)}
-                      className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${filterPrice === opt.value
-                        ? "border-indigo-400/60 bg-indigo-500 text-white shadow-lg shadow-indigo-500/25"
-                        : "border-indigo-400/20 bg-white/5 text-indigo-200 hover:border-indigo-400/40 hover:bg-white/10"
+                      className={`qs-refine-option-btn rounded-lg px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${filterPrice === opt.value ? "active" : ""
                         }`}
                     >
                       {opt.label}
@@ -1593,9 +1698,7 @@ export default function NearbyServices({
                       key={opt.value}
                       type="button"
                       onClick={() => setFilterDuration(opt.value)}
-                      className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${filterDuration === opt.value
-                        ? "border-indigo-400/60 bg-indigo-500 text-white shadow-lg shadow-indigo-500/25"
-                        : "border-indigo-400/20 bg-white/5 text-indigo-200 hover:border-indigo-400/40 hover:bg-white/10"
+                      className={`qs-refine-option-btn rounded-lg px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${filterDuration === opt.value ? "active" : ""
                         }`}
                     >
                       {opt.label}
@@ -1615,11 +1718,7 @@ export default function NearbyServices({
                       key={opt.value}
                       type="button"
                       onClick={() => setFilterBooking(opt.value)}
-                      className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${filterBooking === opt.value
-                        ? opt.value === "instant"
-                          ? "border-emerald-400/60 bg-emerald-500 text-white shadow-lg shadow-emerald-500/25"
-                          : "border-indigo-400/60 bg-indigo-500 text-white shadow-lg shadow-indigo-500/25"
-                        : "border-indigo-400/20 bg-white/5 text-indigo-200 hover:border-indigo-400/40 hover:bg-white/10"
+                      className={`qs-refine-option-btn rounded-lg px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${filterBooking === opt.value ? "active" : ""
                         }`}
                     >
                       {opt.label}
@@ -1652,25 +1751,23 @@ export default function NearbyServices({
       </div>
 
       {/* Results Header: Stats and Map Option Toggle */}
-      <div className="flex flex-wrap items-center justify-between gap-4 border-t border-indigo-500/10 pt-4 mt-2">
+      <div className="flex flex-wrap items-center justify-between gap-4 mt-6">
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2.5 py-1 font-semibold text-emerald-200">
-            <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-            Live
-          </span>
-          <span className="text-indigo-200/90">
-            <strong className="font-bold text-white">{nearby.length}</strong>{" "}
-            provider{nearby.length !== 1 ? "s" : ""} within{" "}
-            <strong className="font-bold text-white">{radiusKm}km</strong>
+          <div className="inline-flex items-center gap-1.5 bg-[#0f766e] text-white text-[11px] font-bold px-3 py-1 rounded-full">
+            <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+            <span>Live</span>
+          </div>
+          <span className="text-sm font-bold text-slate-700">
+            {nearby.length} provider{nearby.length !== 1 ? "s" : ""} within {radiusKm}km
           </span>
           {search && (
-            <span className="rounded-md bg-indigo-500/15 px-2 py-0.5 text-indigo-200">
+            <span className="rounded-full bg-slate-100 px-2.5 py-0.5 font-bold text-slate-600 text-[10px] uppercase tracking-wider">
               for "{search}"
             </span>
           )}
           {activeFilterCount > 0 && (
-            <span className="rounded-md bg-indigo-500/20 px-2 py-0.5 font-semibold text-indigo-300">
-              · {activeFilterCount} filter{activeFilterCount > 1 ? "s" : ""} active
+            <span className="rounded-full bg-indigo-50 border border-indigo-100 px-2.5 py-0.5 font-bold text-indigo-600 text-[10px] uppercase tracking-wider">
+              {activeFilterCount} filter{activeFilterCount > 1 ? "s" : ""} active
             </span>
           )}
         </div>
@@ -1680,12 +1777,11 @@ export default function NearbyServices({
           type="button"
           onClick={handleMapToggle}
           disabled={mapToggleLocked}
-          className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-full border transition-all ${mapToggleLocked ? "cursor-wait opacity-70" : "cursor-pointer"} ${showMap
-            ? "bg-[#6366f1] border-[#6366f1] text-white shadow-lg shadow-indigo-600/20"
-            : "bg-indigo-950/40 border-indigo-500/20 text-indigo-200 hover:border-indigo-500/50"
-            }`}
+          className={`qs-map-toggle-btn inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold rounded-full border transition-all ${
+            mapToggleLocked ? "cursor-wait opacity-70" : "cursor-pointer"
+          } ${showMap ? "active" : ""}`}
         >
-          <span>🗺️</span>
+          <Map className="h-4 w-4 shrink-0" />
           <span>{showMap ? "Hide Map / नक्शा छुपाएं" : "Show Map / नक्शा दिखाएं"}</span>
         </button>
       </div>
@@ -1705,7 +1801,7 @@ export default function NearbyServices({
               {/* Top-left: providers count */}
               <div className="pointer-events-none absolute left-3 top-3 z-[600]">
                 <div className="qs-map-pill flex items-center gap-2">
-                  <span className="text-base">🛠️</span>
+                  <Users className="h-4 w-4 text-[#185fa5] shrink-0" />
                   <div className="leading-tight">
                     <div className="text-[10px] uppercase tracking-wider text-indigo-200/80">
                       Providers
@@ -1720,7 +1816,7 @@ export default function NearbyServices({
               {/* Top-right: live radius badge */}
               <div className="pointer-events-none absolute right-3 top-3 z-[600]">
                 <div className="qs-map-pill flex items-center gap-2">
-                  <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.9)]" />
+                  <Radar className="h-4 w-4 text-emerald-500 animate-pulse shrink-0" />
                   <div className="leading-tight">
                     <div className="text-[10px] uppercase tracking-wider text-indigo-200/80">
                       Live Radius
@@ -1736,12 +1832,26 @@ export default function NearbyServices({
               {buyerPos && (
                 <div className="pointer-events-none absolute bottom-3 left-1/2 z-[600] -translate-x-1/2">
                   <div className="qs-map-pill flex items-center gap-2">
-                    <span className="text-base">📍</span>
+                    <MapPin className="h-4 w-4 text-rose-500 shrink-0" />
                     <span className="text-xs font-semibold text-indigo-100">
                       You are here
                     </span>
                     <span className="text-[10px] text-indigo-300/80">
                       {buyerPos.lat.toFixed(3)}, {buyerPos.lng.toFixed(3)}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Search center badge (when map was clicked to different area) */}
+              {searchCenter && buyerPos &&
+                (Math.abs(searchCenter.lat - buyerPos.lat) > 0.0001 ||
+                  Math.abs(searchCenter.lng - buyerPos.lng) > 0.0001) && (
+                <div className="pointer-events-none absolute bottom-14 left-1/2 z-[600] -translate-x-1/2">
+                  <div className="qs-map-pill flex items-center gap-2 bg-indigo-900/80 border-indigo-400/40">
+                    <Crosshair className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                    <span className="text-xs font-semibold text-emerald-300">
+                      Searching here
                     </span>
                   </div>
                 </div>
@@ -1762,7 +1872,11 @@ export default function NearbyServices({
 
               <MapContainer
                 center={
-                  buyerPos ? [buyerPos.lat, buyerPos.lng] : [20.5937, 78.9629]
+                  searchCenter
+                    ? [searchCenter.lat, searchCenter.lng]
+                    : buyerPos
+                    ? [buyerPos.lat, buyerPos.lng]
+                    : [20.5937, 78.9629]
                 }
                 zoom={buyerPos ? 14 : 5}
                 style={{ height: "100%", width: "100%" }}
@@ -1775,7 +1889,13 @@ export default function NearbyServices({
                   onMapAreaChanged={handleMapAreaChanged}
                 />
                 <MapController
-                  center={buyerPos ? [buyerPos.lat, buyerPos.lng] : null}
+                  center={
+                    searchCenter
+                      ? [searchCenter.lat, searchCenter.lng]
+                      : buyerPos
+                      ? [buyerPos.lat, buyerPos.lng]
+                      : null
+                  }
                   flyTrigger={mapFlyTrigger}
                 />
                 <MapClickHandler onMapClick={handleMapClick} />
@@ -1788,7 +1908,10 @@ export default function NearbyServices({
                 {buyerPos && (
                   <>
                     <Circle
-                      center={[buyerPos.lat, buyerPos.lng]}
+                      center={[
+                        searchCenter ? searchCenter.lat : buyerPos.lat,
+                        searchCenter ? searchCenter.lng : buyerPos.lng,
+                      ]}
                       radius={radiusKm * 1000}
                       pathOptions={{
                         color: "#818cf8",
@@ -1798,10 +1921,26 @@ export default function NearbyServices({
                       }}
                     />
 
+                    {/* User GPS dot — always stays at buyerPos, never moves on map click */}
                     <Marker
                       position={[buyerPos.lat, buyerPos.lng]}
                       icon={USER_ICON}
                     />
+
+                    {/* Show a crosshair marker at searchCenter when it differs from buyerPos */}
+                    {searchCenter &&
+                      (Math.abs(searchCenter.lat - buyerPos.lat) > 0.0001 ||
+                        Math.abs(searchCenter.lng - buyerPos.lng) > 0.0001) && (
+                      <Marker
+                        position={[searchCenter.lat, searchCenter.lng]}
+                        icon={L.divIcon({
+                          className: "search-center-pin",
+                          html: `<div style="width:18px;height:18px;border:3px solid #10b981;border-radius:50%;background:rgba(16,185,129,0.2);box-shadow:0 0 8px rgba(16,185,129,0.5);"></div>`,
+                          iconSize: [18, 18],
+                          iconAnchor: [9, 9],
+                        })}
+                      />
+                    )}
                   </>
                 )}
               </MapContainer>
@@ -1811,9 +1950,9 @@ export default function NearbyServices({
 
         {/* ============ PROVIDER LIST ============ */}
         <div className={`w-full ${showMap ? "lg:w-[42%]" : "lg:w-full"}`}>
-          <div className={`qs-list pb-2 pr-1 ${showMap
-            ? "flex gap-3 overflow-x-auto snap-x snap-mandatory lg:block lg:h-[520px] lg:space-y-3 lg:overflow-y-auto lg:overflow-x-hidden lg:pb-0 lg:snap-none"
-            : "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:max-h-[520px] lg:overflow-y-auto"
+          <div className={`qs-list pb-2 pr-3 ${showMap
+            ? "flex gap-4 overflow-x-auto snap-x snap-mandatory lg:block lg:h-[520px] lg:space-y-5 lg:overflow-y-auto lg:overflow-x-hidden lg:pb-0 lg:snap-none"
+            : "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-5 lg:max-h-[520px] lg:overflow-y-auto"
             }`}>
             {apiError && (
               <div className="qs-glass-panel w-full py-8 px-4 text-center text-red-300 border border-red-500/30">
@@ -1857,7 +1996,7 @@ export default function NearbyServices({
               </div>
             )}
 
-            {nearby.map((seller, idx) => {
+            {nearby.slice(0, visibleCount).map((seller, idx) => {
               const packageRank = getSellerPackageRank(seller);
 
               const sId = seller.id || seller.sellerId;
@@ -1884,42 +2023,41 @@ export default function NearbyServices({
                           className="h-10 w-10 rounded-full object-cover border border-slate-200"
                         />
                       ) : (
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1565C0] font-bold text-white text-sm">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1565C0] font-bold text-white text-sm qs-avatar-default">
                           {seller.name?.[0]?.toUpperCase() || "?"}
                         </div>
                       )}
                       {/* Availability status dot badge */}
                       <span
-                        className={`absolute -bottom-0.5 -right-0.5 block h-3 w-3 rounded-full border-2 border-white shadow-[0_1px_3.5px_rgba(0,0,0,0.15)] ${
-                          isAvailable ? "bg-[#1E8E5A]" : "bg-[#e53935]"
-                        }`}
+                        className={`absolute -bottom-0.5 -right-0.5 block h-3 w-3 rounded-full border-2 border-white shadow-[0_1px_3.5px_rgba(0,0,0,0.15)] ${isAvailable ? "bg-[#1E8E5A] qs-status-available" : "bg-[#e53935] qs-status-unavailable"
+                          }`}
                         title={isAvailable ? "Available" : "Unavailable"}
                       />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
-                        <h4 className="truncate text-sm font-bold text-slate-800">
+                        <h4 className="truncate text-[15px] font-bold text-slate-800">
                           {seller.name}
                         </h4>
                       </div>
-                      <div className="truncate text-xs font-medium text-slate-500">
+                      <div className="truncate text-xs font-medium text-slate-500 mt-0.5">
                         {seller.service}
                       </div>
                     </div>
-                    <div className="qs-distance-badge">
+                    <div className="qs-custom-distance-badge">
                       <span className="text-[10px] opacity-80">📍</span>
                       <span>{`${distanceLabel}km away`}</span>
                     </div>
                   </div>
 
                   {/* Address */}
-                  <div className="mt-2.5 flex items-start gap-1.5 text-xs text-slate-600">
-                    <span className="mt-0.5">📌</span>
+                  <div className="mt-3.5 flex items-start gap-1.5 text-xs text-slate-500">
+                    <span className="mt-0.5 opacity-70">📍</span>
                     <span className="truncate">{seller.address}</span>
                   </div>
 
                   {/* Badge row */}
-                  <div className="mt-2.5 flex flex-wrap gap-1.5">
+                  <div className="mt-3.5 flex flex-wrap gap-2">
                     {/* Service Mode badges */}
                     {seller?.serviceMode === "online" && (
                       <span className="qs-tag qs-tag-indigo">
@@ -1940,11 +2078,11 @@ export default function NearbyServices({
                     {/* Instant Service */}
                     {seller?.instantService && (
                       <span
-                        className="qs-instant-badge"
+                        className="qs-custom-instant-badge"
                         title="⚡ Instant Service"
                       >
-                        <span className="qs-instant-badge-dot" />⚡ Instant
-                        Service
+                        <span className="qs-custom-instant-badge-dot" />
+                        <span>⚡ Instant Service</span>
                       </span>
                     )}
 
@@ -1974,13 +2112,96 @@ export default function NearbyServices({
                   <a
                     href={`/seller/${sId}`}
                     onClick={(e) => handleViewDetailsClick(seller, e)}
-                    className="qs-cta mt-3 block w-full rounded-xl py-2.5 text-center text-xs font-bold text-white"
+                    className="btn qs-seller-card-btn mt-5 block w-full rounded-xl py-2.5 text-center text-xs font-bold"
                   >
                     View Profile / प्रोफ़ाइल देखें →
                   </a>
                 </div>
               );
             })}
+
+            {/* Show More Trigger & Seller Ads Placeholder */}
+            {nearby.length > 0 && (
+              <>
+                {/* Show More Trigger */}
+                {nearby.length > visibleCount && (
+                  <>
+                    {/* Mobile horizontal scroll Card (only when map is showing) */}
+                    {showMap ? (
+                      <div className="flex-shrink-0 w-[280px] rounded-2xl border border-dashed border-slate-200 flex flex-col items-center justify-center p-6 text-center bg-white lg:hidden qs-card">
+                        <span className="text-2xl mb-2">⚡</span>
+                        <h5 className="text-sm font-bold text-slate-800 mb-1">More Partners Found</h5>
+                        <p className="text-xs text-slate-400 mb-4">View more local service providers near you</p>
+                        <button
+                          onClick={() => setVisibleCount((prev) => prev + 5)}
+                          className="btn qs-seller-card-btn px-5 py-2 text-xs font-bold rounded-xl"
+                        >
+                          Show More
+                        </button>
+                      </div>
+                    ) : null}
+
+                    {/* Desktop button or grid full-width button */}
+                    <div className={`mt-4 ${showMap
+                      ? "hidden lg:block w-full"
+                      : "w-full col-span-full flex justify-center mt-6"
+                      }`}>
+                      <button
+                        type="button"
+                        onClick={() => setVisibleCount((prev) => prev + 5)}
+                        className="btn qs-seller-card-btn w-full py-3 text-xs font-bold rounded-xl text-center"
+                      >
+                        Show More Services / और दिखाएं ↓
+                      </button>
+                    </div>
+                  </>
+                )}
+
+                {/* Seller Advertisement container */}
+                {showMap ? (
+                  /* Mobile horizontal scroll ad card */
+                  <div className="qs-featured-ad-card flex-shrink-0 w-[280px] text-center flex flex-col justify-between lg:hidden ml-1">
+                    <div>
+                      <span className="qs-tag qs-tag-amber text-[9px] uppercase tracking-wider mb-2 font-bold">Sponsored Slot</span>
+                      <h5 className="text-[15px] font-bold text-slate-800 mt-2.5">Advertise Here</h5>
+                      <p className="text-[12px] text-slate-500 mt-2 leading-relaxed">
+                        Boost your visibility and reach thousands of customers in your local area.
+                      </p>
+                    </div>
+                    <a
+                      href="/advertise"
+                      onClick={(e) => { e.preventDefault(); alert("Advertise features coming soon!"); }}
+                      className="btn qs-seller-card-btn py-2 text-xs font-bold rounded-xl mt-4 block"
+                    >
+                      Join as Partner
+                    </a>
+                  </div>
+                ) : null}
+
+                {/* Desktop list ad banner or Grid layout ad banner */}
+                <div className={`mt-8 ${showMap
+                  ? "hidden lg:block w-full mt-7"
+                  : "w-full col-span-full mt-10"
+                  }`}>
+                  <div className="qs-featured-ad-banner text-center flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="text-left">
+                      <span className="qs-tag qs-tag-amber text-[9px] uppercase tracking-wider font-bold">Featured Slot</span>
+                      <h5 className="text-base font-bold text-slate-800 mt-1.5">Want to grow your local service business?</h5>
+                      <p className="text-[13px] text-slate-500 mt-1">
+                        Advertise your services here and get up to 5x more customer bookings.
+                      </p>
+                    </div>
+                    <a
+                      href="/advertise"
+                      onClick={(e) => { e.preventDefault(); alert("Advertise features coming soon!"); }}
+                      className="btn qs-seller-card-btn px-6 py-2.5 text-xs font-bold rounded-xl whitespace-nowrap"
+                    >
+                      Advertise with Us
+                    </a>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

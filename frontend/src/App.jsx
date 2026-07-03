@@ -9,6 +9,7 @@ import {
 
 import { useEffect } from "react";
 import Navbar from "./components/Navbar";
+import BottomNavUser from "./components/BottomNavUser";
 import Footer from "./components/Footer";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminLogin from "./pages/AdminLogin";
@@ -144,6 +145,7 @@ function AppRoutes() {
       </Routes>
 
       {!isAdminRoute && !isSellerRoute && <Footer />}
+      {!isAdminRoute && !isSellerRoute && <BottomNavUser />}
     </>
   );
 }
