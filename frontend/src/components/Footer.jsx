@@ -92,18 +92,18 @@ const Footer = () => {
             &copy; {currentYear} QuickSeva. All rights reserved.
           </p>
           <div className="flex space-x-6">
-            <a
-              href="#"
+            <Link
+              to="/privacy-policy"
               className="text-indigo-200 hover:text-red-400 text-sm transition duration-200"
             >
               Privacy Policy
-            </a>
-            <a
-              href="#"
+            </Link>
+            <Link
+              to="/terms-of-service"
               className="text-indigo-200 hover:text-red-400 text-sm transition duration-200"
             >
               Terms of Service
-            </a>
+            </Link>
           </div>
         </div>
       </div>

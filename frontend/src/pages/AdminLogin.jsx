@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import apiClient from "../api/axiosConfig";
 
 const AdminLogin = () => {
   const navigate = useNavigate();
@@ -97,39 +98,33 @@ const AdminLogin = () => {
     setLoading(true);
 
     try {
-      // ⚠️ TEMPORARY: Hardcoded admin credentials for testing
-      // In production, this should call your .NET backend:
-      // POST /api/admin/login { email, password }
+      // API call to backend admin-login endpoint
+      const response = await apiClient.post("/auth/admin-login", {
+        username: formData.username,
+        password: formData.password,
+      });
 
-      // Frontend-only testing credentials (no backend yet)
-      // Default admin:
-      const ADMIN_USERNAME = "admin";
-      const ADMIN_PASSWORD = "Admin@123";
+      const { user, token } = response.data.data;
 
-      if (
-        formData.username === ADMIN_USERNAME &&
-        formData.password === ADMIN_PASSWORD
-      ) {
-        // Admin login successful
-        const adminToken = `admin_token_${Date.now()}`;
-
-        localStorage.setItem("authToken", adminToken);
-        localStorage.setItem("userRole", "admin");
-        localStorage.setItem("isAdminAuthenticated", "true");
-        localStorage.setItem("adminUsername", formData.username);
-        localStorage.setItem("adminEmail", formData.username);
-
-        setSuccessMessage("✓ Admin login successful! Redirecting...");
-
-        setTimeout(() => {
-          navigate("/admin/dashboard", { replace: true });
-        }, 1500);
-      } else {
-        throw new Error("Invalid admin credentials");
+      if (user.role !== "admin") {
+        throw new Error("Access denied: You are not an administrator.");
       }
+
+      localStorage.setItem("authToken", token);
+      localStorage.setItem("userRole", "admin");
+      localStorage.setItem("isAdminAuthenticated", "true");
+      localStorage.setItem("adminEmail", user.email || "");
+
+      setSuccessMessage("✓ Admin login successful! Redirecting...");
+
+      setTimeout(() => {
+        window.location.href = "/admin/dashboard";
+      }, 1500);
     } catch (err) {
+      console.error(err);
+      const errMsg = err?.response?.data?.message || err.message || "Admin login failed. Please try again.";
       setErrors({
-        submit: err.message || "Admin login failed. Please try again.",
+        submit: errMsg,
       });
     } finally {
       setLoading(false);
@@ -167,7 +162,7 @@ const AdminLogin = () => {
                   ? "border-red-500 focus:border-red-500"
                   : "border-indigo-500/30 focus:border-indigo-400"
               }`}
-              placeholder="admin"
+              placeholder="e.g., admin"
               disabled={loading}
             />
             {touched.username && errors.username && (

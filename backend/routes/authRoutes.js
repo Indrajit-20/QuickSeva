@@ -9,6 +9,7 @@ const {
   verifyOTP,
   changePassword,
   resetPassword,
+  adminLogin,
 } = require("../controllers/authController");
 
 const { protect } = require("../middleware/authMiddleware");
@@ -25,6 +26,7 @@ router.post("/verify-otp",      verifyOTP);
 
 // Password-based login (legacy / admin)
 router.post("/login",           login);
+router.post("/admin-login",     adminLogin);
 
 // Password management
 router.post("/reset-password",  resetPassword);

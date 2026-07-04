@@ -1,0 +1,14 @@
+CREATE TABLE IF NOT EXISTS admins (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  username VARCHAR(100) UNIQUE NOT NULL,
+  password VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO admins (username, password) VALUES
+('admin', '$2a$10$XCmCMDtLzVE8ruODkn1/iOPYPoDOG.Ix/vzFkGCSlXF7COwb2iQqS')
+ON DUPLICATE KEY UPDATE password=VALUES(password);
+
+ALTER TABLE policies DROP FOREIGN KEY policies_ibfk_1;
+
+ALTER TABLE policies ADD CONSTRAINT fk_policies_updated_by FOREIGN KEY (updated_by) REFERENCES admins(id) ON DELETE SET NULL;

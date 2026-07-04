@@ -508,3 +508,48 @@ exports.resetPassword = async (req, res) => {
     return errorRes(res, "Password reset failed");
   }
 };
+
+// ── Admin Login ──────────────────────────────────────────────────────────────
+exports.adminLogin = async (req, res) => {
+  try {
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+      return errorRes(res, "Username and password are required", 400);
+    }
+
+    const [rows] = await pool.query(
+      "SELECT * FROM admins WHERE username = ? LIMIT 1",
+      [username]
+    );
+
+    if (!rows.length) {
+      return errorRes(res, "Invalid username or password", 401);
+    }
+
+    const admin = rows[0];
+    const isMatch = await bcrypt.compare(password, admin.password);
+    if (!isMatch) {
+      return errorRes(res, "Invalid username or password", 401);
+    }
+
+    const token = generateToken({ id: admin.id, role: "admin" });
+
+    return successRes(
+      res,
+      {
+        token,
+        user: {
+          id: admin.id,
+          name: admin.username,
+          email: "admin@quickseva.com",
+          role: "admin",
+        },
+      },
+      "Admin login successful"
+    );
+  } catch (err) {
+    console.error("Admin login error:", err);
+    return errorRes(res, "Admin login failed");
+  }
+};

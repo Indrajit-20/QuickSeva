@@ -307,6 +307,24 @@ async function run() {
     };
 
     const hashedPassword = await bcrypt.hash("password123", 12);
+    const adminHashedPassword = await bcrypt.hash("Admin@123", 12);
+
+    console.log("Seeding admin user...");
+    const [adminUserRes] = await pool.query(
+      `INSERT INTO users (name, email, phone, password, role, is_verified, is_active)
+       VALUES (?, ?, ?, ?, ?, 1, 1)`,
+      [
+        "System Admin",
+        "admin@quickseva.com",
+        "9999999999",
+        adminHashedPassword,
+        "admin"
+      ]
+    );
+    await pool.query(
+      "INSERT INTO wallets (user_id, balance) VALUES (?, 0.00)",
+      [adminUserRes.insertId]
+    );
 
     for (let index = 0; index < 100; index++) {
       const area = AREAS[index % AREAS.length];

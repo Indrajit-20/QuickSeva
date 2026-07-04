@@ -11,7 +11,7 @@ const SellerRegister = () => {
     ownerName: "",
     email: "",
     mobileNumber: "",
-    location: { lat: null, lng: null, address: "" },
+    location: { lat: null, lng: null, address: "", pincode: "" },
     categoryIds: [],
   });
 
@@ -56,15 +56,21 @@ const SellerRegister = () => {
     if (
       !formData.location ||
       formData.location.lat === null ||
-      formData.location.lng === null
+      formData.location.lng === null ||
+      !formData.location.address ||
+      formData.location.address.trim().length < 3
     ) {
-      nextErrors.location = "Please pin your service location on the map";
+      nextErrors.location = "Please search/detect your service location and enter a valid address";
     }
 
-    // Commented out since categories are optional and selection UI is commented out
-    // if (!Array.isArray(formData.categoryIds) || formData.categoryIds.length === 0) {
-    //   nextErrors.categoryIds = "Please select at least one category";
-    // }
+    if (!formData.location?.pincode) {
+      nextErrors.pincode = "Pincode is required";
+    } else {
+      const pinRegex = /^[1-9][0-9]{5}$/;
+      if (!pinRegex.test(formData.location.pincode)) {
+        nextErrors.pincode = "Enter a valid 6-digit pincode";
+      }
+    }
 
     setErrors(nextErrors);
     setTouched({
@@ -73,6 +79,7 @@ const SellerRegister = () => {
       email: true,
       mobileNumber: true,
       location: true,
+      pincode: true,
       // categoryIds: true,
     });
 
@@ -112,7 +119,7 @@ const SellerRegister = () => {
     if (!validateForm()) return;
 
     // location already validated in validateForm (lat/lng not null)
-    const { lat, lng, address } = formData.location || {};
+    const { lat, lng, address, pincode } = formData.location || {};
 
     setIsLoading(true);
     try {
@@ -124,6 +131,7 @@ const SellerRegister = () => {
         address: address || "",
         lat,
         lng,
+        pincode,
         // categoryIds: formData.categoryIds,
       };
 
@@ -266,15 +274,19 @@ const SellerRegister = () => {
             </label>
 
             <LocationPicker
-              onChange={({ lat, lng, address }) =>
+              hideMap={true}
+              onChange={({ lat, lng, address, pincode }) =>
                 setFormData((prev) => ({
                   ...prev,
-                  location: { lat, lng, address },
+                  location: { lat, lng, address, pincode },
                 }))
               }
             />
             {errors.location && (
               <p className="mt-1 text-xs text-red-300">⚠ {errors.location}</p>
+            )}
+            {errors.pincode && (
+              <p className="mt-1 text-xs text-red-300">⚠ {errors.pincode}</p>
             )}
           </div>
           {/* 
@@ -338,7 +350,7 @@ const SellerRegister = () => {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full mt-2 px-4 py-2.5 rounded-lg font-semibold text-white bg-linear-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 hover:scale-[1.01] hover:shadow-lg active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+            className="w-full mt-2 px-4 py-2.5 rounded-lg font-semibold text-white bg-indigo-600 force-text-white hover:bg-indigo-700 hover:scale-[1.01] hover:shadow-lg active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
           >
             {isLoading ? "Submitting..." : "Register as Partner"}
           </button>

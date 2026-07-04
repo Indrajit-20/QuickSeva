@@ -12,7 +12,7 @@ export default function BecomeSeller() {
     businessName: "",
     experienceYrs: "",
     bio: "",
-    location: { lat: null, lng: null, address: "" },
+    location: { lat: null, lng: null, address: "", pincode: "" },
   });
 
   const [errors, setErrors] = useState({});
@@ -34,9 +34,20 @@ export default function BecomeSeller() {
     if (
       !formData.location ||
       formData.location.lat === null ||
-      formData.location.lng === null
+      formData.location.lng === null ||
+      !formData.location.address ||
+      formData.location.address.trim().length < 3
     ) {
-      nextErrors.location = "Please select your service location on the map";
+      nextErrors.location = "Please search/detect your service location and enter a valid address";
+    }
+
+    if (!formData.location?.pincode) {
+      nextErrors.pincode = "Pincode is required";
+    } else {
+      const pinRegex = /^[1-9][0-9]{5}$/;
+      if (!pinRegex.test(formData.location.pincode)) {
+        nextErrors.pincode = "Enter a valid 6-digit pincode";
+      }
     }
 
     setErrors(nextErrors);
@@ -44,6 +55,7 @@ export default function BecomeSeller() {
       businessName: true,
       experienceYrs: true,
       location: true,
+      pincode: true,
     });
 
     return Object.keys(nextErrors).length === 0;
@@ -82,7 +94,8 @@ export default function BecomeSeller() {
             experience_yrs: Number(formData.experienceYrs),
             address: formData.location.address,
             lat: formData.location.lat,
-            lng: formData.location.lng
+            lng: formData.location.lng,
+            pincode: formData.location.pincode
           });
         }
 
@@ -200,22 +213,26 @@ export default function BecomeSeller() {
               Service Location <span className="text-red-400">*</span>
             </label>
             <LocationPicker
-              onChange={({ lat, lng, address }) =>
+              hideMap={true}
+              onChange={({ lat, lng, address, pincode }) =>
                 setFormData((prev) => ({
                   ...prev,
-                  location: { lat, lng, address },
+                  location: { lat, lng, address, pincode },
                 }))
               }
             />
             {errors.location && touched.location && (
               <p className="mt-1 text-xs text-red-300">⚠ {errors.location}</p>
             )}
+            {errors.pincode && touched.pincode && (
+              <p className="mt-1 text-xs text-red-300">⚠ {errors.pincode}</p>
+            )}
           </div>
 
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full mt-4 px-4 py-2.5 rounded-lg font-semibold text-white bg-linear-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 hover:scale-[1.01] hover:shadow-lg active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+            className="w-full mt-4 px-4 py-2.5 rounded-lg font-semibold text-white bg-indigo-600 force-text-white hover:bg-indigo-700 hover:scale-[1.01] hover:shadow-lg active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
           >
             {isLoading ? "Upgrading Account..." : "Register as Seller"}
           </button>

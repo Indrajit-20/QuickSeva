@@ -2076,9 +2076,24 @@ input[type="range"] {
   animation: bottom-nav-badge-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* User-variant (for the public/user navbar) */
 .bottom-nav-bar--user {
   left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  max-width: none !important;
+  bottom: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.06), 0 -1px 6px rgba(0, 0, 0, 0.03) !important;
+  justify-content: center !important;
+  gap: 24px;
+  transform: none !important;
+  border: none !important;
+  border-top: 1px solid rgba(229, 231, 235, 0.7) !important;
+}
+
+.bottom-nav-bar--user .bottom-nav-item {
+  flex: none !important;
+  width: 80px;
 }
 
 /* Animations */

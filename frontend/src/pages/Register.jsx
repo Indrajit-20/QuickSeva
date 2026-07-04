@@ -444,7 +444,7 @@ const Register = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full mt-2 px-4 py-2.5 rounded-lg font-semibold text-white bg-linear-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 hover:scale-[1.01] hover:shadow-lg active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+              className="w-full mt-2 px-4 py-2.5 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-700 hover:scale-[1.01] hover:shadow-lg active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
             >
               {isLoading ? "Sending OTP…" : "Get OTP →"}
             </button>
@@ -528,7 +528,7 @@ const Register = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full px-4 py-2.5 rounded-lg font-semibold text-white bg-linear-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 hover:scale-[1.01] hover:shadow-lg active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+              className="w-full px-4 py-2.5 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-700 hover:scale-[1.01] hover:shadow-lg active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
             >
               {isLoading ? "Creating Account…" : "Create Account ✓"}
             </button>
@@ -538,7 +538,7 @@ const Register = () => {
               type="button"
               onClick={handleBack}
               disabled={isLoading}
-              className="w-full px-4 py-2 rounded-lg font-medium text-indigo-300 bg-transparent border border-indigo-500/30 hover:bg-indigo-800/30 transition-all duration-200 text-sm disabled:opacity-50"
+              className="w-full px-4 py-2 rounded-lg font-medium text-indigo-600 bg-transparent border border-indigo-600/30 hover:bg-indigo-600/10 transition-all duration-200 text-sm disabled:opacity-50"
             >
               ← Change Details
             </button>

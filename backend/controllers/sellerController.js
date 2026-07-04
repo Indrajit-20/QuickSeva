@@ -132,6 +132,7 @@ exports.updateSellerProfile = async (req, res) => {
       lat,
       lng,
       address,
+      pincode,
     } = req.body;
 
     // Keep sellers.phone synchronized with users.phone
@@ -162,11 +163,12 @@ exports.updateSellerProfile = async (req, res) => {
 
     await SellerModel.update(seller.id, fields);
 
-    if (lat !== undefined || lng !== undefined || address !== undefined) {
+    if (lat !== undefined || lng !== undefined || address !== undefined || pincode !== undefined) {
       const userFields = {};
       if (lat !== undefined && lat !== null) userFields.lat = Number(lat);
       if (lng !== undefined && lng !== null) userFields.lng = Number(lng);
       if (address !== undefined && address !== null) userFields.address = String(address).trim();
+      if (pincode !== undefined && pincode !== null) userFields.pincode = String(pincode).trim();
       
       await UserModel.update(req.user.id, userFields);
     }

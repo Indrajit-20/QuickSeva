@@ -33,6 +33,8 @@ import MyBookings from "./pages/MyBookings";
 import BookingHistory from "./pages/BookingHistory";
 import ProfilePage from "./pages/ProfilePage";
 import NotFound from "./pages/NotFound";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
 import { cleanupExpiredPremium } from "./utils/premium";
 import Unauthorized from "./pages/Unauthorized";
 import SellerLayout from "./layouts/SellerLayout";
@@ -98,6 +100,8 @@ function AppRoutes() {
           <Route path="/" element={<Home />} />
           <Route path="/services" element={<ServicesPage />} />
           <Route path="/seller/:id" element={<SellerPublicProfile />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/terms-of-service" element={<TermsOfService />} />
         </Route>
 
         {/* Guest-only auth routes */}
