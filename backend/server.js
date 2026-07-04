@@ -90,10 +90,15 @@ app.use(notFound);
 app.use(errorHandler);
 
 // ── Start Server ──────────────────────────────────────────────────────────────
+const { startAvailabilitySafetyCheck } = require("./services/availabilitySafetyCheck");
+
 app.listen(PORT, () => {
   console.log(`\n🚀 QuickSeva API running on http://localhost:${PORT}`);
   console.log(`📋 Health check: http://localhost:${PORT}/api/health`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}\n`);
+  
+  // Start the background safety check
+  startAvailabilitySafetyCheck();
 });
 
 module.exports = app;

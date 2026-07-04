@@ -33,7 +33,7 @@ import MyBookings from "./pages/MyBookings";
 import BookingHistory from "./pages/BookingHistory";
 import ProfilePage from "./pages/ProfilePage";
 import NotFound from "./pages/NotFound";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
+import PrivacyPolicy from "./pages/SitePrivacy";
 import TermsOfService from "./pages/TermsOfService";
 import { cleanupExpiredPremium } from "./utils/premium";
 import Unauthorized from "./pages/Unauthorized";

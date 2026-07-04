@@ -92,10 +92,6 @@ exports.submitLead = async (req, res) => {
        LEFT JOIN categories sc_c ON sc_c.id = sc.category_id
        WHERE s.is_available = 1
          AND u.is_active = 1
-         AND s.is_premium = 1
-         AND s.plan = ?
-         AND s.premium_expires_at IS NOT NULL
-         AND s.premium_expires_at > NOW()
          AND (u.pincode = ? OR COALESCE(s.location_address, u.address, '') LIKE ?)
          AND (
            LOWER(c.name) = LOWER(?)
@@ -110,7 +106,6 @@ exports.submitLead = async (req, res) => {
            )
          )`,
       [
-        PRO_PLAN_ID,
         payload.pincode,
         `%${payload.pincode}%`,
         payload.category,
@@ -197,6 +192,12 @@ exports.getSellerLeads = async (req, res) => {
       [sellerId],
     );
 
+    // Update status to 'VIEWED' for all 'NEW' notifications since seller is viewing them
+    await pool.query(
+      "UPDATE seller_lead_notifications SET status = 'VIEWED' WHERE seller_id = ? AND status = 'NEW'",
+      [sellerId]
+    );
+
     return successRes(res, {
       leads: rows.map((lead) => ({
         ...lead,
@@ -208,5 +209,29 @@ exports.getSellerLeads = async (req, res) => {
   } catch (err) {
     console.error("getSellerLeads error:", err);
     return errorRes(res, "Failed to fetch seller leads");
+  }
+};
+
+exports.getUnreadLeadsCount = async (req, res) => {
+  try {
+    await ensureLeadTables();
+
+    let sellerId = null;
+    if (req.user?.id) {
+      const [[seller]] = await pool.query("SELECT id FROM sellers WHERE user_id = ?", [req.user.id]);
+      sellerId = seller?.id || null;
+    }
+
+    if (!sellerId) return successRes(res, { count: 0 });
+
+    const [[result]] = await pool.query(
+      "SELECT COUNT(*) AS count FROM seller_lead_notifications WHERE seller_id = ? AND status = 'NEW'",
+      [sellerId]
+    );
+
+    return successRes(res, { count: result?.count || 0 });
+  } catch (err) {
+    console.error("getUnreadLeadsCount error:", err);
+    return errorRes(res, "Failed to fetch unread leads count");
   }
 };

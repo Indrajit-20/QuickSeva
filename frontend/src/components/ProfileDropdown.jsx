@@ -120,7 +120,7 @@ export default function ProfileDropdown({ user, onLogout }) {
             className="w-9 h-9 rounded-full object-cover border border-slate-200"
           />
         ) : (
-          <div className="w-9 h-9 rounded-full bg-[#185FA5] text-white force-text-white flex items-center justify-center font-bold">
+          <div className="w-9 h-9 rounded-full bg-[#0284c7] text-white force-text-white flex items-center justify-center font-bold">
             {initials}
           </div>
         )}
@@ -169,7 +169,7 @@ export default function ProfileDropdown({ user, onLogout }) {
                       className="w-16 h-16 rounded-full object-cover border border-slate-200"
                     />
                   ) : (
-                    <div className="w-16 h-16 rounded-full bg-[#185FA5] text-white force-text-white flex items-center justify-center font-black text-3xl">
+                    <div className="w-16 h-16 rounded-full bg-[#0284c7] text-white force-text-white flex items-center justify-center font-black text-3xl">
                       {initials}
                     </div>
                   )}
@@ -281,7 +281,7 @@ export default function ProfileDropdown({ user, onLogout }) {
                       className="w-12 h-12 rounded-full object-cover border border-slate-200"
                     />
                   ) : (
-                    <div className="w-12 h-12 rounded-full bg-[#185FA5] text-white force-text-white flex items-center justify-center font-black text-lg">
+                    <div className="w-12 h-12 rounded-full bg-[#0284c7] text-white force-text-white flex items-center justify-center font-black text-lg">
                       {initials}
                     </div>
                   )}

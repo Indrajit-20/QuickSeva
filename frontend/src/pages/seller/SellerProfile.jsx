@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Save, Pencil, Trash2, Camera, UploadCloud, X, Eye, ShieldCheck, Clock, MapPin, CheckCircle2 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import apiClient from "../../api/axiosConfig";
+import LocationPicker from "../../components/LocationPicker";
 
 const inputClass =
   "w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 shadow-sm";
@@ -27,6 +28,8 @@ export default function SellerProfile() {
     lng: null,
     address: "",
     profilePictureUrl: "",
+    sellerType: "individual",
+    pincode: "",
   });
 
   const [workImages, setWorkImages] = useState([]);
@@ -58,6 +61,8 @@ export default function SellerProfile() {
             lng: seller.lng || seller.longitude || null,
             address: seller.location_address || seller.address || "",
             profilePictureUrl: seller.profile_picture_url || "",
+            sellerType: seller.seller_type || "individual",
+            pincode: seller.pincode || "",
           }));
           setWorkImages(seller.work_images || []);
         }
@@ -230,6 +235,11 @@ export default function SellerProfile() {
         experience_yrs: Number(profile.experience || 0),
         gst_number: profile.gstnumber,
         profile_completed: 1,
+        seller_type: profile.sellerType,
+        lat: profile.lat,
+        lng: profile.lng,
+        address: profile.address,
+        pincode: profile.pincode,
       });
 
       updateUser({
@@ -337,11 +347,17 @@ export default function SellerProfile() {
         <h1 className="mt-4 text-3xl font-extrabold text-slate-800 flex items-center gap-2">
           {profile.fullName || "Seller"}
           {Number(user?.profile_completed ?? 0) === 1 && (
-            <ShieldCheck className="text-[#185FA5] fill-[#185FA5]/10" size={24} />
+            <ShieldCheck className="text-[#0284c7] fill-[#0284c7]/10" size={24} />
           )}
         </h1>
-        <p className="mt-1.5 text-sm font-medium text-slate-500">
-          {profile.serviceType || "Service Provider"} • {profile.phoneNumber || user?.phone || ""}
+        <p className="mt-1.5 text-sm font-medium text-slate-500 flex flex-wrap items-center justify-center gap-1.5">
+          <span>{profile.serviceType || "Service Provider"}</span>
+          <span>•</span>
+          <span>{profile.phoneNumber || user?.phone || ""}</span>
+          <span>•</span>
+          <span className="capitalize font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2.5 py-0.5 rounded-full text-[11px] shadow-sm">
+            {profile.sellerType === "agency" ? "Contractor / Agency" : profile.sellerType}
+          </span>
         </p>
 
         {/* Badges */}
@@ -401,6 +417,18 @@ export default function SellerProfile() {
                 <span className="text-slate-500 font-semibold">GSTIN:</span>
                 <span className="text-slate-800 font-mono bg-slate-50 px-2.5 py-1 rounded border border-slate-200">
                   {profile.gstnumber}
+                </span>
+              </div>
+            )}
+
+            {profile.address && (
+              <div className="pt-4 border-t border-slate-100 flex flex-col gap-1 text-sm text-left">
+                <span className="text-slate-500 font-semibold flex items-center gap-1.5">
+                  <MapPin size={16} className="text-slate-400" />
+                  <span>Service Location / सेवा का स्थान:</span>
+                </span>
+                <span className="text-slate-700 bg-slate-50 px-3 py-2.5 rounded-lg border border-slate-200 mt-1 font-medium text-xs leading-relaxed">
+                  {profile.address} {profile.pincode ? `(Pincode: ${profile.pincode})` : ""}
                 </span>
               </div>
             )}
@@ -616,6 +644,52 @@ export default function SellerProfile() {
                 />
               </div>
 
+              {/* Partner Type Selection */}
+              <div className="md:col-span-2 space-y-3">
+                <label className={labelClass}>Partner Type / पार्टनर का प्रकार</label>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  {[
+                    { value: "individual", label: "Individual / व्यक्तिगत", desc: "I work as a sole professional" },
+                    { value: "agency", label: "Contractor / Agency / ठेकेदार या एजेंसी", desc: "I have a team of workers" },
+                    { value: "business", label: "Business / व्यवसाय या दुकान", desc: "I have a business or shop" }
+                  ].map((opt) => {
+                    const checked = profile.sellerType === opt.value;
+                    return (
+                      <label
+                        key={opt.value}
+                        className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition duration-150 ${
+                          checked
+                            ? "border-[#0284c7] bg-[#0284c7]/5 shadow-sm"
+                            : "border-slate-200 bg-white hover:border-slate-300"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="sellerType"
+                          value={opt.value}
+                          checked={checked}
+                          onChange={() =>
+                            setProfile((prev) => ({
+                              ...prev,
+                              sellerType: opt.value,
+                            }))
+                          }
+                          className="mt-1 accent-indigo-500"
+                        />
+                        <div className="min-w-0">
+                          <div className="text-sm font-bold text-slate-800 leading-tight">
+                            {opt.label}
+                          </div>
+                          <div className="mt-1 text-xs text-slate-500 leading-normal">
+                            {opt.desc}
+                          </div>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
               <div className="md:col-span-2">
                 <label className={labelClass}>About/Bio</label>
                 <textarea
@@ -627,6 +701,36 @@ export default function SellerProfile() {
                   placeholder="Tell customers about your work and experience"
                 />
               </div>
+            </div>
+
+            {/* Service Location Settings */}
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-4">
+              <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <MapPin className="text-[#0284c7]" size={20} />
+                <span>Service Location / सेवा का स्थान</span>
+              </h3>
+              <p className="text-xs text-slate-500">
+                Update your service coverage area using your current location, pincode, or search query.
+              </p>
+              
+              <LocationPicker
+                hideMap={true}
+                initialLocation={{
+                  lat: profile.lat,
+                  lng: profile.lng,
+                  address: profile.address,
+                  pincode: profile.pincode,
+                }}
+                onChange={({ lat, lng, address, pincode }) => {
+                  setProfile((prev) => ({
+                    ...prev,
+                    lat,
+                    lng,
+                    address,
+                    pincode,
+                  }));
+                }}
+              />
             </div>
 
             {/* Redesigned Drag & Drop Multi-file Work Portfolio Section */}
@@ -644,7 +748,7 @@ export default function SellerProfile() {
                 onDrop={handleDrop}
                 onClick={() => workFileInputRef.current?.click()}
                 className={`flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-6 transition duration-200 cursor-pointer ${dragActive
-                    ? "border-[#185FA5] bg-[#185FA5]/5"
+                    ? "border-[#0284c7] bg-[#0284c7]/5"
                     : "border-slate-200 bg-slate-50 hover:border-slate-300"
                   }`}
               >

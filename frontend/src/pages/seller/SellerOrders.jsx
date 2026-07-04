@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, PlayCircle, XCircle } from "lucide-react";
 import { formatCurrency, statusClasses } from "./sellerData";
 import { sellerOrdersApi } from "../../api/orderApi";
+import { useAuth } from "../../context/AuthContext";
+import apiClient from "../../api/axiosConfig";
 
 import PageTransition from "../../components/PageTransition";
 import "../../index.css";
@@ -12,6 +14,7 @@ const maskPhone = (phone) =>
   phone ? `${String(phone).slice(0, 2)}XXXXXX${String(phone).slice(-2)}` : "";
 
 export default function SellerOrders() {
+  const { user, updateUser } = useAuth();
   const [activeTab, setActiveTab] = useState("all");
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);

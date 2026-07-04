@@ -63,8 +63,8 @@ export function addFunds(amount) {
 }
 
 export function isWalletSufficient() {
-  const wallet = initWallet();
-  return Number(wallet.balance || 0) > 0;
+  // Free listing: sellers are always active
+  return true;
 }
 
 export function canAfford(amount) {
@@ -141,149 +141,20 @@ function formatTimeForTx(tsIso) {
 }
 
 export function trackSearchImpression(sellerId, serviceName) {
+  // Free listing: search impressions are free and allowed
   const wallet = initWallet();
-  const balance = Number(wallet.balance || 0);
-  if (balance <= 0)
-    return { impressed: false, deducted: false, allowed: false, wallet };
-
-  const sellerKey = `${sellerId}_${getLocalDayKey()}`;
-  const impressionsRaw = localStorage.getItem("sellerImpressions");
-  const impressions = safeJsonParse(impressionsRaw, {});
-
-  const current = Number(impressions[sellerKey] || 0);
-  const next = current + 1;
-
-  impressions[sellerKey] = next;
-  localStorage.setItem("sellerImpressions", JSON.stringify(impressions));
-
-  // Every 5 appearances => deduct ₹1 and reset counter to 0
-  const shouldDeduct = next >= 5;
-  let deducted = false;
-  let updatedWallet = wallet;
-
-  if (shouldDeduct) {
-    if (Number(wallet.balance || 0) <= 0) {
-      return {
-        impressed: true,
-        deducted: false,
-        allowed: false,
-        wallet,
-      };
-    }
-
-    const nextBalance = Number(wallet.balance || 0) - 1;
-
-    const tx = {
-      id: `QS-TX-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-      type: "debit",
-      amount: 1,
-      description: `Search impression - ${serviceName || "Service"} (5/5 → ₹1 deducted)`,
-      timestamp: new Date().toISOString(),
-      balanceAfter: nextBalance,
-      sellerId: sellerId || undefined,
-    };
-
-    updatedWallet = {
-      ...wallet,
-      balance: nextBalance,
-      transactions: [
-        {
-          ...tx,
-          amount: 1,
-        },
-        ...(wallet.transactions || []),
-      ],
-    };
-
-    localStorage.setItem(STORAGE_KEYS.wallet, JSON.stringify(updatedWallet));
-
-    // reset counter to 0 after deduction
-    impressions[sellerKey] = 0;
-    localStorage.setItem("sellerImpressions", JSON.stringify(impressions));
-
-    deducted = true;
-
-    if (nextBalance === 0) {
-      try {
-        const sellersRaw = localStorage.getItem(STORAGE_KEYS.sellers);
-        const sellers = safeJsonParse(sellersRaw, []);
-        if (Array.isArray(sellers)) {
-          const updatedSellers = sellers.map((s) => {
-            const match = sellerId ? s.id === sellerId : true;
-            if (!match) return s;
-            return { ...s, isPremium: false };
-          });
-          localStorage.setItem(
-            STORAGE_KEYS.sellers,
-            JSON.stringify(updatedSellers),
-          );
-        }
-      } catch {
-        // ignore
-      }
-    }
-  }
-
   return {
     impressed: true,
-    deducted,
-    allowed: Number(updatedWallet.balance || 0) > 0,
-    wallet: updatedWallet,
+    deducted: false,
+    allowed: true,
+    wallet,
   };
 }
 
 export function deductContactView(sellerId, serviceName) {
+  // Free listing: contact views are free and allowed
   const wallet = initWallet();
-  const balance = Number(wallet.balance || 0);
-  if (balance <= 0) return { allowed: false, deducted: false, wallet };
-
-  const nextBalance = balance - 1;
-
-  const tx = {
-    id: `QS-TX-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-    type: "debit",
-    amount: 1,
-    description: `Contact viewed - ${serviceName || "Service"}`,
-    timestamp: new Date().toISOString(),
-    balanceAfter: nextBalance,
-    sellerId: sellerId || undefined,
-  };
-
-  const updated = {
-    ...wallet,
-    balance: nextBalance,
-    transactions: [
-      {
-        ...tx,
-        amount: 1,
-      },
-      ...(wallet.transactions || []),
-    ],
-  };
-
-  localStorage.setItem(STORAGE_KEYS.wallet, JSON.stringify(updated));
-
-  if (nextBalance === 0) {
-    try {
-      const sellersRaw = localStorage.getItem(STORAGE_KEYS.sellers);
-      const sellers = safeJsonParse(sellersRaw, []);
-      if (Array.isArray(sellers)) {
-        const updatedSellers = sellers.map((s) => {
-          const match = sellerId ? s.id === sellerId : true;
-          if (!match) return s;
-          return { ...s, isPremium: false };
-        });
-        localStorage.setItem(
-          STORAGE_KEYS.sellers,
-          JSON.stringify(updatedSellers),
-        );
-      }
-    } catch {
-      // ignore
-    }
-  }
-
-  return { allowed: nextBalance > 0, deducted: true, wallet: updated };
+  return { allowed: true, deducted: false, wallet };
 }
 
 // Backward compatibility: keep old API name but route to new impression logic at 5/5.

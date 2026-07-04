@@ -427,6 +427,18 @@ export default function NearbyServices({
   const [locationQuery, setLocationQuery] = useState("");
   const [showServiceDrop, setShowServiceDrop] = useState(false);
   const serviceDropRef = useRef(null);
+  const resultsHeaderRef = useRef(null);
+
+  const scrollToResults = () => {
+    if (resultsHeaderRef.current) {
+      const rect = resultsHeaderRef.current.getBoundingClientRect();
+      const isBelowFold = rect.top > window.innerHeight * 0.7 || rect.top < 0;
+      if (isBelowFold) {
+        resultsHeaderRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+  };
+
 
   const [visibleCount, setVisibleCount] = useState(5);
 
@@ -583,6 +595,7 @@ export default function NearbyServices({
 
   const toggleQuickFilter = (key) => {
     setQuickFilters((prev) => ({ ...prev, [key]: !prev[key] }));
+    setTimeout(scrollToResults, 100);
   };
 
   const quickFilterItems = [
@@ -614,6 +627,22 @@ export default function NearbyServices({
     filterBooking,
     quickFilters
   ]);
+
+  const isInitialMount = useRef(true);
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    setTimeout(scrollToResults, 100);
+  }, [
+    filterPrice,
+    filterDuration,
+    filterBooking,
+    filterServiceMode,
+    quickFilters,
+  ]);
+
 
   const handlePremiumSellerClick = (seller) => {
     const sId = seller?.id || seller?.sellerId;
@@ -1158,6 +1187,7 @@ export default function NearbyServices({
           setLocationResults([]);
           setLocationNotFoundMsg("");
           setGeoError("");
+          setTimeout(scrollToResults, 100);
         } else {
           suppressNextLocationSearchRef.current = false;
           setPincodeError("Pincode not found. Try a nearby pincode.");
@@ -1184,6 +1214,7 @@ export default function NearbyServices({
           setLocationResults([]);
           setLocationNotFoundMsg("");
           setGeoError("");
+          setTimeout(scrollToResults, 100);
         } else {
           setLocationNotFoundMsg("Area not found. Try a nearby landmark.");
         }
@@ -1211,6 +1242,7 @@ export default function NearbyServices({
     setPincodeResults([]);
     setPincodeError("");
     setGeoError("");
+    setTimeout(scrollToResults, 100);
   };
 
   const handlePincodeSearch = async () => {
@@ -1236,6 +1268,7 @@ export default function NearbyServices({
         setLocationResults([]);
         setLocationNotFoundMsg("");
         setGeoError("");
+        setTimeout(scrollToResults, 100);
       } else {
         suppressNextLocationSearchRef.current = false;
         setPincodeError("Pincode not found. Try a nearby pincode.");
@@ -1305,6 +1338,7 @@ export default function NearbyServices({
       setPincodeError("");
       setGeoError("");
       updateLocationFromCoords(lat, lng);
+      setTimeout(scrollToResults, 100);
       return;
     }
 
@@ -1327,6 +1361,7 @@ export default function NearbyServices({
         setPincodeError("");
         setGeoError("");
         updateLocationFromCoords(nextPos.lat, nextPos.lng);
+        setTimeout(scrollToResults, 100);
       },
       () => {
         setGeoError("Please allow location access to find nearby services");
@@ -1599,7 +1634,7 @@ export default function NearbyServices({
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                   Distance Range
                 </span>
-                <span className="text-[10px] font-bold bg-[#185fa5] px-2 py-0.5 rounded-md text-white">{radiusKm} km</span>
+                <span className="text-[10px] font-bold bg-[#0284c7] px-2 py-0.5 rounded-md text-white">{radiusKm} km</span>
               </div>
               <div className="flex flex-col">
                 <input
@@ -1611,7 +1646,7 @@ export default function NearbyServices({
                   onChange={(e) => setRadiusKm(parseInt(e.target.value || "5", 10))}
                   className="qs-range w-full"
                   style={{
-                    background: `linear-gradient(to right, #185fa5 0%, #185fa5 ${((radiusKm - 1) / 19) * 100}%, rgba(24,95,165,0.08) ${((radiusKm - 1) / 19) * 100}%, rgba(24,95,165,0.08) 100%)`,
+                    background: `linear-gradient(to right, #0284c7 0%, #0284c7 ${((radiusKm - 1) / 19) * 100}%, rgba(24,95,165,0.08) ${((radiusKm - 1) / 19) * 100}%, rgba(24,95,165,0.08) 100%)`,
                   }}
                 />
                 <span className="text-[9px] text-slate-400 mt-1 font-semibold">
@@ -1751,7 +1786,11 @@ export default function NearbyServices({
       </div>
 
       {/* Results Header: Stats and Map Option Toggle */}
-      <div className="flex flex-wrap items-center justify-between gap-4 mt-6">
+      <div
+        ref={resultsHeaderRef}
+        style={{ scrollMarginTop: "90px" }}
+        className="flex flex-wrap items-center justify-between gap-4 mt-6"
+      >
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <div className="inline-flex items-center gap-1.5 bg-[#0f766e] text-white text-[11px] font-bold px-3 py-1 rounded-full">
             <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
@@ -1801,7 +1840,7 @@ export default function NearbyServices({
               {/* Top-left: providers count */}
               <div className="pointer-events-none absolute left-3 top-3 z-[600]">
                 <div className="qs-map-pill flex items-center gap-2">
-                  <Users className="h-4 w-4 text-[#185fa5] shrink-0" />
+                  <Users className="h-4 w-4 text-[#0284c7] shrink-0" />
                   <div className="leading-tight">
                     <div className="text-[10px] uppercase tracking-wider text-indigo-200/80">
                       Providers
@@ -1950,10 +1989,13 @@ export default function NearbyServices({
 
         {/* ============ PROVIDER LIST ============ */}
         <div className={`w-full ${showMap ? "lg:w-[42%]" : "lg:w-full"}`}>
-          <div className={`qs-list pb-2 pr-3 ${showMap
-            ? "flex gap-4 overflow-x-auto snap-x snap-mandatory lg:block lg:h-[520px] lg:space-y-5 lg:overflow-y-auto lg:overflow-x-hidden lg:pb-0 lg:snap-none"
-            : "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-5 lg:max-h-[520px] lg:overflow-y-auto"
-            }`}>
+          <div
+            key={`${searchCenter?.lat}-${searchCenter?.lng}-${search}-${nearby.length}`}
+            className={`qs-list pb-2 pr-3 ${showMap
+              ? "flex gap-4 overflow-x-auto snap-x snap-mandatory lg:block lg:h-[520px] lg:space-y-5 lg:overflow-y-auto lg:overflow-x-hidden lg:pb-0 lg:snap-none"
+              : "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-5 lg:max-h-[520px] lg:overflow-y-auto"
+            }`}
+          >
             {apiError && (
               <div className="qs-glass-panel w-full py-8 px-4 text-center text-red-300 border border-red-500/30">
                 {apiError}

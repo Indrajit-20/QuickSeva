@@ -79,7 +79,7 @@ const WorkspaceSwitcher = ({ layout = "dropdown" }) => {
         </span>
         {isSeller ? (
           isSellerActive
-            ? <span style={{ fontSize:"11px", color:"#185FA5", fontWeight:700 }}>Active</span>
+            ? <span style={{ fontSize:"11px", color:"#0284c7", fontWeight:700 }}>Active</span>
             : <span style={{ fontSize:"11px", color:"rgba(26,26,26,0.4)", fontWeight: "bold" }}>Switch</span>
         ) : (
           <span style={{ fontSize:"11px", color:"#f43f5e", fontWeight:700 }}>Join</span>

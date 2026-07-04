@@ -124,7 +124,7 @@ router.get("/in-view", async (req, res) => {
       avg_rating: r.avg_rating !== null && r.avg_rating !== undefined ? parseFloat(r.avg_rating) : 0,
       reviews: r.reviews !== null && r.reviews !== undefined ? parseInt(r.reviews) : 0,
       walletBalance: r.walletBalance !== null && r.walletBalance !== undefined ? parseFloat(r.walletBalance) : 0,
-      isPremium: (r.isPremium && Number(r.walletBalance || 0) > 0 && r.premiumExpiresAt && new Date(r.premiumExpiresAt) > new Date()) ? true : false,
+      isPremium: (r.isPremium && r.premiumExpiresAt && new Date(r.premiumExpiresAt) > new Date()) ? true : false,
       instantService: r.instantService ? true : false,
     }));
 

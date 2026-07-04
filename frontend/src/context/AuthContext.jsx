@@ -129,6 +129,17 @@ export const AuthProvider = ({ children }) => {
         setIsAuthenticated(Boolean(data?.user));
         setAuthError(null);
 
+        if (data.user?.role === "seller" && data.user?.premium_expires_at) {
+          localStorage.setItem(
+            "sellerPremium",
+            JSON.stringify({
+              plan: data.user.plan,
+              expiresAt: data.user.premium_expires_at,
+              isPremium: data.user.is_premium === 1 || data.user.is_premium === true,
+            })
+          );
+        }
+
         const isUserSeller = data.user?.role === "seller";
         setIsSeller(isUserSeller);
 
@@ -239,6 +250,16 @@ export const AuthProvider = ({ children }) => {
         setIsSeller(data.user.role === "seller");
         if (data.user.role) {
           localStorage.setItem("userRole", data.user.role);
+        }
+        if (data.user.role === "seller" && data.user.premium_expires_at) {
+          localStorage.setItem(
+            "sellerPremium",
+            JSON.stringify({
+              plan: data.user.plan,
+              expiresAt: data.user.premium_expires_at,
+              isPremium: data.user.is_premium === 1 || data.user.is_premium === true,
+            })
+          );
         }
       }
     } catch (err) {

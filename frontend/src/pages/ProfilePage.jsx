@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 
 const GENDER_OPTIONS = [
@@ -97,6 +97,7 @@ const hasErrors = (errors) => Object.values(errors).some(Boolean);
 
 export default function ProfilePage() {
   const { user, updateUser } = useAuth();
+  const formRef = useRef(null);
 
   const initial = useMemo(() => {
     const stored = readLoggedInUser();
@@ -146,7 +147,10 @@ export default function ProfilePage() {
       address: true,
     });
 
-    if (hasErrors(nextErrors)) return;
+    if (hasErrors(nextErrors)) {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
 
     const nextUser = {
       ...(user || {}),
@@ -192,7 +196,11 @@ export default function ProfilePage() {
           </div>
         )}
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
+        <section
+          ref={formRef}
+          style={{ scrollMarginTop: "90px" }}
+          className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8"
+        >
           <div className="flex items-center gap-4">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-purple-600 text-2xl font-black text-white">
               {initials}

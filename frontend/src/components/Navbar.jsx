@@ -92,7 +92,7 @@ const Navbar = () => {
         <div className="flex justify-between items-center h-20">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
-            <span className="text-3xl font-bold text-[#185FA5]">
+            <span className="text-3xl font-bold text-[#0284c7]">
               QuickSeva
             </span>
           </Link>
@@ -110,7 +110,7 @@ const Navbar = () => {
           <div className="hidden md:flex items-center space-x-6">
             <Link
               to="/"
-              className="font-semibold text-[#1a1a1a] transition-colors duration-300 hover:text-[#185FA5]"
+              className="font-semibold text-[#1a1a1a] transition-colors duration-300 hover:text-[#0284c7]"
             >
               Home
             </Link>
@@ -119,13 +119,13 @@ const Navbar = () => {
               <>
                 <Link
                   to="/seller/services"
-                  className="font-semibold text-[#1a1a1a] transition-colors duration-300 hover:text-[#185FA5]"
+                  className="font-semibold text-[#1a1a1a] transition-colors duration-300 hover:text-[#0284c7]"
                 >
                   My Services
                 </Link>
                 <Link
                   to="/seller/dashboard"
-                  className="font-semibold text-[#1a1a1a] transition-colors duration-300 hover:text-[#185FA5]"
+                  className="font-semibold text-[#1a1a1a] transition-colors duration-300 hover:text-[#0284c7]"
                 >
                   Dashboard
                 </Link>
@@ -133,7 +133,7 @@ const Navbar = () => {
             ) : isAuthenticated && (
               <Link
                 to="/my-bookings"
-                className="font-semibold text-[#1a1a1a] transition-colors duration-300 hover:text-[#185FA5]"
+                className="font-semibold text-[#1a1a1a] transition-colors duration-300 hover:text-[#0284c7]"
               >
                 My Bookings
               </Link>
@@ -154,12 +154,12 @@ const Navbar = () => {
                   : "1px solid rgba(15,110,86,0.28)",
                 fontSize: "11px",
                 fontWeight: 600,
-                color: activeRole === "seller" ? "#185FA5" : "#0F6E56"
+                color: activeRole === "seller" ? "#0284c7" : "#0F6E56"
               }}>
                 <span style={{
                   width: "6px", height: "6px",
                   borderRadius: "50%",
-                  background: activeRole === "seller" ? "#185FA5" : "#0F6E56",
+                  background: activeRole === "seller" ? "#0284c7" : "#0F6E56",
                   display: "inline-block"
                 }} />
                 <span className="hidden sm:inline">
@@ -173,7 +173,7 @@ const Navbar = () => {
               <>
                 <Link
                   to="/login"
-                  className="font-semibold text-[#1a1a1a] transition-colors duration-300 hover:text-[#185FA5]"
+                  className="font-semibold text-[#1a1a1a] transition-colors duration-300 hover:text-[#0284c7]"
                 >
                   Login
                 </Link>
@@ -187,7 +187,7 @@ const Navbar = () => {
                     className="list-none cursor-pointer"
                     onClick={() => setIsPartnerOpen(true)}
                   >
-                    <span className="font-semibold text-[#1a1a1a] transition-colors duration-300 hover:text-[#185FA5]">
+                    <span className="font-semibold text-[#1a1a1a] transition-colors duration-300 hover:text-[#0284c7]">
                       Become a partner
                     </span>
                   </button>
@@ -227,7 +227,7 @@ const Navbar = () => {
           {/* Mobile Menu Button */}
           <button
             onClick={toggleMenu}
-            className="flex h-10 w-10 flex-col items-center justify-center rounded-md transition hover:bg-[#185FA5]/10 md:hidden"
+            className="flex h-10 w-10 flex-col items-center justify-center rounded-md transition hover:bg-[#0284c7]/10 md:hidden"
           >
             <span
               className={`mb-1.5 block h-0.5 w-6 bg-[#e53935] transition-transform duration-300 ${isMenuOpen ? "rotate-45 translate-y-2" : ""
@@ -258,7 +258,7 @@ const Navbar = () => {
             <Link
               to="/"
               onClick={() => setIsMenuOpen(false)}
-              className="block rounded-lg px-3 py-2 font-semibold text-[#1a1a1a] transition-colors hover:bg-[#f8f9fb] hover:text-[#185FA5]"
+              className="block rounded-lg px-3 py-2 font-semibold text-[#1a1a1a] transition-colors hover:bg-[#f8f9fb] hover:text-[#0284c7]"
             >
               Home
             </Link>
@@ -268,14 +268,14 @@ const Navbar = () => {
                 <Link
                   to="/seller/services"
                   onClick={() => setIsMenuOpen(false)}
-                  className="block rounded-lg px-3 py-2 font-semibold text-[#1a1a1a] transition-colors hover:bg-[#f8f9fb] hover:text-[#185FA5]"
+                  className="block rounded-lg px-3 py-2 font-semibold text-[#1a1a1a] transition-colors hover:bg-[#f8f9fb] hover:text-[#0284c7]"
                 >
                   My Services
                 </Link>
                 <Link
                   to="/seller/dashboard"
                   onClick={() => setIsMenuOpen(false)}
-                  className="block rounded-lg px-3 py-2 font-semibold text-[#1a1a1a] transition-colors hover:bg-[#f8f9fb] hover:text-[#185FA5]"
+                  className="block rounded-lg px-3 py-2 font-semibold text-[#1a1a1a] transition-colors hover:bg-[#f8f9fb] hover:text-[#0284c7]"
                 >
                   Dashboard
                 </Link>
@@ -284,7 +284,7 @@ const Navbar = () => {
               <Link
                 to="/my-bookings"
                 onClick={() => setIsMenuOpen(false)}
-                className="block rounded-lg px-3 py-2 font-semibold text-[#1a1a1a] transition-colors hover:bg-[#f8f9fb] hover:text-[#185FA5]"
+                className="block rounded-lg px-3 py-2 font-semibold text-[#1a1a1a] transition-colors hover:bg-[#f8f9fb] hover:text-[#0284c7]"
               >
                 My Bookings
               </Link>
@@ -301,7 +301,7 @@ const Navbar = () => {
                 <Link
                   to="/login"
                   onClick={() => setIsMenuOpen(false)}
-                  className="block rounded-lg px-3 py-2 font-semibold text-[#1a1a1a] transition-colors hover:bg-[#f8f9fb] hover:text-[#185FA5]"
+                  className="block rounded-lg px-3 py-2 font-semibold text-[#1a1a1a] transition-colors hover:bg-[#f8f9fb] hover:text-[#0284c7]"
                 >
                   Login
                 </Link>

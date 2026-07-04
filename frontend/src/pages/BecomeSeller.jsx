@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import LocationPicker from "../components/LocationPicker";
@@ -7,6 +7,7 @@ import apiClient from "../api/axiosConfig";
 export default function BecomeSeller() {
   const navigate = useNavigate();
   const { user, refreshAuth } = useAuth();
+  const formRef = useRef(null);
 
   const [formData, setFormData] = useState({
     businessName: "",
@@ -70,7 +71,10 @@ export default function BecomeSeller() {
     e.preventDefault();
     setApiError("");
 
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
 
     setIsLoading(true);
     try {
@@ -104,11 +108,13 @@ export default function BecomeSeller() {
         navigate("/seller/dashboard", { replace: true });
       } else {
         setApiError(resp?.data?.message || "Failed to upgrade profile");
+        formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       }
     } catch (err) {
       setApiError(
         err?.response?.data?.message || err?.message || "Failed to upgrade profile"
       );
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     } finally {
       setIsLoading(false);
     }
@@ -116,7 +122,11 @@ export default function BecomeSeller() {
 
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-900 via-indigo-950 to-black flex items-center justify-center p-4 py-12">
-      <div className="bg-indigo-900/40 backdrop-blur-md rounded-2xl shadow-2xl w-full max-w-lg p-8 border border-indigo-500/30 red-accent-line">
+      <div
+        ref={formRef}
+        style={{ scrollMarginTop: "90px" }}
+        className="bg-indigo-900/40 backdrop-blur-md rounded-2xl shadow-2xl w-full max-w-lg p-8 border border-indigo-500/30 red-accent-line"
+      >
         <div className="text-center mb-6">
           <h1 className="text-3xl font-bold text-white mb-2">
             Register as a Seller

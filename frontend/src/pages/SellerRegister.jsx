@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import LocationPicker from "../components/LocationPicker";
 import apiClient from "../api/axiosConfig";
 
 const SellerRegister = () => {
   const navigate = useNavigate();
+  const formRef = useRef(null);
 
   const [formData, setFormData] = useState({
     businessName: "",
@@ -13,6 +14,7 @@ const SellerRegister = () => {
     mobileNumber: "",
     location: { lat: null, lng: null, address: "", pincode: "" },
     categoryIds: [],
+    sellerType: "individual",
   });
 
   const [errors, setErrors] = useState({});
@@ -116,7 +118,10 @@ const SellerRegister = () => {
     setSuccessMessage("");
     setApiError("");
 
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
 
     // location already validated in validateForm (lat/lng not null)
     const { lat, lng, address, pincode } = formData.location || {};
@@ -132,6 +137,7 @@ const SellerRegister = () => {
         lat,
         lng,
         pincode,
+        sellerType: formData.sellerType,
         // categoryIds: formData.categoryIds,
       };
 
@@ -142,11 +148,13 @@ const SellerRegister = () => {
         navigate("/login", { replace: true });
       } else {
         setApiError(resp?.data?.message || "Registration failed");
+        formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       }
     } catch (err) {
       const msg =
         err?.response?.data?.message || err?.message || "Registration failed";
       setApiError(msg);
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     } finally {
       setIsLoading(false);
     }
@@ -154,7 +162,11 @@ const SellerRegister = () => {
 
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-900 via-indigo-950 to-black flex items-center justify-center p-4">
-      <div className="bg-indigo-900/40 backdrop-blur-md rounded-2xl shadow-2xl w-full max-w-md p-8 border border-indigo-500/30 red-accent-line">
+      <div
+        ref={formRef}
+        style={{ scrollMarginTop: "90px" }}
+        className="bg-indigo-900/40 backdrop-blur-md rounded-2xl shadow-2xl w-full max-w-md p-8 border border-indigo-500/30 red-accent-line"
+      >
         <div className="text-center mb-6">
           <h1 className="text-3xl font-bold text-white mb-2">
             Become a Partner
@@ -221,6 +233,42 @@ const SellerRegister = () => {
             {errors.ownerName && touched.ownerName && (
               <p className="mt-1 text-xs text-red-300">⚠ {errors.ownerName}</p>
             )}
+          </div>
+
+          {/* Partner Type Radio Options */}
+          <div className="space-y-3">
+            <label className="block text-xs font-semibold text-indigo-200 mb-2">
+              Partner Type / पार्टनर का प्रकार <span className="text-red-400">*</span>
+            </label>
+            <div className="space-y-2.5">
+              {[
+                { value: "individual", label: "Individual / व्यक्तिगत", desc: "I work as a sole professional / मैं अकेले काम करता हूँ" },
+                { value: "agency", label: "Contractor / Agency / ठेकेदार या एजेंसी", desc: "I have a team of workers under me / मेरे पास श्रमिकों की एक टीम है" },
+                { value: "business", label: "Business / व्यवसाय या दुकान", desc: "I have a business or shop / मेरी एक व्यवसाय या दुकान है" }
+              ].map((opt) => (
+                <label
+                  key={opt.value}
+                  className={`flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-all duration-200 ${
+                    formData.sellerType === opt.value
+                      ? "border-[#0284c7] bg-[#0284c7]/15 shadow-[0_0_12px_rgba(2,132,199,0.25)]"
+                      : "border-indigo-500/20 bg-indigo-950/20 hover:border-[#0284c7]/40"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="sellerType"
+                    value={opt.value}
+                    checked={formData.sellerType === opt.value}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, sellerType: e.target.value }))}
+                    className="mt-1 h-4 w-4 shrink-0 text-indigo-600 border-indigo-500/30 bg-indigo-950/40 focus:ring-indigo-500/50"
+                  />
+                  <div className="min-w-0">
+                    <span className="block text-sm font-bold text-white leading-tight">{opt.label}</span>
+                    <span className="block text-xs text-indigo-300/80 mt-1 leading-normal">{opt.desc}</span>
+                  </div>
+                </label>
+              ))}
+            </div>
           </div>
 
           <div>

@@ -19,28 +19,29 @@ const Service = {
     return result.insertId;
   },
 
-  // Find active services by seller
-  findBySeller: async (seller_id) => {
+  // Find all services by seller (including inactive by default, but can filter activeOnly)
+  findBySeller: async (seller_id, activeOnly = false) => {
+    const filter = activeOnly ? "AND sv.is_active = 1" : "";
     const [rows] = await pool.query(
       `SELECT sv.*, c.name AS category_name, c.icon AS category_icon, ss.name AS sub_service_name
        FROM services sv
        LEFT JOIN categories c ON sv.category_id = c.id
        LEFT JOIN sub_services ss ON sv.sub_service_id = ss.id
-       WHERE sv.seller_id = ? AND sv.is_active = 1
+       WHERE sv.seller_id = ? ${filter}
        ORDER BY sv.created_at DESC`,
       [seller_id]
     );
     return rows;
   },
 
-  // Find service by ID
+  // Find service by ID (including inactive)
   findById: async (id) => {
     const [rows] = await pool.query(
       `SELECT sv.*, c.name AS category_name, c.icon AS category_icon, ss.name AS sub_service_name
        FROM services sv
        LEFT JOIN categories c ON sv.category_id = c.id
        LEFT JOIN sub_services ss ON sv.sub_service_id = ss.id
-       WHERE sv.id = ? AND sv.is_active = 1`,
+       WHERE sv.id = ?`,
       [id]
     );
     return rows[0] || null;

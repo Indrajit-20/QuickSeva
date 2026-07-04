@@ -39,8 +39,10 @@ function readPremiumRaw() {
 }
 
 export function isPremiumActive(premium = readPremiumRaw()) {
-  if (!premium?.expiresAt) return false;
-  const expiresAt = new Date(premium.expiresAt);
+  if (!premium) return false;
+  const expiresAtStr = premium.expiresAt || premium.premium_expires_at || premium.premiumExpiresAt;
+  if (!expiresAtStr) return false;
+  const expiresAt = new Date(expiresAtStr);
   if (Number.isNaN(expiresAt.getTime())) return false;
   return expiresAt.getTime() > Date.now();
 }

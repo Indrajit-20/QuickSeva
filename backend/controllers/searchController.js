@@ -111,7 +111,7 @@ exports.searchNearby = async (req, res) => {
         reviews: parseInt(s.reviews || 0),
         serviceMode: s.serviceMode || "offline",
         instantService: s.instantService ? true : false,
-        isPremium: (s.isPremium && Number(s.walletBalance || 0) > 0 && s.premiumExpiresAt && new Date(s.premiumExpiresAt) > new Date()) ? true : false,
+        isPremium: (s.isPremium && s.premiumExpiresAt && new Date(s.premiumExpiresAt) > new Date()) ? true : false,
         plan: s.plan,
         premiumExpiresAt: s.premiumExpiresAt,
         address: s.address,

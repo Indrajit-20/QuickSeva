@@ -133,6 +133,7 @@ exports.updateSellerProfile = async (req, res) => {
       lng,
       address,
       pincode,
+      seller_type,
     } = req.body;
 
     // Keep sellers.phone synchronized with users.phone
@@ -146,6 +147,7 @@ exports.updateSellerProfile = async (req, res) => {
     if (working_radius !== undefined) fields.working_radius = working_radius;
     if (is_available !== undefined) fields.is_available = is_available;
     if (gst_number !== undefined) fields.gst_number = gst_number;
+    if (seller_type !== undefined) fields.seller_type = seller_type;
     if (profile_completed !== undefined)
       fields.profile_completed = profile_completed;
 
@@ -195,7 +197,10 @@ exports.toggleAvailability = async (req, res) => {
     if (!seller) return errorRes(res, "Seller profile not found", 404);
 
     const newStatus = seller.is_available ? 0 : 1;
-    await SellerModel.update(seller.id, { is_available: newStatus });
+    await SellerModel.update(seller.id, { 
+      is_available: newStatus,
+      availability_last_updated_at: new Date()
+    });
     return successRes(
       res,
       { is_available: !!newStatus },
@@ -256,6 +261,7 @@ exports.registerSeller = async (req, res) => {
       city,
       state,
       pincode,
+      sellerType = "individual",
     } = req.body || {};
 
     // Validation
@@ -366,14 +372,15 @@ exports.registerSeller = async (req, res) => {
     // Create seller row
     const [sellerResult] = await conn.query(
       `INSERT INTO sellers (user_id, business_name, bio, experience_yrs, avg_rating, total_reviews, total_orders,
-                              is_verified, is_available, working_radius, documents, gst_number, profile_completed,
+                              is_verified, is_available, seller_type, working_radius, documents, gst_number, profile_completed,
                               latitude, longitude, lat, lng, location_address)
-       VALUES (?, ?, ?, ?, 0.00, 0, 0, 0, 1, 10, NULL, NULL, 1, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, 0.00, 0, 0, 0, 1, ?, 10, NULL, NULL, 1, ?, ?, ?, ?, ?)`,
       [
         userId,
         businessName.trim(),
         bio || null,
         experience_yrs || 0,
+        sellerType,
         latNum,
         lngNum,
         latNum,

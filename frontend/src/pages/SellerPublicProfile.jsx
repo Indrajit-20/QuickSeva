@@ -406,6 +406,11 @@ export default function SellerPublicProfile() {
                   {seller.experience_yrs} Years Experience
                 </span>
               )}
+              {seller.seller_type && (
+                <span className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-black text-indigo-700 capitalize">
+                  {seller.seller_type === "agency" ? "Contractor / Agency" : seller.seller_type}
+                </span>
+              )}
             </div>
 
             <p className="mt-3 text-sm font-semibold text-indigo-600">
@@ -415,13 +420,13 @@ export default function SellerPublicProfile() {
             {/* Address and Phone Grid */}
             <div className="mt-6 w-full grid gap-3 sm:grid-cols-2 text-left">
               <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
-                <MapPin size={18} className="mt-0.5 text-[#185FA5] shrink-0" />
+                <MapPin size={18} className="mt-0.5 text-[#0284c7] shrink-0" />
                 <span className="text-sm font-semibold text-slate-700">
                   {seller.address || "Address not available"}
                 </span>
               </div>
               <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
-                <Phone size={18} className="mt-0.5 text-[#185FA5] shrink-0" />
+                <Phone size={18} className="mt-0.5 text-[#0284c7] shrink-0" />
                 <span className="text-sm font-semibold text-slate-700">
                   {showContact ? seller.phone || "Phone not available" : "**********"}
                 </span>
@@ -437,31 +442,6 @@ export default function SellerPublicProfile() {
                 </p>
               </div>
             )}
-
-            {/* Work Portfolio Section */}
-            {seller.work_images && seller.work_images.length > 0 && (
-              <div className="mt-6 w-full text-left border-t border-slate-100 pt-6">
-                <h3 className="text-lg font-bold text-slate-800 mb-4">Work Portfolio</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                  {seller.work_images.map((img) => (
-                    <div
-                      key={img.id}
-                      className="relative aspect-square rounded-lg overflow-hidden border border-slate-200 cursor-pointer group shadow-md"
-                      onClick={() => setLightboxImage(img.image_url)}
-                    >
-                      <img
-                        src={getImageUrl(img.image_url)}
-                        alt="Portfolio item"
-                        className="w-full h-full object-cover transition duration-300 group-hover:scale-105"
-                      />
-                      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition duration-200">
-                        <Eye size={20} className="text-white" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
 
           <aside className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm h-fit">
@@ -470,7 +450,7 @@ export default function SellerPublicProfile() {
               <button
                 type="button"
                 onClick={handleBook}
-                className="w-full rounded-xl bg-[#185FA5] hover:bg-[#155391] px-4 py-3 text-base font-black text-white force-text-white shadow-lg shadow-indigo-100 transition duration-150 active:scale-[0.98]"
+                className="w-full rounded-xl bg-[#0284c7] hover:bg-[#0274ae] px-4 py-3 text-base font-black text-white force-text-white shadow-lg shadow-indigo-100 transition duration-150 active:scale-[0.98]"
               >
                 Book This Service
               </button>
@@ -551,7 +531,7 @@ export default function SellerPublicProfile() {
                   onClick={() => handleSelectService(service)}
                   className={`rounded-2xl border-2 p-4 text-left transition duration-200 ${active
                       ? "qs-selected-active shadow-md"
-                      : "border-slate-200 bg-white hover:border-[#185FA5]/30 shadow-sm"
+                      : "border-slate-200 bg-white hover:border-[#0284c7]/30 shadow-sm"
                     }`}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -570,7 +550,7 @@ export default function SellerPublicProfile() {
                     </div>
                     <div
                       className={`mt-1 h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition duration-150 ${active
-                          ? "qs-selected-dot border-[#185FA5]"
+                          ? "qs-selected-dot border-[#0284c7]"
                           : "border-slate-300 bg-white"
                         }`}
                     >
@@ -599,6 +579,33 @@ export default function SellerPublicProfile() {
             })}
           </div>
         </section>
+
+        {seller.work_images && seller.work_images.length > 0 && (
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+            <h2 className="text-2xl font-black text-slate-800">Work Portfolio / Portfolio / काम की तस्वीरें</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {seller.work_images.map((img) => (
+                <div
+                  key={img.id}
+                  className="relative aspect-square rounded-xl overflow-hidden border border-slate-200 cursor-pointer group shadow-sm hover:shadow-md transition duration-200"
+                  onClick={() => setLightboxImage(img.image_url)}
+                >
+                  <img
+                    src={getImageUrl(img.image_url)}
+                    alt="Portfolio item"
+                    className="w-full h-full object-cover transition duration-300 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 flex items-center justify-center transition duration-200">
+                    <span className="text-white text-xs font-bold bg-black/60 px-3 py-1.5 rounded-full flex items-center gap-1.5">
+                      <Eye size={14} />
+                      <span>Zoom / बड़ा करें</span>
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
       </div>
 
       {/* Lightbox Modal */}

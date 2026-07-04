@@ -30,7 +30,7 @@ const SellerModel = {
   // Find by seller ID
   findById: async (id) => {
     const [rows] = await pool.query(
-      `SELECT s.*, u.name, u.email, u.phone, u.profile_pic, u.address, u.city, u.lat, u.lng,
+      `SELECT s.*, u.name, u.email, u.phone, u.profile_pic, u.address, u.city, u.lat, u.lng, u.pincode,
               c.name AS category_name, c.icon AS category_icon
        FROM sellers s
        JOIN users u ON s.user_id = u.id
@@ -44,7 +44,7 @@ const SellerModel = {
   // Find by user ID
   findByUserId: async (user_id) => {
     const [rows] = await pool.query(
-      `SELECT s.*, u.name, u.phone, u.profile_pic, u.city, u.lat, u.lng,
+      `SELECT s.*, u.name, u.phone, u.profile_pic, u.city, u.lat, u.lng, u.pincode,
               c.name AS category_name
        FROM sellers s
        JOIN users u ON s.user_id = u.id

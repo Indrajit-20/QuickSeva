@@ -22,7 +22,7 @@ export default function BottomNavUser() {
   const items = isAuthenticated ? userItems : guestItems;
 
   return (
-    <nav className="bottom-nav-bar bottom-nav-bar--user" aria-label="Quick navigation">
+    <nav className="bottom-nav-bar bottom-nav-bar--user lg:hidden" aria-label="Quick navigation">
       {items.map((item) => {
         const Icon = item.icon;
         const isActive = location.pathname === item.path;

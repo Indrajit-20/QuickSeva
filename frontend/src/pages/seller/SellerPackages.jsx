@@ -216,7 +216,7 @@ function PlanActionCopy({ type, activePremium, selectedPlan }) {
 }
 
 export default function SellerPackages() {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const { walletBalance, refreshWallet } = useWallet();
 
   const [premium, setPremium] = useState(null);
@@ -375,11 +375,31 @@ export default function SellerPackages() {
       if (resp.data?.success) {
         const { premium: updatedPremium, walletBalance: newWalletBalance, transaction } = resp.data.data;
         
+        const isPremiumActiveFlag = updatedPremium.is_premium === 1 || updatedPremium.is_premium === true;
         setPremium({
           plan: updatedPremium.plan,
           expiresAt: updatedPremium.premium_expires_at,
-          isPremium: updatedPremium.is_premium === 1 || updatedPremium.is_premium === true
+          isPremium: isPremiumActiveFlag
         });
+
+        // Write to localStorage for immediate availability in other dashboard pages
+        localStorage.setItem(
+          "sellerPremium",
+          JSON.stringify({
+            plan: updatedPremium.plan,
+            expiresAt: updatedPremium.premium_expires_at,
+            isPremium: isPremiumActiveFlag,
+          })
+        );
+
+        // Update the global auth user context
+        if (typeof updateUser === "function") {
+          updateUser({
+            is_premium: isPremiumActiveFlag ? 1 : 0,
+            plan: updatedPremium.plan,
+            premium_expires_at: updatedPremium.premium_expires_at,
+          });
+        }
 
         // Add history entry
         const historyEntry = {

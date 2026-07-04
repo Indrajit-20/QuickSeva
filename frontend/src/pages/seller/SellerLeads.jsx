@@ -19,36 +19,8 @@ export default function SellerLeads() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [lastUpdated, setLastUpdated] = useState(null);
-  const [premiumStatus, setPremiumStatus] = useState({
-    loading: true,
-    isProActive: false,
-    plan: null,
-    expiresAt: null,
-  });
 
   const sellerId = user?.sellerId || user?.seller_id || user?.seller?.id || "";
-
-  const fetchPremiumStatus = async () => {
-    try {
-      const profileResp = await apiClient.get("/sellers/me/profile");
-      const seller = profileResp.data?.data?.seller || profileResp.data?.seller;
-      const expiresAt = seller?.premium_expires_at || seller?.premiumExpiresAt;
-      const expiryTime = expiresAt ? new Date(expiresAt).getTime() : 0;
-      const isProActive =
-        (seller?.is_premium === 1 || seller?.is_premium === true) &&
-        seller?.plan === "pro" &&
-        expiryTime > Date.now();
-
-      setPremiumStatus({
-        loading: false,
-        isProActive,
-        plan: seller?.plan || null,
-        expiresAt: expiresAt || null,
-      });
-    } catch {
-      setPremiumStatus((prev) => ({ ...prev, loading: false }));
-    }
-  };
 
   const fetchLeads = async ({ silent = false } = {}) => {
     if (!silent) setLoading(true);
@@ -84,9 +56,6 @@ export default function SellerLeads() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sellerId]);
 
-  useEffect(() => {
-    fetchPremiumStatus();
-  }, []);
 
   const openLeads = useMemo(
     () => leads.filter((lead) => lead.status === "OPEN" || lead.status === "PENDING"),
@@ -97,9 +66,9 @@ export default function SellerLeads() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-black text-white">Premium Lead Alerts</h1>
+          <h1 className="text-2xl font-black text-white">Lead Alerts / ग्राहक संदेश</h1>
           <p className="mt-1 text-sm text-slate-400">
-            Pro plan fallback requests routed directly to your dashboard.
+            Customer leads routed directly to your dashboard. / ग्राहकों के संदेश सीधे आपके डैशबोर्ड पर।
           </p>
         </div>
         <button
@@ -114,7 +83,7 @@ export default function SellerLeads() {
 
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-2xl border border-indigo-400/20 bg-[#151334] p-4">
-          <div className="text-xs font-semibold uppercase tracking-wider text-indigo-300">Open Leads</div>
+          <div className="text-xs font-semibold uppercase tracking-wider text-indigo-300">Open Leads / नए संदेश</div>
           <div className="mt-2 text-3xl font-black text-white">{openLeads.length}</div>
         </div>
         <div className="rounded-2xl border border-indigo-400/20 bg-[#151334] p-4">
@@ -128,38 +97,6 @@ export default function SellerLeads() {
           </div>
         </div>
       </div>
-
-      {!premiumStatus.loading && !premiumStatus.isProActive && (
-        <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 p-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-start gap-3">
-              <div className="rounded-xl bg-amber-400/15 p-2 text-amber-200">
-                <Crown className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-sm font-black text-amber-100">
-                  Pro plan is not active
-                </p>
-                <p className="mt-1 text-xs text-amber-100/75">
-                  Fallback leads are routed only to active Pro sellers on the Rs 355 plan.
-                </p>
-              </div>
-            </div>
-            <a
-              href="/seller/packages"
-              className="rounded-xl bg-amber-500 px-4 py-2 text-sm font-black text-slate-950 transition hover:bg-amber-400"
-            >
-              Activate Pro Plan
-            </a>
-          </div>
-        </div>
-      )}
-
-      {!premiumStatus.loading && premiumStatus.isProActive && (
-        <div className="rounded-2xl border border-emerald-400/25 bg-emerald-500/10 p-4 text-sm font-semibold text-emerald-200">
-          Pro plan active. Premium fallback leads will appear here automatically.
-        </div>
-      )}
 
       {error && (
         <div className="rounded-2xl border border-red-400/25 bg-red-500/10 p-4 text-sm font-semibold text-red-200">
@@ -175,9 +112,9 @@ export default function SellerLeads() {
 
       {!loading && leads.length === 0 && (
         <div className="rounded-2xl border border-indigo-400/20 bg-[#151334] p-10 text-center">
-          <p className="text-sm font-bold text-white">No premium fallback leads yet.</p>
+          <p className="text-sm font-bold text-white">No lead alerts yet / कोई ग्राहक संदेश नहीं है</p>
           <p className="mt-1 text-xs text-slate-400">
-            New matching requests will appear here automatically.
+            New matching requests will appear here. / नए काम के संदेश यहाँ दिखाई देंगे।
           </p>
         </div>
       )}

@@ -49,7 +49,7 @@
 /* =================================================================
    QUICKSEVA CORPORATE THEME OVERRIDES
    Flat professional palette:
-   page #f8f9fb, panels #ffffff, primary #185FA5,
+   page #f8f9fb, panels #ffffff, primary #0284c7,
    secondary #0F6E56, accent #e53935.
    This block intentionally overrides legacy dark/glass Tailwind classes
    without changing component structure.
@@ -59,7 +59,7 @@
   --qs-bg: #f8f9fb;
   --qs-surface: #ffffff;
   --qs-border: #e5e7eb;
-  --qs-primary: #185fa5;
+  --qs-primary: #0284c7;
   --qs-secondary: #0f6e56;
   --qs-accent: #e53935;
   --qs-text: #1a1a1a;
@@ -404,6 +404,7 @@ textarea::placeholder {
   outline: none !important;
   box-sizing: border-box !important;
 }
+
 .marker-cluster:focus,
 .marker-cluster:active {
   outline: none !important;
@@ -417,17 +418,20 @@ textarea::placeholder {
   border: none !important;
   /* Do NOT set transform here — Leaflet positions this with transform */
 }
+
 .qs-cluster-icon:focus,
 .qs-cluster-icon:focus-visible,
 .qs-cluster-icon:active {
   outline: none !important;
 }
+
 /* The inner div (created by iconCreateFunction) must not shift on hover */
 .qs-cluster-icon div {
   box-sizing: border-box !important;
   outline: none !important;
   /* border and size are set inline in JS — do not override here */
 }
+
 /* Hide the old default cluster coverage polygon that causes repaints */
 .leaflet-cluster-spider-leg {
   opacity: 0.4 !important;
@@ -440,6 +444,7 @@ textarea::placeholder {
   border: 1px solid rgba(21, 101, 192, 0.15) !important;
   overflow: hidden !important;
 }
+
 .qs-seller-popup .leaflet-popup-tip-container {
   margin-top: -1px !important;
 }
@@ -1247,10 +1252,10 @@ a:not(.btn):not([class*="bg-"]):hover {
 
 .btn-primary,
 .qs-primary,
-[class*="bg-indigo-5"],
-[class*="bg-indigo-6"],
-[class*="bg-blue-5"],
-[class*="bg-blue-6"] {
+[class*="bg-indigo-500"],
+[class*="bg-indigo-600"],
+[class*="bg-blue-500"],
+[class*="bg-blue-600"] {
   background: var(--qs-primary) !important;
   border-color: var(--qs-primary) !important;
   color: #ffffff !important;
@@ -1781,29 +1786,34 @@ input[type="range"] {
 
 /* Light inputs inside the card to contrast with the white card background */
 .qs-search-panel-card input {
-  background: #f8fafc !important; /* soft grey-blue */
+  background: #f8fafc !important;
+  /* soft grey-blue */
   border: 1px solid #f1f5f9 !important;
   color: #1e293b !important;
 }
 
 .qs-search-panel-card input::placeholder {
-  color: #94a3b8 !important; /* slate-400 */
+  color: #94a3b8 !important;
+  /* slate-400 */
 }
 
 .qs-search-panel-card input:focus {
-  background: #ffffff !important; /* white on focus */
+  background: #ffffff !important;
+  /* white on focus */
   border-color: var(--qs-primary) !important;
   box-shadow: 0 0 0 3.5px rgba(24, 95, 165, 0.15) !important;
 }
 
 /* Fix text labels inside the white card */
 .qs-search-panel-card label {
-  color: #334155 !important; /* dark slate-700 for labels */
+  color: #334155 !important;
+  /* dark slate-700 for labels */
   font-weight: 600 !important;
 }
 
 .qs-search-panel-card span:not(.qs-tag):not(.qs-instant-badge-dot) {
-  color: #475569 !important; /* dark slate-600 for inline text span */
+  color: #475569 !important;
+  /* dark slate-600 for inline text span */
 }
 
 /* Slider and Filters container card */
@@ -1847,7 +1857,8 @@ input[type="range"] {
 
 /* Refine Toggle Button */
 .qs-refine-toggle-btn {
-  background: #0f172a !important; /* dark slate/black */
+  background: #0f172a !important;
+  /* dark slate/black */
   border: none !important;
   color: #ffffff !important;
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15) !important;
@@ -1867,7 +1878,8 @@ input[type="range"] {
 
 /* Map Option Toggle Button on the Top Side */
 .qs-map-toggle-btn {
-  background: var(--qs-primary) !important; /* brand blue */
+  background: var(--qs-primary) !important;
+  /* brand blue */
   border: none !important;
   color: #ffffff !important;
   box-shadow: 0 4px 12px rgba(24, 95, 165, 0.2) !important;
@@ -1932,11 +1944,13 @@ input[type="range"] {
 .leaflet-popup-content div,
 .leaflet-popup-content span,
 .leaflet-popup-content strong {
-  color: #1e293b !important; /* Force dark text color to resolve invisible text issue */
+  color: #1e293b !important;
+  /* Force dark text color to resolve invisible text issue */
 }
 
 .leaflet-popup-content a {
-  color: #ffffff !important; /* Ensure link text is white */
+  color: #ffffff !important;
+  /* Ensure link text is white */
 }
 
 .leaflet-popup-tip {
@@ -1970,7 +1984,8 @@ input[type="range"] {
 /* On large screens with sidebar, offset for seller layout */
 @media (min-width: 1024px) {
   .bottom-nav-bar:not(.bottom-nav-bar--user) {
-    left: 288px; /* 18rem = w-72 sidebar */
+    left: 288px;
+    /* 18rem = w-72 sidebar */
   }
 }
 
@@ -1995,7 +2010,7 @@ input[type="range"] {
 }
 
 .bottom-nav-item:hover {
-  color: #185FA5;
+  color: #0284c7;
 }
 
 .bottom-nav-item:active {
@@ -2003,7 +2018,7 @@ input[type="range"] {
 }
 
 .bottom-nav-item--active {
-  color: #185FA5;
+  color: #0284c7;
 }
 
 /* Icon wrapper for relative badge positioning */
@@ -2038,7 +2053,7 @@ input[type="range"] {
 }
 
 .bottom-nav-item--active .bottom-nav-label {
-  color: #185FA5;
+  color: #0284c7;
   font-weight: 700;
 }
 
@@ -2051,7 +2066,7 @@ input[type="range"] {
   width: 18px;
   height: 3px;
   border-radius: 0 0 6px 6px;
-  background: linear-gradient(90deg, #185FA5, #3b82f6);
+  background: linear-gradient(90deg, #0284c7, #3b82f6);
   animation: bottom-nav-slide-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -2102,6 +2117,7 @@ input[type="range"] {
     width: 0;
     opacity: 0;
   }
+
   100% {
     width: 18px;
     opacity: 1;
@@ -2112,9 +2128,11 @@ input[type="range"] {
   0% {
     transform: scale(0);
   }
+
   60% {
     transform: scale(1.2);
   }
+
   100% {
     transform: scale(1);
   }

@@ -69,6 +69,8 @@
     total_orders    INT DEFAULT 0,
     is_verified     TINYINT(1) DEFAULT 0,
     is_available    TINYINT(1) DEFAULT 1,
+    availability_last_updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    seller_type     VARCHAR(50) DEFAULT 'individual', -- individual, agency, business
     working_radius  INT DEFAULT 10,         -- in km
     documents       JSON,                    -- ID proof, certificates
     gst_number      VARCHAR(15) DEFAULT NULL,

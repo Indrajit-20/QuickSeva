@@ -15,15 +15,16 @@ const sellerBottomItems = [
   { label: "Profile", path: "/seller/profile", icon: User },
 ];
 
-export default function BottomNavSeller({ pendingOrdersCount = 0 }) {
+export default function BottomNavSeller({ pendingOrdersCount = 0, unreadLeadsCount = 0 }) {
   const location = useLocation();
 
   return (
-    <nav className="bottom-nav-bar" aria-label="Seller quick navigation">
+    <nav className="bottom-nav-bar lg:hidden" aria-label="Seller quick navigation">
       {sellerBottomItems.map((item) => {
         const Icon = item.icon;
         const isActive = location.pathname === item.path;
-        const hasBadge = item.label === "Orders" && pendingOrdersCount > 0;
+        const badgeCount = item.label === "Orders" ? pendingOrdersCount : item.label === "Leads" ? unreadLeadsCount : 0;
+        const hasBadge = badgeCount > 0;
 
         return (
           <NavLink
@@ -35,7 +36,7 @@ export default function BottomNavSeller({ pendingOrdersCount = 0 }) {
               <Icon size={20} strokeWidth={isActive ? 2.4 : 1.8} />
               {hasBadge && (
                 <span className="bottom-nav-badge">
-                  {pendingOrdersCount > 9 ? "9+" : pendingOrdersCount}
+                  {badgeCount > 9 ? "9+" : badgeCount}
                 </span>
               )}
             </span>

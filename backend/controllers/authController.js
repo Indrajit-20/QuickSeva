@@ -202,6 +202,10 @@ exports.getMe = async (req, res) => {
           ...user,
           profile_completed: seller?.profile_completed ?? 0,
           services_count,
+          is_premium: seller?.is_premium ?? 0,
+          plan: seller?.plan ?? null,
+          premium_expires_at: seller?.premium_expires_at ?? null,
+          is_available: seller?.is_available ?? 0,
         },
       });
     }
@@ -323,6 +327,7 @@ exports.verifyOTP = async (req, res) => {
 
       let profile_completed = 0;
       let services_count = 0;
+      let is_available = 0;
       if (user.role === "seller") {
         const seller = await SellerModel.findByUserId(user.id);
         profile_completed = seller?.profile_completed ?? 0;
@@ -331,6 +336,7 @@ exports.verifyOTP = async (req, res) => {
           [seller?.id || 0]
         );
         services_count = serviceRows[0]?.count || 0;
+        is_available = seller?.is_available ?? 0;
       }
 
       return successRes(
@@ -344,6 +350,7 @@ exports.verifyOTP = async (req, res) => {
             role: userData.role,
             profile_completed,
             services_count,
+            is_available,
           },
         },
         "Login successful",
@@ -457,6 +464,7 @@ exports.verifyOTP = async (req, res) => {
             role: userData.role,
             profile_completed,
             services_count: 0,
+            is_available: seller?.is_available ?? 1,
           },
         },
         "Seller registration successful",

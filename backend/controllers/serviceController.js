@@ -91,8 +91,21 @@ exports.getServiceById = async (req, res) => {
   try {
     const service = await ServiceModel.findById(req.params.id);
     if (!service) return errorRes(res, "Service not found", 404);
+
+    // Hide inactive services from public views
+    if (!service.is_active) {
+      const isOwnerOrAdmin = req.user && (
+        req.user.role === "admin" ||
+        await SellerModel.findByUserId(req.user.id).then(seller => seller && seller.id === service.seller_id)
+      );
+      if (!isOwnerOrAdmin) {
+        return errorRes(res, "Service not found", 404);
+      }
+    }
+
     return successRes(res, { service });
   } catch (err) {
+    console.error("Get service by ID error:", err);
     return errorRes(res, "Failed to fetch service");
   }
 };
@@ -100,7 +113,7 @@ exports.getServiceById = async (req, res) => {
 // Get all services by a seller (public)
 exports.getServicesBySeller = async (req, res) => {
   try {
-    const services = await ServiceModel.findBySeller(req.params.sellerId);
+    const services = await ServiceModel.findBySeller(req.params.sellerId, true);
     return successRes(res, { services });
   } catch (err) {
     return errorRes(res, "Failed to fetch services");
@@ -134,9 +147,10 @@ exports.updateService = async (req, res) => {
       return errorRes(res, "Service not found or unauthorized", 403);
     }
 
-    const { title, description, price, price_type, duration_hrs, category_id, sub_service_id } = req.body;
+    const { title, description, price, price_type, duration_hrs, category_id, sub_service_id, is_active } = req.body;
     const fields = {};
 
+    if (is_active !== undefined) fields.is_active = is_active ? 1 : 0;
     if (sub_service_id !== undefined) fields.sub_service_id = sub_service_id || null;
 
     if (title !== undefined) {

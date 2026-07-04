@@ -142,6 +142,23 @@ export default function SellerServices() {
     }
   };
 
+  const handleToggleStatus = async (service) => {
+    try {
+      const nextActive = service.is_active === 0 ? 1 : 0;
+      const res = await serviceService.updateService(service.id, {
+        is_active: nextActive,
+      });
+      if (res?.data?.success) {
+        setServices((prev) =>
+          prev.map((s) => (s.id === service.id ? { ...s, is_active: nextActive } : s))
+        );
+      }
+    } catch (e) {
+      console.error("Failed to toggle service status:", e);
+      alert(e?.response?.data?.message || "Failed to toggle service status");
+    }
+  };
+
   if (loading) {
     return (
       <div className="animate-fade-in space-y-6">
@@ -159,7 +176,7 @@ export default function SellerServices() {
   }
 
   return (
-    <div className="animate-fade-in space-y-10 pb-16">
+    <div className="animate-fade-in space-y-10 bottom-nav-spacer pb-20">
       {Number(user?.profile_completed ?? 0) === 1 && Number(user?.services_count ?? 0) === 0 && (
         <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-200 text-sm font-semibold flex items-center gap-3 animate-pulse">
           <span className="text-xl">⚠️</span>
@@ -278,9 +295,19 @@ export default function SellerServices() {
                       </span>
                     </td>
                     <td className="px-6 py-5 whitespace-nowrap">
-                      <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-300">
-                        Active / चालू
-                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleStatus(service)}
+                        className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-bold transition duration-200 active:scale-95 cursor-pointer ${
+                          service.is_active !== 0
+                            ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20"
+                            : "border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-500/20"
+                        }`}
+                        title="Click to toggle status / स्थिति बदलने के लिए क्लिक करें"
+                      >
+                        <span className={`h-1.5 w-1.5 rounded-full ${service.is_active !== 0 ? "bg-emerald-400" : "bg-red-400"}`} />
+                        {service.is_active !== 0 ? "Active / चालू" : "Inactive / बंद"}
+                      </button>
                     </td>
                     <td className="px-6 py-5 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-2">
@@ -358,7 +385,7 @@ export default function SellerServices() {
             <label className="text-sm font-bold text-slate-300 block">
               Mark Specific Holidays / छुट्टी के दिन चुनें:
             </label>
-            <div className="bg-[#0f0e1a] p-4 rounded-xl border border-indigo-500/10 flex justify-center">
+            <div className="bg-[#0f0e1a] p-4 rounded-xl border border-indigo-500/10 flex justify-center" style={{ minHeight: "340px" }}>
               <Calendar
                 ref={calendarRef}
                 multiple
@@ -1236,6 +1263,7 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
           </div>
         </div>
       )}
+      <div className="h-28" />
     </div>
   );
 }

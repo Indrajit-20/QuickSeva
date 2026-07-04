@@ -137,6 +137,17 @@ export default function ServicesPage() {
 
   const [selectedService, setSelectedService] = useState(null);
 
+  const contentRef = useRef(null);
+  const isInitialServiceMount = useRef(true);
+
+  useEffect(() => {
+    if (isInitialServiceMount.current) {
+      isInitialServiceMount.current = false;
+      return;
+    }
+    contentRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [selectedService]);
+
   const visibleSellers = useMemo(() => {
     const allSellers = sellers || [];
     if (!selectedService || !category) return [];
@@ -281,7 +292,11 @@ export default function ServicesPage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+      <section
+        ref={contentRef}
+        style={{ scrollMarginTop: "90px" }}
+        className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8"
+      >
         <div className="mb-6">
           {category ? (
             <>
