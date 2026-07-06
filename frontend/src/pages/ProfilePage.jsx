@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
+import { scrollToFirstError } from "../utils/scrollUtils";
 
 const GENDER_OPTIONS = [
   "Male",
@@ -148,7 +149,7 @@ export default function ProfilePage() {
     });
 
     if (hasErrors(nextErrors)) {
-      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      scrollToFirstError(nextErrors);
       return;
     }
 
@@ -254,6 +255,7 @@ export default function ProfilePage() {
 
           <div className="mt-6 grid gap-5 md:grid-cols-2">
             <Field
+              name="fullName"
               label="Full Name"
               value={form.fullName}
               editing={isEditing}
@@ -264,6 +266,7 @@ export default function ProfilePage() {
             />
 
             <Field
+              name="email"
               label="Email"
               value={form.email}
               editing={isEditing}
@@ -275,6 +278,7 @@ export default function ProfilePage() {
             />
 
             <Field
+              name="phone"
               label="Phone"
               value={form.phone}
               editing={isEditing}
@@ -285,6 +289,7 @@ export default function ProfilePage() {
             />
 
             <SelectField
+              name="gender"
               label="Gender"
               value={form.gender}
               editing={isEditing}
@@ -295,6 +300,7 @@ export default function ProfilePage() {
             />
 
             <Field
+              name="dob"
               label="Date of Birth"
               value={form.dob}
               editing={isEditing}
@@ -314,6 +320,7 @@ export default function ProfilePage() {
                 </div>
               ) : (
                 <textarea
+                  name="address"
                   value={form.address}
                   onChange={(e) => updateField("address", e.target.value)}
                   rows={3}
@@ -334,6 +341,7 @@ export default function ProfilePage() {
 }
 
 function Field({
+  name,
   label,
   value,
   editing,
@@ -355,6 +363,7 @@ function Field({
       ) : (
         <>
           <input
+            name={name}
             type={type}
             value={value}
             onChange={(e) => onChange?.(e.target.value)}
@@ -372,7 +381,7 @@ function Field({
   );
 }
 
-function SelectField({ label, value, editing, options, error, valid, onChange }) {
+function SelectField({ name, label, value, editing, options, error, valid, onChange }) {
   return (
     <div>
       <label className="mb-2 block text-sm font-black text-slate-700">
@@ -385,6 +394,7 @@ function SelectField({ label, value, editing, options, error, valid, onChange })
       ) : (
         <>
           <select
+            name={name}
             value={value}
             onChange={(e) => onChange?.(e.target.value)}
             className={`w-full rounded-xl border bg-white px-4 py-3 text-sm focus:outline-none focus:ring-2 ${

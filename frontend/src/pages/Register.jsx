@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../config/api";
+import { scrollToFirstError } from "../utils/scrollUtils";
 
 
 // ─── Shared Input Component ───────────────────────────────────────────────────
@@ -203,6 +204,9 @@ const Register = () => {
       if (err) { newErrors[key] = err; valid = false; }
     }
     setErrors(newErrors);
+    if (!valid) {
+      scrollToFirstError(newErrors);
+    }
     return valid;
   };
 

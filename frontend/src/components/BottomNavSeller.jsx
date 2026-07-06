@@ -1,10 +1,11 @@
+import { useState, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
-  LayoutDashboard,
-  Megaphone,
-  BriefcaseBusiness,
-  ClipboardList,
-  User,
+   LayoutDashboard,
+   Megaphone,
+   BriefcaseBusiness,
+   ClipboardList,
+   User,
 } from "lucide-react";
 
 const sellerBottomItems = [
@@ -17,9 +18,36 @@ const sellerBottomItems = [
 
 export default function BottomNavSeller({ pendingOrdersCount = 0, unreadLeadsCount = 0 }) {
   const location = useLocation();
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const handleFocusIn = (e) => {
+      if (
+        e.target &&
+        (e.target.tagName === "INPUT" ||
+          e.target.tagName === "TEXTAREA" ||
+          e.target.isContentEditable)
+      ) {
+        setIsKeyboardVisible(true);
+      }
+    };
+    const handleFocusOut = () => {
+      setIsKeyboardVisible(false);
+    };
+
+    document.addEventListener("focusin", handleFocusIn);
+    document.addEventListener("focusout", handleFocusOut);
+    return () => {
+      document.removeEventListener("focusin", handleFocusIn);
+      document.removeEventListener("focusout", handleFocusOut);
+    };
+  }, []);
 
   return (
-    <nav className="bottom-nav-bar lg:hidden" aria-label="Seller quick navigation">
+    <nav
+      className={`bottom-nav-bar lg:hidden ${isKeyboardVisible ? "bottom-nav-bar--hidden" : ""}`}
+      aria-label="Seller quick navigation"
+    >
       {sellerBottomItems.map((item) => {
         const Icon = item.icon;
         const isActive = location.pathname === item.path;
@@ -48,3 +76,4 @@ export default function BottomNavSeller({ pendingOrdersCount = 0, unreadLeadsCou
     </nav>
   );
 }
+

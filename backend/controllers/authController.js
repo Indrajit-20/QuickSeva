@@ -188,6 +188,10 @@ exports.login = async (req, res) => {
 // ── Get current user (me) ────────────────────────────────────────────────────
 exports.getMe = async (req, res) => {
   try {
+    if (req.user && req.user.role === "admin") {
+      return successRes(res, { user: req.user });
+    }
+
     const user = await UserModel.findById(req.user.id);
 
     if (user?.role === "seller") {

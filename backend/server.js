@@ -21,6 +21,7 @@ const leadChargeRoutes = require("./routes/leadChargeRoutes");
 const searchRoutes = require("./routes/searchRoutes");
 const leadRoutes = require("./routes/leadRoutes");
 const policyRoutes = require("./routes/policyRoutes");
+const adminRoutes = require("./routes/adminRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -84,6 +85,7 @@ app.use("/api", sellerLocationRoutes);
 app.use("/api", leadChargeRoutes);
 app.use("/api", leadRoutes);
 app.use("/api/policies", policyRoutes);
+app.use("/api/admin", adminRoutes);
 
 // ── Error Handling ────────────────────────────────────────────────────────────
 app.use(notFound);

@@ -298,11 +298,10 @@ export default function SellerServices() {
                       <button
                         type="button"
                         onClick={() => handleToggleStatus(service)}
-                        className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-bold transition duration-200 active:scale-95 cursor-pointer ${
-                          service.is_active !== 0
+                        className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-bold transition duration-200 active:scale-95 cursor-pointer ${service.is_active !== 0
                             ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20"
                             : "border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-500/20"
-                        }`}
+                          }`}
                         title="Click to toggle status / स्थिति बदलने के लिए क्लिक करें"
                       >
                         <span className={`h-1.5 w-1.5 rounded-full ${service.is_active !== 0 ? "bg-emerald-400" : "bg-red-400"}`} />
@@ -365,11 +364,10 @@ export default function SellerServices() {
                   key={day}
                   type="button"
                   onClick={() => toggleWeeklyDay(day)}
-                  className={`cursor-pointer rounded-xl border px-4 py-3 text-xs font-black transition-all duration-200 active:scale-95 flex flex-col items-center min-w-[90px] ${
-                    checked
+                  className={`cursor-pointer rounded-xl border px-4 py-3 text-xs font-black transition-all duration-200 active:scale-95 flex flex-col items-center min-w-[90px] ${checked
                       ? "border-indigo-400 bg-indigo-500/20 text-white shadow-lg shadow-indigo-500/10"
                       : "border-indigo-500/10 bg-[#0f0e1a] text-[#94a3b8] hover:border-indigo-500/30"
-                  }`}
+                    }`}
                 >
                   <span className="text-sm font-black">{day}</span>
                   <span className="text-[10px] font-semibold opacity-70 mt-0.5">{hindiDays[day]}</span>
@@ -385,7 +383,20 @@ export default function SellerServices() {
             <label className="text-sm font-bold text-slate-300 block">
               Mark Specific Holidays / छुट्टी के दिन चुनें:
             </label>
-            <div className="bg-[#0f0e1a] p-4 rounded-xl border border-indigo-500/10 flex justify-center" style={{ minHeight: "340px" }}>
+
+            {/* On Mobile (hidden on desktop) */}
+            <div className="block md:hidden w-full">
+              <button
+                type="button"
+                onClick={() => setActiveOverlay('calendar')}
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-indigo-600/10 border border-indigo-500/30 hover:bg-indigo-600/20 text-indigo-300 font-bold px-4 py-3.5 text-sm transition duration-200"
+              >
+                📅 Manage Leave Calendar ({blackoutDates.length} marked)
+              </button>
+            </div>
+
+            {/* On Desktop (hidden on mobile) */}
+            <div className="hidden md:flex bg-[#0f0e1a] p-4 rounded-xl border border-indigo-500/10 justify-center" style={{ minHeight: "340px" }}>
               <Calendar
                 ref={calendarRef}
                 multiple
@@ -393,16 +404,6 @@ export default function SellerServices() {
                   const [y, m, d] = ymd.split("-").map(Number);
                   return new Date(y, m - 1, d);
                 })}
-                onOpen={() => {
-                  if (activeOverlay !== 'wizard') {
-                    setActiveOverlay('calendar');
-                  }
-                }}
-                onClose={() => {
-                  if (activeOverlay === 'calendar') {
-                    setActiveOverlay(null);
-                  }
-                }}
                 onChange={(next) => {
                   const arr = Array.isArray(next) ? next : next ? [next] : [];
                   const out = new Set();
@@ -518,6 +519,55 @@ export default function SellerServices() {
           </div>
         </div>
       )}
+
+      {/* Calendar Bottom Sheet / Modal Overlay for Mobile */}
+      {activeOverlay === 'calendar' && (
+        <div className="qs-mobile-sheet-backdrop md:hidden" onClick={() => setActiveOverlay(null)}>
+          <div className="qs-mobile-sheet-container" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-indigo-500/15 pb-3 mb-4">
+              <div>
+                <h3 className="text-base font-black text-white">Select Leave Dates / छुट्टियां चुनें</h3>
+                <p className="text-[10px] text-slate-400">Tap dates on the calendar to mark holidays</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveOverlay(null)}
+                className="text-indigo-300 hover:text-white transition text-xs font-black px-3 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-lg cursor-pointer"
+              >
+                Done / हो गया
+              </button>
+            </div>
+
+            <div className="flex justify-center p-3 rounded-2xl bg-[#0f0e1a] border border-indigo-500/10 min-h-[320px]">
+              <Calendar
+                ref={calendarRef}
+                multiple
+                value={blackoutDates.map((ymd) => {
+                  const [y, m, d] = ymd.split("-").map(Number);
+                  return new Date(y, m - 1, d);
+                })}
+                onChange={(next) => {
+                  const arr = Array.isArray(next) ? next : next ? [next] : [];
+                  const out = new Set();
+                  for (const item of arr) {
+                    const asYmd = extractYMD(item);
+                    if (asYmd) out.add(asYmd);
+                  }
+                  const uniq = Array.from(out).sort();
+                  setBlackoutDates(uniq);
+                }}
+                className="qs-date-picker"
+                calendarClassName="qs-date-picker__calendar"
+                containerClassName="qs-date-picker__container"
+              />
+            </div>
+
+            <div className="mt-4 text-[10px] text-center text-slate-500 font-medium">
+              💡 Marked leave dates will prevent clients from booking on those days.
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -591,7 +641,7 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
         if (isMounted) {
           const subs = res?.data?.data?.sub_services || [];
           setSubServices(subs);
-          
+
           if (editingService && editingService.sub_service_id) {
             const matchedSub = subs.find(s => s.id === editingService.sub_service_id);
             if (matchedSub) {
@@ -658,7 +708,7 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
         price,
         price_type: priceType,
       };
-      
+
       if (editingService) {
         const res = await serviceService.updateService(editingService.id, payload);
         if (res?.data?.success) {
@@ -777,8 +827,8 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
             {editingService ? "Service Updated! / काम अपडेट हुआ!" : "Service Added! / नया काम जुड़ गया!"}
           </h2>
           <p className="mt-2 text-slate-300 font-bold text-sm">
-            {editingService 
-              ? "Your service has been successfully updated." 
+            {editingService
+              ? "Your service has been successfully updated."
               : "Your service has been successfully created."}
           </p>
         </div>
@@ -814,21 +864,19 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
               type="button"
               disabled={step < s && !editingService}
               onClick={() => setStep(s)}
-              className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-black transition-all ${
-                step === s
+              className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-black transition-all ${step === s
                   ? "bg-indigo-600 border border-indigo-400 text-white ring-4 ring-indigo-500/20"
                   : step > s
-                  ? "bg-emerald-500 text-white"
-                  : "bg-[#0f0e1a] border border-indigo-500/20 text-slate-500"
-              }`}
+                    ? "bg-emerald-500 text-white"
+                    : "bg-[#0f0e1a] border border-indigo-500/20 text-slate-500"
+                }`}
             >
               {step > s ? "✓" : s}
             </button>
             {s < 5 && (
               <div
-                className={`h-0.5 grow mx-2 transition-all ${
-                  step > s ? "bg-emerald-500" : "bg-indigo-500/10"
-                }`}
+                className={`h-0.5 grow mx-2 transition-all ${step > s ? "bg-emerald-500" : "bg-indigo-500/10"
+                  }`}
               />
             )}
           </div>
@@ -856,11 +904,10 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
                     key={cat.id}
                     type="button"
                     onClick={() => handleCategorySelect(cat)}
-                    className={`flex flex-col items-center justify-center gap-3 rounded-2xl border p-5 text-center transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer ${
-                      isSelected
+                    className={`flex flex-col items-center justify-center gap-3 rounded-2xl border p-5 text-center transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer ${isSelected
                         ? "border-indigo-400 bg-indigo-500/25 text-white ring-2 ring-indigo-500/40"
                         : "border-indigo-500/20 bg-[#0f0e1a] text-slate-300 hover:border-indigo-400/60 hover:bg-indigo-500/5"
-                    }`}
+                      }`}
                   >
                     <span className="text-4xl">{cat.icon || "🔧"}</span>
                     <span className="text-base font-bold">{cat.name}</span>
@@ -905,11 +952,10 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
                       key={sub.id}
                       type="button"
                       onClick={() => handleSubServiceSelect(sub)}
-                      className={`flex flex-col items-start gap-1 rounded-xl border p-4 text-left transition-all duration-150 hover:scale-[1.01] active:scale-[0.99] cursor-pointer ${
-                        isSelected
+                      className={`flex flex-col items-start gap-1 rounded-xl border p-4 text-left transition-all duration-150 hover:scale-[1.01] active:scale-[0.99] cursor-pointer ${isSelected
                           ? "border-indigo-400 bg-indigo-500/25 text-white ring-2 ring-indigo-500/40"
                           : "border-indigo-500/10 bg-[#0f0e1a] text-slate-300 hover:border-indigo-400/40 hover:bg-indigo-500/5"
-                      }`}
+                        }`}
                     >
                       <span className="text-sm font-black text-white">
                         {engPart?.trim()}
@@ -1012,11 +1058,10 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
                   key={preset}
                   type="button"
                   onClick={() => setPrice(preset)}
-                  className={`px-3 py-2 text-xs font-black rounded-lg border transition duration-150 active:scale-95 cursor-pointer ${
-                    price === preset
+                  className={`px-3 py-2 text-xs font-black rounded-lg border transition duration-150 active:scale-95 cursor-pointer ${price === preset
                       ? "border-emerald-400 bg-emerald-500/20 text-emerald-300"
                       : "border-indigo-500/10 bg-[#0f0e1a] text-slate-400 hover:border-indigo-500/30"
-                  }`}
+                    }`}
                 >
                   ₹{preset}
                 </button>
@@ -1039,11 +1084,10 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
                     key={opt.type}
                     type="button"
                     onClick={() => handlePriceTypeSelect(opt.type)}
-                    className={`rounded-xl border p-4 text-xs font-black transition-all duration-150 text-center flex flex-col items-center justify-center gap-1 active:scale-95 cursor-pointer ${
-                      checked
+                    className={`rounded-xl border p-4 text-xs font-black transition-all duration-150 text-center flex flex-col items-center justify-center gap-1 active:scale-95 cursor-pointer ${checked
                         ? "border-indigo-400 bg-indigo-500/20 text-white shadow-lg shadow-indigo-500/10"
                         : "border-indigo-500/10 bg-[#0f0e1a] text-slate-400 hover:border-indigo-400/40"
-                    }`}
+                      }`}
                   >
                     <span className="text-sm font-black">{opt.label}</span>
                     <span className="text-[10px] font-semibold opacity-80">{opt.hindi}</span>
@@ -1256,8 +1300,8 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
               disabled={isSubmitting}
               className="px-8 py-3.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-black transition text-sm hover:scale-[1.01] active:scale-95 disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-indigo-500/25 cursor-pointer"
             >
-              {isSubmitting 
-                ? (editingService ? "Updating..." : "Adding...") 
+              {isSubmitting
+                ? (editingService ? "Updating..." : "Adding...")
                 : (editingService ? "Update Service / सुरक्षित करें" : "Add Service / सेवा जोड़ें")}
             </button>
           </div>

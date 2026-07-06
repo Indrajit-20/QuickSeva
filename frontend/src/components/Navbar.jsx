@@ -91,7 +91,7 @@ const Navbar = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2">
+          <Link to="/" className="flex items-center gap-2" onClick={() => window.scrollTo({ top: 0, behavior: "instant" })}>
             <span className="text-3xl font-bold text-[#0284c7]">
               QuickSeva
             </span>
@@ -110,6 +110,7 @@ const Navbar = () => {
           <div className="hidden md:flex items-center space-x-6">
             <Link
               to="/"
+              onClick={() => window.scrollTo({ top: 0, behavior: "instant" })}
               className="font-semibold text-[#1a1a1a] transition-colors duration-300 hover:text-[#0284c7]"
             >
               Home
@@ -257,7 +258,10 @@ const Navbar = () => {
 
             <Link
               to="/"
-              onClick={() => setIsMenuOpen(false)}
+              onClick={() => {
+                setIsMenuOpen(false);
+                window.scrollTo({ top: 0, behavior: "instant" });
+              }}
               className="block rounded-lg px-3 py-2 font-semibold text-[#1a1a1a] transition-colors hover:bg-[#f8f9fb] hover:text-[#0284c7]"
             >
               Home

@@ -45,7 +45,7 @@ function SellerNavLink({ item, onClick, badgeCount }) {
     <NavLink
       to={item.path}
       onClick={onClick}
-      className={`flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-semibold transition-all ${active
+      className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm font-semibold transition-all ${active
           ? "bg-[#0284c7]/10 text-[#0284c7] shadow-[inset_3px_0_0_#0284c7]"
           : "text-[#6b7280] hover:bg-[#f8f9fb] hover:text-[#0284c7]"
         }`}
@@ -65,8 +65,8 @@ function SellerNavLink({ item, onClick, badgeCount }) {
 
 function SellerSidebar({ user, onLogout, onNavigate, pendingOrdersCount, onToggleAvailability }) {
   return (
-    <div className="flex h-full flex-col border-r border-[#e5e7eb] bg-white px-4 py-5 text-[#1a1a1a]">
-      <div className="mb-6 flex flex-col gap-2">
+    <div className="flex h-full flex-col border-r border-[#e5e7eb] bg-white px-4 py-4 text-[#1a1a1a]">
+      <div className="mb-4 flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <div>
             <div className="text-2xl font-black tracking-normal text-[#1a1a1a]">
@@ -94,22 +94,22 @@ function SellerSidebar({ user, onLogout, onNavigate, pendingOrdersCount, onToggl
         </div>
       </div>
 
-      <nav className="flex-1 space-y-1.5 overflow-y-auto">
+      <nav className="flex-1 space-y-1 overflow-y-auto no-scrollbar">
         {navItems.map((item) => (
           <SellerNavLink key={item.path} item={item} onClick={onNavigate} badgeCount={pendingOrdersCount} />
         ))}
       </nav>
 
-      <div className="border-t border-[#e5e7eb] pt-4 mt-4">
-        <div className="mb-4 flex items-center gap-3 rounded-lg border border-[#e5e7eb] bg-[#f8f9fb] p-3">
+      <div className="border-t border-[#e5e7eb] pt-2.5 mt-2.5">
+        <div className="mb-2.5 flex items-center gap-3 rounded-lg border border-[#e5e7eb] bg-[#f8f9fb] p-2.5">
           {user?.profile_pic ? (
             <img
               src={getImageUrl(user.profile_pic)}
               alt="Profile"
-              className="h-10 w-10 shrink-0 rounded-full object-cover border border-[#e5e7eb]"
+              className="h-9 w-9 shrink-0 rounded-full object-cover border border-[#e5e7eb]"
             />
           ) : (
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#0284c7] text-sm font-bold text-white">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0284c7] text-sm font-bold text-white">
               {getInitial(user?.name)}
             </div>
           )}
@@ -126,7 +126,7 @@ function SellerSidebar({ user, onLogout, onNavigate, pendingOrdersCount, onToggl
         <button
           type="button"
           onClick={onLogout}
-          className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#e53935]/30 bg-[#e53935]/10 px-3 py-2.5 text-sm font-semibold text-[#e53935] transition hover:-translate-y-0.5 hover:bg-[#e53935]/15 hover:shadow-[0_10px_22px_-14px_#e53935]"
+          className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#e53935]/30 bg-[#e53935]/10 px-3 py-2 text-sm font-semibold text-[#e53935] transition hover:-translate-y-0.5 hover:bg-[#e53935]/15 hover:shadow-[0_10px_22px_-14px_#e53935]"
         >
           <LogOut size={17} />
           Logout

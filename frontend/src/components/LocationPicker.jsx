@@ -413,6 +413,7 @@ export default function LocationPicker({ onChange, initialLocation, hideMap = fa
             📍 Service Address
           </label>
           <textarea
+            name="location"
             value={address}
             onChange={handleAddressChange}
             placeholder={hideMap ? "Enter your service address..." : "Your full address will appear here after pinning location"}
@@ -427,6 +428,7 @@ export default function LocationPicker({ onChange, initialLocation, hideMap = fa
           </label>
           <input
             type="text"
+            name="pincode"
             value={pincode}
             onChange={handlePincodeChange}
             placeholder="6-digit pincode"

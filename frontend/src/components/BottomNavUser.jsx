@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { Home, CalendarCheck, User, Compass } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
@@ -19,10 +20,40 @@ const userItems = [
 export default function BottomNavUser() {
   const location = useLocation();
   const { isAuthenticated } = useAuth();
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const handleFocusIn = (e) => {
+      if (
+        e.target &&
+        (e.target.tagName === "INPUT" ||
+          e.target.tagName === "TEXTAREA" ||
+          e.target.isContentEditable)
+      ) {
+        setIsKeyboardVisible(true);
+      }
+    };
+    const handleFocusOut = () => {
+      setIsKeyboardVisible(false);
+    };
+
+    document.addEventListener("focusin", handleFocusIn);
+    document.addEventListener("focusout", handleFocusOut);
+    return () => {
+      document.removeEventListener("focusin", handleFocusIn);
+      document.removeEventListener("focusout", handleFocusOut);
+    };
+  }, []);
+
   const items = isAuthenticated ? userItems : guestItems;
 
   return (
-    <nav className="bottom-nav-bar bottom-nav-bar--user lg:hidden" aria-label="Quick navigation">
+    <nav
+      className={`bottom-nav-bar bottom-nav-bar--user lg:hidden ${
+        isKeyboardVisible ? "bottom-nav-bar--hidden" : ""
+      }`}
+      aria-label="Quick navigation"
+    >
       {items.map((item) => {
         const Icon = item.icon;
         const isActive = location.pathname === item.path;
@@ -31,6 +62,9 @@ export default function BottomNavUser() {
           <NavLink
             key={item.path}
             to={item.path}
+            onClick={() => {
+              window.scrollTo({ top: 0, behavior: "instant" });
+            }}
             className={`bottom-nav-item ${isActive ? "bottom-nav-item--active" : ""}`}
           >
             <span className="bottom-nav-icon-wrap">
@@ -44,3 +78,4 @@ export default function BottomNavUser() {
     </nav>
   );
 }
+

@@ -13,6 +13,12 @@ import BottomNavUser from "./components/BottomNavUser";
 import Footer from "./components/Footer";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminLogin from "./pages/AdminLogin";
+import AdminLayout from "./layouts/AdminLayout";
+import AdminUsers from "./pages/AdminUsers";
+import AdminSellers from "./pages/AdminSellers";
+import AdminDisputes from "./pages/AdminDisputes";
+import AdminCategories from "./pages/AdminCategories";
+import AdminPlaceholder from "./pages/AdminPlaceholder";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
 import SellerRoute from "./components/SellerRoute";
@@ -79,6 +85,11 @@ function AppRoutes() {
     cleanupExpiredPremium();
   }, []);
 
+  // Global scroll to top on route change / page navigation
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [location.pathname]);
+
   const isAdminRoute = location.pathname.startsWith("/admin");
   const isSellerRoute =
     location.pathname === "/seller" ||
@@ -142,7 +153,33 @@ function AppRoutes() {
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
         <Route element={<AdminRoute />}>
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route
+              index
+              element={<Navigate to="/admin/dashboard" replace />}
+            />
+            <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="users" element={<AdminUsers />} />
+            <Route path="sellers" element={<AdminSellers />} />
+            <Route path="disputes" element={<AdminDisputes />} />
+            <Route path="categories" element={<AdminCategories />} />
+            {/* Placeholders */}
+            <Route path="bookings" element={<AdminPlaceholder />} />
+            <Route path="leads" element={<AdminPlaceholder />} />
+            <Route path="services" element={<AdminPlaceholder />} />
+            <Route path="services/approvals" element={<AdminPlaceholder />} />
+            <Route path="payments" element={<AdminPlaceholder />} />
+            <Route path="reviews" element={<AdminPlaceholder />} />
+            <Route path="notifications" element={<AdminPlaceholder />} />
+            <Route path="support" element={<AdminPlaceholder />} />
+            <Route path="reports" element={<AdminPlaceholder />} />
+            <Route path="locations" element={<AdminPlaceholder />} />
+            <Route path="coupons" element={<AdminPlaceholder />} />
+            <Route path="policies" element={<AdminDashboard />} />
+            <Route path="settings" element={<AdminPlaceholder />} />
+            <Route path="security" element={<AdminPlaceholder />} />
+            <Route path="marketing" element={<AdminPlaceholder />} />
+          </Route>
         </Route>
 
         <Route path="*" element={<NotFound />} />

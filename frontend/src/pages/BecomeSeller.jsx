@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import LocationPicker from "../components/LocationPicker";
 import apiClient from "../api/axiosConfig";
+import { scrollToFirstError } from "../utils/scrollUtils";
 
 export default function BecomeSeller() {
   const navigate = useNavigate();
@@ -21,7 +22,7 @@ export default function BecomeSeller() {
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState("");
 
-  const validateForm = () => {
+  const validateForm = (shouldScroll = false, markAllTouched = false) => {
     const nextErrors = {};
 
     if (!formData.businessName || formData.businessName.trim().length < 2) {
@@ -52,14 +53,20 @@ export default function BecomeSeller() {
     }
 
     setErrors(nextErrors);
-    setTouched({
-      businessName: true,
-      experienceYrs: true,
-      location: true,
-      pincode: true,
-    });
+    if (markAllTouched) {
+      setTouched({
+        businessName: true,
+        experienceYrs: true,
+        location: true,
+        pincode: true,
+      });
+    }
 
-    return Object.keys(nextErrors).length === 0;
+    const isValid = Object.keys(nextErrors).length === 0;
+    if (!isValid && shouldScroll) {
+      scrollToFirstError(nextErrors);
+    }
+    return isValid;
   };
 
   const handleChange = (e) => {
@@ -71,8 +78,7 @@ export default function BecomeSeller() {
     e.preventDefault();
     setApiError("");
 
-    if (!validateForm()) {
-      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (!validateForm(true, true)) {
       return;
     }
 

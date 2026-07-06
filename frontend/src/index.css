@@ -2142,3 +2142,153 @@ input[type="range"] {
 .bottom-nav-spacer {
   padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
 }
+
+/* Custom scrollbar hiding utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
+}
+
+/* Bottom Navigation Hide Behavior */
+.bottom-nav-bar--hidden {
+  transform: translateY(100%) !important;
+  pointer-events: none !important;
+}
+
+/* React Multi Date Picker Overrides for Premium Dark UI */
+.rmdp-portal {
+  z-index: 10000 !important;
+}
+
+.rmdp-wrapper {
+  background-color: #17152b !important;
+  border: 1.5px solid rgba(99, 102, 241, 0.25) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.5) !important;
+  font-family: inherit !important;
+  overflow: hidden !important;
+}
+
+.rmdp-calendar {
+  background-color: #17152b !important;
+  color: #f1f5f9 !important;
+  padding: 8px !important;
+}
+
+.rmdp-header {
+  margin-top: 6px !important;
+  margin-bottom: 12px !important;
+}
+
+.rmdp-header-values {
+  color: #e2e8f0 !important;
+  font-weight: 800 !important;
+  font-size: 14px !important;
+}
+
+.rmdp-arrow-container {
+  background-color: rgba(99, 102, 241, 0.1) !important;
+  border-radius: 8px !important;
+  width: 28px !important;
+  height: 28px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.2s !important;
+}
+
+.rmdp-arrow-container:hover {
+  background-color: rgba(99, 102, 241, 0.25) !important;
+}
+
+.rmdp-arrow {
+  border: solid #818cf8 !important;
+  border-width: 0 2px 2px 0 !important;
+  margin-top: 0 !important;
+}
+
+.rmdp-week-day {
+  color: #818cf8 !important;
+  font-weight: 700 !important;
+  font-size: 12px !important;
+}
+
+.rmdp-day {
+  color: #cbd5e1 !important;
+  font-weight: 500 !important;
+  transition: all 0.15s ease-in-out !important;
+}
+
+.rmdp-day span {
+  font-size: 13px !important;
+}
+
+.rmdp-day:not(.rmdp-disabled):not(.rmdp-day-hidden) span:hover {
+  background-color: rgba(99, 102, 241, 0.15) !important;
+  color: #ffffff !important;
+}
+
+.rmdp-day.rmdp-today span {
+  background-color: rgba(99, 102, 241, 0.1) !important;
+  border: 1px solid #6366f1 !important;
+  color: #a5b4fc !important;
+}
+
+.rmdp-day.rmdp-selected span {
+  background: linear-gradient(135deg, #6366f1, #4f46e5) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3) !important;
+}
+
+.rmdp-day.rmdp-disabled {
+  color: #475569 !important;
+}
+
+/* For inputs using DatePicker wrapper */
+.qs-date-picker__container {
+  width: 100% !important;
+  display: block !important;
+}
+
+/* Custom Modal/Bottom Sheet for Mobile Calendar */
+.qs-mobile-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  z-index: 9999;
+  animation: qs-fade-in 0.25s ease-out;
+}
+
+.qs-mobile-sheet-container {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #17152b;
+  border-top-left-radius: 28px;
+  border-top-right-radius: 28px;
+  border-top: 1.5px solid rgba(99, 102, 241, 0.25);
+  padding: 20px 16px calc(24px + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -10px 25px rgba(0, 0, 0, 0.3);
+  z-index: 10000;
+  animation: qs-slide-up 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+@keyframes qs-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes qs-slide-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}

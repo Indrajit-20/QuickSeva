@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import LocationPicker from "../components/LocationPicker";
 import apiClient from "../api/axiosConfig";
+import { scrollToFirstError } from "../utils/scrollUtils";
 
 const SellerRegister = () => {
   const navigate = useNavigate();
@@ -40,7 +41,7 @@ const SellerRegister = () => {
     return null;
   };
 
-  const validateForm = () => {
+  const validateForm = (shouldScroll = false, markAllTouched = false) => {
     const nextErrors = {};
 
     if (!formData.businessName || formData.businessName.length < 2)
@@ -75,19 +76,23 @@ const SellerRegister = () => {
     }
 
     setErrors(nextErrors);
-    setTouched({
-      businessName: true,
-      ownerName: true,
-      email: true,
-      mobileNumber: true,
-      location: true,
-      pincode: true,
-      // categoryIds: true,
-    });
+
+    if (markAllTouched) {
+      setTouched({
+        businessName: true,
+        ownerName: true,
+        email: true,
+        mobileNumber: true,
+        location: true,
+        pincode: true,
+        // categoryIds: true,
+      });
+    }
 
     const isValid = Object.keys(nextErrors).length === 0;
-    if (!isValid) {
+    if (!isValid && shouldScroll) {
       console.warn("SellerRegister validation failed:", nextErrors);
+      scrollToFirstError(nextErrors);
     }
     return isValid;
   };
@@ -102,13 +107,14 @@ const SellerRegister = () => {
 
     if (touched[name]) {
       // lightweight revalidation on blur/after touched
-      validateForm();
+      validateForm(false, false);
     }
   };
 
   const handleBlur = (e) => {
     const { name } = e.target;
     setTouched((prev) => ({ ...prev, [name]: true }));
+    validateForm(false, false);
   };
 
   const handleSubmit = async (e) => {
@@ -118,8 +124,7 @@ const SellerRegister = () => {
     setSuccessMessage("");
     setApiError("");
 
-    if (!validateForm()) {
-      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (!validateForm(true, true)) {
       return;
     }
 

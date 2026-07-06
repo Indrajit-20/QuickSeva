@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import apiClient from "../api/axiosConfig";
+import DatePicker from "react-multi-date-picker";
+import { scrollToFirstError } from "../utils/scrollUtils";
 
 const TIME_SLOTS = [
   "8:00 AM",
@@ -82,7 +84,7 @@ export default function BookingPage() {
           setSeller(s);
           const serviceList = Array.isArray(svcs) ? svcs : [];
           setSellerServices(serviceList);
-          
+
           // Match selected service from location state to the loaded service list to sync all properties
           if (selectedService) {
             const found = serviceList.find(item => item.id === selectedService.id);
@@ -132,7 +134,7 @@ export default function BookingPage() {
     }
   };
 
-  const validate = () => {
+  const validate = (shouldScroll = false) => {
     const nextErrors = {};
     const mobileDigits = formData.mobile.replace(/\D/g, "");
 
@@ -145,13 +147,17 @@ export default function BookingPage() {
       nextErrors.mobile = "Mobile number must be 10 digits";
 
     setErrors(nextErrors);
-    return Object.keys(nextErrors).length === 0;
+    const isValid = Object.keys(nextErrors).length === 0;
+    if (!isValid && shouldScroll) {
+      scrollToFirstError(nextErrors);
+    }
+    return isValid;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitError("");
-    if (!seller || !validate()) return;
+    if (!seller || !validate(true)) return;
 
     setBookingLoading(true);
     try {
@@ -364,14 +370,19 @@ export default function BookingPage() {
             {/* Date Selection */}
             <div>
               <label className="form-label dark">Select Date / तारीख चुनें</label>
-              <input
-                type="date"
+              <DatePicker
                 value={formData.date}
-                min={tomorrow()}
-                max={thirtyDaysFromNow()}
-                onChange={(e) => updateField("date", e.target.value)}
-                className="form-input dark focus:ring-indigo-500/40"
-                style={{ colorScheme: "dark" }}
+                onChange={(dateObj) => {
+                  const val = dateObj ? dateObj.format("YYYY-MM-DD") : "";
+                  updateField("date", val);
+                }}
+                minDate={new Date(tomorrow())}
+                maxDate={new Date(thirtyDaysFromNow())}
+                format="YYYY-MM-DD"
+                portal
+                inputClass="form-input dark focus:ring-indigo-500/40 cursor-pointer w-full text-white"
+                containerClassName="qs-date-picker__container"
+                placeholder="Select a date / तारीख चुनें"
               />
               {errors.date && (
                 <p className="mt-1.5 text-xs font-semibold text-red-400">⚠ {errors.date}</p>
@@ -389,11 +400,10 @@ export default function BookingPage() {
                       key={slot}
                       type="button"
                       onClick={() => updateField("timeSlot", slot)}
-                      className={`rounded-xl border px-3 py-2.5 text-sm font-bold transition-all duration-300 ${
-                        active
+                      className={`rounded-xl border px-3 py-2.5 text-sm font-bold transition-all duration-300 ${active
                           ? "bg-gradient-to-r from-indigo-500 to-fuchsia-600 border-indigo-400 text-white shadow-[0_0_15px_rgba(99,102,241,0.4)] scale-[1.02]"
                           : "border-indigo-500/20 bg-indigo-950/40 text-indigo-200 hover:border-indigo-400/40 hover:bg-indigo-950/60"
-                      }`}
+                        }`}
                     >
                       {slot}
                     </button>
