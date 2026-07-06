@@ -36,7 +36,9 @@ async function executeSqlFile(filePath) {
       if (
         err.code === 'ER_DUP_FIELDNAME' ||
         err.code === 'ER_TABLE_EXISTS_ERROR' ||
-        err.code === 'ER_DUP_KEYNAME'
+        err.code === 'ER_DUP_KEYNAME' ||
+        err.code === 'ER_CANT_DROP_FIELD_OR_KEY' ||
+        (err.code === 'ER_CANT_CREATE_TABLE' && err.errno === 1005 && err.sqlMessage && err.sqlMessage.includes('121'))
       ) {
         continue;
       }
