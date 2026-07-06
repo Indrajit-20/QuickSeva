@@ -33,7 +33,7 @@ export function getUserLocation() {
  * Fallback to IP geolocation API
  * @returns {Promise<{lat: number, lng: number, city: string, source: 'ip' | 'default'}>}
  */
-async function getIpFallback() {
+export async function getIpFallback() {
   try {
     const response = await fetch("http://ip-api.com/json/");
     if (!response.ok) {

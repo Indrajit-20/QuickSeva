@@ -8,6 +8,9 @@ import {
   useMap,
   useMapEvents,
 } from "react-leaflet";
+import { getIpFallback } from "../utils/getLocation";
+import LocationErrorModal from "./LocationErrorModal";
+import { Info, AlertTriangle } from "lucide-react";
 
 // Fix Leaflet marker icon URLs (must be top of every map component file)
 delete L.Icon.Default.prototype._getIconUrl;
@@ -59,10 +62,28 @@ export default function LocationPicker({ onChange, initialLocation, hideMap = fa
   const [address, setAddress] = useState(initialLocation?.address || "");
   const [pincode, setPincode] = useState(initialLocation?.pincode || "");
   const [geoLoading, setGeoLoading] = useState(false);
+  const [showLocationModal, setShowLocationModal] = useState(false);
   const [locationQuery, setLocationQuery] = useState("");
   const [locationResults, setLocationResults] = useState([]);
   const [locationNotFoundMsg, setLocationNotFoundMsg] = useState("");
   const [flyTarget, setFlyTarget] = useState(null);
+  const [permissionState, setPermissionState] = useState("prompt");
+
+  useEffect(() => {
+    if (!navigator.permissions || !navigator.permissions.query) return;
+    try {
+      navigator.permissions.query({ name: "geolocation" }).then((result) => {
+        setPermissionState(result.state);
+        result.onchange = () => {
+          setPermissionState(result.state);
+        };
+      }).catch((err) => {
+        console.warn("Permissions query failed:", err);
+      });
+    } catch (e) {
+      console.warn("Permissions query not supported", e);
+    }
+  }, []);
 
   const lastGeocodeTimerRef = useRef(null);
   const abortCtrlRef = useRef(null);
@@ -256,13 +277,34 @@ export default function LocationPicker({ onChange, initialLocation, hideMap = fa
     return () => clearTimeout(timer);
   }, [locationQuery]);
 
-  const handleUseMyLocation = () => {
+  const handleUseMyLocation = async () => {
+    setGeoLoading(true);
+
+    const tryIpFallback = async () => {
+      try {
+        const fallback = await getIpFallback();
+        if (fallback && fallback.source === "ip") {
+          updateLocation(fallback.lat, fallback.lng, true);
+          setFlyTarget({ center: [fallback.lat, fallback.lng], zoom: 15 });
+          setGeoLoading(false);
+          alert("📍 Precision GPS unavailable. Using approximate IP-based location.");
+          return true;
+        }
+      } catch (err) {
+        console.error("IP fallback failed in location picker:", err);
+      }
+      return false;
+    };
+
     if (!navigator.geolocation) {
-      alert("Geolocation is not supported by your browser.");
+      const ok = await tryIpFallback();
+      if (!ok) {
+        setShowLocationModal(true);
+        setGeoLoading(false);
+      }
       return;
     }
 
-    setGeoLoading(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const lat = pos.coords.latitude;
@@ -271,20 +313,15 @@ export default function LocationPicker({ onChange, initialLocation, hideMap = fa
         setFlyTarget({ center: [lat, lng], zoom: 15 });
         setGeoLoading(false);
       },
-      (error) => {
-        setGeoLoading(false);
-        console.error("Geolocation error:", error);
-        let errorMsg = "Could not detect location. Please check your browser permissions or search manually.";
-        if (error.code === 1) {
-          errorMsg = "Location permission denied. Please allow location access in your browser or search manually.";
-        } else if (error.code === 2) {
-          errorMsg = "Location unavailable. Please search manually.";
-        } else if (error.code === 3) {
-          errorMsg = "Location detection timed-out. Please try again or search manually.";
+      async (error) => {
+        console.error("Geolocation error, trying IP fallback...", error);
+        const ok = await tryIpFallback();
+        if (!ok) {
+          setShowLocationModal(true);
+          setGeoLoading(false);
         }
-        alert(errorMsg);
       },
-      { enableHighAccuracy: true, timeout: 10000 },
+      { enableHighAccuracy: true, timeout: 5000 },
     );
   };
 
@@ -398,6 +435,25 @@ export default function LocationPicker({ onChange, initialLocation, hideMap = fa
         </div>
       )}
 
+      {/* Location Permission Alert/Banner */}
+      {permissionState === "denied" ? (
+        <div className="flex items-start gap-2.5 p-3 rounded-lg border border-amber-500/20 bg-amber-500/5 text-xs text-amber-200">
+          <AlertTriangle className="h-4.5 w-4.5 shrink-0 text-amber-400 mt-0.5" />
+          <div>
+            <span className="font-bold text-white block mb-0.5">Location Access Blocked / स्थान अवरुद्ध है</span>
+            <span>To auto-detect, click the Lock 🔒 icon in the URL bar, set Location to 'Allow', then retry.</span>
+          </div>
+        </div>
+      ) : permissionState === "prompt" ? (
+        <div className="flex items-start gap-2.5 p-3 rounded-lg border border-indigo-500/20 bg-indigo-500/5 text-xs text-indigo-200">
+          <Info className="h-4.5 w-4.5 shrink-0 text-indigo-400 mt-0.5" />
+          <div>
+            <span className="font-bold text-white block mb-0.5">Allow Location Access / स्थान की अनुमति दें</span>
+            <span>Click the button below to allow location access so customers near you can find your services.</span>
+          </div>
+        </div>
+      ) : null}
+
       <button
         type="button"
         onClick={handleUseMyLocation}
@@ -443,6 +499,14 @@ export default function LocationPicker({ onChange, initialLocation, hideMap = fa
           Click the map or drag the marker to set your service location
         </p>
       )}
+      <LocationErrorModal
+        isOpen={showLocationModal}
+        onClose={() => setShowLocationModal(false)}
+        onRetry={async () => {
+          setShowLocationModal(false);
+          await handleUseMyLocation();
+        }}
+      />
     </div>
   );
 }

@@ -125,6 +125,9 @@ const SellerRegister = () => {
     setApiError("");
 
     if (!validateForm(true, true)) {
+      if (!formData.location || formData.location.lat === null || formData.location.lng === null) {
+        alert("📍 Location Required: Please allow location access and click 'Use My Current Location', or select a location manually to proceed.");
+      }
       return;
     }
 

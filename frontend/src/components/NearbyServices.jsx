@@ -9,7 +9,8 @@ import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/leaflet.markercluster";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
-import { getUserLocation } from "../utils/getLocation";
+import { getUserLocation, getIpFallback } from "../utils/getLocation";
+import LocationErrorModal from "./LocationErrorModal";
 import {
   Sparkles,
   Zap,
@@ -422,6 +423,7 @@ export default function NearbyServices({
   const [searchCenter, setSearchCenter] = useState(null);
   const [mapFlyTrigger, setMapFlyTrigger] = useState(0);
   const [geoError, setGeoError] = useState("");
+  const [showLocationModal, setShowLocationModal] = useState(false);
   const [showMap, setShowMap] = useState(true);
   const [search, setSearch] = useState(initialSearch);
   const [locationQuery, setLocationQuery] = useState("");
@@ -1311,7 +1313,7 @@ export default function NearbyServices({
     setGeoError("");
   }, []);
 
-  const handleUseMyLocation = () => {
+  const handleUseMyLocation = async () => {
     const updateLocationFromCoords = async (lat, lng) => {
       suppressNextLocationSearchRef.current = true;
       setGeoLoading(true);
@@ -1342,8 +1344,44 @@ export default function NearbyServices({
       return;
     }
 
-    if (!navigator.geolocation) return;
     setGeoLoading(true);
+    setGeoError("");
+
+    const tryIpFallback = async () => {
+      try {
+        const fallback = await getIpFallback();
+        if (fallback && fallback.source === "ip") {
+          const nextPos = { lat: fallback.lat, lng: fallback.lng };
+          setBuyerPos(nextPos);
+          setSearchCenter(nextPos);
+          setMapFlyTrigger((prev) => prev + 1);
+          setLocationResults([]);
+          setLocationNotFoundMsg("");
+          setPincodeResults([]);
+          setPincode("");
+          setPincodeError("");
+          setGeoError("");
+          updateLocationFromCoords(nextPos.lat, nextPos.lng);
+          toast.info("📍 Precision GPS unavailable. Using approximate IP-based location.");
+          setTimeout(scrollToResults, 100);
+          setGeoLoading(false);
+          return true;
+        }
+      } catch (err) {
+        console.error("IP fallback failed inside handler:", err);
+      }
+      return false;
+    };
+
+    if (!navigator.geolocation) {
+      const ok = await tryIpFallback();
+      if (!ok) {
+        setShowLocationModal(true);
+        setGeoLoading(false);
+      }
+      return;
+    }
+
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const nextPos = {
@@ -1362,12 +1400,18 @@ export default function NearbyServices({
         setGeoError("");
         updateLocationFromCoords(nextPos.lat, nextPos.lng);
         setTimeout(scrollToResults, 100);
-      },
-      () => {
-        setGeoError("Please allow location access to find nearby services");
         setGeoLoading(false);
       },
-      { enableHighAccuracy: true, timeout: 10000 },
+      async (err) => {
+        console.warn("GPS failed, trying IP fallback...", err);
+        const ok = await tryIpFallback();
+        if (!ok) {
+          setShowLocationModal(true);
+          setGeoError("Please turn on location and allow permissions to search automatically.");
+          setGeoLoading(false);
+        }
+      },
+      { enableHighAccuracy: true, timeout: 5000 },
     );
   };
 
@@ -2247,6 +2291,14 @@ export default function NearbyServices({
           </div>
         </div>
       </div>
+      <LocationErrorModal
+        isOpen={showLocationModal}
+        onClose={() => setShowLocationModal(false)}
+        onRetry={async () => {
+          setShowLocationModal(false);
+          await handleUseMyLocation();
+        }}
+      />
     </div>
   );
 }

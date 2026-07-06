@@ -5,6 +5,8 @@ require("dotenv").config();
 
 const { connectDB } = require("./config/db");
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
+const logger = require("./utils/logger");
+const requestLogger = require("./middleware/requestLogger");
 
 // ── Routes ───────────────────────────────────────────────────────────────────
 const authRoutes = require("./routes/authRoutes");
@@ -47,7 +49,7 @@ app.use(
       if (isAllowed) {
         callback(null, true);
       } else {
-        console.error(`CORS Blocked: Origin ${origin} is not in allowed origins:`, allowedOrigins);
+        logger.error(`CORS Blocked: Origin ${origin} is not in allowed origins: ${JSON.stringify(allowedOrigins)}`);
         callback(new Error("Not allowed by CORS"));
       }
     },
@@ -56,6 +58,7 @@ app.use(
 );
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(requestLogger);
 
 // Serve uploaded files statically
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
@@ -95,9 +98,9 @@ app.use(errorHandler);
 const { startAvailabilitySafetyCheck } = require("./services/availabilitySafetyCheck");
 
 app.listen(PORT, () => {
-  console.log(`\n🚀 QuickSeva API running on http://localhost:${PORT}`);
-  console.log(`📋 Health check: http://localhost:${PORT}/api/health`);
-  console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}\n`);
+  logger.info(`🚀 QuickSeva API running on http://localhost:${PORT}`);
+  logger.info(`📋 Health check: http://localhost:${PORT}/api/health`);
+  logger.info(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
   
   // Start the background safety check
   startAvailabilitySafetyCheck();
