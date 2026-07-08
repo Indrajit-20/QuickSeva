@@ -1,3 +1,4 @@
+import React from "react";
 import { useAuth } from "../context/AuthContext";
 
 const WorkspaceSwitcher = ({ layout = "dropdown" }) => {
@@ -9,13 +10,13 @@ const WorkspaceSwitcher = ({ layout = "dropdown" }) => {
   if (layout === "sidebar") {
     return (
       <div className="py-2.5">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 px-0.5">
-          Workspace
+        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5 px-0.5">
+          Workspace / कार्यक्षेत्र
         </p>
-        <div className="relative flex rounded-lg bg-slate-100 p-0.5 border border-slate-200/50">
+        <div className="relative flex rounded-xl bg-slate-100 p-0.5 border border-slate-200">
           {/* Sliding indicator */}
           <div
-            className={`absolute top-0.5 bottom-0.5 left-0.5 w-[calc(50%-2px)] rounded-md bg-white shadow-sm transition-transform duration-200 ease-out ${
+            className={`absolute top-0.5 bottom-0.5 left-0.5 w-[calc(50%-2px)] rounded-lg bg-white shadow-sm transition-transform duration-200 ease-out ${
               isSellerActive ? "translate-x-full" : "translate-x-0"
             }`}
           />
@@ -23,11 +24,11 @@ const WorkspaceSwitcher = ({ layout = "dropdown" }) => {
           <button
             type="button"
             onClick={() => !isUserActive && switchRole("user")}
-            className={`relative z-10 flex flex-1 items-center justify-center gap-1.5 py-1 text-xs font-bold transition-colors duration-200 ${
+            className={`relative z-10 flex flex-1 items-center justify-center gap-1.5 py-2 text-xs font-extrabold transition-colors duration-200 ${
               isUserActive ? "text-emerald-700" : "text-slate-500 hover:text-slate-700"
             }`}
           >
-            <span>👤 Customer</span>
+            👤 Customer
           </button>
           
           <button
@@ -39,97 +40,57 @@ const WorkspaceSwitcher = ({ layout = "dropdown" }) => {
                 switchRole("seller");
               }
             }}
-            className={`relative z-10 flex flex-1 items-center justify-center gap-1.5 py-1 text-xs font-bold transition-colors duration-200 ${
-              isSellerActive ? "text-[#0284c7]" : "text-slate-500 hover:text-slate-700"
+            className={`relative z-10 flex flex-1 items-center justify-center gap-1.5 py-2 text-xs font-extrabold transition-colors duration-200 ${
+              isSellerActive ? "text-indigo-700" : "text-slate-500 hover:text-slate-700"
             }`}
           >
-            <span>🏪 {isSeller ? "Seller" : "Join"}</span>
+            🏪 {isSeller ? "Seller" : "Join"}
           </button>
         </div>
       </div>
     );
   }
 
-  const cardBase = {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "10px 14px",
-    borderRadius: "10px",
-    marginBottom: "8px",
-    transition: "all 0.2s ease",
-    width: "100%"
-  };
-
   return (
-    <div style={{ padding: "10px 16px" }}>
+    <div className="px-4 py-2.5 border-t border-b border-slate-100 bg-slate-50/50 flex items-center justify-between gap-3">
+      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 shrink-0">
+        Workspace / कार्यक्षेत्र
+      </span>
 
-      <p style={{
-        fontSize: "10px",
-        color: "rgba(26,26,26,0.4)",
-        textTransform: "uppercase",
-        letterSpacing: "0.08em",
-        marginBottom: "8px",
-        fontWeight: "bold"
-      }}>
-        Workspace
-      </p>
-
-      {/* Customer Card */}
-      <div
-        onClick={() => !isUserActive && switchRole("user")}
-        style={{
-          ...cardBase,
-          cursor: isUserActive ? "default" : "pointer",
-          background: isUserActive
-            ? "rgba(34,197,94,0.08)"
-            : "transparent",
-          border: isUserActive
-            ? "1px solid rgba(34,197,94,0.4)"
-            : "1px solid #e5e7eb"
-        }}
-      >
-        <span style={{ fontSize: "13px", color: "#1a1a1a", fontWeight: "bold" }}>
+      <div className="relative flex flex-1 rounded-xl bg-slate-200/80 p-0.5 border border-slate-300/40 max-w-[210px]">
+        {/* Sliding indicator */}
+        <div
+          className={`absolute top-0.5 bottom-0.5 left-0.5 w-[calc(50%-2px)] rounded-lg bg-white shadow-sm transition-transform duration-200 ease-out ${
+            isSellerActive ? "translate-x-full" : "translate-x-0"
+          }`}
+        />
+        
+        <button
+          type="button"
+          onClick={() => !isUserActive && switchRole("user")}
+          className={`relative z-10 flex flex-1 items-center justify-center py-1.5 text-xs font-black transition-colors duration-200 cursor-pointer ${
+            isUserActive ? "text-emerald-700" : "text-slate-500 hover:text-slate-700"
+          }`}
+        >
           👤 Customer
-        </span>
-        {isUserActive
-          ? <span style={{ fontSize:"11px", color:"#22c55e", fontWeight:700 }}>Active</span>
-          : <span style={{ fontSize:"11px", color:"rgba(26,26,26,0.4)", fontWeight: "bold" }}>Switch</span>
-        }
+        </button>
+        
+        <button
+          type="button"
+          onClick={() => {
+            if (!isSeller) {
+              switchRole("seller");
+            } else if (!isSellerActive) {
+              switchRole("seller");
+            }
+          }}
+          className={`relative z-10 flex flex-1 items-center justify-center py-1.5 text-xs font-black transition-colors duration-200 cursor-pointer ${
+            isSellerActive ? "text-indigo-700" : "text-slate-500 hover:text-slate-700"
+          }`}
+        >
+          🏪 {isSeller ? "Seller" : "Join"}
+        </button>
       </div>
-
-      {/* Seller Card */}
-      <div
-        onClick={() => {
-          if (!isSeller) {
-            switchRole("seller");
-          } else if (!isSellerActive) {
-            switchRole("seller");
-          }
-        }}
-        style={{
-          ...cardBase,
-          cursor: isSellerActive ? "default" : "pointer",
-          background: isSellerActive
-            ? "rgba(24,95,165,0.08)"
-            : "transparent",
-          border: isSellerActive
-            ? "1px solid rgba(24,95,165,0.4)"
-            : "1px solid #e5e7eb"
-        }}
-      >
-        <span style={{ fontSize: "13px", color: "#1a1a1a", fontWeight: "bold" }}>
-          🏪 {isSeller ? "Seller" : "Become a Seller"}
-        </span>
-        {isSeller ? (
-          isSellerActive
-            ? <span style={{ fontSize:"11px", color:"#0284c7", fontWeight:700 }}>Active</span>
-            : <span style={{ fontSize:"11px", color:"rgba(26,26,26,0.4)", fontWeight: "bold" }}>Switch</span>
-        ) : (
-          <span style={{ fontSize:"11px", color:"#f43f5e", fontWeight:700 }}>Join</span>
-        )}
-      </div>
-
     </div>
   );
 };

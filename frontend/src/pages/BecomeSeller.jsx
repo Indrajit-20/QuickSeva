@@ -134,7 +134,7 @@ export default function BecomeSeller() {
       <div
         ref={formRef}
         style={{ scrollMarginTop: "90px" }}
-        className="bg-indigo-900/40 backdrop-blur-md rounded-2xl shadow-2xl w-full max-w-lg p-8 border border-indigo-500/30 red-accent-line"
+        className="bg-indigo-900/40 backdrop-blur-md rounded-2xl shadow-2xl w-full max-w-lg p-5 sm:p-8 border border-indigo-500/30 red-accent-line"
       >
         <div className="text-center mb-6">
           <h1 className="text-3xl font-bold text-white mb-2">

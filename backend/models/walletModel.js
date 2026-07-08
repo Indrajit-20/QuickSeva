@@ -20,10 +20,11 @@ const WalletModel = {
   },
 
   // Credit wallet
-  credit: async (user_id, amount, source, reference_id, description) => {
-    const conn = await pool.getConnection();
+  credit: async (user_id, amount, source, reference_id, description, externalConn = null) => {
+    const conn = externalConn || await pool.getConnection();
+    const shouldManageTx = !externalConn;
     try {
-      await conn.beginTransaction();
+      if (shouldManageTx) await conn.beginTransaction();
 
       await conn.query(
         `UPDATE wallets SET balance = balance + ? WHERE user_id = ?`,
@@ -41,21 +42,22 @@ const WalletModel = {
         [user_id, amount, wallet.balance, source, reference_id || null, description]
       );
 
-      await conn.commit();
+      if (shouldManageTx) await conn.commit();
       return wallet.balance;
     } catch (err) {
-      await conn.rollback();
+      if (shouldManageTx) await conn.rollback();
       throw err;
     } finally {
-      conn.release();
+      if (shouldManageTx) conn.release();
     }
   },
 
   // Debit wallet
-  debit: async (user_id, amount, source, reference_id, description) => {
-    const conn = await pool.getConnection();
+  debit: async (user_id, amount, source, reference_id, description, externalConn = null) => {
+    const conn = externalConn || await pool.getConnection();
+    const shouldManageTx = !externalConn;
     try {
-      await conn.beginTransaction();
+      if (shouldManageTx) await conn.beginTransaction();
 
       const [[wallet]] = await conn.query(
         `SELECT id, balance FROM wallets WHERE user_id = ? FOR UPDATE`,
@@ -79,13 +81,13 @@ const WalletModel = {
         [wallet.id, amount, newBalance, source, reference_id || null, description]
       );
 
-      await conn.commit();
+      if (shouldManageTx) await conn.commit();
       return newBalance;
     } catch (err) {
-      await conn.rollback();
+      if (shouldManageTx) await conn.rollback();
       throw err;
     } finally {
-      conn.release();
+      if (shouldManageTx) conn.release();
     }
   },
 

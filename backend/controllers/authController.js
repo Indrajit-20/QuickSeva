@@ -311,6 +311,10 @@ exports.verifyOTP = async (req, res) => {
     console.log("Original Phone:", rawIdentifier);
     console.log("Normalized Phone:", phone);
 
+    if (!phone || phone.length !== 10) {
+      return errorRes(res, "Valid 10-digit phone number is required", 400);
+    }
+
     let verified = false;
     if (process.env.NODE_ENV === "development" && otp === "123456") {
       verified = true;
@@ -371,32 +375,53 @@ exports.verifyOTP = async (req, res) => {
 
       if (!name) return errorRes(res, "name is required", 400);
 
-      const userId = await UserModel.create({
-        name,
-        phone,
-        email: email || null,
-        role,
-      });
+      // Email duplication check
+      if (email) {
+        const existingEmail = await UserModel.findByEmail(email);
+        if (existingEmail) {
+          return errorRes(res, "Email is already registered", 400);
+        }
+      }
 
-      await WalletModel.create(userId);
+      const conn = await pool.getConnection();
+      try {
+        await conn.beginTransaction();
 
-      const token = generateToken({ id: userId, role });
-      const user = await UserModel.findById(userId);
-      const { password: _, ...userData } = user;
+        const userId = await UserModel.create({
+          name,
+          phone,
+          email: email || null,
+          role,
+        }, conn);
 
-      return successRes(
-        res,
-        {
-          token,
-          user: {
-            id: userData.id,
-            name: userData.name,
-            phone: userData.phone,
-            role: userData.role,
+        await WalletModel.create(userId, conn);
+
+        await conn.commit();
+
+        const token = generateToken({ id: userId, role });
+        const user = await UserModel.findById(userId);
+        const { password: _, ...userData } = user;
+
+        return successRes(
+          res,
+          {
+            token,
+            user: {
+              id: userData.id,
+              name: userData.name,
+              phone: userData.phone,
+              role: userData.role,
+            },
           },
-        },
-        "Registration successful",
-      );
+          "Registration successful",
+        );
+      } catch (err) {
+        await conn.rollback();
+        console.error("Register error:", err);
+        return errorRes(res, "Registration failed");
+      } finally {
+        conn.release();
+      }
     }
 
     if (type === "seller-register") {
@@ -413,66 +438,87 @@ exports.verifyOTP = async (req, res) => {
       const name = `${firstName || ""} ${lastName || ""}`.trim();
       if (!name) return errorRes(res, "Seller name is required", 400);
 
-      // Create user with role=seller.
-      const userId = await UserModel.create({
-        name,
-        phone,
-        email,
-        role: "seller",
-      });
+      // Email duplication check
+      if (email) {
+        const existingEmail = await UserModel.findByEmail(email);
+        if (existingEmail) {
+          return errorRes(res, "Email is already registered", 400);
+        }
+      }
 
-      console.log("Created seller user:", userId);
-      console.log("Creating seller profile...");
+      const conn = await pool.getConnection();
+      try {
+        await conn.beginTransaction();
 
-      const sellerBusinessName = businessName || name;
-      await SellerModel.create({
-        user_id: userId,
-        business_name: sellerBusinessName,
-        category_id: null,
-        bio: "",
-        experience_yrs: 0,
-      });
+        // Create user with role=seller.
+        const userId = await UserModel.create({
+          name,
+          phone,
+          email,
+          role: "seller",
+        }, conn);
 
-      console.log("Seller profile created");
+        console.log("Created seller user:", userId);
+        console.log("Creating seller profile...");
 
-      await WalletModel.create(userId);
+        const sellerBusinessName = businessName || name;
+        await SellerModel.create({
+          user_id: userId,
+          business_name: sellerBusinessName,
+          category_id: null,
+          bio: "",
+          experience_yrs: 0,
+        }, conn);
 
-      const token = generateToken({ id: userId, role: "seller" });
-      const user = await UserModel.findById(userId);
+        console.log("Seller profile created");
 
-      console.log(
-        "[verifyOTP seller-register] CREATED user=",
-        user
-          ? {
-            id: user.id,
-            phone: user.phone,
-            role: user.role,
-            is_active: user.is_active,
-          }
-          : null,
-      );
+        await WalletModel.create(userId, conn);
 
-      const { password: _, ...userData } = user;
+        await conn.commit();
 
-      const seller = await SellerModel.findByUserId(userId);
-      const profile_completed = seller?.profile_completed ?? 0;
+        const token = generateToken({ id: userId, role: "seller" });
+        const user = await UserModel.findById(userId);
 
-      return successRes(
-        res,
-        {
-          token,
-          user: {
-            id: userData.id,
-            name: userData.name,
-            phone: userData.phone,
-            role: userData.role,
-            profile_completed,
-            services_count: 0,
-            is_available: seller?.is_available ?? 1,
+        console.log(
+          "[verifyOTP seller-register] CREATED user=",
+          user
+            ? {
+              id: user.id,
+              phone: user.phone,
+              role: user.role,
+              is_active: user.is_active,
+            }
+            : null,
+        );
+
+        const { password: _, ...userData } = user;
+
+        const seller = await SellerModel.findByUserId(userId);
+        const profile_completed = seller?.profile_completed ?? 0;
+
+        return successRes(
+          res,
+          {
+            token,
+            user: {
+              id: userData.id,
+              name: userData.name,
+              phone: userData.phone,
+              role: userData.role,
+              profile_completed,
+              services_count: 0,
+              is_available: seller?.is_available ?? 1,
+            },
           },
-        },
-        "Seller registration successful",
-      );
+          "Seller registration successful",
+        );
+      } catch (err) {
+        await conn.rollback();
+        console.error("Seller register error:", err);
+        return errorRes(res, "Seller registration failed");
+      } finally {
+        conn.release();
+      }
     }
 
     return errorRes(res, "Unsupported OTP type", 400);

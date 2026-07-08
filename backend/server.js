@@ -29,7 +29,15 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // ── Connect DB ───────────────────────────────────────────────────────────────
-connectDB();
+const { ensureLeadTables } = require("./controllers/leadController");
+connectDB().then(async () => {
+  try {
+    await ensureLeadTables();
+    logger.info("✅ Lead tables verified/created");
+  } catch (err) {
+    logger.error("❌ Failed to ensure lead tables:", err);
+  }
+});
 
 // ── Middleware ────────────────────────────────────────────────────────────────
 const allowedOrigins = process.env.FRONTEND_URL

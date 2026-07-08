@@ -15,17 +15,25 @@ exports.getProfile = async (req, res) => {
 // Update profile
 exports.updateProfile = async (req, res) => {
   try {
-    const { name, email, address, city, state, pincode, lat, lng } = req.body;
+    const { name, email, address, city, state, pincode, lat, lng, gender, dob } = req.body;
     const fields = {};
 
     if (name)    fields.name    = name;
-    if (email)   fields.email   = email;
+    if (email) {
+      const existingEmail = await UserModel.findByEmail(email);
+      if (existingEmail && existingEmail.id !== req.user.id) {
+        return errorRes(res, "Email is already in use by another account", 409);
+      }
+      fields.email = email;
+    }
     if (address) fields.address = address;
     if (city)    fields.city    = city;
     if (state)   fields.state   = state;
     if (pincode) fields.pincode = pincode;
     if (lat)     fields.lat     = lat;
     if (lng)     fields.lng     = lng;
+    if (gender)  fields.gender  = gender;
+    if (dob)     fields.dob     = dob;
 
     if (req.file) {
       fields.profile_pic = `/uploads/profiles/${req.file.filename}`;

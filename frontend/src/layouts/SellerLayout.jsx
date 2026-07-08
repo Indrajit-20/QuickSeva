@@ -78,7 +78,7 @@ function SellerSidebar({ user, onLogout, onNavigate, pendingOrdersCount, onToggl
           <button
             onClick={onToggleAvailability}
             className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${user?.is_available ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-slate-300 hover:bg-slate-400'}`}
-            title={user?.is_available ? "Active / Click to deactivate" : "Inactive / Click to activate"}
+            title={user?.is_available ? "Active: Customers can see and book your services / चालू: ग्राहक आपकी सेवाएं देख सकते हैं" : "Inactive: Customers cannot see or book your services / बंद: ग्राहक आपकी सेवाएं नहीं देख सकते"}
             aria-label="Toggle availability"
           >
             <span

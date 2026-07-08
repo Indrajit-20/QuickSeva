@@ -114,7 +114,7 @@ export default function SellerDashboard() {
                 }
               }}
               className={`relative inline-flex h-5 w-8 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${user?.is_available ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-slate-300 hover:bg-slate-400'}`}
-              title="Click to toggle availability / स्थिति बदलने के लिए क्लिक करें"
+              title={user?.is_available ? "Active: Customers can see and book your services / चालू: ग्राहक आपकी सेवाएं देख सकते हैं" : "Inactive: Customers cannot see or book your services / बंद: ग्राहक आपकी सेवाएं नहीं देख सकते"}
               aria-label="Toggle availability"
             >
               <span
@@ -130,6 +130,24 @@ export default function SellerDashboard() {
           )}
         </div>
       </div>
+
+      {/* Offline Status Alert Banner */}
+      {!user?.is_available && (
+        <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-5 flex items-start gap-3.5 animate-pulse">
+          <span className="text-2xl mt-0.5 select-none">⚠️</span>
+          <div>
+            <h3 className="text-base font-bold text-rose-300">
+              You are currently Offline / आप अभी ऑफ़लाइन हैं
+            </h3>
+            <p className="text-sm text-rose-200/90 mt-1 font-medium leading-relaxed">
+              Your services are hidden from customers. Switch your status to <strong className="text-white bg-rose-600/50 px-1.5 py-0.5 rounded font-bold">Active / चालू</strong> in the top header or sidebar to start showing up in searches and receiving new bookings.
+            </p>
+            <p className="text-xs text-rose-300/80 mt-1 font-medium">
+              आपकी सेवाएं ग्राहकों को दिखाई नहीं दे रही हैं। ग्राहकों की खोज में दिखने और नई बुकिंग प्राप्त करने के लिए ऊपर या साइडबार में अपनी स्थिति को <strong className="text-white bg-rose-600/50 px-1.5 py-0.5 rounded font-bold">Active / चालू</strong> पर बदलें।
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Premium Boost Banner */}
       {!hasPremium && (

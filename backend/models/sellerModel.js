@@ -10,8 +10,8 @@ const SellerModel = {
     experience_yrs,
     phone,
     profile_completed = 1,
-  }) => {
-    const [result] = await pool.query(
+  }, conn = pool) => {
+    const [result] = await conn.query(
       `INSERT INTO sellers (user_id, business_name, category_id, bio, experience_yrs, phone, profile_completed)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [

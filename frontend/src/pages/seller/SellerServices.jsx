@@ -414,6 +414,8 @@ export default function SellerServices() {
                   const uniq = Array.from(out).sort();
                   setBlackoutDates(uniq);
                 }}
+                minDate={new Date()}
+                maxDate={new Date(Date.now() + 15 * 86400000)}
                 className="qs-date-picker"
                 calendarClassName="qs-date-picker__calendar"
                 containerClassName="qs-date-picker__container"
@@ -556,6 +558,8 @@ export default function SellerServices() {
                   const uniq = Array.from(out).sort();
                   setBlackoutDates(uniq);
                 }}
+                minDate={new Date()}
+                maxDate={new Date(Date.now() + 15 * 86400000)}
                 className="qs-date-picker"
                 calendarClassName="qs-date-picker__calendar"
                 containerClassName="qs-date-picker__container"

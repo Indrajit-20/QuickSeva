@@ -18,10 +18,20 @@ const TIME_SLOTS = [
   "6:00 PM",
 ];
 
-const tomorrow = () =>
-  new Date(Date.now() + 86400000).toISOString().split("T")[0];
-const thirtyDaysFromNow = () =>
-  new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0];
+const today = () => {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const date = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${date}`;
+};
+const fifteenDaysFromNow = () => {
+  const d = new Date(Date.now() + 15 * 86400000);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const date = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${date}`;
+};
 
 const formatDate = (value) =>
   new Intl.DateTimeFormat("en-IN", {
@@ -376,8 +386,8 @@ export default function BookingPage() {
                   const val = dateObj ? dateObj.format("YYYY-MM-DD") : "";
                   updateField("date", val);
                 }}
-                minDate={new Date(tomorrow())}
-                maxDate={new Date(thirtyDaysFromNow())}
+                minDate={new Date(today())}
+                maxDate={new Date(fifteenDaysFromNow())}
                 format="YYYY-MM-DD"
                 portal
                 inputClass="form-input dark focus:ring-indigo-500/40 cursor-pointer w-full text-white"

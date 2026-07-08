@@ -145,6 +145,10 @@ async function run() {
     await pool.query("TRUNCATE TABLE services");
     await pool.query("TRUNCATE TABLE sellers");
     await pool.query("TRUNCATE TABLE wallets");
+    await pool.query("TRUNCATE TABLE wallet_transactions");
+    await pool.query("TRUNCATE TABLE orders");
+    await pool.query("TRUNCATE TABLE notifications");
+    await pool.query("TRUNCATE TABLE otp_verifications");
     await pool.query("TRUNCATE TABLE users");
     await pool.query("TRUNCATE TABLE sub_services");
     await pool.query("TRUNCATE TABLE seller_categories");

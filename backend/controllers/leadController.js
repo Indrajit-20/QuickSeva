@@ -4,7 +4,7 @@ const { successRes, errorRes } = require("../utils/helpers");
 const PRO_PLAN_ID = "pro";
 const PRO_PLAN_PRICE = 355;
 
-const ensureLeadTables = async (conn = pool) => {
+exports.ensureLeadTables = async (conn = pool) => {
   await conn.query(`
     CREATE TABLE IF NOT EXISTS fallback_leads (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -63,7 +63,6 @@ exports.submitLead = async (req, res) => {
     }
 
     await conn.beginTransaction();
-    await ensureLeadTables(conn);
 
     const [leadResult] = await conn.query(
       `INSERT INTO fallback_leads
@@ -158,7 +157,6 @@ exports.submitLead = async (req, res) => {
 
 exports.getSellerLeads = async (req, res) => {
   try {
-    await ensureLeadTables();
 
     let sellerId = req.query.sellerId ? Number(req.query.sellerId) : null;
     if (!sellerId && req.user?.id) {
@@ -214,7 +212,6 @@ exports.getSellerLeads = async (req, res) => {
 
 exports.getUnreadLeadsCount = async (req, res) => {
   try {
-    await ensureLeadTables();
 
     let sellerId = null;
     if (req.user?.id) {

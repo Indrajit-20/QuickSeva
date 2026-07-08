@@ -22,7 +22,7 @@ exports.chargeLead = async (req, res) => {
     return successRes(res, { charged }, "Lead charge processed");
   } catch (err) {
     if (String(err?.message || "").includes("Insufficient wallet balance")) {
-      return errorRes(res, "Insufficient wallet balance", 400);
+      return errorRes(res, "This service provider is temporarily unable to receive new leads.", 400);
     }
     return errorRes(res, "Failed to charge lead");
   }

@@ -2284,11 +2284,110 @@ input[type="range"] {
 }
 
 @keyframes qs-fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes qs-slide-up {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
-}
+  from {
+    transform: translateY(100%);
+  }
+
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* QuickSeva Animation Helper Classes */
+.animate-fade-in {
+  animation: qs-fade-in 0.2s ease-out forwards;
+}
+
+.animate-slide-in {
+  animation: qs-slide-in-left 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-fade-in-down {
+  animation: qs-fade-in-down 0.25s ease-out forwards;
+}
+
+@keyframes qs-slide-in-left {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes qs-fade-in-down {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* QuickSeva Responsive Grid Map Layout */
+.qs-main-grid-layout {
+  display: grid;
+  grid-template-columns: 100%;
+  grid-template-areas:
+    "search"
+    "header"
+    "map"
+    "list";
+  gap: 1.25rem;
+}
+
+.qs-main-grid-layout.map-hidden {
+  grid-template-areas:
+    "search"
+    "header"
+    "list";
+}
+
+.qs-grid-area-search {
+  grid-area: search;
+}
+
+.qs-grid-area-header {
+  grid-area: header;
+}
+
+.qs-grid-area-map {
+  grid-area: map;
+}
+
+.qs-grid-area-list {
+  grid-area: list;
+}
+
+@media (min-width: 1024px) {
+  .qs-main-grid-layout {
+    grid-template-columns: 58% 42%;
+    grid-template-areas:
+      "search search"
+      "header header"
+      "map    list  ";
+    gap: 1.5rem;
+  }
+
+  .qs-main-grid-layout.map-hidden {
+    grid-template-columns: 100%;
+    grid-template-areas:
+      "search"
+      "header"
+      "list";
+  }
+}

@@ -3,7 +3,7 @@ const { normalizeIndianMobile } = require("../utils/phoneUtils");
 
 const UserModel = {
   // Create a new user
-  create: async ({ name, email, phone, hashedPassword, role = "buyer" }) => {
+  create: async ({ name, email, phone, hashedPassword, role = "buyer" }, conn = pool) => {
     const normalizedPhone = normalizeIndianMobile(phone);
     let passHash = hashedPassword;
     if (!passHash) {
@@ -12,7 +12,7 @@ const UserModel = {
       const randomPassword = crypto.randomBytes(16).toString("hex");
       passHash = await bcrypt.hash(randomPassword, 12);
     }
-    const [result] = await pool.query(
+    const [result] = await conn.query(
       `INSERT INTO users (name, email, phone, password, role) VALUES (?, ?, ?, ?, ?)`,
       [name, email || null, normalizedPhone, passHash, role],
     );
@@ -22,7 +22,7 @@ const UserModel = {
   // Find by ID
   findById: async (id) => {
     const [rows] = await pool.query(
-      `SELECT id, name, email, phone, role, profile_pic, address, city, state, pincode, lat, lng, is_verified, is_active, created_at
+      `SELECT id, name, email, phone, role, profile_pic, address, city, state, pincode, lat, lng, gender, dob, is_verified, is_active, created_at
        FROM users WHERE id = ?`,
       [id],
     );
