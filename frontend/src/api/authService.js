@@ -40,8 +40,26 @@ export const register = async ({
 // ========================================
 // LOGIN
 // POST /api/auth/login
-// Payload: { phone, password }
+// Payload: { phone, password, captchaAnswer, captchaToken }
 // ========================================
+export const login = async ({ phone, password, captchaAnswer, captchaToken }) => {
+  const response = await apiClient.post("/auth/login", {
+    phone,
+    password,
+    captchaAnswer,
+    captchaToken,
+  });
+  return unwrapSuccessData(response.data);
+};
+
+// ========================================
+// GET CAPTCHA
+// GET /api/auth/captcha
+// ========================================
+export const getCaptcha = async () => {
+  const response = await apiClient.get("/auth/captcha");
+  return unwrapSuccessData(response.data);
+};
 
 // ========================================
 // GET CURRENT USER

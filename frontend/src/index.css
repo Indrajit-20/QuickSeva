@@ -2391,3 +2391,14 @@ input[type="range"] {
       "list";
   }
 }
+
+/* QuickSeva Leaflet Mobile GPU Acceleration optimizations */
+.leaflet-container {
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+}
+
+.leaflet-pane {
+  will-change: transform;
+}

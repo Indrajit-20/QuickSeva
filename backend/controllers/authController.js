@@ -1,4 +1,5 @@
 const bcrypt = require("bcryptjs");
+const crypto = require("crypto");
 const UserModel = require("../models/userModel");
 const WalletModel = require("../models/walletModel");
 const SellerModel = require("../models/sellerModel");
@@ -100,6 +101,51 @@ const verifyWith2Factor = async ({ sessionId, otp }) => {
   return { verified: true, raw: data };
 };
 
+const verifyCaptcha = (answer, token) => {
+  try {
+    if (!answer || !token) return false;
+    const decoded = Buffer.from(token, "base64").toString("utf-8");
+    const [expiryStr, signature] = decoded.split("|");
+    const expiry = parseInt(expiryStr, 10);
+
+    if (Date.now() > expiry) return false;
+
+    const hmacInput = `${String(answer).trim()}|${expiry}`;
+    const expectedSignature = crypto
+      .createHmac("sha256", process.env.JWT_SECRET || "fallback_secret")
+      .update(hmacInput)
+      .digest("hex");
+
+    return signature === expectedSignature;
+  } catch (err) {
+    console.error("verifyCaptcha error:", err);
+    return false;
+  }
+};
+
+exports.getCaptcha = async (req, res) => {
+  try {
+    const num1 = Math.floor(Math.random() * 15) + 1;
+    const num2 = Math.floor(Math.random() * 15) + 1;
+    const question = `${num1} + ${num2} = ?`;
+    const answer = String(num1 + num2);
+
+    const expiry = Date.now() + 2 * 60 * 1000;
+    const hmacInput = `${answer}|${expiry}`;
+    const signature = crypto
+      .createHmac("sha256", process.env.JWT_SECRET || "fallback_secret")
+      .update(hmacInput)
+      .digest("hex");
+
+    const captchaToken = Buffer.from(`${expiry}|${signature}`).toString("base64");
+
+    return successRes(res, { question, captchaToken }, "Captcha generated successfully");
+  } catch (err) {
+    console.error("Get Captcha error:", err);
+    return errorRes(res, "Failed to generate Captcha");
+  }
+};
+
 // ── Register ────────────────────────────────────────────────────────────────
 exports.register = async (req, res) => {
   try {
@@ -144,11 +190,22 @@ exports.login = async (req, res) => {
   const { generateToken } = require("../utils/jwtUtils");
 
   try {
-    const { phone, password } = req.body;
+    const { phone, password, captchaAnswer, captchaToken } = req.body;
+
+    if (!phone || !password) {
+      return errorRes(res, "Phone and password are required", 400);
+    }
+
+    if (!verifyCaptcha(captchaAnswer, captchaToken)) {
+      return errorRes(res, "Invalid or expired captcha", 400);
+    }
 
     const user = await UserModel.findByPhone(phone);
-    if (!user) return errorRes(res, "Invalid phone ", 401);
+    if (!user) return errorRes(res, "Invalid phone number or password", 401);
     if (!user.is_active) return errorRes(res, "Account is deactivated", 401);
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return errorRes(res, "Invalid phone number or password", 401);
 
     const token = generateToken({ id: user.id, role: user.role });
 
@@ -371,9 +428,10 @@ exports.verifyOTP = async (req, res) => {
       if (existing)
         return errorRes(res, "Phone number already registered", 400);
 
-      const { name, email, role = "buyer" } = req.body || {};
+      const { name, email, password, role = "buyer" } = req.body || {};
 
       if (!name) return errorRes(res, "name is required", 400);
+      if (!password) return errorRes(res, "password is required", 400);
 
       // Email duplication check
       if (email) {
@@ -383,6 +441,8 @@ exports.verifyOTP = async (req, res) => {
         }
       }
 
+      const hashedPassword = await bcrypt.hash(password, 12);
+
       const conn = await pool.getConnection();
       try {
         await conn.beginTransaction();
@@ -391,6 +451,7 @@ exports.verifyOTP = async (req, res) => {
           name,
           phone,
           email: email || null,
+          hashedPassword,
           role,
         }, conn);
 
@@ -550,12 +611,24 @@ exports.changePassword = async (req, res) => {
 // ── Reset Password (after OTP) ───────────────────────────────────────────────
 exports.resetPassword = async (req, res) => {
   try {
-    const { identifier, new_password } = req.body;
+    const { identifier, otp, sessionId, new_password } = req.body;
 
-    const user = identifier.includes("@")
-      ? await UserModel.findByEmail(identifier)
-      : await UserModel.findByPhone(identifier);
+    if (!identifier || !otp || !sessionId || !new_password) {
+      return errorRes(res, "All fields are required", 400);
+    }
 
+    const phone = normalizeIndianMobile(identifier);
+
+    let verified = false;
+    if (process.env.NODE_ENV === "development" && otp === "123456") {
+      verified = true;
+    } else {
+      const result = await verifyWith2Factor({ sessionId, otp });
+      verified = result.verified;
+    }
+    if (!verified) return errorRes(res, "OTP verification failed", 400);
+
+    const user = await UserModel.findByPhone(phone);
     if (!user) return errorRes(res, "User not found", 404);
 
     const hashed = await bcrypt.hash(new_password, 12);
@@ -563,6 +636,7 @@ exports.resetPassword = async (req, res) => {
 
     return successRes(res, null, "Password reset successful");
   } catch (err) {
+    console.error("Reset password error:", err);
     return errorRes(res, "Password reset failed");
   }
 };
@@ -611,3 +685,5 @@ exports.adminLogin = async (req, res) => {
     return errorRes(res, "Admin login failed");
   }
 };
+
+exports.verifyWith2Factor = verifyWith2Factor;

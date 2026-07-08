@@ -30,6 +30,7 @@ import { WalletProvider } from "./context/WalletContext";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
 import OtpVerification from "./pages/OtpVerification";
 import SellerRegister from "./pages/SellerRegister";
 import BecomeSeller from "./pages/BecomeSeller";
@@ -119,6 +120,7 @@ function AppRoutes() {
         <Route element={<UserRoute guestOnly={true} />}>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/seller-register" element={<SellerRegister />} />
           <Route path="/verify-otp" element={<OtpVerification />} />
         </Route>

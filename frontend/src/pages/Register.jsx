@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../config/api";
 import { scrollToFirstError } from "../utils/scrollUtils";
+import { useAuth } from "../context/AuthContext";
 
 
 // ─── Shared Input Component ───────────────────────────────────────────────────
@@ -100,6 +101,7 @@ const StepIndicator = ({ current, labels }) => (
 // ─── Register Page ─────────────────────────────────────────────────────────────
 const Register = () => {
   const navigate = useNavigate();
+  const { authenticateSession } = useAuth();
 
   // ── UI State ───────────────────────────────────────────────────────────────
   const [step, setStep]               = useState(1); // 1 = details, 2 = OTP
@@ -113,6 +115,7 @@ const Register = () => {
     lastName:     "",
     email:        "",
     mobileNumber: "",
+    password:     "",
     agreeToTerms: false,
   });
   const [errors,  setErrors]  = useState({});
@@ -158,6 +161,8 @@ const Register = () => {
       if (v.replace(/\D/g, "").length !== 10) return "Must be exactly 10 digits";
       return null;
     },
+    password: (v) =>
+      !v ? "Password is required" : v.length < 6 ? "Must be at least 6 characters" : null,
     agreeToTerms: (v) => (!v ? "You must accept the Terms & Conditions" : null),
   };
 
@@ -297,6 +302,7 @@ const Register = () => {
           type:       "register",
           name:       `${formData.firstName.trim()} ${formData.lastName.trim()}`,
           email:      formData.email,
+          password:   formData.password,
           role:       "buyer",
         }),
       });
@@ -304,8 +310,13 @@ const Register = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "OTP verification failed");
 
-      setSuccess("Account created successfully! Redirecting to login…");
-      setTimeout(() => navigate("/login"), 1800);
+      setSuccess("Account created successfully! Logging you in...");
+      if (data?.data?.token && data?.data?.user) {
+        authenticateSession(data.data.token, data.data.user);
+        setTimeout(() => navigate("/"), 1800);
+      } else {
+        setTimeout(() => navigate("/login"), 1800);
+      }
     } catch (err) {
       setServerError(err.message || "Something went wrong. Please try again.");
     } finally {
@@ -413,6 +424,20 @@ const Register = () => {
               value={formData.mobileNumber}
               error={errors.mobileNumber}
               isTouched={touched.mobileNumber}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              disabled={isLoading}
+            />
+
+            {/* Password */}
+            <InputField
+              label="Password"
+              name="password"
+              type="password"
+              placeholder="••••••••"
+              value={formData.password}
+              error={errors.password}
+              isTouched={touched.password}
               onChange={handleChange}
               onBlur={handleBlur}
               disabled={isLoading}

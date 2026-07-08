@@ -1,18 +1,21 @@
-import { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import LocationPicker from "../components/LocationPicker";
 import apiClient from "../api/axiosConfig";
 import { scrollToFirstError } from "../utils/scrollUtils";
+import { API_BASE_URL } from "../config/api";
 
 const SellerRegister = () => {
   const navigate = useNavigate();
   const formRef = useRef(null);
 
+  const [step, setStep] = useState(1); // 1 = Details, 2 = OTP Verification
   const [formData, setFormData] = useState({
     businessName: "",
     ownerName: "",
     email: "",
     mobileNumber: "",
+    password: "",
     location: { lat: null, lng: null, address: "", pincode: "" },
     categoryIds: [],
     sellerType: "individual",
@@ -22,10 +25,29 @@ const SellerRegister = () => {
   const [touched, setTouched] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
-
   const [apiError, setApiError] = useState("");
 
+  // OTP State
+  const [otp, setOtp] = useState("");
+  const [sessionId, setSessionId] = useState("");
+  const [resendCountdown, setResendCountdown] = useState(0);
+  const resendTimerRef = useRef(null);
 
+  useEffect(() => () => clearInterval(resendTimerRef.current), []);
+
+  const startResendTimer = () => {
+    clearInterval(resendTimerRef.current);
+    setResendCountdown(60);
+    resendTimerRef.current = setInterval(() => {
+      setResendCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(resendTimerRef.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
 
   const validateEmail = (email) => {
     if (!email) return null;
@@ -44,10 +66,10 @@ const SellerRegister = () => {
   const validateForm = (shouldScroll = false, markAllTouched = false) => {
     const nextErrors = {};
 
-    if (!formData.businessName || formData.businessName.length < 2)
+    if (!formData.businessName || formData.businessName.trim().length < 2)
       nextErrors.businessName = "Business name is required";
 
-    if (!formData.ownerName || formData.ownerName.length < 2)
+    if (!formData.ownerName || formData.ownerName.trim().length < 2)
       nextErrors.ownerName = "Owner name is required";
 
     const emailError = validateEmail(formData.email);
@@ -56,6 +78,10 @@ const SellerRegister = () => {
     const mobileError = validateMobile(formData.mobileNumber);
     if (mobileError) nextErrors.mobileNumber = mobileError;
 
+    if (!formData.password || formData.password.length < 6) {
+      nextErrors.password = "Password must be at least 6 characters";
+    }
+
     if (
       !formData.location ||
       formData.location.lat === null ||
@@ -63,7 +89,7 @@ const SellerRegister = () => {
       !formData.location.address ||
       formData.location.address.trim().length < 3
     ) {
-      nextErrors.location = "Please search/detect your service location and enter a valid address";
+      nextErrors.location = "Please select a valid service location";
     }
 
     if (!formData.location?.pincode) {
@@ -83,15 +109,14 @@ const SellerRegister = () => {
         ownerName: true,
         email: true,
         mobileNumber: true,
+        password: true,
         location: true,
         pincode: true,
-        // categoryIds: true,
       });
     }
 
     const isValid = Object.keys(nextErrors).length === 0;
     if (!isValid && shouldScroll) {
-      console.warn("SellerRegister validation failed:", nextErrors);
       scrollToFirstError(nextErrors);
     }
     return isValid;
@@ -99,14 +124,11 @@ const SellerRegister = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-
     const sanitizedValue =
       name === "mobileNumber" ? value.replace(/\D/g, "").slice(0, 10) : value;
 
     setFormData((prev) => ({ ...prev, [name]: sanitizedValue }));
-
     if (touched[name]) {
-      // lightweight revalidation on blur/after touched
       validateForm(false, false);
     }
   };
@@ -117,59 +139,116 @@ const SellerRegister = () => {
     validateForm(false, false);
   };
 
-  const handleSubmit = async (e) => {
+  // Step 1 Submission: Requests OTP
+  const handleSendOtp = async (e) => {
     e.preventDefault();
-    // password is intentionally omitted for seller registration
-
-    setSuccessMessage("");
     setApiError("");
+    setSuccessMessage("");
 
     if (!validateForm(true, true)) {
       if (!formData.location || formData.location.lat === null || formData.location.lng === null) {
-        alert("📍 Location Required: Please allow location access and click 'Use My Current Location', or select a location manually to proceed.");
+        alert("📍 Location Required: Please select a location to proceed.");
       }
       return;
     }
 
-    // location already validated in validateForm (lat/lng not null)
-    const { lat, lng, address, pincode } = formData.location || {};
-
     setIsLoading(true);
     try {
-      const payload = {
-        ownerName: formData.ownerName,
-        businessName: formData.businessName,
-        email: formData.email,
-        phone: formData.mobileNumber,
-        address: address || "",
-        lat,
-        lng,
-        pincode,
-        sellerType: formData.sellerType,
-        // categoryIds: formData.categoryIds,
-      };
+      // First, check duplicate mobile or email via API endpoint or let auth do it
+      const res = await fetch(`${API_BASE_URL}/auth/send-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          identifier: formData.mobileNumber,
+          type: "seller-register",
+        }),
+      });
 
-      const resp = await apiClient.post("/sellers/register", payload);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to send OTP");
 
-      if (resp?.data?.success) {
-        setSuccessMessage("Registration successful. Please login.");
-        navigate("/login", { replace: true });
-      } else {
-        setApiError(resp?.data?.message || "Registration failed");
-        formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
+      setSessionId(data.data?.sessionId ?? "");
+      startResendTimer();
+      setStep(2);
     } catch (err) {
-      const msg =
-        err?.response?.data?.message || err?.message || "Registration failed";
-      setApiError(msg);
+      setApiError(err.message || "Onboarding initialization failed.");
       formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleResendOtp = async () => {
+    if (resendCountdown > 0 || isLoading) return;
+    setApiError("");
+    setIsLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/send-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          identifier: formData.mobileNumber,
+          type: "seller-register",
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to resend OTP");
+
+      setSessionId(data.data?.sessionId ?? "");
+      setOtp("");
+      startResendTimer();
+    } catch (err) {
+      setApiError(err.message || "Failed to resend OTP.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Step 2 Submission: Verifies OTP & completes database insertion
+  const handleVerifyOtpAndRegister = async (e) => {
+    e.preventDefault();
+    setApiError("");
+
+    if (!otp || !/^\d{6}$/.test(otp)) {
+      setApiError("Please enter the 6-digit OTP code");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { lat, lng, address, pincode } = formData.location || {};
+      const payload = {
+        ownerName: formData.ownerName,
+        businessName: formData.businessName,
+        email: formData.email,
+        phone: formData.mobileNumber,
+        password: formData.password,
+        address: address || "",
+        lat,
+        lng,
+        pincode,
+        sellerType: formData.sellerType,
+        otp,
+        sessionId,
+      };
+
+      const resp = await apiClient.post("/sellers/register", payload);
+
+      if (resp?.data?.success) {
+        setSuccessMessage("Partner registration successful! Redirecting to login...");
+        setTimeout(() => navigate("/login", { replace: true }), 1800);
+      } else {
+        setApiError(resp?.data?.message || "Registration failed");
+      }
+    } catch (err) {
+      setApiError(err?.response?.data?.message || err?.message || "Registration failed");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-900 via-indigo-950 to-black flex items-center justify-center p-4">
+    <div className="min-h-screen bg-linear-to-br from-slate-900 via-indigo-950 to-black flex items-center justify-center p-4 py-12">
       <div
         ref={formRef}
         style={{ scrollMarginTop: "90px" }}
@@ -179,7 +258,9 @@ const SellerRegister = () => {
           <h1 className="text-3xl font-bold text-white mb-2">
             Become a Partner
           </h1>
-          <p className="text-indigo-200 text-sm">Seller registration</p>
+          <p className="text-indigo-200 text-sm">
+            {step === 1 ? "Seller registration details" : `Verify OTP sent to +91 ${formData.mobileNumber}`}
+          </p>
         </div>
 
         {successMessage && (
@@ -200,218 +281,267 @@ const SellerRegister = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-indigo-200 mb-2">
-              Business Name <span className="text-red-400">*</span>
-            </label>
-            <input
-              name="businessName"
-              value={formData.businessName}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              placeholder="QuickSeva Partner Pvt. Ltd"
-              className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${errors.businessName && touched.businessName
-                  ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
-                  : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
+        {/* STEP 1: Details & Credentials Form */}
+        {step === 1 && (
+          <form onSubmit={handleSendOtp} className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-indigo-200 mb-2">
+                Business Name <span className="text-red-400">*</span>
+              </label>
+              <input
+                name="businessName"
+                value={formData.businessName}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                placeholder="QuickSeva Partner Pvt. Ltd"
+                disabled={isLoading}
+                className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${
+                  errors.businessName && touched.businessName
+                    ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
+                    : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
                 }`}
-            />
-            {errors.businessName && touched.businessName && (
-              <p className="mt-1 text-xs text-red-300">
-                ⚠ {errors.businessName}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-indigo-200 mb-2">
-              Owner Name <span className="text-red-400">*</span>
-            </label>
-            <input
-              name="ownerName"
-              value={formData.ownerName}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              placeholder="John Doe"
-              className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${errors.ownerName && touched.ownerName
-                  ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
-                  : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
-                }`}
-            />
-            {errors.ownerName && touched.ownerName && (
-              <p className="mt-1 text-xs text-red-300">⚠ {errors.ownerName}</p>
-            )}
-          </div>
-
-          {/* Partner Type Radio Options */}
-          <div className="space-y-3">
-            <label className="block text-xs font-semibold text-indigo-200 mb-2">
-              Partner Type / पार्टनर का प्रकार <span className="text-red-400">*</span>
-            </label>
-            <div className="space-y-2.5">
-              {[
-                { value: "individual", label: "Individual / व्यक्तिगत", desc: "I work as a sole professional / मैं अकेले काम करता हूँ" },
-                { value: "agency", label: "Contractor / Agency / ठेकेदार या एजेंसी", desc: "I have a team of workers under me / मेरे पास श्रमिकों की एक टीम है" },
-                { value: "business", label: "Business / व्यवसाय या दुकान", desc: "I have a business or shop / मेरी एक व्यवसाय या दुकान है" }
-              ].map((opt) => (
-                <label
-                  key={opt.value}
-                  className={`flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-all duration-200 ${
-                    formData.sellerType === opt.value
-                      ? "border-[#0284c7] bg-[#0284c7]/15 shadow-[0_0_12px_rgba(2,132,199,0.25)]"
-                      : "border-indigo-500/20 bg-indigo-950/20 hover:border-[#0284c7]/40"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="sellerType"
-                    value={opt.value}
-                    checked={formData.sellerType === opt.value}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, sellerType: e.target.value }))}
-                    className="mt-1 h-4 w-4 shrink-0 text-indigo-600 border-indigo-500/30 bg-indigo-950/40 focus:ring-indigo-500/50"
-                  />
-                  <div className="min-w-0">
-                    <span className="block text-sm font-bold text-white leading-tight">{opt.label}</span>
-                    <span className="block text-xs text-indigo-300/80 mt-1 leading-normal">{opt.desc}</span>
-                  </div>
-                </label>
-              ))}
+              />
+              {errors.businessName && touched.businessName && (
+                <p className="mt-1 text-xs text-red-300">⚠ {errors.businessName}</p>
+              )}
             </div>
-          </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-indigo-200 mb-2">
-              Email {/*<span className="text-red-400">*</span> */}
-            </label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              placeholder="you@example.com"
-              className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${errors.email && touched.email
-                  ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
-                  : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
+            <div>
+              <label className="block text-xs font-semibold text-indigo-200 mb-2">
+                Owner Name <span className="text-red-400">*</span>
+              </label>
+              <input
+                name="ownerName"
+                value={formData.ownerName}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                placeholder="John Doe"
+                disabled={isLoading}
+                className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${
+                  errors.ownerName && touched.ownerName
+                    ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
+                    : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
                 }`}
-            />
-            {/* {errors.email && touched.email && (
-              <p className="mt-1 text-xs text-red-300">⚠ {errors.email}</p>
-            )}*/}
-          </div>
+              />
+              {errors.ownerName && touched.ownerName && (
+                <p className="mt-1 text-xs text-red-300">⚠ {errors.ownerName}</p>
+              )}
+            </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-indigo-200 mb-2">
-              Mobile Number <span className="text-red-400">*</span>
-            </label>
-            <input
-              type="tel"
-              name="mobileNumber"
-              value={formData.mobileNumber}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              placeholder="98765 43210"
-              maxLength={10}
-              className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${errors.mobileNumber && touched.mobileNumber
-                  ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
-                  : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
-                }`}
-            />
-            {errors.mobileNumber && touched.mobileNumber && (
-              <p className="mt-1 text-xs text-red-300">
-                ⚠ {errors.mobileNumber}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-indigo-200 mb-2">
-              Your Service Location <span className="text-red-400">*</span>
-            </label>
-
-            <LocationPicker
-              hideMap={true}
-              onChange={({ lat, lng, address, pincode }) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  location: { lat, lng, address, pincode },
-                }))
-              }
-            />
-            {errors.location && (
-              <p className="mt-1 text-xs text-red-300">⚠ {errors.location}</p>
-            )}
-            {errors.pincode && (
-              <p className="mt-1 text-xs text-red-300">⚠ {errors.pincode}</p>
-            )}
-          </div>
-          {/* 
-          <div>
-            <label className="block text-xs font-semibold text-indigo-200 mb-2">
-              Service Categories <span className="text-red-400">*</span>
-            </label>
-
-            {categoriesLoading ? (
-              <p className="text-xs text-indigo-300">Loading categories...</p>
-            ) : categories.length === 0 ? (
-              <p className="text-xs text-red-300">
-                ⚠ Could not load categories. Please refresh and try again.
-              </p>
-            ) : (
-              <div className="grid grid-cols-2 gap-2">
-                {categories.map((cat) => {
-                  const checked = formData.categoryIds.includes(cat.id);
-                  return (
-                    <label
-                      key={cat.id}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium border cursor-pointer transition-all duration-200 ${
-                        checked
-                          ? "bg-indigo-600/30 border-indigo-500 text-white"
-                          : "bg-indigo-950/40 border-indigo-500/30 text-indigo-200"
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => handleCategoryToggle(cat.id)}
-                        className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 border-indigo-500/50 bg-indigo-950/40"
-                      />
-                      {cat.icon ? `${cat.icon} ` : ""}
-                      {cat.name}
-                    </label>
-                  );
-                })}
+            {/* Partner Type Options */}
+            <div className="space-y-3">
+              <label className="block text-xs font-semibold text-indigo-200 mb-2">
+                Partner Type <span className="text-red-400">*</span>
+              </label>
+              <div className="space-y-2">
+                {[
+                  { value: "individual", label: "Individual / व्यक्तिगत", desc: "I work alone" },
+                  { value: "agency", label: "Agency / ठेकेदार", desc: "I manage a team of workers" },
+                  { value: "business", label: "Shop / Business / दुकान", desc: "I have a physical store" }
+                ].map((opt) => (
+                  <label
+                    key={opt.value}
+                    className={`flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-all duration-200 ${
+                      formData.sellerType === opt.value
+                        ? "border-[#0284c7] bg-[#0284c7]/15 shadow-[0_0_12px_rgba(2,132,199,0.25)]"
+                        : "border-indigo-500/20 bg-indigo-950/20"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="sellerType"
+                      value={opt.value}
+                      checked={formData.sellerType === opt.value}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, sellerType: e.target.value }))}
+                      disabled={isLoading}
+                      className="mt-1 h-4 w-4 text-indigo-600 border-indigo-500/30 bg-indigo-950/40 focus:ring-indigo-500/50"
+                    />
+                    <div className="min-w-0">
+                      <span className="block text-sm font-bold text-white leading-tight">{opt.label}</span>
+                      <span className="block text-xs text-indigo-300/80 mt-1">{opt.desc}</span>
+                    </div>
+                  </label>
+                ))}
               </div>
-            )}
+            </div>
 
-            {errors.categoryIds && touched.categoryIds && (
-              <p className="mt-1 text-xs text-red-300">
-                ⚠ {errors.categoryIds}
+            <div>
+              <label className="block text-xs font-semibold text-indigo-200 mb-2">
+                Email Address
+              </label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                placeholder="you@example.com"
+                disabled={isLoading}
+                className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${
+                  errors.email && touched.email
+                    ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
+                    : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
+                }`}
+              />
+              {errors.email && touched.email && (
+                <p className="mt-1 text-xs text-red-300">⚠ {errors.email}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-indigo-200 mb-2">
+                Mobile Number <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="tel"
+                name="mobileNumber"
+                value={formData.mobileNumber}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                placeholder="98765 43210"
+                maxLength={10}
+                disabled={isLoading}
+                className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${
+                  errors.mobileNumber && touched.mobileNumber
+                    ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
+                    : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
+                }`}
+              />
+              {errors.mobileNumber && touched.mobileNumber && (
+                <p className="mt-1 text-xs text-red-300">⚠ {errors.mobileNumber}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-indigo-200 mb-2">
+                Password <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                placeholder="••••••••"
+                disabled={isLoading}
+                className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${
+                  errors.password && touched.password
+                    ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
+                    : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
+                }`}
+              />
+              {errors.password && touched.password && (
+                <p className="mt-1 text-xs text-red-300">⚠ {errors.password}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-indigo-200 mb-2">
+                Your Service Location <span className="text-red-400">*</span>
+              </label>
+              <LocationPicker
+                hideMap={true}
+                onChange={({ lat, lng, address, pincode }) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    location: { lat, lng, address, pincode },
+                  }))
+                }
+              />
+              {errors.location && (
+                <p className="mt-1 text-xs text-red-300">⚠ {errors.location}</p>
+              )}
+              {errors.pincode && (
+                <p className="mt-1 text-xs text-red-300">⚠ {errors.pincode}</p>
+              )}
+            </div>
+
+            <div className="flex items-start text-sm pt-2">
+              <input
+                type="checkbox"
+                id="sellerTerms"
+                required
+                className="w-4 h-4 text-indigo-600 rounded mt-0.5 border-indigo-500/50 bg-indigo-950/40"
+              />
+              <label htmlFor="sellerTerms" className="ml-2 text-indigo-200 cursor-pointer select-none">
+                I agree to be contacted about partner onboarding
+              </label>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full mt-2 px-4 py-2.5 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-700 hover:scale-[1.01] hover:shadow-lg active:scale-[0.99] transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? "Validating details..." : "Get OTP →"}
+            </button>
+          </form>
+        )}
+
+        {/* STEP 2: SMS Verification Form */}
+        {step === 2 && (
+          <form onSubmit={handleVerifyOtpAndRegister} className="space-y-5">
+            <div className="text-center bg-indigo-950/30 border border-indigo-500/20 rounded-lg p-3">
+              <p className="text-sm text-indigo-200">
+                OTP sent to <span className="font-semibold text-white">{formData.mobileNumber}</span>
               </p>
-            )}
-          </div> */}
+              <button
+                type="button"
+                onClick={() => {
+                  setStep(1);
+                  setOtp("");
+                  setApiError("");
+                }}
+                className="mt-1 text-xs text-red-400 hover:text-red-300 font-medium underline focus:outline-none"
+              >
+                Change Phone / Details
+              </button>
+            </div>
 
-          <div className="flex items-start text-sm">
-            <input
-              type="checkbox"
-              id="sellerTerms"
-              required
-              className="w-4 h-4 text-indigo-600 rounded mt-0.5 focus:ring-indigo-500 border-indigo-500/50 bg-indigo-950/40"
-            />
-            <label htmlFor="sellerTerms" className="ml-2 text-indigo-200">
-              I agree to be contacted about partner onboarding
-            </label>
-          </div>
+            <div>
+              <label className="block text-xs font-semibold text-indigo-200 mb-2">
+                Enter OTP <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                placeholder="123456"
+                maxLength={6}
+                disabled={isLoading}
+                className="w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border border-indigo-500/30 transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
+              />
+            </div>
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full mt-2 px-4 py-2.5 rounded-lg font-semibold text-white bg-indigo-600 force-text-white hover:bg-indigo-700 hover:scale-[1.01] hover:shadow-lg active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-          >
-            {isLoading ? "Submitting..." : "Register as Partner"}
-          </button>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full px-4 py-2.5 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-700 hover:scale-[1.01] hover:shadow-lg active:scale-[0.99] transition-all duration-200 shadow-lg disabled:opacity-50"
+            >
+              {isLoading ? "Verifying & Registering..." : "Verify & Complete Registration"}
+            </button>
 
-          <p className="text-center text-indigo-200 text-sm">
+            <div className="border-t border-indigo-500/20 pt-4 text-center">
+              <p className="text-xs text-indigo-300 mb-2">Didn't receive the OTP?</p>
+              <button
+                type="button"
+                onClick={handleResendOtp}
+                disabled={isLoading || resendCountdown > 0}
+                className={`w-full px-4 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-700 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 shadow-md ${
+                  isLoading || resendCountdown > 0
+                    ? "opacity-50 cursor-not-allowed"
+                    : "opacity-100"
+                }`}
+              >
+                {resendCountdown > 0 ? `Resend OTP in ${resendCountdown}s` : "Resend OTP"}
+              </button>
+            </div>
+          </form>
+        )}
+
+        <div className="my-6 border-t border-indigo-500/30 pt-6 text-center">
+          <p className="text-indigo-200 text-sm">
             Already registered?{" "}
             <Link
               to="/login"
@@ -420,7 +550,7 @@ const SellerRegister = () => {
               Sign in
             </Link>
           </p>
-        </form>
+        </div>
       </div>
     </div>
   );

@@ -36,6 +36,10 @@ import {
   SlidersHorizontal,
   ChevronDown,
   Map,
+  Lock,
+  Unlock,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 
 import {
@@ -368,6 +372,35 @@ function MapEventTracker({ mapRef, onMapReady, fetchSellersInView, onMapAreaChan
   return null;
 }
 
+// Sub-component to dynamically adjust map interaction on mobile devices
+function MapInteractionController({ isMobile, isMapUnlocked }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!map) return;
+    if (isMobile) {
+      if (isMapUnlocked) {
+        map.dragging.enable();
+        map.touchZoom.enable();
+        map.doubleClickZoom.enable();
+        if (map.tap) map.tap.enable();
+      } else {
+        map.dragging.disable();
+        map.touchZoom.disable();
+        map.doubleClickZoom.disable();
+        if (map.tap) map.tap.disable();
+      }
+    } else {
+      map.dragging.enable();
+      map.touchZoom.enable();
+      map.doubleClickZoom.enable();
+      if (map.tap) map.tap.enable();
+    }
+  }, [map, isMobile, isMapUnlocked]);
+
+  return null;
+}
+
 function isSellerPackageActive(seller) {
   if (!seller?.isPremium || !seller?.premiumExpiresAt) return false;
   const expiresAt = new Date(seller.premiumExpiresAt);
@@ -425,6 +458,32 @@ export default function NearbyServices({
   const [geoError, setGeoError] = useState("");
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [showMap, setShowMap] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isMapUnlocked, setIsMapUnlocked] = useState(false);
+  const [isMapFullScreen, setIsMapFullScreen] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      const isMobileSize = window.innerWidth < 1024;
+      const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      setIsMobile(isMobileSize || isMobileUA);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  useEffect(() => {
+    if (isMapFullScreen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isMapFullScreen]);
+
   const [search, setSearch] = useState(initialSearch);
   const [locationQuery, setLocationQuery] = useState("");
   const [showServiceDrop, setShowServiceDrop] = useState(false);
@@ -500,6 +559,16 @@ export default function NearbyServices({
   const [pincodeResults, setPincodeResults] = useState([]);
 
   const [selectedSellerId, setSelectedSellerId] = useState(null);
+
+  useEffect(() => {
+    if (selectedSellerId) {
+      const el = document.getElementById(`seller-card-${selectedSellerId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+    }
+  }, [selectedSellerId]);
+
   const [dropdownStyle, setDropdownStyle] = useState(null);
 
   // Provider listing filters (frontend-only, mock data)
@@ -822,6 +891,10 @@ export default function NearbyServices({
   const [apiError, setApiError] = useState("");
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
 
+  const selectedSeller = useMemo(() => {
+    return sellers.find((s) => (s.id || s.sellerId) === selectedSellerId);
+  }, [sellers, selectedSellerId]);
+
   useEffect(() => {
     try {
       localStorage.removeItem("sellers");
@@ -987,6 +1060,9 @@ export default function NearbyServices({
         })
         .on("popupopen", () => {
           setSelectedSellerId(sId);
+        })
+        .on("popupclose", () => {
+          setSelectedSellerId(null);
         })
         .on("click", (ev) => {
           // Stop map click handler from firing when a marker is clicked
@@ -1419,17 +1495,35 @@ export default function NearbyServices({
   const handleMapToggle = useCallback(() => {
     if (mapToggleLocked) return;
     setMapToggleLocked(true);
-    setShowMap((prev) => !prev);
+    setShowMap((prev) => {
+      const nextVal = !prev;
+      if (!nextVal) {
+        setIsMapUnlocked(false);
+        setIsMapFullScreen(false);
+      }
+      return nextVal;
+    });
     window.setTimeout(() => setMapToggleLocked(false), 300);
   }, [mapToggleLocked]);
+
+  const handleCloseMap = useCallback(() => {
+    if (isMapFullScreen) {
+      setIsMapFullScreen(false);
+      if (isMobile) {
+        setIsMapUnlocked(false);
+      }
+    } else {
+      handleMapToggle();
+    }
+  }, [isMapFullScreen, isMobile, handleMapToggle]);
 
   useEffect(() => {
     if (!showMap || !mapRef.current) return;
     const timer = window.setTimeout(() => {
       mapRef.current?.invalidateSize?.();
-    }, 60);
+    }, 100);
     return () => window.clearTimeout(timer);
-  }, [showMap]);
+  }, [showMap, isMapFullScreen]);
 
   const clearLocationInput = () => {
     suppressNextLocationSearchRef.current = true;
@@ -1455,7 +1549,7 @@ export default function NearbyServices({
 
   // =================== STEP-BY-STEP SEARCH & FINDER PANEL ===================
   return (
-    <div className={`qs-main-grid-layout ${showMap ? "" : "map-hidden"} animate-fade-in`}>
+    <div className={`qs-main-grid-layout ${showMap ? "" : "map-hidden"} ${isMapFullScreen ? "" : "animate-fade-in"}`}>
       {/* QuickSeva - Map Performance Feature: Floating Toast Message */}
       {toastMessage && (
         <div className="fixed top-20 right-4 z-[9999] flex items-center gap-2 rounded-xl bg-indigo-900/90 border border-indigo-500/50 px-4 py-3 text-sm font-semibold text-white shadow-[0_0_20px_rgba(99,102,241,0.5)] backdrop-blur-md">
@@ -1498,7 +1592,7 @@ export default function NearbyServices({
           document.body,
         )}
 
-      <div className="qs-grid-area-search">
+      <div className={`qs-grid-area-search ${isMapFullScreen ? "hidden" : "block"}`}>
         <div className="qs-search-panel-card">
           <div className="relative z-10 flex flex-col gap-5">
             {/* STEP 1: Service search (What service do you need?) */}
@@ -1848,7 +1942,7 @@ export default function NearbyServices({
       </div>
 
       {/* Results Header: Stats and Map Option Toggle */}
-      <div className="qs-grid-area-header">
+      <div className={`qs-grid-area-header ${isMapFullScreen ? "hidden" : "block"}`}>
         <div
           ref={resultsHeaderRef}
           style={{ scrollMarginTop: "90px" }}
@@ -1890,13 +1984,18 @@ export default function NearbyServices({
 
       {/* ============ MAP ============ */}
       <div
-        className={`qs-grid-area-map w-full ${showMap ? "block animate-fade-in" : "hidden"}`}
+        className={`qs-grid-area-map w-full ${showMap ? (isMapFullScreen ? "block" : "block animate-fade-in") : "hidden"}`}
         aria-hidden={!showMap}
       >
         <MapErrorBoundary>
           <div
-            className="qs-map-frame relative isolate overflow-hidden rounded-3xl h-[300px] sm:h-[350px] lg:h-[520px]"
+            className={`qs-map-frame overflow-hidden ${
+              isMapFullScreen
+                ? "fixed inset-0 z-[2000] w-screen h-screen rounded-none"
+                : "relative isolate rounded-3xl h-[300px] sm:h-[350px] lg:h-[520px] w-full"
+            }`}
           >
+
             {/* Top-left: providers count */}
             <div className="pointer-events-none absolute left-3 top-3 z-[600]">
               <div className="qs-map-pill flex items-center gap-2">
@@ -1912,8 +2011,9 @@ export default function NearbyServices({
               </div>
             </div>
 
+
             {/* Top-right: live radius badge */}
-            <div className="pointer-events-none absolute right-3 top-3 z-[600]">
+            <div className={`pointer-events-none absolute top-3 z-[600] ${isMapFullScreen ? "right-52" : "right-3"}`}>
               <div className="qs-map-pill flex items-center gap-2">
                 <Radar className="h-4 w-4 text-emerald-500 animate-pulse shrink-0" />
                 <div className="leading-tight">
@@ -1973,6 +2073,66 @@ export default function NearbyServices({
               </button>
             </div>
 
+            {/* Selected Seller Floating Card Overlay (Map Context) */}
+            {selectedSeller && (
+              <div
+                style={{ zIndex: 1000 }}
+                className="absolute bottom-3 left-3 right-15 md:right-auto md:max-w-[320px] bg-white rounded-2xl border border-slate-200 shadow-2xl p-3.5 animate-fade-in-up"
+              >
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedSellerId(null);
+                    if (mapRef.current) {
+                      mapRef.current.closePopup();
+                    }
+                  }}
+                  className="absolute top-2 right-2 flex h-5.5 w-5.5 items-center justify-center rounded-full bg-slate-100 hover:bg-red-500 hover:text-white text-slate-500 transition-all border border-slate-200/60 cursor-pointer"
+                  title="Clear selection / बंद करें"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+                
+                <div className="flex items-center gap-3 pr-6">
+                  <div className="relative h-9 w-9 flex-shrink-0">
+                    {(selectedSeller.profilePhotoUrl || selectedSeller.profile_pic) ? (
+                      <img
+                        src={getImageUrl(selectedSeller.profilePhotoUrl || selectedSeller.profile_pic)}
+                        alt={selectedSeller.name}
+                        className="h-9 w-9 rounded-full object-cover border border-slate-200"
+                      />
+                    ) : (
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#1565C0] font-bold text-white text-xs">
+                        {selectedSeller.name?.[0]?.toUpperCase() || "?"}
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h4 className="truncate text-xs font-bold text-slate-800">
+                      {selectedSeller.name}
+                    </h4>
+                    <p className="truncate text-[10px] font-semibold text-[#0284c7] mt-0.5">
+                      {selectedSeller.service}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="mt-2.5 flex items-center justify-between text-[11px] border-t border-slate-100 pt-2.5">
+                  <span className="font-bold text-slate-600">
+                    ⭐ {Number(selectedSeller.rating || 0).toFixed(1)} ({selectedSeller.reviews || 0} reviews)
+                  </span>
+                  <a
+                    href={`/seller/${selectedSeller.id || selectedSeller.sellerId}`}
+                    onClick={(e) => handleViewDetailsClick(selectedSeller, e)}
+                    className="bg-[#0284c7] text-white px-3 py-1.5 rounded-lg font-bold text-[10px] hover:bg-[#0284c7]/95 transition-all text-center force-text-white"
+                  >
+                    View Profile →
+                  </a>
+                </div>
+              </div>
+            )}
+
             {/* Loading overlay */}
             {!buyerPos && (
               <div className="absolute inset-0 z-[500] flex flex-col items-center justify-center bg-indigo-950/80 backdrop-blur-sm">
@@ -1996,8 +2156,15 @@ export default function NearbyServices({
               }
               zoom={buyerPos ? 14 : 5}
               style={{ height: "100%", width: "100%" }}
-              scrollWheelZoom
+              scrollWheelZoom={!isMobile}
+              dragging={!isMobile || isMapUnlocked}
+              touchZoom={!isMobile || isMapUnlocked}
+              doubleClickZoom={!isMobile || isMapUnlocked}
             >
+              <MapInteractionController
+                isMobile={isMobile}
+                isMapUnlocked={isMapUnlocked}
+              />
               <MapEventTracker
                 mapRef={mapRef}
                 onMapReady={onMapReady}
@@ -2060,16 +2227,144 @@ export default function NearbyServices({
                 </>
               )}
             </MapContainer>
+
+            {/* Mobile Interaction Overlay */}
+            {!isMapUnlocked && isMobile && (
+              <div
+                onClick={() => setIsMapUnlocked(true)}
+                style={{
+                  backgroundColor: "rgba(15, 23, 42, 0.75)",
+                  backdropFilter: "blur(4px)",
+                  WebkitBackdropFilter: "blur(4px)",
+                  zIndex: 2500
+                }}
+                className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer transition-all"
+              >
+                <div
+                  style={{
+                    backgroundColor: "#1e293b",
+                    border: "1px solid rgba(99, 102, 241, 0.4)",
+                  }}
+                  className="flex flex-col items-center gap-2 rounded-2xl px-6 py-5 text-center shadow-2xl animate-fade-in max-w-[85%]"
+                >
+                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 mb-1">
+                    <Map className="h-5.5 w-5.5 text-white" />
+                  </div>
+                  <h3 style={{ color: "#ffffff" }} className="text-sm font-extrabold tracking-wider uppercase">
+                    Tap to use map
+                  </h3>
+                  <p style={{ color: "#e2e8f0" }} className="text-xs font-semibold">
+                    नक्शे का उपयोग करने के लिए टैप करें
+                  </p>
+                  <p style={{ color: "#94a3b8" }} className="text-[10px] mt-1 max-w-[200px] leading-normal">
+                    Allows dragging map. Scrolls page when locked.<br />
+                    लॉक होने पर पेज स्क्रॉल होगा।
+                  </p>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsMapFullScreen(true);
+                      setIsMapUnlocked(true);
+                    }}
+                    style={{ backgroundColor: "#4f46e5", color: "#ffffff" }}
+                    className="mt-3.5 flex items-center gap-2 px-5 py-2.5 rounded-xl font-extrabold text-xs shadow-lg transition-all active:scale-95 cursor-pointer border border-indigo-400/30"
+                  >
+                    <Maximize2 className="h-3.5 w-3.5 text-white" />
+                    <span>Full Map / पूरा नक्शा</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Mobile Re-lock Button */}
+            {isMapUnlocked && !isMapFullScreen && isMobile && (
+              <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[2500]">
+                <button
+                  type="button"
+                  onClick={() => setIsMapUnlocked(false)}
+                  style={{
+                    backgroundColor: "#1e293b",
+                    border: "1px solid rgba(99, 102, 241, 0.5)",
+                    color: "#ffffff"
+                  }}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-full font-bold text-[9px] uppercase tracking-wider shadow-2xl hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                >
+                  <Lock className="h-3 w-3 text-indigo-400" />
+                  <span style={{ color: "#ffffff" }}>Lock / लॉक</span>
+                </button>
+              </div>
+            )}
+
+            {/* Full Screen Toggle (when map is unlocked on mobile, or on desktop, but not full-screen) */}
+            {!isMapFullScreen && (!isMobile || isMapUnlocked) && (
+              <div className="absolute bottom-3 left-3 z-[2500]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMapFullScreen(true);
+                    if (isMobile) {
+                      setIsMapUnlocked(true);
+                    }
+                  }}
+                  style={{
+                    backgroundColor: "#ffffff",
+                    border: "1px solid rgba(0, 0, 0, 0.15)",
+                    color: "#4f46e5"
+                  }}
+                  className="flex items-center justify-center h-8 w-8 rounded-full shadow-lg hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                  title="Full Screen / पूरा नक्शा"
+                >
+                  <Maximize2 className="h-4 w-4 text-indigo-600" />
+                </button>
+              </div>
+            )}
+
+            {/* Close button is portaled to document.body — see below */}
           </div>
         </MapErrorBoundary>
       </div>
 
+      {/* Full-screen close button — portaled to document.body so it's always on top */}
+      {isMapFullScreen &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            className="fixed top-4 right-4 z-[99999]"
+            style={{ pointerEvents: "auto" }}
+          >
+            <button
+              type="button"
+              onClick={handleCloseMap}
+              style={{
+                backgroundColor: "#ffffff",
+                border: "2px solid #ef4444",
+                boxShadow:
+                  "0 4px 24px rgba(0,0,0,0.3), 0 0 0 4px rgba(239,68,68,0.2)",
+              }}
+              className="flex items-center gap-2.5 pl-3 pr-5 py-2.5 rounded-full hover:scale-[1.03] active:scale-95 transition-all cursor-pointer"
+              title="Close Full Screen / बंद करें"
+            >
+              <span
+                style={{ backgroundColor: "#ef4444" }}
+                className="flex h-7 w-7 items-center justify-center rounded-full shadow-md"
+              >
+                <X className="h-4 w-4 text-white" strokeWidth={3} />
+              </span>
+              <span className="text-sm font-extrabold tracking-wide text-slate-800">
+                Close Map
+              </span>
+            </button>
+          </div>,
+          document.body,
+        )}
+
       {/* ============ PROVIDER LIST ============ */}
-      <div className="qs-grid-area-list w-full">
+      <div className={`qs-grid-area-list w-full ${isMapFullScreen ? "hidden" : "block"}`}>
         <div
           key={`${searchCenter?.lat}-${searchCenter?.lng}-${search}-${nearby.length}`}
           className={`qs-list pb-2 pr-3 ${showMap
-            ? "space-y-4 max-h-[300px] sm:max-h-[350px] overflow-y-auto mt-4 lg:mt-0 lg:block lg:h-[520px] lg:max-h-none lg:space-y-5 lg:overflow-y-auto lg:overflow-x-hidden lg:pb-0 lg:snap-none"
+            ? "space-y-4 mt-4 lg:mt-0 lg:block lg:h-[520px] lg:space-y-5 lg:overflow-y-auto lg:overflow-x-hidden lg:pb-0 lg:snap-none"
             : "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-5 lg:max-h-[520px] lg:overflow-y-auto"
             }`}
         >
@@ -2129,11 +2424,28 @@ export default function NearbyServices({
                 id={`seller-card-${sId}`}
                 onClick={() => handlePremiumSellerClick(seller)}
                 style={{ animationDelay: `${Math.min(idx * 50, 400)}ms` }}
-                className={`qs-card group cursor-pointer w-full lg:w-auto ${isSelected ? "qs-card-active" : ""
+                className={`qs-card group cursor-pointer w-full lg:w-auto relative ${isSelected ? "qs-card-active" : ""
                   }`}
               >
+                {isSelected && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedSellerId(null);
+                      if (mapRef.current) {
+                        mapRef.current.closePopup();
+                      }
+                    }}
+                    style={{ zIndex: 10 }}
+                    className="absolute top-3 right-3 flex h-5.5 w-5.5 items-center justify-center rounded-full bg-slate-100 hover:bg-red-500 hover:text-white text-slate-500 transition-all shadow-md border border-slate-200/60 cursor-pointer hover:scale-105 active:scale-95"
+                    title="Deselect / बंद करें"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
                 {/* Header: avatar + name + distance */}
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 pr-6">
                   <div className="relative h-10 w-10 flex-shrink-0">
                     {(seller.profilePhotoUrl || seller.profile_pic) ? (
                       <img

@@ -71,96 +71,99 @@ export default function NoProvidersLeadForm({
 
   return (
     <div className="qs-lead-form-card">
-      <div className="mb-4">
-        <p className="text-sm font-bold text-white">No direct providers found</p>
-        <p className="mt-1 text-xs text-indigo-200/75">
-          Share your requirement and QuickSeva will notify matching Pro partners instantly.
+      <div className="mb-5 pb-3 border-b border-slate-100">
+        <h4 className="text-base font-bold text-slate-800 flex items-center gap-2">
+          <BriefcaseBusiness className="h-5 w-5 text-indigo-600" />
+          No Direct Partners Found
+        </h4>
+        <p className="mt-1 text-xs text-slate-500 leading-normal">
+          Share your requirement and QuickSeva will notify matching premium partners in your area instantly.
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-3">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="block">
-            <span className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-indigo-200">
-              <User className="h-3.5 w-3.5" />
+      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+        <div className="grid gap-3.5 sm:grid-cols-2">
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1.5 flex items-center gap-1.5">
+              <User className="h-3.5 w-3.5 text-indigo-500" />
               Customer Name
-            </span>
+            </label>
             <input
               value={form.customerName}
               onChange={(e) => update("customerName", e.target.value)}
               required
-              className="w-full rounded-xl border border-indigo-400/20 bg-white/5 px-3 py-2.5 text-sm font-medium text-white placeholder-indigo-300/45 outline-none transition focus:border-indigo-300/60 focus:bg-white/10"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm font-medium text-slate-800 placeholder-slate-400 outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-100"
               placeholder="Your name"
             />
-          </label>
+          </div>
 
-          <label className="block">
-            <span className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-indigo-200">
-              <Phone className="h-3.5 w-3.5" />
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1.5 flex items-center gap-1.5">
+              <Phone className="h-3.5 w-3.5 text-indigo-500" />
               Contact Number
-            </span>
+            </label>
             <input
               value={form.contactNumber}
               onChange={(e) => update("contactNumber", e.target.value)}
               required
               inputMode="tel"
-              className="w-full rounded-xl border border-indigo-400/20 bg-white/5 px-3 py-2.5 text-sm font-medium text-white placeholder-indigo-300/45 outline-none transition focus:border-indigo-300/60 focus:bg-white/10"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm font-medium text-slate-800 placeholder-slate-400 outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-100"
               placeholder="10-digit mobile number"
             />
-          </label>
+          </div>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="block">
-            <span className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-indigo-200">
-              <BriefcaseBusiness className="h-3.5 w-3.5" />
+        <div className="grid gap-3.5 sm:grid-cols-2">
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1.5 flex items-center gap-1.5">
+              <BriefcaseBusiness className="h-3.5 w-3.5 text-indigo-500" />
               Service Category
-            </span>
+            </label>
             <input
               value={targetCategory}
               onChange={(e) => setTargetCategory(e.target.value)}
               readOnly={Boolean(category)}
               required
-              className="w-full rounded-xl border border-indigo-400/20 bg-indigo-500/10 px-3 py-2.5 text-sm font-semibold text-indigo-100 outline-none transition focus:border-indigo-300/60"
+              className="w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2.5 text-sm font-semibold text-slate-600 outline-none cursor-not-allowed"
               placeholder="Enter service category"
             />
-          </label>
+          </div>
 
-          <label className="block">
-            <span className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-indigo-200">
-              <MapPin className="h-3.5 w-3.5" />
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1.5 flex items-center gap-1.5">
+              <MapPin className="h-3.5 w-3.5 text-indigo-500" />
               Target Pincode
-            </span>
+            </label>
             <input
               value={targetPincode}
               onChange={(e) => setTargetPincode(e.target.value.replace(/\D/g, "").slice(0, 6))}
               inputMode="numeric"
               required
-              className="w-full rounded-xl border border-indigo-400/20 bg-indigo-500/10 px-3 py-2.5 text-sm font-semibold text-indigo-100 outline-none transition focus:border-indigo-300/60"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm font-medium text-slate-800 placeholder-slate-400 outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-100"
               placeholder="Enter target pincode"
             />
-          </label>
+          </div>
         </div>
 
-        <label className="block">
-          <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-indigo-200">
+        <div>
+          <label className="block text-xs font-semibold text-slate-600 mb-1.5">
             Requirement Details
-          </span>
+          </label>
           <textarea
             value={form.description}
             onChange={(e) => update("description", e.target.value)}
             rows={4}
-            className="w-full resize-none rounded-xl border border-indigo-400/20 bg-white/5 px-3 py-2.5 text-sm font-medium text-white placeholder-indigo-300/45 outline-none transition focus:border-indigo-300/60 focus:bg-white/10"
-            placeholder="Describe the issue, urgency, timing, or landmark..."
+            className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm font-medium text-slate-800 placeholder-slate-400 outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-100"
+            placeholder="Describe what help you need, timing, landmark, etc..."
           />
-        </label>
+        </div>
 
         {status.message && (
           <div
             className={`rounded-xl border px-3 py-2 text-xs font-semibold ${
               status.type === "success"
-                ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-200"
-                : "border-red-400/30 bg-red-500/10 text-red-200"
+                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                : "border-red-200 bg-red-50 text-red-800"
             }`}
           >
             {status.message}
@@ -170,9 +173,9 @@ export default function NoProvidersLeadForm({
         <button
           type="submit"
           disabled={submitting || !targetCategory.trim() || targetPincode.length !== 6}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-indigo-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 shadow-md cursor-pointer hover:shadow-lg"
         >
-          <Send className="h-4 w-4" />
+          <Send className="h-4 w-4 text-white" />
           {submitting ? "Sending..." : "Notify Premium Partners"}
         </button>
       </form>

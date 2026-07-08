@@ -2,8 +2,8 @@ const { pool } = require("../config/db");
 
 const WalletModel = {
   // Create wallet for new user
-  create: async (user_id) => {
-    const [result] = await pool.query(
+  create: async (user_id, conn = pool) => {
+    const [result] = await conn.query(
       `INSERT INTO wallets (user_id, balance) VALUES (?, 0.00)`,
       [user_id]
     );

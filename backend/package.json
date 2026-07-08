@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "db:setup": "node config/setupDB.js"
+    "db:setup": "node config/setupDB.js",
+    "db:seed": "node scripts/seed_users_sellers.js"
   },
   "dependencies": {
     "axios": "^1.17.0",

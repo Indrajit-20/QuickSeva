@@ -5,6 +5,7 @@ import {
   getMe,
   verifyOtp,
   sendOtp,
+  login,
   getBackendErrorMessage,
 } from "../api/authService";
 
@@ -227,6 +228,47 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const loginWithPassword = async ({ phone, password, captchaAnswer, captchaToken }) => {
+    setIsLoading(true);
+    setAuthError(null);
+
+    try {
+      const result = await login({ phone, password, captchaAnswer, captchaToken });
+
+      const token = result?.data?.token;
+      const userData = result?.data?.user;
+
+      if (!token || !userData) {
+        throw new Error("Invalid response from server.");
+      }
+
+      localStorage.setItem("authToken", token);
+      if (userData?.role) localStorage.setItem("userRole", userData.role);
+
+      setUser(userData);
+      setIsAuthenticated(true);
+      return { user: userData, token };
+    } catch (err) {
+      const message = getBackendErrorMessage(err);
+      setAuthError(mapAuthErrorToUserMessage(message));
+      setIsAuthenticated(false);
+      setUser(null);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const authenticateSession = (token, userData) => {
+    localStorage.setItem("authToken", token);
+    if (userData?.role) localStorage.setItem("userRole", userData.role);
+    setUser(userData);
+    setIsAuthenticated(true);
+    setIsSeller(userData?.role === "seller");
+    setActiveRole(userData?.role || "user");
+    localStorage.setItem("activeRole", userData?.role || "user");
+  };
+
   // New function
   const switchRole = (role) => {
     if (role === "seller" && !isSeller) {
@@ -306,10 +348,12 @@ export const AuthProvider = ({ children }) => {
     // Methods
     sendOtp: sendOtpToPhone,
     loginWithOtp,
+    loginWithPassword,
     logout,
     updateUser,
     switchRole,
     refreshAuth,
+    authenticateSession,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

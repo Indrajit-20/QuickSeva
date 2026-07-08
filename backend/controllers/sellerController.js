@@ -6,6 +6,7 @@ const { pool } = require("../config/db");
 const { successRes, errorRes, paginate } = require("../utils/helpers");
 const bcrypt = require("bcryptjs");
 const { normalizeIndianMobile } = require("../utils/phoneUtils");
+const { verifyWith2Factor } = require("./authController");
 
 // Create seller profile (buyer becomes seller)
 exports.createSellerProfile = async (req, res) => {
@@ -262,6 +263,8 @@ exports.registerSeller = async (req, res) => {
       state,
       pincode,
       sellerType = "individual",
+      otp,
+      sessionId,
     } = req.body || {};
 
     // Validation
@@ -286,17 +289,37 @@ exports.registerSeller = async (req, res) => {
       return errorRes(res, "Valid phone number is required", 400);
     }
 
-    // Password is now optional for seller registration.
-    // If missing, we generate a temporary password that the seller can change later.
+    if (!password) {
+      return errorRes(res, "Password is required", 400);
+    }
+    if (String(password).length < 6) {
+      return errorRes(res, "Password must be at least 6 characters", 400);
+    }
+
+    if (!otp) {
+      return errorRes(res, "OTP is required", 400);
+    }
+    if (!sessionId) {
+      return errorRes(res, "OTP Session ID is required", 400);
+    }
+
+    let verified = false;
+    if (process.env.NODE_ENV === "development" && otp === "123456") {
+      verified = true;
+    } else {
+      try {
+        const result = await verifyWith2Factor({ sessionId, otp });
+        verified = result.verified;
+      } catch (err) {
+        console.error("Seller verifyOTP error:", err);
+        return errorRes(res, err?.message || "OTP verification failed", 400);
+      }
+    }
+    if (!verified) {
+      return errorRes(res, "OTP verification failed", 400);
+    }
+
     let finalPassword = password;
-    if (!finalPassword) {
-      // No password provided from client.
-      // Generate a temporary password; seller can later change it.
-      finalPassword = `Temp#${Date.now()}`;
-    }
-    if (String(finalPassword).length < 6) {
-      finalPassword = `${finalPassword}12345`;
-    }
 
     if (!address || String(address).trim().length < 3) {
       return errorRes(res, "Address is required", 400);

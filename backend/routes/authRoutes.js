@@ -10,6 +10,7 @@ const {
   changePassword,
   resetPassword,
   adminLogin,
+  getCaptcha,
 } = require("../controllers/authController");
 
 const { protect } = require("../middleware/authMiddleware");
@@ -17,6 +18,9 @@ const { protect } = require("../middleware/authMiddleware");
 // ── Public ────────────────────────────────────────────────────────────────────
 // Direct register (used internally / admin seeding — NOT the normal user flow)
 router.post("/register",        register);
+
+// Math Captcha
+router.get("/captcha",          getCaptcha);
 
 // OTP-based authentication — used by both Register.jsx and Login.jsx
 // Register flow : send-otp { type:"register" } → verify-otp { type:"register", name, email }
