@@ -356,7 +356,7 @@ const OtpVerification = () => {
         });
       }, 200);
     } catch (err) {
-      setError("Verification failed. Please try again.");
+      setError(err.message || "Verification failed. Please try again.");
       console.error("OTP verification error:", err);
     } finally {
       setLoading(false);

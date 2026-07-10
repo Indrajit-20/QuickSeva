@@ -48,6 +48,8 @@ async function executeSqlFile(filePath) {
         err.code === 'ER_DUP_KEYNAME' ||                // Index/Constraint already exists
         err.code === 'ER_CANT_DROP_FIELD_OR_KEY' ||     // Key to drop doesn't exist
         err.code === 'ER_DUP_ENTRY' ||                  // Unique key constraint duplicate row
+        err.code === 'ER_FK_DUP_NAME' ||                // Duplicate FK constraint name
+        err.errno === 1826 ||                           // Duplicate FK constraint name (alternate check)
         (err.code === 'ER_CANT_CREATE_TABLE' && err.errno === 1005 && err.sqlMessage && err.sqlMessage.includes('121'))
       ) {
         skippedCount++;

@@ -27,6 +27,15 @@ const toast = {
 const mapAuthErrorToUserMessage = (message) => {
   const normalized = String(message || "").toLowerCase();
 
+  // Check for password mismatch first, so it doesn't get caught by the general "invalid phone" check below
+  if (
+    normalized.includes("invalid phone number or password") ||
+    normalized.includes("invalid password") ||
+    normalized.includes("incorrect password")
+  ) {
+    return "Invalid phone number or password.";
+  }
+
   if (
     normalized.includes("user not found") ||
     normalized.includes("invalid phone") ||
