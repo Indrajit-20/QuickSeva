@@ -36,6 +36,27 @@ export default function SellerOrders() {
   const [otpCode, setOtpCode] = useState("");
   const [verifyingOtp, setVerifyingOtp] = useState(false);
 
+  // Completion PIN verification states (for cash payments)
+  const [completingOrderId, setCompletingOrderId] = useState(null);
+  const [completionPin, setCompletionPin] = useState("");
+  const [verifyingCompletionPin, setVerifyingCompletionPin] = useState(false);
+
+  const handleCompletionPinVerify = async (e) => {
+    e.preventDefault();
+    if (!completingOrderId || !completionPin) return;
+    setVerifyingCompletionPin(true);
+    try {
+      await sellerOrdersApi.complete(completingOrderId, { otp: completionPin });
+      setCompletingOrderId(null);
+      setCompletionPin("");
+      await fetchOrders();
+    } catch (err) {
+      alert(err?.response?.data?.message || "Invalid secure completion PIN");
+    } finally {
+      setVerifyingCompletionPin(false);
+    }
+  };
+
   const handleQuoteSubmit = async (e) => {
     e.preventDefault();
     if (!quotingOrderId) return;
@@ -102,7 +123,17 @@ export default function SellerOrders() {
     try {
       if (action === "accept") await sellerOrdersApi.accept(id);
       else if (action === "start") await sellerOrdersApi.start(id);
-      else if (action === "complete") await sellerOrdersApi.complete(id);
+      else if (action === "complete") {
+        const order = orders.find((o) => o.id === id);
+        if (order && order.payment_method === "cash") {
+          setCompletingOrderId(id);
+          setCompletionPin("");
+          setVerifyingCompletionPin(false);
+          setBusyId(null);
+          return;
+        }
+        await sellerOrdersApi.complete(id);
+      }
       else if (action === "cancel")
         await sellerOrdersApi.cancel(id, { reason: "Cancelled by seller" });
       await fetchOrders();
@@ -363,8 +394,43 @@ export default function SellerOrders() {
                         </div>
                       </form>
                     )}
+
+                    {/* Render Completion PIN verification form for cash orders */}
+                    {completingOrderId === id && (
+                      <form onSubmit={handleCompletionPinVerify} className="mt-4 p-4 rounded-xl border border-amber-500/25 bg-[#0f0e1a] space-y-3 w-full text-left">
+                        <h3 className="text-sm font-bold text-white uppercase tracking-wider text-amber-400">Verify Completion PIN / भुगतान सत्यापन पिन</h3>
+                        <p className="text-[10px] text-slate-400">Ask the customer for the 4-digit Completion PIN to verify receipt of Cash.</p>
+                        
+                        <div className="flex gap-3 max-w-xs items-center">
+                          <input
+                            type="text"
+                            required
+                            maxLength="4"
+                            pattern="\d{4}"
+                            value={completionPin}
+                            onChange={(e) => setCompletionPin(e.target.value.replace(/\D/g, ""))}
+                            placeholder="E.g. 5923"
+                            className="rounded-lg border border-amber-500/20 bg-[#16152b] px-3 py-2 text-center text-base font-black tracking-widest text-white outline-none focus:border-amber-500 w-28"
+                          />
+                          <button
+                            type="submit"
+                            disabled={verifyingCompletionPin || completionPin.length !== 4}
+                            className="rounded-lg bg-emerald-600 hover:bg-emerald-700 px-4 py-2 text-xs font-bold text-white shadow-lg active:scale-95 transition disabled:opacity-50"
+                          >
+                            {verifyingCompletionPin ? "Verifying..." : "Verify & Complete"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setCompletingOrderId(null)}
+                            className="text-xs font-semibold text-slate-400 hover:text-white"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
+                    )}
  
-                    <div className="flex shrink-0 flex-wrap gap-2">
+                    <div className="flex shrink-0 flex-wrap gap-2 mt-2.5">
                       {order.status === "pending" && (
                         <>
                           <button

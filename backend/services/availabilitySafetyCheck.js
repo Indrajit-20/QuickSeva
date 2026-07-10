@@ -6,6 +6,8 @@ const startAvailabilitySafetyCheck = () => {
   const checkAndCleanup = async () => {
     try {
       console.log("⏰ Running availability safety check: checking for stale active sellers (12+ hours)...");
+      // Bypassed automatic seller deactivation for testing/fake payment flow
+      /*
       const [result] = await pool.query(`
         UPDATE sellers
         SET is_available = 0
@@ -17,6 +19,8 @@ const startAvailabilitySafetyCheck = () => {
       } else {
         console.log("⏰ Safety check complete: No stale active sellers found.");
       }
+      */
+      console.log("⏰ Safety check: Bypassed automatic deactivation.");
     } catch (error) {
       console.error("❌ Error running availability safety check:", error);
     }

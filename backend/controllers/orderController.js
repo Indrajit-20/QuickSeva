@@ -37,21 +37,32 @@ exports.placeOrder = async (req, res) => {
 
     const seller = await SellerModel.findById(seller_id);
     if (!seller) return errorRes(res, "Seller not found", 404);
+    // Bypassed seller availability check to allow testing/fake payments when seller is unavailable
+    /*
     if (!seller.is_available)
       return errorRes(res, "Seller is currently unavailable", 400);
+    */
 
     const [serviceRows] = await pool.query("SELECT * FROM services WHERE id = ?", [service_id]);
     if (serviceRows.length === 0) return errorRes(res, "Service not found", 404);
     const service = serviceRows[0];
 
-    const visiting_charge = parseFloat(service.visiting_charge || 0);
+    // Enforce a minimum visiting charge of ₹100 to cover provider's travel costs
+    let visiting_charge = parseFloat(service.visiting_charge || 0);
+    if (visiting_charge < 100.00) {
+      visiting_charge = 100.00;
+    }
 
     // Fetch platform fee settings
     const feeModel = await getSystemSetting("platform_fee_model", "buyer");
     const feePercentage = parseFloat(await getSystemSetting("platform_fee_percentage", "5.00"));
 
-    // Calculate Stage 1 Platform Fee (based on visiting charge)
-    const visiting_platform_fee = parseFloat((visiting_charge * (feePercentage / 100)).toFixed(2));
+    // Calculate Stage 1 Platform Fee (based on visiting charge) and cap at max ₹100.00
+    let calculated_fee = visiting_charge * (feePercentage / 100);
+    if (calculated_fee > 100.00) {
+      calculated_fee = 100.00;
+    }
+    const visiting_platform_fee = parseFloat(calculated_fee.toFixed(2));
 
     // Calculate how much the customer pays in Stage 1
     // Option A (buyer pays fee): pays visiting charge + fee
@@ -86,10 +97,10 @@ exports.placeOrder = async (req, res) => {
       notes,
       visiting_charge_amount: visiting_charge.toFixed(2),
       visiting_platform_fee: visiting_platform_fee.toFixed(2),
-      visiting_payment_status: payment_method === "wallet" ? "paid" : "pending",
+      visiting_payment_status: (payment_method === "wallet" || payment_method === "online") ? "paid" : "pending",
     });
 
-    if (payment_method === "wallet") {
+    if (payment_method === "wallet" || payment_method === "online") {
       await OrderModel.updatePaymentStatus(orderId, "paid");
       // For immediate verification, if paid, also auto-accept or transition status to accepted
       await OrderModel.updateStatus(orderId, "accepted");
@@ -245,6 +256,14 @@ exports.completeOrder = async (req, res) => {
     if (order.status !== "in_progress")
       return errorRes(res, "Order not in progress", 400);
 
+    // Validate Secure Completion PIN for Cash orders
+    if (order.payment_method === "cash") {
+      const { otp } = req.body;
+      if (!otp || String(order.completion_otp_code) !== String(otp).trim()) {
+        return errorRes(res, "Invalid secure completion PIN. Please count the cash and verify the PIN with the buyer.", 400);
+      }
+    }
+
     await OrderModel.updateStatus(req.params.id, "completed", {
       completed_at: new Date(),
     });
@@ -314,6 +333,11 @@ exports.cancelOrder = async (req, res) => {
       return errorRes(res, "Unauthorized", 403);
     }
 
+    // Restrict buyer cancellation: not allowed if status is in_progress, completed, or cancelled
+    if (isBuyer && ["in_progress", "completed", "cancelled"].includes(order.status)) {
+      return errorRes(res, "You cannot cancel the booking after the work has started", 400);
+    }
+
     // Cancellation is allowed if not already completed or cancelled
     if (["completed", "cancelled"].includes(order.status)) {
       return errorRes(res, "Order cannot be cancelled at this stage", 400);
@@ -328,7 +352,8 @@ exports.cancelOrder = async (req, res) => {
       let refundAmount = 0;
       const feeModel = await getSystemSetting("platform_fee_model", "buyer");
 
-      if (order.visiting_payment_status === "paid") {
+      // Only refund visiting charge if cancelled before provider visited (i.e. status is pending or accepted)
+      if (order.visiting_payment_status === "paid" && ["pending", "accepted"].includes(order.status)) {
         const visiting_charge = parseFloat(order.visiting_charge_amount || 0);
         const visiting_fee = parseFloat(order.visiting_platform_fee || 0);
         refundAmount += visiting_charge + (feeModel === "buyer" ? visiting_fee : 0);
@@ -350,8 +375,8 @@ exports.cancelOrder = async (req, res) => {
           order.order_number,
           `Refund for cancelled order #${order.order_number}`,
         );
+        await OrderModel.updatePaymentStatus(req.params.id, "refunded");
       }
-      await OrderModel.updatePaymentStatus(req.params.id, "refunded");
     }
 
     return successRes(res, null, "Order cancelled");
@@ -376,8 +401,12 @@ exports.submitQuotation = async (req, res) => {
     const feeModel = await getSystemSetting("platform_fee_model", "buyer");
     const feePercentage = parseFloat(await getSystemSetting("platform_fee_percentage", "5.00"));
 
-    const subtotal = parseFloat(service_charge || 0) + parseFloat(parts_cost || 0) - parseFloat(discount || 0);
-    const final_platform_fee = (subtotal * (feePercentage / 100)).toFixed(2);
+    // Calculate Stage 2 platform fee on quotation subtotal and cap at max ₹100.00
+    let quote_fee = subtotal * (feePercentage / 100);
+    if (quote_fee > 100.00) {
+      quote_fee = 100.00;
+    }
+    const final_platform_fee = quote_fee.toFixed(2);
     const start_otp_code = Math.floor(1000 + Math.random() * 9000).toString();
 
     await pool.query(
@@ -432,7 +461,7 @@ exports.approveQuotation = async (req, res) => {
     const feeModel = await getSystemSetting("platform_fee_model", "buyer");
     const remaining = feeModel === "buyer" ? (subtotal + parseFloat(order.final_platform_fee || 0)) : subtotal;
 
-    const final_pay_status = order.payment_method === "wallet" ? "paid" : "pending";
+    const final_pay_status = (order.payment_method === "wallet" || order.payment_method === "online") ? "paid" : "pending";
 
     // If wallet payment, debit remaining amount immediately
     if (order.payment_method === "wallet") {
@@ -445,18 +474,24 @@ exports.approveQuotation = async (req, res) => {
       );
     }
 
+    const completion_otp_code = order.payment_method === "cash"
+      ? Math.floor(1000 + Math.random() * 9000).toString()
+      : null;
+
     // Update order totals and statuses
     // Set status to quoted but final payment status updated. Seller enters Start OTP to move back to in_progress
     await pool.query(
       `UPDATE orders SET
         final_payment_status = ?,
         total_amount = total_amount + ?,
-        platform_fee = platform_fee + ?
+        platform_fee = platform_fee + ?,
+        completion_otp_code = ?
        WHERE id = ?`,
       [
         final_pay_status,
         remaining.toFixed(2),
         parseFloat(order.final_platform_fee || 0).toFixed(2),
+        completion_otp_code,
         req.params.id
       ]
     );

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { buyerOrdersApi } from "../api/orderApi";
 import apiClient from "../api/axiosConfig";
+import { useAuth } from "../context/AuthContext";
 
 const getImageUrl = (url) => {
   if (!url) return "";
@@ -34,6 +35,15 @@ export default function MyBookings() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [busyId, setBusyId] = useState(null);
+
+  // Simulated payment gateway states
+  const [showPaymentGateway, setShowPaymentGateway] = useState(false);
+  const [paymentGatewayStatus, setPaymentGatewayStatus] = useState("idle"); // "idle", "processing", "success", "failed"
+  const [gatewayError, setGatewayError] = useState("");
+  const [gatewaySubView, setGatewaySubView] = useState("select");
+  const [activeBookingForPayment, setActiveBookingForPayment] = useState(null);
+
+  const { user } = useAuth();
 
   const refresh = async () => {
     try {
@@ -75,14 +85,34 @@ export default function MyBookings() {
     }
   };
 
-  const handleApproveQuotation = async (id) => {
-    if (!window.confirm("Are you sure you want to approve and pay the quotation? / क्या आप कोटेशन का भुगतान करना चाहते हैं?")) return;
+  const triggerApproveQuotation = (booking) => {
+    if (booking.payment_method === "cash") {
+      if (!window.confirm("Are you sure you want to approve this quotation? / क्या आप कोटेशन मंजूर करना चाहते हैं?")) return;
+      executeApproveQuotation(booking.id);
+    } else {
+      setActiveBookingForPayment(booking);
+      setGatewaySubView("select");
+      setPaymentGatewayStatus("idle");
+      setGatewayError("");
+      setShowPaymentGateway(true);
+    }
+  };
+
+  const executeApproveQuotation = async (id) => {
     setBusyId(id);
+    setPaymentGatewayStatus("processing");
     try {
+      // Simulate gateway payment processing latency
+      await new Promise((r) => setTimeout(r, 1500));
       await buyerOrdersApi.approveQuotation(id);
       await refresh();
+      setShowPaymentGateway(false);
     } catch (e) {
-      alert(e?.response?.data?.message || "Failed to approve quotation");
+      setGatewayError(e?.response?.data?.message || "Failed to approve quotation");
+      setPaymentGatewayStatus("failed");
+      if (activeBookingForPayment?.payment_method === "cash") {
+        alert(e?.response?.data?.message || "Failed to approve quotation");
+      }
     } finally {
       setBusyId(null);
     }
@@ -321,6 +351,17 @@ export default function MyBookings() {
                                 <span className="block text-[10px] text-indigo-200/50 mt-1">Technician will enter this code in their app to verify and start service.</span>
                               </div>
                             )}
+
+                            {/* Secure Cash Handshake Completion Code */}
+                            {booking.status === "in_progress" && booking.payment_method === "cash" && booking.completion_otp_code && (
+                              <div className="mt-3.5 p-3.5 rounded-2xl border border-amber-500/20 bg-amber-955/20 text-center shadow-md">
+                                <span className="block text-[10px] font-black text-amber-400 uppercase tracking-widest">Secure Cash Completion PIN / भुगतान सत्यापन पिन</span>
+                                <span className="block text-3xl font-black text-white mt-1.5 tracking-wider">{booking.completion_otp_code}</span>
+                                <span className="block text-[10px] text-amber-200/60 mt-1.5 leading-normal">
+                                  🔴 Share this PIN with the technician ONLY after they complete the work and you hand over the cash.
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -343,7 +384,7 @@ export default function MyBookings() {
                           <button
                             type="button"
                             disabled={busyId === booking.id}
-                            onClick={() => handleApproveQuotation(booking.id)}
+                            onClick={() => triggerApproveQuotation(booking)}
                             className="flex items-center justify-center gap-1.5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 hover:bg-emerald-500/25 px-4 py-2.5 text-xs font-bold text-emerald-400 hover:text-emerald-300 transition duration-300 w-full text-center disabled:opacity-50 shadow-md"
                           >
                             {busyId === booking.id ? (
@@ -356,7 +397,7 @@ export default function MyBookings() {
                                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
-                                Approve &amp; Pay
+                                {booking.payment_method === "cash" ? "Approve Quotation" : "Approve & Pay"}
                               </>
                             )}
                           </button>
@@ -371,7 +412,7 @@ export default function MyBookings() {
                           </button>
                         </>
                       )}
-                      {booking.status === "pending" && (
+                      {["pending", "accepted"].includes(booking.status) && (
                         <button
                           type="button"
                           disabled={busyId === booking.id}
@@ -425,6 +466,208 @@ export default function MyBookings() {
           </div>
         )}
       </div>
+
+      {/* Fake Razorpay/PhonePe Payment Gateway Modal */}
+      {showPaymentGateway && activeBookingForPayment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 animate-fade-in text-white">
+          <div className="w-full max-w-sm rounded-2xl bg-[#0f111a] border border-slate-800 shadow-2xl overflow-hidden relative flex flex-col force-text-white">
+            {/* Gateway Header */}
+            <div className="bg-[#0b0c13] p-4 border-b border-slate-800 flex justify-between items-center">
+              <div className="flex items-center gap-2 text-left">
+                <span className="text-xl">💳</span>
+                <div>
+                  <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">QuickSeva Secure Pay</h2>
+                  <p className="text-[10px] text-slate-500">Stage 2 Quotation Payment Emulator</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => {
+                  setShowPaymentGateway(false);
+                  setGatewaySubView("select");
+                }}
+                className="text-slate-400 hover:text-white text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            {paymentGatewayStatus === "idle" && (
+              <div className="p-6 space-y-5 flex-1 text-left">
+                {/* Total box */}
+                <div className="bg-[#0b0c13] p-4 rounded-xl border border-slate-800/80 text-center">
+                  <span className="block text-[10px] text-slate-500 uppercase font-semibold">Payable Quote Amount / भुगतान राशि</span>
+                  <span className="text-3xl font-black text-emerald-400 mt-1 block" style={{ color: '#34d399' }}>
+                    ₹{Number(
+                      parseFloat(activeBookingForPayment.service_charge_amount || 0) + 
+                      parseFloat(activeBookingForPayment.parts_cost_amount || 0) - 
+                      parseFloat(activeBookingForPayment.discount_amount || 0) +
+                      parseFloat(activeBookingForPayment.final_platform_fee || 0)
+                    ).toLocaleString("en-IN")}
+                  </span>
+                </div>
+
+                {gatewaySubView === "select" && (
+                  <>
+                    <div className="space-y-2.5">
+                      <span className="block text-[10px] text-slate-500 uppercase font-bold tracking-wider">Select Payment Mode</span>
+                      {[
+                        { id: "upi_qr", icon: "📱", name: "UPI QR (GPay / PhonePe / Paytm)" },
+                        { id: "card_info", icon: "💳", name: "Debit / Credit Card" },
+                        { id: "wallet_pay", icon: "💼", name: "Wallet Balance (Auto-Debit)" }
+                      ].map((opt) => (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => setGatewaySubView(opt.id)}
+                          className="w-full text-left p-3.5 rounded-xl border border-slate-800 bg-[#08090e] hover:bg-slate-900 hover:border-slate-750 transition flex items-center gap-3 cursor-pointer group active:scale-[0.99]"
+                        >
+                          <span className="text-lg bg-slate-850 p-1.5 rounded-lg group-hover:bg-slate-700">{opt.icon}</span>
+                          <span className="text-xs font-bold text-slate-200 group-hover:text-slate-100 flex-1">{opt.name}</span>
+                          <span className="text-slate-500 text-xs">➔</span>
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex gap-2.5 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => executeApproveQuotation(activeBookingForPayment.id)}
+                        className="w-full py-2.5 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-white rounded-xl active:scale-95 transition cursor-pointer text-center"
+                      >
+                        Bypass Directly ✓ (Simulate Success)
+                      </button>
+                    </div>
+                  </>
+                )}
+
+                {gatewaySubView === "upi_qr" && (
+                  <div className="space-y-4 text-center">
+                    <span className="block text-[10px] text-slate-500 uppercase font-bold tracking-wider text-left">Scan UPI QR Code</span>
+                    <div className="flex flex-col items-center justify-center p-4 bg-white rounded-xl border border-slate-200 shadow-inner">
+                      <svg className="h-32 w-32 text-slate-800 animate-pulse" viewBox="0 0 100 100" fill="currentColor">
+                        <path d="M0 0h30v30H0V0zm10 10v10h10V10H10zm60-10h30v30H70V0zm10 10v10h10V10H10zM0 70h30v30H0V70zm10 10v10h10V10H10zm45-45h10v10H55zm10 10h10v10H65zm-20 20h10v10H45zm25 0h10v10H70zm-15 15h10v10H55zm15 0h10v10H70zm-35-15h10v10H35zm0-20h10v10H35zm30-25h5v5h-5z" />
+                      </svg>
+                      <span className="text-[10px] text-slate-400 font-medium mt-2">Scan with GPay, PhonePe, or Paytm</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setGatewaySubView("select")}
+                        className="flex-1 py-2.5 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-white rounded-xl active:scale-95 transition cursor-pointer"
+                      >
+                        Back / पीछे
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => executeApproveQuotation(activeBookingForPayment.id)}
+                        className="flex-1 py-2.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl active:scale-95 transition cursor-pointer"
+                      >
+                        I have Scanned &amp; Paid
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {gatewaySubView === "card_info" && (
+                  <div className="space-y-4">
+                    <span className="block text-[10px] text-slate-500 uppercase font-bold tracking-wider">Card Details</span>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-[10px] text-slate-400 block mb-1">Card Number</label>
+                        <input
+                          type="text"
+                          placeholder="4111 2222 3333 4444"
+                          maxLength="19"
+                          className="w-full text-xs bg-[#0b0c13] border border-slate-850 rounded-lg p-2.5 text-white outline-none"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-[10px] text-slate-400 block mb-1">Expiry Date</label>
+                          <input
+                            type="text"
+                            placeholder="MM/YY"
+                            maxLength="5"
+                            className="w-full text-xs bg-[#0b0c13] border border-slate-850 rounded-lg p-2.5 text-white outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-slate-400 block mb-1">CVV</label>
+                          <input
+                            type="password"
+                            placeholder="•••"
+                            maxLength="3"
+                            className="w-full text-xs bg-[#0b0c13] border border-slate-850 rounded-lg p-2.5 text-white outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setGatewaySubView("select")}
+                        className="flex-1 py-2.5 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-white rounded-xl active:scale-95 transition cursor-pointer"
+                      >
+                        Back / पीछे
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => executeApproveQuotation(activeBookingForPayment.id)}
+                        className="flex-1 py-2.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl active:scale-95 transition cursor-pointer"
+                      >
+                        Pay &amp; Confirm
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {gatewaySubView === "wallet_pay" && (
+                  <div className="space-y-4">
+                    <span className="block text-[10px] text-slate-500 uppercase font-bold tracking-wider">Wallet Balance Payment</span>
+                    <div className="bg-[#0b0c13] p-4 rounded-xl border border-slate-855 flex justify-between items-center">
+                      <div>
+                        <span className="block text-[10px] text-slate-500">Your Current Balance</span>
+                        <span className="text-sm font-bold text-white">₹{Number(user?.wallet_balance || 0).toLocaleString("en-IN")}</span>
+                      </div>
+                      <span className="text-lg">💼</span>
+                    </div>
+                    <div className="flex gap-2 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setGatewaySubView("select")}
+                        className="flex-1 py-2.5 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-white rounded-xl active:scale-95 transition cursor-pointer"
+                      >
+                        Back / पीछे
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => executeApproveQuotation(activeBookingForPayment.id)}
+                        className="flex-1 py-2.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl active:scale-95 transition cursor-pointer"
+                      >
+                        Pay via Wallet
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {paymentGatewayStatus === "failed" && (
+              <div className="p-6 text-center space-y-5 flex flex-col items-center justify-center flex-1">
+                <span className="text-5xl text-red-500">❌</span>
+                <h3 className="text-base font-extrabold text-red-400">Payment Failed</h3>
+                <p className="text-xs text-slate-400">{gatewayError || "Transaction rejected."}</p>
+                <button
+                  type="button"
+                  onClick={() => setPaymentGatewayStatus("idle")}
+                  className="w-full py-2.5 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-white rounded-lg active:scale-95 transition"
+                >
+                  Try Again
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </main>
   );
 }

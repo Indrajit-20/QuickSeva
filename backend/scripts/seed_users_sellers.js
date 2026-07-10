@@ -450,9 +450,10 @@ async function run() {
       // Create Services
       // Basic Service
       const isInstantBasic = index % 4 === 0;
+      const vChargeBasic = 100 + (index % 3) * 50; // ₹100, ₹150, or ₹200
       await pool.query(
-        `INSERT INTO services (seller_id, category_id, title, description, price, price_type, duration_hrs, duration, is_instant, is_active)
-         VALUES (?, ?, ?, ?, ?, 'fixed', 1.5, ?, ?, 1)`,
+        `INSERT INTO services (seller_id, category_id, title, description, price, price_type, duration_hrs, duration, is_instant, visiting_charge, is_active)
+         VALUES (?, ?, ?, ?, ?, 'fixed', 1.5, ?, ?, ?, 1)`,
         [
           sellerId,
           categoryId,
@@ -460,21 +461,24 @@ async function run() {
           `Regular ${service.toLowerCase()} service for home and office needs.`,
           299 + (index % 5) * 50,
           "1-2 hours",
-          isInstantBasic ? 1 : 0
+          isInstantBasic ? 1 : 0,
+          vChargeBasic
         ]
       );
 
       // Deep Service
+      const vChargeDeep = 150 + (index % 3) * 50; // ₹150, ₹200, or ₹250
       await pool.query(
-        `INSERT INTO services (seller_id, category_id, title, description, price, price_type, duration_hrs, duration, is_instant, is_active)
-         VALUES (?, ?, ?, ?, ?, 'fixed', 2.5, ?, 0, 1)`,
+        `INSERT INTO services (seller_id, category_id, title, description, price, price_type, duration_hrs, duration, is_instant, visiting_charge, is_active)
+         VALUES (?, ?, ?, ?, ?, 'fixed', 2.5, ?, 0, ?, 1)`,
         [
           sellerId,
           categoryId,
           `${service} Deep Service`,
           `Detailed ${service.toLowerCase()} with inspection and finishing.`,
           599 + (index % 6) * 75,
-          "2-3 hours"
+          "2-3 hours",
+          vChargeDeep
         ]
       );
     }

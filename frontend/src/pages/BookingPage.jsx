@@ -99,6 +99,39 @@ function buildScheduledAt(date, slot) {
   return `${yyyymmdd} ${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}:00`;
 }
 
+function isSlotInPast(date, slot) {
+  if (!date || !slot) return false;
+  
+  const parts = date.split("-");
+  if (parts.length !== 3) return false;
+  
+  let day, month, year;
+  if (parts[0].length === 2) {
+    day = parseInt(parts[0], 10);
+    month = parseInt(parts[1], 10) - 1; // 0-indexed month
+    year = parseInt(parts[2], 10);
+  } else {
+    year = parseInt(parts[0], 10);
+    month = parseInt(parts[1], 10) - 1;
+    day = parseInt(parts[2], 10);
+  }
+
+  const timeParts = slot.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if (!timeParts) return false;
+
+  let hours = parseInt(timeParts[1], 10);
+  const minutes = parseInt(timeParts[2], 10);
+  const ampm = timeParts[3].toUpperCase();
+
+  if (ampm === "PM" && hours !== 12) hours += 12;
+  if (ampm === "AM" && hours === 12) hours = 0;
+
+  const slotDate = new Date(year, month, day, hours, minutes, 0, 0);
+  const now = new Date();
+  
+  return slotDate < now;
+}
+
 export default function BookingPage() {
   const { sellerId } = useParams();
   const location = useLocation();
@@ -109,7 +142,7 @@ export default function BookingPage() {
   const [seller, setSeller] = useState(null);
   const [sellerLoading, setSellerLoading] = useState(true);
   const [sellerServices, setSellerServices] = useState([]);
-  const [selectedServiceState, setSelectedServiceState] = useState(selectedService);
+  const [selectedServiceState, setSelectedServiceState] = useState(selectedService ? { ...selectedService, price_type: "negotiable" } : null);
   const [confirmedBooking, setConfirmedBooking] = useState(null);
   const [errors, setErrors] = useState({});
   const [bookingLoading, setBookingLoading] = useState(false);
@@ -121,6 +154,7 @@ export default function BookingPage() {
   const [showPaymentGateway, setShowPaymentGateway] = useState(false);
   const [paymentGatewayStatus, setPaymentGatewayStatus] = useState("idle"); // "idle", "processing", "success", "failed"
   const [gatewayError, setGatewayError] = useState("");
+  const [gatewaySubView, setGatewaySubView] = useState("select"); // "select", "upi_qr", "card_info", "wallet_pay"
 
   const [formData, setFormData] = useState({
     service: selectedService?.name || selectedService?.title || "",
@@ -142,7 +176,11 @@ export default function BookingPage() {
           apiClient.get(`/services/seller/${sellerId}`).catch(() => ({ data: [] }))
         ]);
         const s = sellerRes?.data?.data?.seller || sellerRes?.data?.seller || null;
-        const svcs = servicesRes?.data?.data || servicesRes?.data || [];
+        const svcsRaw = servicesRes?.data?.data || servicesRes?.data || [];
+        const svcs = Array.isArray(svcsRaw) ? svcsRaw.map(svc => ({
+          ...svc,
+          price_type: 'negotiable'
+        })) : [];
         if (!cancelled) {
           setSeller(s);
           const serviceList = Array.isArray(svcs) ? svcs : [];
@@ -185,7 +223,8 @@ export default function BookingPage() {
   }, [selectedServiceState?.price]);
 
   const visitingCharge = useMemo(() => {
-    return Number(selectedServiceState?.visiting_charge || 0);
+    const raw = Number(selectedServiceState?.visiting_charge || 0);
+    return raw < 100 ? 100 : raw;
   }, [selectedServiceState?.visiting_charge]);
 
   const avatarLetter =
@@ -216,7 +255,11 @@ export default function BookingPage() {
 
     if (!formData.service) nextErrors.service = "Select a service";
     if (!formData.date) nextErrors.date = "Select a date";
-    if (!formData.timeSlot) nextErrors.timeSlot = "Select a time slot";
+    if (!formData.timeSlot) {
+      nextErrors.timeSlot = "Select a time slot";
+    } else if (isSlotInPast(formData.date, formData.timeSlot)) {
+      nextErrors.timeSlot = "Selected time slot is in the past";
+    }
     if (!formData.address.trim()) nextErrors.address = "Enter your address";
     if (!formData.mobile.trim()) nextErrors.mobile = "Enter your mobile number";
     else if (mobileDigits.length !== 10)
@@ -417,10 +460,22 @@ export default function BookingPage() {
             
             <div className="border-t border-[var(--qs-border-light)] pt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <div className="text-xs text-[var(--qs-muted)]">
-                Work price <span className="mx-1">•</span> due after inspection
+                {selectedServiceState?.price_type === "negotiable" ? (
+                  <>Work price <span className="mx-1">•</span> quoted onsite / ऑन-साइट तय होगा</>
+                ) : (
+                  <>Work price <span className="mx-1">•</span> due after service completion / काम के बाद देय</>
+                )}
               </div>
               <div className="text-lg font-black text-[var(--qs-primary)]">
-                Starts from ₹{selectedServicePrice}
+                {selectedServiceState?.price_type === "negotiable" ? (
+                  <span className="text-xs font-bold text-sky-750 bg-sky-50 px-2 py-0.5 rounded-md border border-sky-200">
+                    Starts from ₹{selectedServicePrice} / से शुरू (Final quote onsite)
+                  </span>
+                ) : selectedServiceState?.price_type === "hourly" ? (
+                  `₹${selectedServicePrice} / hr (Hourly / प्रति घंटा)`
+                ) : (
+                  `₹${selectedServicePrice} (Fixed Price / पक्का रेट)`
+                )}
               </div>
             </div>
           </section>
@@ -448,6 +503,9 @@ export default function BookingPage() {
                 onChange={(dateObj) => {
                   const val = dateObj ? dateObj.format("DD-MM-YYYY") : "";
                   updateField("date", val);
+                  if (formData.timeSlot && isSlotInPast(val, formData.timeSlot)) {
+                    updateField("timeSlot", "");
+                  }
                 }}
                 minDate={getMinDate()}
                 maxDate={getMaxDate()}
@@ -472,15 +530,19 @@ export default function BookingPage() {
               <div className="flex flex-wrap gap-1.5">
                 {TIME_SLOTS.map((slot) => {
                   const active = formData.timeSlot === slot;
+                  const disabled = isSlotInPast(formData.date, slot);
                   return (
                     <button
                       key={slot}
                       type="button"
+                      disabled={disabled}
                       onClick={() => updateField("timeSlot", slot)}
-                      className={`rounded-lg border px-2.5 py-1.5 text-xs font-bold transition-all duration-200 cursor-pointer active:scale-95 text-center ${
-                        active
-                          ? "bg-[var(--qs-primary)] border-[var(--qs-primary)] text-white shadow-sm"
-                          : "bg-white border-[var(--qs-border)] text-[var(--qs-text-2)] hover:bg-[var(--qs-surface-2)]"
+                      className={`rounded-lg border px-2.5 py-1.5 text-xs font-bold transition-all duration-200 text-center ${
+                        disabled
+                          ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed line-through opacity-50"
+                          : active
+                          ? "bg-[var(--qs-primary)] border-[var(--qs-primary)] text-white shadow-sm cursor-pointer active:scale-95"
+                          : "bg-white border-[var(--qs-border)] text-[var(--qs-text-2)] hover:bg-[var(--qs-surface-2)] cursor-pointer active:scale-95"
                       }`}
                     >
                       {slot}
@@ -627,7 +689,7 @@ export default function BookingPage() {
               {[
                 {
                   value: "wallet",
-                  icon: "🌐",
+                  icon: "💼",
                   title: "Pay Online (Wallet)",
                   titleHi: "ऑनलाइन वॉलेट",
                   desc: "Deduct from wallet later after work approval."
@@ -729,7 +791,7 @@ export default function BookingPage() {
       {/* Invoice Type Breakdown Modal */}
       {showInvoiceModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in">
-          <div className="w-full max-w-md rounded-2xl bg-white border border-slate-200 p-6 shadow-2xl space-y-5 text-slate-800 relative force-text-dark">
+          <div className="w-full max-w-md rounded-2xl bg-white border border-slate-200 p-5 shadow-2xl space-y-4 text-slate-800 relative force-text-dark">
             <div className="border-b border-slate-100 pb-3 flex justify-between items-center">
               <h2 className="text-lg font-extrabold text-slate-900">
                 Invoice Preview / पक्का बिल (रसीद)
@@ -780,28 +842,17 @@ export default function BookingPage() {
                 </div>
               </div>
 
-              {/* Note in English & Hindi */}
-              <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 text-[11px] leading-relaxed text-amber-900">
-                <p className="font-bold">⚠️ Note / महत्वपूर्ण सूचना:</p>
-                {visitingCharge === 0 ? (
-                  <>
-                    <p className="mt-1">
-                      <strong>EN:</strong> There is no visiting charge. Booking will be confirmed directly.
-                    </p>
-                    <p className="mt-1.5 border-t border-amber-200/50 pt-1.5">
-                      <strong>HI:</strong> कोई विजिटिंग चार्ज नहीं है। बुकिंग सीधे कन्फर्म कर दी जाएगी।
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <p className="mt-1">
-                      <strong>EN:</strong> This amount pays only for the travel & onsite inspection. The final work price will be quoted after the seller inspects the work.
-                    </p>
-                    <p className="mt-1.5 border-t border-amber-200/50 pt-1.5">
-                      <strong>HI:</strong> यह राशि केवल सेलर के आने-जाने और जांच के लिए है। काम का फाइनल रेट सेलर द्वारा जांच के बाद तय किया जाएगा।
-                    </p>
-                  </>
-                )}
+              {/* Ultra Compact Warning Box */}
+              <div className="rounded-xl bg-amber-50 border border-amber-200/80 p-2.5 text-[10px] leading-normal text-amber-900 font-medium text-left space-y-1">
+                <p className="flex items-center gap-1 font-bold text-amber-950 uppercase tracking-wider">
+                  <span>⚠️</span> Service Notice / महत्वपूर्ण सूचना:
+                </p>
+                <p className="leading-relaxed">
+                  <strong>EN:</strong> Paid amount covers travel & inspection only. Actual repair cost is quoted onsite.
+                </p>
+                <p className="leading-relaxed border-t border-amber-200/60 pt-1">
+                  <strong>HI:</strong> भुगतान केवल यात्रा और जांच शुल्क है। काम का फाइनल रेट सेलर ऑन-साइट जांच के बाद बताएगा।
+                </p>
               </div>
             </div>
 
@@ -824,6 +875,7 @@ export default function BookingPage() {
                   } else {
                     setShowPaymentGateway(true);
                     setPaymentGatewayStatus("idle");
+                    setGatewaySubView("select");
                     setGatewayError("");
                   }
                 }}
@@ -851,7 +903,10 @@ export default function BookingPage() {
                 </div>
               </div>
               <button 
-                onClick={() => setShowPaymentGateway(false)}
+                onClick={() => {
+                  setShowPaymentGateway(false);
+                  setGatewaySubView("select");
+                }}
                 className="text-slate-400 hover:text-white text-sm"
               >
                 ✕
@@ -859,7 +914,7 @@ export default function BookingPage() {
             </div>
 
             {paymentGatewayStatus === "idle" && (
-              <div className="p-6 space-y-6 flex-1">
+              <div className="p-6 space-y-5 flex-1 text-left">
                 {/* Total box */}
                 <div className="bg-[#0b0c13] p-4 rounded-xl border border-slate-800/80 text-center">
                   <span className="block text-[10px] text-slate-500 uppercase font-semibold">Payable Amount / भुगतान राशि</span>
@@ -868,37 +923,165 @@ export default function BookingPage() {
                   </span>
                 </div>
 
-                {/* Simulated payment options */}
-                <div className="space-y-2.5 text-left">
-                  <span className="block text-[10px] text-slate-500 uppercase font-bold tracking-wider">Select Payment Mode</span>
-                  
-                  {[
-                    { id: "upi", icon: "📱", name: "UPI (GPay / PhonePe / Paytm)" },
-                    { id: "card", icon: "💳", name: "Debit / Credit Card (Visa, RuPay)" },
-                    { id: "wallet", icon: "💼", name: "Wallet Balance (Auto-Debit)" }
-                  ].map((opt) => (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      onClick={() => handleSimulatedPayment(true)}
-                      className="w-full text-left p-3.5 rounded-xl border border-slate-800 bg-[#08090e] hover:bg-slate-900 hover:border-slate-700 transition flex items-center gap-3 cursor-pointer group active:scale-[0.99]"
-                    >
-                      <span className="text-xl bg-slate-800 p-1.5 rounded-lg group-hover:bg-slate-750">{opt.icon}</span>
-                      <span className="text-xs font-bold text-slate-200 group-hover:text-slate-100 flex-1">{opt.name}</span>
-                      <span className="text-slate-500 text-xs">➔</span>
-                    </button>
-                  ))}
-                </div>
+                {gatewaySubView === "select" && (
+                  <>
+                    {/* Simulated payment options */}
+                    <div className="space-y-2.5">
+                      <span className="block text-[10px] text-slate-500 uppercase font-bold tracking-wider">Select Payment Mode</span>
+                      
+                      {[
+                        { id: "upi_qr", icon: "📱", name: "UPI QR (GPay / PhonePe / Paytm)", method: "online" },
+                        { id: "card_info", icon: "💳", name: "Debit / Credit Card", method: "online" },
+                        { id: "wallet_pay", icon: "💼", name: "Wallet Balance (Auto-Debit)", method: "wallet" }
+                      ].map((opt) => (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => {
+                            setGatewaySubView(opt.id);
+                            setPaymentMethod(opt.method);
+                          }}
+                          className="w-full text-left p-3.5 rounded-xl border border-slate-800 bg-[#08090e] hover:bg-slate-900 hover:border-slate-750 transition flex items-center gap-3 cursor-pointer group active:scale-[0.99]"
+                        >
+                          <span className="text-lg bg-slate-850 p-1.5 rounded-lg group-hover:bg-slate-700">{opt.icon}</span>
+                          <span className="text-xs font-bold text-slate-200 group-hover:text-slate-100 flex-1">{opt.name}</span>
+                          <span className="text-slate-500 text-xs">➔</span>
+                        </button>
+                      ))}
+                    </div>
 
-                <div className="flex gap-2.5 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => handleSimulatedPayment(false)}
-                    className="flex-1 py-3 text-xs font-bold text-red-400 bg-red-950/20 border border-red-900/40 rounded-xl hover:bg-red-950/40 active:scale-95 transition cursor-pointer"
-                  >
-                    Simulate Failure ❌
-                  </button>
-                </div>
+                    <div className="flex gap-2.5 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => handleSimulatedPayment(false)}
+                        className="w-full py-2.5 text-xs font-bold text-red-400 bg-red-955/10 border border-red-900/30 rounded-xl hover:bg-red-955/20 active:scale-95 transition cursor-pointer text-center"
+                      >
+                        Simulate Failure ❌
+                      </button>
+                    </div>
+                  </>
+                )}
+
+                {gatewaySubView === "upi_qr" && (
+                  <div className="space-y-4 text-center">
+                    <span className="block text-[10px] text-slate-500 uppercase font-bold tracking-wider text-left">Scan UPI QR Code</span>
+                    <div className="flex flex-col items-center justify-center p-4 bg-white rounded-xl border border-slate-200 shadow-inner">
+                      {/* Dynamic Simulated QR Code */}
+                      <svg className="h-32 w-32 text-slate-800 animate-pulse" viewBox="0 0 100 100" fill="currentColor">
+                        <path d="M0 0h30v30H0V0zm10 10v10h10V10H10zm60-10h30v30H70V0zm10 10v10h10V10H10zM0 70h30v30H0V70zm10 10v10h10V10H10zm45-45h10v10H55zm10 10h10v10H65zm-20 20h10v10H45zm25 0h10v10H70zm-15 15h10v10H55zm15 0h10v10H70zm-35-15h10v10H35zm0-20h10v10H35zm30-25h5v5h-5z" />
+                      </svg>
+                      <span className="text-[10px] text-slate-400 font-medium mt-2">Scan with GPay, PhonePe, or Paytm</span>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setGatewaySubView("select")}
+                        className="flex-1 py-2.5 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-white rounded-xl active:scale-95 transition cursor-pointer"
+                      >
+                        Back / पीछे
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSimulatedPayment(true)}
+                        className="flex-1 py-2.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl active:scale-95 transition cursor-pointer"
+                      >
+                        I have Scanned &amp; Paid
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {gatewaySubView === "card_info" && (
+                  <div className="space-y-4">
+                    <span className="block text-[10px] text-slate-500 uppercase font-bold tracking-wider">Card Details</span>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-[10px] text-slate-400 block mb-1">Card Number</label>
+                        <input
+                          type="text"
+                          placeholder="4111 2222 3333 4444"
+                          maxLength="19"
+                          className="w-full text-xs bg-[#0b0c13] border border-slate-850 rounded-lg p-2.5 text-white outline-none focus:border-sky-500"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-[10px] text-slate-400 block mb-1">Expiry Date</label>
+                          <input
+                            type="text"
+                            placeholder="MM/YY"
+                            maxLength="5"
+                            className="w-full text-xs bg-[#0b0c13] border border-slate-850 rounded-lg p-2.5 text-white outline-none focus:border-sky-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-slate-400 block mb-1">CVV</label>
+                          <input
+                            type="password"
+                            placeholder="•••"
+                            maxLength="3"
+                            className="w-full text-xs bg-[#0b0c13] border border-slate-850 rounded-lg p-2.5 text-white outline-none focus:border-sky-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setGatewaySubView("select")}
+                        className="flex-1 py-2.5 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-white rounded-xl active:scale-95 transition cursor-pointer text-center"
+                      >
+                        Back / पीछे
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSimulatedPayment(true)}
+                        className="flex-1 py-2.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl active:scale-95 transition cursor-pointer text-center"
+                      >
+                        Pay &amp; Confirm
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {gatewaySubView === "wallet_pay" && (
+                  <div className="space-y-4">
+                    <span className="block text-[10px] text-slate-500 uppercase font-bold tracking-wider">Wallet Balance Payment</span>
+                    <div className="bg-[#0b0c13] p-4 rounded-xl border border-slate-850 flex justify-between items-center">
+                      <div>
+                        <span className="block text-[10px] text-slate-500">Your Current Balance</span>
+                        <span className="text-sm font-bold text-white">₹{Number(user?.wallet_balance || 0).toLocaleString("en-IN")}</span>
+                      </div>
+                      <span className="text-lg">💼</span>
+                    </div>
+
+                    {Number(user?.wallet_balance || 0) < (visitingCharge + (visitingCharge > 0 ? Math.round(visitingCharge * 0.05 * 100) / 100 : 0)) ? (
+                      <div className="rounded-lg bg-red-955/10 border border-red-900/30 p-3 text-[10px] text-red-400 leading-normal">
+                        ⚠️ Insufficient balance. Please use UPI QR or Card to pay directly, or add funds to your wallet first.
+                      </div>
+                    ) : null}
+
+                    <div className="flex gap-2 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setGatewaySubView("select")}
+                        className="flex-1 py-2.5 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-white rounded-xl active:scale-95 transition cursor-pointer text-center"
+                      >
+                        Back / पीछे
+                      </button>
+                      <button
+                        type="button"
+                        disabled={Number(user?.wallet_balance || 0) < (visitingCharge + (visitingCharge > 0 ? Math.round(visitingCharge * 0.05 * 100) / 100 : 0))}
+                        onClick={() => handleSimulatedPayment(true)}
+                        className="flex-1 py-2.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl active:scale-95 transition cursor-pointer text-center disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Pay via Wallet
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

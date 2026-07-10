@@ -7,6 +7,7 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "db:setup": "node config/setupDB.js",
+    "db:migrate": "node scripts/runMigrations.js",
     "db:seed": "node scripts/seed_users_sellers.js"
   },
   "dependencies": {

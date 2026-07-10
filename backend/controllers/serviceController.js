@@ -18,14 +18,14 @@ exports.createService = async (req, res) => {
       return errorRes(res, "Service title is required", 400);
     }
 
-    const numPrice = Number(price);
-    if (isNaN(numPrice) || numPrice <= 0) {
-      return errorRes(res, "Price must be a positive number", 400);
-    }
-
     const validPriceTypes = ["fixed", "hourly", "negotiable"];
     if (!validPriceTypes.includes(price_type)) {
       return errorRes(res, "Invalid price type", 400);
+    }
+
+    const numPrice = Number(price);
+    if (price_type !== "negotiable" && (isNaN(numPrice) || numPrice <= 0)) {
+      return errorRes(res, "Price must be a positive number", 400);
     }
 
     // Auto-register seller under category if not already registered
@@ -161,12 +161,14 @@ exports.updateService = async (req, res) => {
     }
     if (description !== undefined) fields.description = description;
 
+    const activePriceType = price_type !== undefined ? price_type : service.price_type;
+
     if (price !== undefined) {
       const numPrice = Number(price);
-      if (isNaN(numPrice) || numPrice <= 0) {
+      if (activePriceType !== "negotiable" && (isNaN(numPrice) || numPrice <= 0)) {
         return errorRes(res, "Price must be a positive number", 400);
       }
-      fields.price = numPrice;
+      fields.price = isNaN(numPrice) ? 0 : numPrice;
     }
 
     if (price_type !== undefined) {

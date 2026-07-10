@@ -287,11 +287,10 @@ export default function SellerServices() {
                     <td className="px-6 py-5 whitespace-nowrap">
                       <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/20 bg-emerald-400/5 px-3 py-1 text-sm font-black text-emerald-300">
                         <IndianRupee size={12} />
-                        {formatCurrency(service.price).replace("₹", "")}
-                        {service.price_type === "hourly" ? " / hr" : ""}
+                        {Number(service.price || 0).toLocaleString("en-IN")}
                       </span>
                       <span className="text-[10px] text-indigo-300 font-semibold block mt-1">
-                        {service.price_type === "fixed" ? "पक्का रेट (Fixed)" : service.price_type === "hourly" ? "प्रति घंटा (Hourly)" : "बात कर लेंगे (Discuss)"}
+                        {service.price_type === "negotiable" ? "शुरुआत (Starts from)" : "पक्का रेट (Fixed)"}
                       </span>
                     </td>
                     <td className="px-6 py-5 whitespace-nowrap">
@@ -590,9 +589,9 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
   const [subServicesError, setSubServicesError] = useState("");
 
   // Step 3 (Price & type & visiting charge)
-  const [price, setPrice] = useState(editingService ? Number(editingService.price) : 500);
-  const [priceType, setPriceType] = useState(editingService ? editingService.price_type : "fixed");
-  const [visitingCharge, setVisitingCharge] = useState(editingService ? Number(editingService.visiting_charge || 0) : 100);
+  const [price, setPrice] = useState(editingService ? Number(editingService.price || 199) : 199);
+  const [priceType, setPriceType] = useState("negotiable");
+  const [visitingCharge, setVisitingCharge] = useState(editingService ? Math.max(100, Number(editingService.visiting_charge || 0)) : 100);
   const [isInspectionRequired, setIsInspectionRequired] = useState(editingService ? Boolean(editingService.is_inspection_required !== 0) : true);
   const [finalPriceAfterInspection, setFinalPriceAfterInspection] = useState(editingService ? Boolean(editingService.final_price_after_inspection !== 0) : true);
 
@@ -684,6 +683,8 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
       setDescription(subService.description || "");
       if (subService.default_price) {
         setPrice(Math.round(Number(subService.default_price)));
+      } else {
+        setPrice(199);
       }
     }
     setStep(3);
@@ -694,13 +695,18 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
     if (!editingService) {
       setTitle(selectedCategory.name + " Service");
       setDescription("");
-      setPrice(500);
+      setPrice(199);
     }
     setStep(3);
   };
 
   const handlePriceTypeSelect = (type) => {
     setPriceType(type);
+    if (type === "negotiable") {
+      setPrice(0);
+    } else if (price === 0) {
+      setPrice(500);
+    }
   };
 
   const handleSubmit = async () => {
@@ -748,8 +754,8 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
     setStep(1);
     setSelectedCategory(null);
     setSelectedSubService(null);
-    setPrice(500);
-    setPriceType("fixed");
+    setPrice(199);
+    setPriceType("negotiable");
     setTitle("");
     setDescription("");
     setSuccess(false);
@@ -980,11 +986,6 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
                           {sub.description}
                         </span>
                       )}
-                      {sub.default_price && (
-                        <span className="text-[10px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full font-bold mt-2">
-                          Preset / सुझाया रेट: ₹{Math.round(Number(sub.default_price))}
-                        </span>
-                      )}
                     </button>
                   );
                 })}
@@ -1027,14 +1028,15 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
 
       {/* STEP 3: PRICING DETAILS */}
       {step === 3 && (
-        <div className="space-y-6 animate-fade-in">
+        <div className="space-y-6 animate-fade-in text-left">
           <div className="text-center">
-            <h2 className="text-2xl font-black text-white">What do you charge? / आप कितने पैसे लेंगे?</h2>
-            <p className="mt-1 text-sm text-slate-400">Set your pricing details below / अपना काम का दाम तय करें</p>
+            <h2 className="text-2xl font-black text-white">Pricing & Visit Fee / दाम और विजिटिंग चार्ज</h2>
+            <p className="mt-1 text-sm text-slate-400">Set your baseline rates below / अपने काम का अनुमानित दाम तय करें</p>
           </div>
 
-          <div className="flex flex-col items-center justify-center gap-3 py-4 bg-[#0f0e1a]/50 rounded-2xl border border-indigo-500/5">
-            <span className="text-xs font-black text-[#94a3b8] tracking-widest">PRICE / रेट</span>
+          {/* Starting Price Slider (Work rate) */}
+          <div className="flex flex-col items-center justify-center gap-3 py-4 bg-[#0f0e1a]/50 rounded-2xl border border-indigo-500/5 w-full">
+            <span className="text-xs font-black text-[#94a3b8] tracking-widest uppercase">Starting Price / शुरुआत का दाम (Starts From)</span>
             <div className="flex items-center gap-4">
               <button
                 type="button"
@@ -1061,7 +1063,7 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
               </button>
             </div>
 
-            {/* Quick Price Preset Buttons (Highly Accessible) */}
+            {/* Quick Price Preset Buttons */}
             <div className="mt-3 flex flex-wrap justify-center gap-2 px-4 max-w-sm">
               {[100, 200, 350, 500, 800, 1000, 1500, 2000].map((preset) => (
                 <button
@@ -1079,32 +1081,10 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
             </div>
           </div>
 
-          {/* Pricing Method Selection */}
-          <div className="space-y-3">
-            <span className="block text-center text-xs font-black text-[#94a3b8] tracking-widest uppercase">Charging Method / पैसा लेने का तरीका</span>
-            <div className="grid grid-cols-3 gap-3">
-              {[
-                { type: "fixed", label: "Fixed", hindi: "पक्का रेट" },
-                { type: "hourly", label: "Hourly", hindi: "प्रति घंटा" },
-                { type: "negotiable", label: "Discuss", hindi: "बात कर लेंगे" },
-              ].map((opt) => {
-                const checked = priceType === opt.type;
-                return (
-                  <button
-                    key={opt.type}
-                    type="button"
-                    onClick={() => handlePriceTypeSelect(opt.type)}
-                    className={`rounded-xl border p-4 text-xs font-black transition-all duration-150 text-center flex flex-col items-center justify-center gap-1 active:scale-95 cursor-pointer ${checked
-                        ? "border-indigo-400 bg-indigo-500/20 text-white shadow-lg shadow-indigo-500/10"
-                        : "border-indigo-500/10 bg-[#0f0e1a] text-slate-400 hover:border-indigo-400/40"
-                      }`}
-                  >
-                    <span className="text-sm font-black">{opt.label}</span>
-                    <span className="text-[10px] font-semibold opacity-80">{opt.hindi}</span>
-                  </button>
-                );
-              })}
-            </div>
+          <div className="flex flex-col items-center justify-center gap-2 py-3 px-4 bg-indigo-950/20 rounded-2xl border border-indigo-500/10 text-center w-full">
+            <span className="text-[11px] text-slate-450 leading-normal">
+              💡 This is a **starting rate reference** for buyers. The final quotation will be calculated and approved onsite after diagnostic inspection.
+            </span>
           </div>
 
           {/* Visiting Charge Selection */}
@@ -1113,7 +1093,7 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
             <div className="flex items-center gap-4">
               <button
                 type="button"
-                onClick={() => setVisitingCharge((v) => Math.max(0, v - 10))}
+                onClick={() => setVisitingCharge((v) => Math.max(100, v - 10))}
                 className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 hover:bg-indigo-700 text-lg font-black text-white transition hover:scale-105 active:scale-95 shadow-md cursor-pointer"
               >
                 -
@@ -1123,7 +1103,7 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
                 <input
                   type="number"
                   value={visitingCharge}
-                  onChange={(e) => setVisitingCharge(Math.max(0, parseInt(e.target.value) || 0))}
+                  onChange={(e) => setVisitingCharge(Math.max(100, parseInt(e.target.value) || 100))}
                   className="w-20 text-center text-2xl font-black bg-transparent text-white outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
               </div>
@@ -1138,7 +1118,7 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
 
             {/* Quick Visiting presets */}
             <div className="flex flex-wrap justify-center gap-2 px-4 mt-2">
-              {[0, 50, 100, 150, 200].map((preset) => (
+              {[100, 150, 200, 250, 300].map((preset) => (
                 <button
                   key={preset}
                   type="button"
@@ -1148,38 +1128,9 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
                       : "border-indigo-500/10 bg-[#0f0e1a] text-slate-400 hover:border-indigo-500/30"
                     }`}
                 >
-                  {preset === 0 ? "Free Visit / मुफ्त" : `₹${preset}`}
+                  ₹{preset}
                 </button>
               ))}
-            </div>
-          </div>
-
-          {/* Inspection and Final Price toggles */}
-          <div className="space-y-4 rounded-2xl border border-indigo-500/10 bg-[#0f0e1a]/30 p-4">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <label className="text-sm font-bold text-white block">Is Inspection Required? / क्या काम देखने जाना होगा?</label>
-                <span className="text-[11px] text-slate-400">Visiting charge paid only to inspect issues first</span>
-              </div>
-              <input
-                type="checkbox"
-                checked={isInspectionRequired}
-                onChange={(e) => setIsInspectionRequired(e.target.checked)}
-                className="h-5 w-5 accent-indigo-500 cursor-pointer"
-              />
-            </div>
-
-            <div className="flex items-center justify-between gap-4 border-t border-indigo-500/5 pt-3">
-              <div>
-                <label className="text-sm font-bold text-white block">Final Price After Inspection? / काम के बाद अंतिम मूल्य?</label>
-                <span className="text-[11px] text-slate-400">Final price will be quoted separately later</span>
-              </div>
-              <input
-                type="checkbox"
-                checked={finalPriceAfterInspection}
-                onChange={(e) => setFinalPriceAfterInspection(e.target.checked)}
-                className="h-5 w-5 accent-indigo-500 cursor-pointer"
-              />
             </div>
           </div>
 
@@ -1343,8 +1294,12 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
 
             <div className="border-t border-indigo-500/10 pt-4 flex justify-between items-center text-sm font-semibold">
               <span className="text-slate-400">Price Details / सेवा का रेट:</span>
-              <span className="text-base font-black text-white bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-lg text-emerald-300">
-                ₹{price} ({priceTypeLabels[priceType]})
+              <span className="text-base font-black text-white bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-lg text-emerald-350">
+                {priceType === "negotiable" ? (
+                  "Onsite Quote / जांच के बाद तय होगा"
+                ) : (
+                  <>₹{price} ({priceTypeLabels[priceType]})</>
+                )}
               </span>
             </div>
 

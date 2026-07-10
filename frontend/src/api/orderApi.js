@@ -10,7 +10,7 @@ export const sellerOrdersApi = {
 
   accept: async (orderId) => apiClient.patch(`/orders/${orderId}/accept`),
   start: async (orderId) => apiClient.patch(`/orders/${orderId}/start`),
-  complete: async (orderId) => apiClient.patch(`/orders/${orderId}/complete`),
+  complete: async (orderId, payload = {}) => apiClient.patch(`/orders/${orderId}/complete`, payload),
   cancel: async (orderId, payload = {}) =>
     apiClient.patch(`/orders/${orderId}/cancel`, payload),
   submitQuotation: async (orderId, payload) =>

@@ -38,7 +38,10 @@ function getDistanceKm(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-function formatPrice(price) {
+function formatPrice(price, priceType) {
+  if (priceType === "negotiable" || price === 0 || price === "0") {
+    return "Onsite Quote (जांच के बाद)";
+  }
   if (typeof price === "number") {
     return `Rs ${price.toLocaleString("en-IN")} onwards`;
   }
@@ -190,6 +193,8 @@ export default function SellerPublicProfile() {
       description:
         service.description || "Professional service from a verified provider.",
       price: service.price ?? "Price on request",
+      price_type: "negotiable",
+      visiting_charge: service.visiting_charge ?? 100,
       duration: service.duration_hrs
         ? `${service.duration_hrs} hrs`
         : service.duration || "1-2 hours",
@@ -539,11 +544,19 @@ export default function SellerPublicProfile() {
                       <h3 className="text-lg font-black text-slate-800">
                         {service.name}
                       </h3>
-                      {service.sub_service_name && (
-                        <span className="text-[10px] bg-purple-50 border border-purple-200 text-purple-700 font-bold px-2 py-0.5 rounded-full inline-block mt-1">
-                          🎯 {service.sub_service_name}
+                      <div className="flex flex-wrap gap-1.5 mt-1">
+                        <span className="text-[10px] font-bold text-sky-700 bg-sky-50 px-2 py-0.5 rounded border border-sky-200">
+                          Starts from / शुरुआत: ₹{Number(service.price || 0).toLocaleString("en-IN")}
                         </span>
-                      )}
+                        <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200/50">
+                          Onsite Quote / जांच के बाद
+                        </span>
+                        {service.sub_service_name && (
+                          <span className="text-[10px] bg-purple-50 border border-purple-200 text-purple-700 font-bold px-2 py-0.5 rounded-full">
+                            🎯 {service.sub_service_name}
+                          </span>
+                        )}
+                      </div>
                       <p className="mt-2 text-sm font-medium text-slate-600">
                         {service.description}
                       </p>
@@ -561,9 +574,9 @@ export default function SellerPublicProfile() {
                   </div>
 
                   <div className="mt-4 grid gap-2 text-sm font-bold text-slate-600 sm:grid-cols-3">
-                    <span className="inline-flex items-center gap-1 text-[#e53935]">
+                    <span className="inline-flex items-center gap-1 text-emerald-600">
                       <IndianRupee size={15} />
-                      {formatPrice(service.price).replace(/^Rs\s?/, "")}
+                      <span>Visit Fee: ₹{Number(service.visiting_charge || 0).toLocaleString("en-IN")}</span>
                     </span>
                     <span className="inline-flex items-center gap-1 text-slate-500">
                       <Clock size={15} />

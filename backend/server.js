@@ -30,12 +30,14 @@ const PORT = process.env.PORT || 5000;
 
 // ── Connect DB ───────────────────────────────────────────────────────────────
 const { ensureLeadTables } = require("./controllers/leadController");
+const { ensureStoredProcedures } = require("./utils/storedProcedures");
 connectDB().then(async () => {
   try {
     await ensureLeadTables();
     logger.info("✅ Lead tables verified/created");
+    await ensureStoredProcedures();
   } catch (err) {
-    logger.error("❌ Failed to ensure lead tables:", err);
+    logger.error("❌ Failed to ensure database initial tables/procedures:", err);
   }
 });
 
