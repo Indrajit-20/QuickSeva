@@ -1,13 +1,23 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { buyerOrdersApi } from "../api/orderApi";
+import apiClient from "../api/axiosConfig";
+
+const getImageUrl = (url) => {
+  if (!url) return "";
+  if (url.startsWith("http")) return url;
+  const base = apiClient.defaults.baseURL ? apiClient.defaults.baseURL.replace("/api", "") : "http://localhost:5000";
+  return `${base}${url}`;
+};
 
 const statusClasses = {
   pending: "border-amber-500/30 bg-amber-500/10 text-amber-300",
   accepted: "border-sky-500/30 bg-sky-500/10 text-sky-300",
+  quoted: "border-teal-500/30 bg-teal-500/10 text-teal-300",
   in_progress: "border-indigo-500/30 bg-indigo-500/10 text-indigo-300",
   completed: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
   cancelled: "border-red-500/30 bg-red-500/10 text-red-300",
+  disputed: "border-orange-500/30 bg-orange-500/10 text-orange-300",
 };
 
 const formatDate = (value) => {
@@ -60,6 +70,19 @@ export default function MyBookings() {
       await refresh();
     } catch (e) {
       alert(e?.response?.data?.message || "Failed to cancel");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleApproveQuotation = async (id) => {
+    if (!window.confirm("Are you sure you want to approve and pay the quotation? / क्या आप कोटेशन का भुगतान करना चाहते हैं?")) return;
+    setBusyId(id);
+    try {
+      await buyerOrdersApi.approveQuotation(id);
+      await refresh();
+    } catch (e) {
+      alert(e?.response?.data?.message || "Failed to approve quotation");
     } finally {
       setBusyId(null);
     }
@@ -157,9 +180,17 @@ export default function MyBookings() {
                     <div className="flex flex-col sm:flex-row items-start gap-4 flex-1">
                       {/* Avatar Ring */}
                       <div className="qs-avatar-ring flex-shrink-0 mt-1">
-                        <div className="qs-avatar bg-gradient-to-br from-indigo-600 to-indigo-900 font-extrabold text-white">
-                          {avatarLetter}
-                        </div>
+                        {booking.seller_pic ? (
+                          <img
+                            src={getImageUrl(booking.seller_pic)}
+                            alt={booking.business_name || booking.seller_name}
+                            className="qs-avatar object-cover rounded-full"
+                          />
+                        ) : (
+                          <div className="qs-avatar bg-gradient-to-br from-indigo-600 to-indigo-900 font-extrabold text-white">
+                            {avatarLetter}
+                          </div>
+                        )}
                       </div>
 
                       {/* Info block */}
@@ -226,20 +257,71 @@ export default function MyBookings() {
                             </p>
                           )}
 
-                          <p className="flex items-center text-sm text-indigo-200/70">
-                            <svg className="h-4 w-4 text-indigo-400/80 mr-2.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 8h6m-5 0a3 3 0 110 6H9l3 3m-3-6h6m6 1a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <span className="font-medium">Total Amount:</span>
-                            <span className="ml-1.5 text-white font-extrabold">
-                              ₹{Number(booking.total_amount || 0).toLocaleString("en-IN")}
-                            </span>
-                            {booking.payment_method && (
-                              <span className="ml-2 px-1.5 py-0.5 rounded bg-indigo-950/60 border border-indigo-500/20 text-[10px] uppercase font-bold tracking-wider text-indigo-300">
+                          <div className="mt-4 pt-3 border-t border-indigo-500/10 space-y-2">
+                            <div className="flex flex-col gap-2 rounded-xl bg-indigo-950/40 border border-indigo-500/10 p-3.5">
+                              {/* Stage 1 details */}
+                              <div className="flex items-center justify-between text-xs text-indigo-300">
+                                <span>Stage 1: Visiting Charge / विजिटिंग चार्ज:</span>
+                                <span className="font-extrabold text-emerald-400">
+                                  ₹{Number(booking.visiting_charge_amount || booking.total_amount || 0).toLocaleString("en-IN")} (✓ Paid / भुगतान हुआ)
+                                </span>
+                              </div>
+                              
+                              {/* Stage 2 details */}
+                              {booking.service_charge_amount > 0 && (
+                                <div className="border-t border-indigo-500/5 pt-2 mt-2 space-y-1 text-xs">
+                                  <span className="block font-bold text-indigo-400 mb-1">Stage 2: Quotation / काम का पक्का बिल:</span>
+                                  <div className="flex justify-between text-indigo-200">
+                                    <span>Service Fee / काम का दाम:</span>
+                                    <span>₹{Number(booking.service_charge_amount || 0).toLocaleString("en-IN")}</span>
+                                  </div>
+                                  {booking.parts_cost_amount > 0 && (
+                                    <div className="flex justify-between text-indigo-200">
+                                      <span>Parts/Materials / सामान का चार्ज:</span>
+                                      <span>₹{Number(booking.parts_cost_amount || 0).toLocaleString("en-IN")}</span>
+                                    </div>
+                                  )}
+                                  {booking.discount_amount > 0 && (
+                                    <div className="flex justify-between text-red-400 font-semibold">
+                                      <span>Discount / छूट:</span>
+                                      <span>-₹{Number(booking.discount_amount || 0).toLocaleString("en-IN")}</span>
+                                    </div>
+                                  )}
+                                  {booking.final_platform_fee > 0 && (
+                                    <div className="flex justify-between text-indigo-300/80">
+                                      <span>Platform Fee / सुरक्षा शुल्क:</span>
+                                      <span>+₹{Number(booking.final_platform_fee || 0).toLocaleString("en-IN")}</span>
+                                    </div>
+                                  )}
+                                  <div className="flex justify-between text-sm font-extrabold text-white border-t border-indigo-500/10 pt-1.5 mt-1">
+                                    <span>Remaining Total / बकाया कुल राशि:</span>
+                                    <span>₹{Number(
+                                      parseFloat(booking.service_charge_amount || 0) + 
+                                      parseFloat(booking.parts_cost_amount || 0) - 
+                                      parseFloat(booking.discount_amount || 0) +
+                                      parseFloat(booking.final_platform_fee || 0)
+                                    ).toLocaleString("en-IN")}</span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            <p className="flex items-center text-xs text-indigo-200/50">
+                              <span>Payment Mode / भुगतान का माध्यम:</span>
+                              <span className="ml-1.5 px-1.5 py-0.5 rounded bg-indigo-950/60 border border-indigo-500/20 text-[10px] uppercase font-bold tracking-wider text-indigo-300">
                                 {booking.payment_method}
                               </span>
+                            </p>
+                            
+                            {/* OTP Start Code display */}
+                            {booking.status === "quoted" && booking.final_payment_status === "paid" && booking.start_otp_code && (
+                              <div className="mt-3.5 p-3.5 rounded-2xl border border-indigo-400/30 bg-indigo-950/60 text-center shadow-lg">
+                                <span className="block text-[10px] font-black text-indigo-400 uppercase tracking-widest">Share this Start Code with Technician / काम शुरू करने का कोड</span>
+                                <span className="block text-2xl font-black text-white mt-1.5 tracking-widest">{booking.start_otp_code}</span>
+                                <span className="block text-[10px] text-indigo-200/50 mt-1">Technician will enter this code in their app to verify and start service.</span>
+                              </div>
                             )}
-                          </p>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -255,6 +337,39 @@ export default function MyBookings() {
                           </svg>
                           View Provider
                         </Link>
+                      )}
+                      {booking.status === "quoted" && booking.final_payment_status !== "paid" && (
+                        <>
+                          <button
+                            type="button"
+                            disabled={busyId === booking.id}
+                            onClick={() => handleApproveQuotation(booking.id)}
+                            className="flex items-center justify-center gap-1.5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 hover:bg-emerald-500/25 px-4 py-2.5 text-xs font-bold text-emerald-400 hover:text-emerald-300 transition duration-300 w-full text-center disabled:opacity-50 shadow-md"
+                          >
+                            {busyId === booking.id ? (
+                              <>
+                                <span className="h-3 w-3 animate-spin rounded-full border-2 border-emerald-400 border-t-white" />
+                                Approving…
+                              </>
+                            ) : (
+                              <>
+                                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Approve &amp; Pay
+                              </>
+                            )}
+                          </button>
+                          
+                          <button
+                            type="button"
+                            disabled={busyId === booking.id}
+                            onClick={() => cancelBooking(booking.id)}
+                            className="flex items-center justify-center gap-1.5 rounded-xl border border-red-500/20 bg-red-500/10 hover:bg-red-500/25 px-4 py-2.5 text-xs font-bold text-red-400 hover:text-red-300 transition duration-300 w-full text-center disabled:opacity-50"
+                          >
+                            Reject Quotation
+                          </button>
+                        </>
                       )}
                       {booking.status === "pending" && (
                         <button

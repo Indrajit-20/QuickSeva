@@ -20,9 +20,14 @@ export default function UserRoute({ allowGuests = false, guestOnly = false }) {
     );
   }
 
+  // If a route allows guests, anyone (authenticated or not, admin, seller, buyer) can view it.
+  if (allowGuests) {
+    return <Outlet />;
+  }
+
   // Case 1: Not Authenticated
   if (!isAuthenticated) {
-    if (guestOnly || allowGuests) {
+    if (guestOnly) {
       return <Outlet />;
     }
     return <Navigate to="/login" replace />;

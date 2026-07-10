@@ -459,12 +459,36 @@ textarea::placeholder {
   -webkit-backdrop-filter: none !important;
 }
 
-.qs-avatar-ring,
+.qs-avatar-ring {
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 9999px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: rgba(99, 102, 241, 0.1) !important;
+  border: 1.5px solid rgba(99, 102, 241, 0.2) !important;
+  padding: 2px !important;
+  box-shadow: none !important;
+}
+
 .qs-avatar {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 9999px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   background: var(--qs-primary) !important;
   background-image: none !important;
   color: #ffffff !important;
   box-shadow: none !important;
+  font-size: 1rem !important;
+  font-weight: 800 !important;
+}
+
+img.qs-avatar {
+  object-fit: cover !important;
 }
 
 .qs-verified-tick,
@@ -2401,4 +2425,96 @@ input[type="range"] {
 
 .leaflet-pane {
   will-change: transform;
+}
+
+/* ==================== PREMIUM DATE PICKER OVERRIDES ==================== */
+.qs-date-picker__container {
+  width: 100% !important;
+  display: block !important;
+}
+
+.rmdp-container {
+  width: 100% !important;
+}
+
+.rmdp-input {
+  width: 100% !important;
+  background-color: var(--qs-surface) !important;
+  border: 1px solid var(--qs-border) !important;
+  color: var(--qs-text) !important;
+  border-radius: 0.75rem !important;
+  padding: 0.75rem 1rem !important;
+  font-size: 0.875rem !important;
+  outline: none !important;
+  transition: all 0.2s ease !important;
+}
+
+.rmdp-input:focus {
+  border-color: var(--qs-primary) !important;
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.1) !important;
+}
+
+.rmdp-calendar {
+  background-color: var(--qs-surface) !important;
+  border: 1px solid var(--qs-border) !important;
+  border-radius: 1rem !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+  padding: 0.5rem !important;
+}
+
+.rmdp-day span {
+  color: var(--qs-text) !important;
+}
+
+.rmdp-day.rmdp-today span {
+  background-color: rgba(2, 132, 199, 0.1) !important;
+  color: var(--qs-primary) !important;
+  font-weight: bold !important;
+}
+
+.rmdp-day.rmdp-selected span {
+  background-color: var(--qs-primary) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 6px -1px rgba(2, 132, 199, 0.4) !important;
+}
+
+.rmdp-day:not(.rmdp-disabled):not(.rmdp-day-hidden) span:hover {
+  background-color: rgba(2, 132, 199, 0.08) !important;
+  color: var(--qs-primary) !important;
+}
+
+.rmdp-arrow {
+  border-color: var(--qs-text) !important;
+}
+
+.rmdp-header-values {
+  color: var(--qs-text) !important;
+  font-weight: bold !important;
+}
+
+.rmdp-week-day {
+  color: var(--qs-muted) !important;
+  font-weight: 600 !important;
+}
+
+/* High-contrast and form field visibility overrides in Corporate Theme */
+.form-label.dark {
+  color: var(--qs-text) !important;
+}
+
+.form-input.dark {
+  background-color: var(--qs-surface) !important;
+  color: var(--qs-text) !important;
+  border: 1px solid var(--qs-border) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+}
+
+.form-input.dark:focus {
+  border-color: var(--qs-primary) !important;
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15) !important;
+  color: var(--qs-text) !important;
+}
+
+.form-input.dark::placeholder {
+  color: var(--qs-muted) !important;
 }

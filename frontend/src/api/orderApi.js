@@ -13,6 +13,10 @@ export const sellerOrdersApi = {
   complete: async (orderId) => apiClient.patch(`/orders/${orderId}/complete`),
   cancel: async (orderId, payload = {}) =>
     apiClient.patch(`/orders/${orderId}/cancel`, payload),
+  submitQuotation: async (orderId, payload) =>
+    apiClient.patch(`/orders/${orderId}/quotation`, payload),
+  verifyStartCode: async (orderId, otp) =>
+    apiClient.post(`/orders/${orderId}/verify-start-code`, { otp }),
 };
 
 export const buyerOrdersApi = {
@@ -26,4 +30,6 @@ export const buyerOrdersApi = {
   // Note: backend has PATCH /orders/:id/cancel that allows buyer cancel
   cancel: async (orderId, payload = {}) =>
     apiClient.patch(`/orders/${orderId}/cancel`, payload),
+  approveQuotation: async (orderId) =>
+    apiClient.patch(`/orders/${orderId}/approve-quotation`),
 };

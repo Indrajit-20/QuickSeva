@@ -8,7 +8,7 @@ import apiClient from "../../api/axiosConfig";
 import PageTransition from "../../components/PageTransition";
 import "../../index.css";
 
-const tabs = ["all", "pending", "accepted", "in_progress", "completed", "cancelled"];
+const tabs = ["all", "pending", "accepted", "in_progress", "quoted", "completed", "cancelled"];
 
 const maskPhone = (phone) =>
   phone ? `${String(phone).slice(0, 2)}XXXXXX${String(phone).slice(-2)}` : "";
@@ -20,6 +20,59 @@ export default function SellerOrders() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [busyId, setBusyId] = useState(null);
+
+  // Quotation states
+  const [quotingOrderId, setQuotingOrderId] = useState(null);
+  const [quoteForm, setQuoteForm] = useState({
+    service_charge: "",
+    parts_cost: "",
+    discount: "",
+    notes: "",
+  });
+  const [submittingQuote, setSubmittingQuote] = useState(false);
+
+  // OTP verification states
+  const [verifyingOrderId, setVerifyingOrderId] = useState(null);
+  const [otpCode, setOtpCode] = useState("");
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
+
+  const handleQuoteSubmit = async (e) => {
+    e.preventDefault();
+    if (!quotingOrderId) return;
+    setSubmittingQuote(true);
+    try {
+      await sellerOrdersApi.submitQuotation(quotingOrderId, {
+        service_charge: Number(quoteForm.service_charge) || 0,
+        parts_cost: Number(quoteForm.parts_cost) || 0,
+        discount: Number(quoteForm.discount) || 0,
+        notes: quoteForm.notes,
+      });
+      alert("Quotation estimate sent to customer!");
+      setQuotingOrderId(null);
+      setQuoteForm({ service_charge: "", parts_cost: "", discount: "", notes: "" });
+      await fetchOrders();
+    } catch (err) {
+      alert(err?.response?.data?.message || "Failed to submit quotation");
+    } finally {
+      setSubmittingQuote(false);
+    }
+  };
+
+  const handleOtpVerify = async (e) => {
+    e.preventDefault();
+    if (!verifyingOrderId || !otpCode) return;
+    setVerifyingOtp(true);
+    try {
+      await sellerOrdersApi.verifyStartCode(verifyingOrderId, otpCode);
+      setVerifyingOrderId(null);
+      setOtpCode("");
+      await fetchOrders();
+    } catch (err) {
+      alert(err?.response?.data?.message || "Invalid start code");
+    } finally {
+      setVerifyingOtp(false);
+    }
+  };
 
   const fetchOrders = async () => {
     try {
@@ -152,13 +205,16 @@ export default function SellerOrders() {
                         </div>
                         <div>
                           <span className="block text-xs text-[#94a3b8]">
-                            Amount
+                            Amount / कुल राशि
                           </span>
-                          <span className="font-semibold">
-                            {amount !== undefined && amount !== null
-                              ? formatCurrency(amount)
-                              : "—"}
+                          <span className="font-semibold text-emerald-400">
+                            Visit: {order.visiting_charge_amount ? formatCurrency(order.visiting_charge_amount) : formatCurrency(amount || 0)}
                           </span>
+                          {order.service_charge_amount > 0 && (
+                            <span className="block text-xs text-indigo-300">
+                              Work: +{formatCurrency(parseFloat(order.service_charge_amount) + parseFloat(order.parts_cost_amount || 0) - parseFloat(order.discount_amount || 0))}
+                            </span>
+                          )}
                         </div>
                         <div>
                           <span className="block text-xs text-[#94a3b8]">
@@ -178,7 +234,7 @@ export default function SellerOrders() {
                         </div>
                       </div>
 
-                      {["accepted", "in_progress", "completed"].includes(order.status) && (
+                      {["accepted", "in_progress", "quoted", "completed"].includes(order.status) && (
                         <div className="mt-4 grid gap-3 border-t border-indigo-500/10 pt-4 text-sm sm:grid-cols-2">
                           {phone && (
                             <div>
@@ -204,6 +260,110 @@ export default function SellerOrders() {
                       )}
                     </div>
 
+                    {/* Render quotation form if active */}
+                    {quotingOrderId === id && (
+                      <form onSubmit={handleQuoteSubmit} className="mt-4 p-4 rounded-xl border border-indigo-500/25 bg-[#0f0e1a] space-y-3.5 w-full">
+                        <h3 className="text-sm font-bold text-white uppercase tracking-wider">Create Quotation / नया पक्का बिल बनाएं</h3>
+                        
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                          <div>
+                            <label className="block text-xs font-semibold text-slate-400 mb-1">Service Fee / काम का दाम (₹)</label>
+                            <input
+                              type="number"
+                              required
+                              value={quoteForm.service_charge}
+                              onChange={(e) => setQuoteForm({ ...quoteForm, service_charge: e.target.value })}
+                              placeholder="E.g. 500"
+                              className="w-full rounded-lg border border-indigo-500/20 bg-[#16152b] px-3 py-2 text-xs text-white outline-none focus:border-indigo-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold text-slate-400 mb-1">Parts/Materials / सामान का दाम (₹, Optional)</label>
+                            <input
+                              type="number"
+                              value={quoteForm.parts_cost}
+                              onChange={(e) => setQuoteForm({ ...quoteForm, parts_cost: e.target.value })}
+                              placeholder="E.g. 200"
+                              className="w-full rounded-lg border border-indigo-500/20 bg-[#16152b] px-3 py-2 text-xs text-white outline-none focus:border-indigo-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold text-slate-400 mb-1">Discount / छूट (₹, Optional)</label>
+                            <input
+                              type="number"
+                              value={quoteForm.discount}
+                              onChange={(e) => setQuoteForm({ ...quoteForm, discount: e.target.value })}
+                              placeholder="E.g. 50"
+                              className="w-full rounded-lg border border-indigo-500/20 bg-[#16152b] px-3 py-2 text-xs text-white outline-none focus:border-indigo-500"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-400 mb-1">Quotation Notes / विवरण</label>
+                          <textarea
+                            value={quoteForm.notes}
+                            onChange={(e) => setQuoteForm({ ...quoteForm, notes: e.target.value })}
+                            placeholder="Describe parts replaced or additional tasks done..."
+                            rows="2"
+                            className="w-full rounded-lg border border-indigo-500/20 bg-[#16152b] px-3 py-2 text-xs text-white outline-none focus:border-indigo-500 resize-none"
+                          />
+                        </div>
+
+                        <div className="flex gap-2 justify-end">
+                          <button
+                            type="button"
+                            onClick={() => setQuotingOrderId(null)}
+                            className="rounded-lg border border-slate-500/30 px-3.5 py-2 text-xs font-bold text-slate-300 hover:bg-white/5 active:scale-95 transition"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="submit"
+                            disabled={submittingQuote}
+                            className="rounded-lg bg-indigo-600 hover:bg-indigo-700 px-4 py-2 text-xs font-bold text-white shadow-lg active:scale-95 transition"
+                          >
+                            {submittingQuote ? "Submitting..." : "Send Estimate"}
+                          </button>
+                        </div>
+                      </form>
+                    )}
+
+                    {/* Render OTP verification form if active */}
+                    {verifyingOrderId === id && (
+                      <form onSubmit={handleOtpVerify} className="mt-4 p-4 rounded-xl border border-indigo-500/25 bg-[#0f0e1a] space-y-3 w-full">
+                        <h3 className="text-sm font-bold text-white uppercase tracking-wider">Verify Start Code / काम शुरू करने का कोड</h3>
+                        <p className="text-[10px] text-slate-400">Ask the customer for the 4-digit code shown on their booking screen.</p>
+                        
+                        <div className="flex gap-3 max-w-xs items-center">
+                          <input
+                            type="text"
+                            required
+                            maxLength="4"
+                            pattern="\d{4}"
+                            value={otpCode}
+                            onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
+                            placeholder="E.g. 4812"
+                            className="rounded-lg border border-indigo-500/20 bg-[#16152b] px-3 py-2 text-center text-base font-black tracking-widest text-white outline-none focus:border-indigo-500 w-28"
+                          />
+                          <button
+                            type="submit"
+                            disabled={verifyingOtp || otpCode.length !== 4}
+                            className="rounded-lg bg-emerald-600 hover:bg-emerald-700 px-4 py-2 text-xs font-bold text-white shadow-lg active:scale-95 transition disabled:opacity-50"
+                          >
+                            {verifyingOtp ? "Verifying..." : "Verify & Start"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setVerifyingOrderId(null)}
+                            className="text-xs font-semibold text-slate-400 hover:text-white"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
+                    )}
+ 
                     <div className="flex shrink-0 flex-wrap gap-2">
                       {order.status === "pending" && (
                         <>
@@ -238,7 +398,17 @@ export default function SellerOrders() {
                           Start
                         </button>
                       )}
-                      {order.status === "in_progress" && (
+                      {order.status === "in_progress" && (!order.service_charge_amount || parseFloat(order.service_charge_amount) === 0) && (
+                        <button
+                          type="button"
+                          disabled={busy || quotingOrderId === id}
+                          onClick={() => setQuotingOrderId(id)}
+                          className="inline-flex items-center gap-2 rounded-lg border border-indigo-400/30 bg-indigo-500/10 px-3 py-2 text-sm font-bold text-indigo-200 transition hover:bg-indigo-500/20 disabled:opacity-50 shadow-md"
+                        >
+                          ➕ Create Quotation / बिल बनाएं
+                        </button>
+                      )}
+                      {order.status === "in_progress" && order.service_charge_amount > 0 && (
                         <button
                           type="button"
                           disabled={busy}
@@ -248,6 +418,27 @@ export default function SellerOrders() {
                           <CheckCircle2 size={16} />
                           Mark Complete
                         </button>
+                      )}
+                      {order.status === "quoted" && (
+                        <>
+                          {order.final_payment_status === "paid" ? (
+                            <button
+                              type="button"
+                              disabled={busy || verifyingOrderId === id}
+                              onClick={() => {
+                                setVerifyingOrderId(id);
+                                setOtpCode("");
+                              }}
+                              className="inline-flex items-center gap-2 rounded-lg border border-teal-400/30 bg-teal-500/10 px-3 py-2 text-sm font-bold text-teal-200 transition hover:bg-teal-500/20 shadow-md"
+                            >
+                              🔑 Enter Start Code / कोड डालें
+                            </button>
+                          ) : (
+                            <span className="text-xs font-semibold text-amber-300 bg-amber-500/5 border border-amber-500/20 px-3 py-2 rounded-lg">
+                              ⏳ Awaiting Customer Approval / मंजूरी का इंतज़ार
+                            </span>
+                          )}
+                        </>
                       )}
                       {order.status === "completed" && (
                         <button

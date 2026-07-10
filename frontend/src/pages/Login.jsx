@@ -13,7 +13,7 @@ const Login = () => {
 
   const [captchaQuestion, setCaptchaQuestion] = useState("");
   const [captchaToken, setCaptchaToken] = useState("");
-  
+
   const [localErrors, setLocalErrors] = useState({});
   const [localMessage, setLocalMessage] = useState("");
   const [fetchingCaptcha, setFetchingCaptcha] = useState(false);
@@ -96,7 +96,7 @@ const Login = () => {
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-900 via-indigo-950 to-black flex items-center justify-center p-4">
       <div className="bg-indigo-900/40 backdrop-blur-md rounded-2xl shadow-2xl w-full max-w-md p-5 sm:p-8 border border-indigo-500/30 red-accent-line">
-        
+
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-white mb-2">Welcome Back</h1>
@@ -134,11 +134,10 @@ const Login = () => {
               placeholder="98765 43210"
               maxLength={10}
               disabled={isLoading}
-              className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${
-                localErrors.phone
+              className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${localErrors.phone
                   ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
                   : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
-              }`}
+                }`}
             />
             {localErrors.phone && (
               <p className="mt-1 text-xs text-red-300">⚠ {localErrors.phone}</p>
@@ -167,11 +166,10 @@ const Login = () => {
               }}
               placeholder="••••••••"
               disabled={isLoading}
-              className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${
-                localErrors.password
+              className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${localErrors.password
                   ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
                   : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
-              }`}
+                }`}
             />
             {localErrors.password && (
               <p className="mt-1 text-xs text-red-300">⚠ {localErrors.password}</p>
@@ -207,11 +205,10 @@ const Login = () => {
               }}
               placeholder="Enter answer"
               disabled={isLoading}
-              className={`w-full mt-2 px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${
-                localErrors.captcha
+              className={`w-full mt-2 px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${localErrors.captcha
                   ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
                   : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
-              }`}
+                }`}
             />
             {localErrors.captcha && (
               <p className="mt-1 text-xs text-red-300">⚠ {localErrors.captcha}</p>

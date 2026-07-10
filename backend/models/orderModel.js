@@ -14,12 +14,16 @@ const OrderModel = {
     lng,
     scheduled_at,
     notes,
+    visiting_charge_amount,
+    visiting_platform_fee,
+    visiting_payment_status,
   }) => {
     const [result] = await pool.query(
       `INSERT INTO orders
        (order_number, buyer_id, seller_id, service_id, total_amount, platform_fee,
-        payment_method, address, lat, lng, scheduled_at, notes)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        payment_method, address, lat, lng, scheduled_at, notes,
+        visiting_charge_amount, visiting_platform_fee, visiting_payment_status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         order_number,
         buyer_id,
@@ -33,6 +37,9 @@ const OrderModel = {
         lng || null,
         scheduled_at || null,
         notes || null,
+        visiting_charge_amount || 0,
+        visiting_platform_fee || 0,
+        visiting_payment_status || 'pending',
       ],
     );
     return result.insertId;

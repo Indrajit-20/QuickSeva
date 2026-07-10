@@ -9,13 +9,24 @@ const {
   generateOrderNumber,
 } = require("../utils/helpers");
 
-// Place a new order
+// Helper to get system settings dynamically
+async function getSystemSetting(key, defaultValue = "") {
+  try {
+    const [rows] = await pool.query("SELECT `value` FROM system_settings WHERE `key` = ?", [key]);
+    if (rows && rows.length > 0) return rows[0].value;
+    return defaultValue;
+  } catch (err) {
+    console.error(`Failed to get system setting ${key}:`, err);
+    return defaultValue;
+  }
+}
+
+// Place a new order (Stage 1: Visiting Charge Payment)
 exports.placeOrder = async (req, res) => {
   try {
     const {
       seller_id,
       service_id,
-      total_amount,
       payment_method,
       address,
       lat,
@@ -29,17 +40,34 @@ exports.placeOrder = async (req, res) => {
     if (!seller.is_available)
       return errorRes(res, "Seller is currently unavailable", 400);
 
-    const platform_fee = (parseFloat(total_amount) * 0.05).toFixed(2); // 5% fee
+    const [serviceRows] = await pool.query("SELECT * FROM services WHERE id = ?", [service_id]);
+    if (serviceRows.length === 0) return errorRes(res, "Service not found", 404);
+    const service = serviceRows[0];
+
+    const visiting_charge = parseFloat(service.visiting_charge || 0);
+
+    // Fetch platform fee settings
+    const feeModel = await getSystemSetting("platform_fee_model", "buyer");
+    const feePercentage = parseFloat(await getSystemSetting("platform_fee_percentage", "5.00"));
+
+    // Calculate Stage 1 Platform Fee (based on visiting charge)
+    const visiting_platform_fee = parseFloat((visiting_charge * (feePercentage / 100)).toFixed(2));
+
+    // Calculate how much the customer pays in Stage 1
+    // Option A (buyer pays fee): pays visiting charge + fee
+    // Option B (seller pays fee): pays only visiting charge
+    const total_stage_1 = feeModel === "buyer" ? (visiting_charge + visiting_platform_fee) : visiting_charge;
+
     const order_number = generateOrderNumber();
 
-    // If wallet payment, debit immediately
+    // If wallet payment, debit Stage 1 amount immediately
     if (payment_method === "wallet") {
       await WalletModel.debit(
         req.user.id,
-        total_amount,
+        total_stage_1.toFixed(2),
         "order",
         order_number,
-        `Payment for order ${order_number}`,
+        `Visiting charge for order ${order_number}`,
       );
     }
 
@@ -48,18 +76,23 @@ exports.placeOrder = async (req, res) => {
       buyer_id: req.user.id,
       seller_id,
       service_id,
-      total_amount,
-      platform_fee,
+      total_amount: total_stage_1.toFixed(2),
+      platform_fee: visiting_platform_fee.toFixed(2),
       payment_method,
       address,
       lat,
       lng,
       scheduled_at,
       notes,
+      visiting_charge_amount: visiting_charge.toFixed(2),
+      visiting_platform_fee: visiting_platform_fee.toFixed(2),
+      visiting_payment_status: payment_method === "wallet" ? "paid" : "pending",
     });
 
     if (payment_method === "wallet") {
       await OrderModel.updatePaymentStatus(orderId, "paid");
+      // For immediate verification, if paid, also auto-accept or transition status to accepted
+      await OrderModel.updateStatus(orderId, "accepted");
     }
 
     // Create notification for seller
@@ -72,8 +105,8 @@ exports.placeOrder = async (req, res) => {
        VALUES (?, ?, ?, 'order', ?)`,
       [
         sellerUser[0][0].user_id,
-        "New Order!",
-        `You have a new order #${order_number}`,
+        "New Order Booked!",
+        `New order #${order_number} booked. Visiting charge paid.`,
         orderId,
       ],
     );
@@ -218,8 +251,22 @@ exports.completeOrder = async (req, res) => {
 
     // Credit seller wallet (amount minus platform fee) if not cash
     if (order.payment_method !== "cash") {
-      const sellerAmount =
-        parseFloat(order.total_amount) - parseFloat(order.platform_fee);
+      const feeModel = await getSystemSetting("platform_fee_model", "buyer");
+      
+      const visiting_charge = parseFloat(order.visiting_charge_amount || 0);
+      const service_charge = parseFloat(order.service_charge_amount || 0);
+      const parts_cost = parseFloat(order.parts_cost_amount || 0);
+      const discount = parseFloat(order.discount_amount || 0);
+
+      const sellerEarnings = visiting_charge + service_charge + parts_cost - discount;
+      let sellerAmount = sellerEarnings;
+
+      if (feeModel === "seller") {
+        const visiting_fee = parseFloat(order.visiting_platform_fee || 0);
+        const final_fee = parseFloat(order.final_platform_fee || 0);
+        sellerAmount = sellerEarnings - (visiting_fee + final_fee);
+      }
+
       await WalletModel.credit(
         seller.user_id,
         sellerAmount.toFixed(2),
@@ -247,6 +294,7 @@ exports.completeOrder = async (req, res) => {
 
     return successRes(res, null, "Order completed");
   } catch (err) {
+    console.error("Complete order error:", err);
     return errorRes(res, "Failed to complete order");
   }
 };
@@ -266,8 +314,8 @@ exports.cancelOrder = async (req, res) => {
       return errorRes(res, "Unauthorized", 403);
     }
 
-
-    if (!["pending", "accepted"].includes(order.status)) {
+    // Cancellation is allowed if not already completed or cancelled
+    if (["completed", "cancelled"].includes(order.status)) {
       return errorRes(res, "Order cannot be cancelled at this stage", 400);
     }
 
@@ -276,19 +324,207 @@ exports.cancelOrder = async (req, res) => {
     });
 
     // Refund wallet if paid via wallet
-    if (order.payment_method === "wallet" && order.payment_status === "paid") {
-      await WalletModel.credit(
-        order.buyer_id,
-        order.total_amount,
-        "refund",
-        order.order_number,
-        `Refund for cancelled order #${order.order_number}`,
-      );
+    if (order.payment_method === "wallet") {
+      let refundAmount = 0;
+      const feeModel = await getSystemSetting("platform_fee_model", "buyer");
+
+      if (order.visiting_payment_status === "paid") {
+        const visiting_charge = parseFloat(order.visiting_charge_amount || 0);
+        const visiting_fee = parseFloat(order.visiting_platform_fee || 0);
+        refundAmount += visiting_charge + (feeModel === "buyer" ? visiting_fee : 0);
+      }
+
+      if (order.final_payment_status === "paid") {
+        const service_charge = parseFloat(order.service_charge_amount || 0);
+        const parts_cost = parseFloat(order.parts_cost_amount || 0);
+        const discount = parseFloat(order.discount_amount || 0);
+        const final_fee = parseFloat(order.final_platform_fee || 0);
+        refundAmount += (service_charge + parts_cost - discount) + (feeModel === "buyer" ? final_fee : 0);
+      }
+
+      if (refundAmount > 0) {
+        await WalletModel.credit(
+          order.buyer_id,
+          refundAmount.toFixed(2),
+          "refund",
+          order.order_number,
+          `Refund for cancelled order #${order.order_number}`,
+        );
+      }
       await OrderModel.updatePaymentStatus(req.params.id, "refunded");
     }
 
     return successRes(res, null, "Order cancelled");
   } catch (err) {
+    console.error("Cancel order error:", err);
     return errorRes(res, "Failed to cancel order");
+  }
+};
+
+// Submit quotation (seller)
+exports.submitQuotation = async (req, res) => {
+  try {
+    const { service_charge, parts_cost, discount, notes } = req.body;
+    const seller = await SellerModel.findByUserId(req.user.id);
+    const order = await OrderModel.findById(req.params.id);
+
+    if (!order || order.seller_id !== seller.id)
+      return errorRes(res, "Order not found", 404);
+    if (order.status !== "in_progress")
+      return errorRes(res, "Order must be in progress to submit quotation", 400);
+
+    const feeModel = await getSystemSetting("platform_fee_model", "buyer");
+    const feePercentage = parseFloat(await getSystemSetting("platform_fee_percentage", "5.00"));
+
+    const subtotal = parseFloat(service_charge || 0) + parseFloat(parts_cost || 0) - parseFloat(discount || 0);
+    const final_platform_fee = (subtotal * (feePercentage / 100)).toFixed(2);
+    const start_otp_code = Math.floor(1000 + Math.random() * 9000).toString();
+
+    await pool.query(
+      `UPDATE orders SET
+        status = 'quoted',
+        service_charge_amount = ?,
+        parts_cost_amount = ?,
+        discount_amount = ?,
+        final_platform_fee = ?,
+        quotation_notes = ?,
+        start_otp_code = ?
+       WHERE id = ?`,
+      [
+        parseFloat(service_charge || 0).toFixed(2),
+        parseFloat(parts_cost || 0).toFixed(2),
+        parseFloat(discount || 0).toFixed(2),
+        parseFloat(final_platform_fee).toFixed(2),
+        notes || "",
+        start_otp_code,
+        req.params.id
+      ]
+    );
+
+    // Send notification to buyer
+    await pool.query(
+      `INSERT INTO notifications (user_id, title, message, type, ref_id) VALUES (?, ?, ?, 'order', ?)`,
+      [
+        order.buyer_id,
+        "New Quotation Received!",
+        `Technician submitted a quotation of ₹${subtotal} for order #${order.order_number}. Please review.`,
+        order.id
+      ]
+    );
+
+    return successRes(res, { start_otp_code }, "Quotation submitted successfully");
+  } catch (err) {
+    console.error("Submit quotation error:", err);
+    return errorRes(res, "Failed to submit quotation");
+  }
+};
+
+// Approve & pay quotation (buyer)
+exports.approveQuotation = async (req, res) => {
+  try {
+    const order = await OrderModel.findById(req.params.id);
+    if (!order || order.buyer_id !== req.user.id)
+      return errorRes(res, "Order not found", 404);
+    if (order.status !== "quoted")
+      return errorRes(res, "No active quotation to approve", 400);
+
+    const subtotal = parseFloat(order.service_charge_amount || 0) + parseFloat(order.parts_cost_amount || 0) - parseFloat(order.discount_amount || 0);
+    const feeModel = await getSystemSetting("platform_fee_model", "buyer");
+    const remaining = feeModel === "buyer" ? (subtotal + parseFloat(order.final_platform_fee || 0)) : subtotal;
+
+    const final_pay_status = order.payment_method === "wallet" ? "paid" : "pending";
+
+    // If wallet payment, debit remaining amount immediately
+    if (order.payment_method === "wallet") {
+      await WalletModel.debit(
+        req.user.id,
+        remaining.toFixed(2),
+        "order",
+        order.order_number,
+        `Final payment for order ${order.order_number}`,
+      );
+    }
+
+    // Update order totals and statuses
+    // Set status to quoted but final payment status updated. Seller enters Start OTP to move back to in_progress
+    await pool.query(
+      `UPDATE orders SET
+        final_payment_status = ?,
+        total_amount = total_amount + ?,
+        platform_fee = platform_fee + ?
+       WHERE id = ?`,
+      [
+        final_pay_status,
+        remaining.toFixed(2),
+        parseFloat(order.final_platform_fee || 0).toFixed(2),
+        req.params.id
+      ]
+    );
+
+    // Notify seller
+    const sellerUser = await pool.query(
+      `SELECT user_id FROM sellers WHERE id = ?`,
+      [order.seller_id]
+    );
+    await pool.query(
+      `INSERT INTO notifications (user_id, title, message, type, ref_id) VALUES (?, ?, ?, 'order', ?)`,
+      [
+        sellerUser[0][0].user_id,
+        "Quotation Approved!",
+        `Buyer approved and paid the quotation for order #${order.order_number}. Enter the start code to begin work.`,
+        order.id
+      ]
+    );
+
+    return successRes(res, null, "Quotation approved and paid");
+  } catch (err) {
+    console.error("Approve quotation error:", err);
+    if (err.message === "Insufficient wallet balance") {
+      return errorRes(res, "Insufficient wallet balance", 400);
+    }
+    return errorRes(res, "Failed to approve quotation");
+  }
+};
+
+// Verify OTP start code (seller)
+exports.verifyStartCode = async (req, res) => {
+  try {
+    const { otp } = req.body;
+    const seller = await SellerModel.findByUserId(req.user.id);
+    const order = await OrderModel.findById(req.params.id);
+
+    if (!order || order.seller_id !== seller.id)
+      return errorRes(res, "Order not found", 404);
+    if (order.status !== "quoted")
+      return errorRes(res, "Order not in quoted stage", 400);
+
+    if (order.start_otp_code !== otp) {
+      return errorRes(res, "Invalid start code. Please ask the customer for the correct code.", 400);
+    }
+
+    // Transition order back to in_progress and clear OTP
+    await pool.query(
+      `UPDATE orders SET
+        status = 'in_progress',
+        start_otp_code = NULL
+       WHERE id = ?`,
+      [req.params.id]
+    );
+
+    // Notify buyer
+    await pool.query(
+      `INSERT INTO notifications (user_id, title, message, type, ref_id) VALUES (?, ?, ?, 'order', ?)`,
+      [
+        order.buyer_id,
+        "Service Started!",
+        `Technician verified the start code. Work on order #${order.order_number} has officially started.`,
+        order.id
+      ]
+    );
+
+    return successRes(res, null, "Start code verified. Service is now in progress.");
+  } catch (err) {
+    console.error("Verify start code error:", err);
+    return errorRes(res, "Failed to verify start code");
   }
 };

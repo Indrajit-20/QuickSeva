@@ -131,6 +131,26 @@ const AdminLogin = () => {
     }
   };
 
+  const handleSwitchToUser = (e) => {
+    e.preventDefault();
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("userRole");
+    localStorage.removeItem("isAdminAuthenticated");
+    localStorage.removeItem("adminEmail");
+    navigate("/login");
+    window.location.reload();
+  };
+
+  const handleGoHome = (e) => {
+    e.preventDefault();
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("userRole");
+    localStorage.removeItem("isAdminAuthenticated");
+    localStorage.removeItem("adminEmail");
+    navigate("/");
+    window.location.reload();
+  };
+
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-900 via-indigo-950 to-black flex items-center justify-center p-4">
       <div className="bg-indigo-900/40 backdrop-blur-md rounded-2xl shadow-2xl w-full max-w-md p-8 border border-indigo-500/30">
@@ -247,20 +267,20 @@ const AdminLogin = () => {
         <div className="text-center space-y-3">
           <p className="text-indigo-300 text-sm">
             Not an admin?{" "}
-            <Link
-              to="/login"
-              className="text-indigo-400 hover:text-indigo-300 font-semibold"
+            <button
+              onClick={handleSwitchToUser}
+              className="text-indigo-400 hover:text-indigo-300 font-semibold bg-transparent border-none p-0 cursor-pointer outline-none"
             >
               User Login
-            </Link>
+            </button>
           </p>
           <p className="text-indigo-300 text-sm">
-            <Link
-              to="/"
-              className="text-indigo-400 hover:text-indigo-300 font-semibold"
+            <button
+              onClick={handleGoHome}
+              className="text-indigo-400 hover:text-indigo-300 font-semibold bg-transparent border-none p-0 cursor-pointer outline-none"
             >
               Back to Home
-            </Link>
+            </button>
           </p>
         </div>
       </div>

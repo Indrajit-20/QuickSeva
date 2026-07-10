@@ -301,8 +301,8 @@ async function run() {
       return Number((raw * 0.01).toFixed(5));
     };
 
-    // 10. Seed 100 Buyers
-    console.log("Seeding 100 buyers...");
+    // 10. Seed 300 Buyers
+    console.log("Seeding 300 buyers...");
     const buyerFirstNames = [
       "Aarav", "Vivaan", "Aditya", "Vihaan", "Arjun", "Sai", "Reyansh", "Krishna", "Ishaan", "Shaurya",
       "Diya", "Ananya", "Aadhya", "Pihu", "Khushi", "Saanvi", "Shruti", "Kavya", "Riya", "Aanya",
@@ -310,7 +310,7 @@ async function run() {
     ];
     const buyerGenders = ["male", "female"];
 
-    for (let index = 0; index < 100; index++) {
+    for (let index = 0; index < 300; index++) {
       const area = AREAS[index % AREAS.length];
       const firstName = buyerFirstNames[index % buyerFirstNames.length];
       const surname = SURNAMES[index % SURNAMES.length];
@@ -342,8 +342,8 @@ async function run() {
       );
     }
 
-    // 11. Seed 100 Sellers
-    console.log("Seeding 100 sellers...");
+    // 11. Seed 300 Sellers
+    console.log("Seeding 300 sellers...");
     const SERVICES = [
       "Cleaning",
       "Electrical",
@@ -368,7 +368,7 @@ async function run() {
 
     const PLANS = ["basic", "standard", "pro"];
 
-    for (let index = 0; index < 100; index++) {
+    for (let index = 0; index < 300; index++) {
       const area = AREAS[index % AREAS.length];
       const service = SERVICES[index % SERVICES.length];
       const surname = SURNAMES[index % SURNAMES.length];
@@ -482,8 +482,8 @@ async function run() {
     console.log("--------------------------------------------------");
     console.log("✅ Database initialized successfully!");
     console.log("✅ Seeded 1 Admin User");
-    console.log("✅ Seeded 100 Buyers (role = 'buyer')");
-    console.log("✅ Seeded 100 Sellers (role = 'seller')");
+    console.log("✅ Seeded 300 Buyers (role = 'buyer')");
+    console.log("✅ Seeded 300 Sellers (role = 'seller')");
     console.log("--------------------------------------------------");
 
   } catch (err) {

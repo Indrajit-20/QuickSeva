@@ -589,9 +589,12 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
   const [selectedSubService, setSelectedSubService] = useState(null);
   const [subServicesError, setSubServicesError] = useState("");
 
-  // Step 3 (Price & type)
+  // Step 3 (Price & type & visiting charge)
   const [price, setPrice] = useState(editingService ? Number(editingService.price) : 500);
   const [priceType, setPriceType] = useState(editingService ? editingService.price_type : "fixed");
+  const [visitingCharge, setVisitingCharge] = useState(editingService ? Number(editingService.visiting_charge || 0) : 100);
+  const [isInspectionRequired, setIsInspectionRequired] = useState(editingService ? Boolean(editingService.is_inspection_required !== 0) : true);
+  const [finalPriceAfterInspection, setFinalPriceAfterInspection] = useState(editingService ? Boolean(editingService.final_price_after_inspection !== 0) : true);
 
   // Step 4 (Title & details)
   const [title, setTitle] = useState(editingService ? (editingService.title || editingService.name) : "");
@@ -711,6 +714,9 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
         description: description || null,
         price,
         price_type: priceType,
+        visiting_charge: visitingCharge,
+        is_inspection_required: isInspectionRequired ? 1 : 0,
+        final_price_after_inspection: finalPriceAfterInspection ? 1 : 0,
       };
 
       if (editingService) {
@@ -1098,6 +1104,82 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
                   </button>
                 );
               })}
+            </div>
+          </div>
+
+          {/* Visiting Charge Selection */}
+          <div className="flex flex-col items-center justify-center gap-3 py-4 bg-[#0f0e1a]/50 rounded-2xl border border-indigo-500/5">
+            <span className="text-xs font-black text-[#94a3b8] tracking-widest uppercase">Visiting Charge / विजिटिंग चार्ज</span>
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                onClick={() => setVisitingCharge((v) => Math.max(0, v - 10))}
+                className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 hover:bg-indigo-700 text-lg font-black text-white transition hover:scale-105 active:scale-95 shadow-md cursor-pointer"
+              >
+                -
+              </button>
+              <div className="flex items-center bg-[#0f0e1a] border border-indigo-500/20 rounded-xl px-4 py-2">
+                <span className="text-xl font-bold text-indigo-300 mr-1">₹</span>
+                <input
+                  type="number"
+                  value={visitingCharge}
+                  onChange={(e) => setVisitingCharge(Math.max(0, parseInt(e.target.value) || 0))}
+                  className="w-20 text-center text-2xl font-black bg-transparent text-white outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => setVisitingCharge((v) => v + 10)}
+                className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 hover:bg-indigo-700 text-lg font-black text-white transition hover:scale-105 active:scale-95 shadow-md cursor-pointer"
+              >
+                +
+              </button>
+            </div>
+
+            {/* Quick Visiting presets */}
+            <div className="flex flex-wrap justify-center gap-2 px-4 mt-2">
+              {[0, 50, 100, 150, 200].map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setVisitingCharge(preset)}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition duration-150 active:scale-95 cursor-pointer ${visitingCharge === preset
+                      ? "border-emerald-400 bg-emerald-500/20 text-emerald-300"
+                      : "border-indigo-500/10 bg-[#0f0e1a] text-slate-400 hover:border-indigo-500/30"
+                    }`}
+                >
+                  {preset === 0 ? "Free Visit / मुफ्त" : `₹${preset}`}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Inspection and Final Price toggles */}
+          <div className="space-y-4 rounded-2xl border border-indigo-500/10 bg-[#0f0e1a]/30 p-4">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <label className="text-sm font-bold text-white block">Is Inspection Required? / क्या काम देखने जाना होगा?</label>
+                <span className="text-[11px] text-slate-400">Visiting charge paid only to inspect issues first</span>
+              </div>
+              <input
+                type="checkbox"
+                checked={isInspectionRequired}
+                onChange={(e) => setIsInspectionRequired(e.target.checked)}
+                className="h-5 w-5 accent-indigo-500 cursor-pointer"
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-4 border-t border-indigo-500/5 pt-3">
+              <div>
+                <label className="text-sm font-bold text-white block">Final Price After Inspection? / काम के बाद अंतिम मूल्य?</label>
+                <span className="text-[11px] text-slate-400">Final price will be quoted separately later</span>
+              </div>
+              <input
+                type="checkbox"
+                checked={finalPriceAfterInspection}
+                onChange={(e) => setFinalPriceAfterInspection(e.target.checked)}
+                className="h-5 w-5 accent-indigo-500 cursor-pointer"
+              />
             </div>
           </div>
 
