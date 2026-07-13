@@ -2,20 +2,17 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import apiClient from "../api/axiosConfig";
+import axios from "axios";
 import DatePicker from "react-multi-date-picker";
 const DatePickerComponent = DatePicker.default || DatePicker;
 import { scrollToFirstError } from "../utils/scrollUtils";
 
 const TIME_SLOTS = [
   "8:00 AM",
-  "9:00 AM",
   "10:00 AM",
-  "11:00 AM", 
   "12:00 PM",
   "2:00 PM",
-  "3:00 PM",
   "4:00 PM",
-  "5:00 PM",
   "6:00 PM",
 ];
 
@@ -145,6 +142,19 @@ export default function BookingPage() {
   const [selectedServiceState, setSelectedServiceState] = useState(selectedService ? { ...selectedService, price_type: "negotiable" } : null);
   const [confirmedBooking, setConfirmedBooking] = useState(null);
   const [errors, setErrors] = useState({});
+  const [bookedSlots, setBookedSlots] = useState([]);
+
+  const isSlotBooked = (date, slot) => {
+    if (!date || !slot || !bookedSlots.length) return false;
+    const candidateTimeStr = buildScheduledAt(date, slot);
+    if (!candidateTimeStr) return false;
+    const candidateTime = new Date(candidateTimeStr).getTime();
+
+    return bookedSlots.some((bookedTimeStr) => {
+      const bookedTime = new Date(bookedTimeStr).getTime();
+      return Math.abs(candidateTime - bookedTime) < 7200000;
+    });
+  };
   const [bookingLoading, setBookingLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("wallet");
@@ -168,12 +178,17 @@ export default function BookingPage() {
   // Load seller and services from backend
   useEffect(() => {
     let cancelled = false;
+    const controller = new AbortController();
+
     (async () => {
       try {
         setSellerLoading(true);
         const [sellerRes, servicesRes] = await Promise.all([
-          apiClient.get(`/sellers/${sellerId}`),
-          apiClient.get(`/services/seller/${sellerId}`).catch(() => ({ data: [] }))
+          apiClient.get(`/sellers/${sellerId}`, { signal: controller.signal }),
+          apiClient.get(`/services/seller/${sellerId}`, { signal: controller.signal }).catch((err) => {
+            if (axios.isCancel(err)) throw err;
+            return { data: [] };
+          })
         ]);
         const s = sellerRes?.data?.data?.seller || sellerRes?.data?.seller || null;
         const svcsRaw = servicesRes?.data?.data || servicesRes?.data || [];
@@ -183,6 +198,7 @@ export default function BookingPage() {
         })) : [];
         if (!cancelled) {
           setSeller(s);
+          setBookedSlots(s?.booked_slots || []);
           const serviceList = Array.isArray(svcs) ? svcs : [];
           setSellerServices(serviceList);
 
@@ -204,6 +220,7 @@ export default function BookingPage() {
           }
         }
       } catch (err) {
+        if (axios.isCancel(err)) return;
         console.error("Error loading seller details:", err);
         if (!cancelled) setSeller(null);
       } finally {
@@ -212,6 +229,7 @@ export default function BookingPage() {
     })();
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [sellerId, selectedService]);
 
@@ -530,7 +548,7 @@ export default function BookingPage() {
               <div className="flex flex-wrap gap-1.5">
                 {TIME_SLOTS.map((slot) => {
                   const active = formData.timeSlot === slot;
-                  const disabled = isSlotInPast(formData.date, slot);
+                  const disabled = isSlotInPast(formData.date, slot) || isSlotBooked(formData.date, slot);
                   return (
                     <button
                       key={slot}

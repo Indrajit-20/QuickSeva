@@ -89,7 +89,8 @@ exports.submitLead = async (req, res) => {
        LEFT JOIN categories c ON c.id = s.category_id
        LEFT JOIN seller_categories sc ON sc.seller_id = s.id
        LEFT JOIN categories sc_c ON sc_c.id = sc.category_id
-       WHERE s.is_available = 1
+       WHERE s.is_premium = 1
+         AND (s.premium_expires_at IS NULL OR s.premium_expires_at > NOW())
          AND u.is_active = 1
          AND (u.pincode = ? OR COALESCE(s.location_address, u.address, '') LIKE ?)
          AND (

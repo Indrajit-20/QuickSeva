@@ -201,11 +201,11 @@ exports.login = async (req, res) => {
     }
 
     const user = await UserModel.findByPhone(phone);
-    if (!user) return errorRes(res, "Invalid phone number or password", 401);
+    if (!user) return errorRes(res, "Mobile number is not registered. Please sign up.", 401);
     if (!user.is_active) return errorRes(res, "Account is deactivated", 401);
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return errorRes(res, "Invalid phone number or password", 401);
+    if (!isMatch) return errorRes(res, "Incorrect password. Please try again.", 401);
 
     const token = generateToken({ id: user.id, role: user.role });
 
@@ -321,19 +321,26 @@ exports.sendOTP = async (req, res) => {
           }
           : null,
       );
-      if (!existing) return errorRes(res, "User not found", 404);
+      if (!existing) return errorRes(res, "Mobile number is not registered", 404);
     }
 
     if (type === "register") {
       const existing = await UserModel.findByPhone(normalizedPhone);
-      if (existing)
-        return errorRes(res, "Phone number already registered", 400);
+      if (existing) {
+        const roleName = existing.role === "buyer" ? "customer" : existing.role === "seller" ? "seller" : existing.role;
+        return errorRes(res, `Mobile number is already registered as a ${roleName}. Please login.`, 400);
+      }
     }
 
     if (type === "seller-register") {
       const existing = await UserModel.findByPhone(normalizedPhone);
-      if (existing)
-        return errorRes(res, "Phone number already registered", 400);
+      if (existing) {
+        const roleName = existing.role === "buyer" ? "customer" : existing.role === "seller" ? "seller" : existing.role;
+        const suggestion = existing.role === "buyer" 
+          ? "Please use a different number or log in." 
+          : "Please login.";
+        return errorRes(res, `Mobile number is already registered as a ${roleName}. ${suggestion}`, 400);
+      }
     }
 
     let sessionId;
@@ -425,8 +432,10 @@ exports.verifyOTP = async (req, res) => {
     if (type === "register") {
       // Registration: create user + wallet only if it doesn't exist.
       const existing = await UserModel.findByPhone(phone);
-      if (existing)
-        return errorRes(res, "Phone number already registered", 400);
+      if (existing) {
+        const roleName = existing.role === "buyer" ? "customer" : existing.role === "seller" ? "seller" : existing.role;
+        return errorRes(res, `Mobile number is already registered as a ${roleName}. Please login.`, 400);
+      }
 
       const { name, email, password, role = "buyer" } = req.body || {};
 
@@ -488,8 +497,13 @@ exports.verifyOTP = async (req, res) => {
     if (type === "seller-register") {
       // Seller Registration: create seller-capable user + wallet.
       const existing = await UserModel.findByPhone(phone);
-      if (existing)
-        return errorRes(res, "Phone number already registered", 400);
+      if (existing) {
+        const roleName = existing.role === "buyer" ? "customer" : existing.role === "seller" ? "seller" : existing.role;
+        const suggestion = existing.role === "buyer" 
+          ? "Please use a different number or log in." 
+          : "Please login.";
+        return errorRes(res, `Mobile number is already registered as a ${roleName}. ${suggestion}`, 400);
+      }
 
       console.log("[verifyOTP seller-register] BODY:", req.body);
       console.log("[verifyOTP seller-register] PHONE(db lookup input)=", phone);
@@ -623,13 +637,18 @@ exports.resetPassword = async (req, res) => {
     if (process.env.NODE_ENV === "development" && otp === "123456") {
       verified = true;
     } else {
-      const result = await verifyWith2Factor({ sessionId, otp });
-      verified = result.verified;
+      try {
+        const result = await verifyWith2Factor({ sessionId, otp });
+        verified = result.verified;
+      } catch (err) {
+        console.error("Reset password verifyOTP error:", err);
+        return errorRes(res, err?.message || "OTP verification failed", 400);
+      }
     }
     if (!verified) return errorRes(res, "OTP verification failed", 400);
 
     const user = await UserModel.findByPhone(phone);
-    if (!user) return errorRes(res, "User not found", 404);
+    if (!user) return errorRes(res, "Mobile number is not registered", 404);
 
     const hashed = await bcrypt.hash(new_password, 12);
     await UserModel.updatePassword(user.id, hashed);
@@ -637,7 +656,7 @@ exports.resetPassword = async (req, res) => {
     return successRes(res, null, "Password reset successful");
   } catch (err) {
     console.error("Reset password error:", err);
-    return errorRes(res, "Password reset failed");
+    return errorRes(res, err?.message || "Password reset failed");
   }
 };
 

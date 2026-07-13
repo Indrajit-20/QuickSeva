@@ -743,6 +743,9 @@ export default function NearbyServices({
   const portalDropdownRef = useRef(null);
   const searchCache = useRef({});
   const suppressNextLocationSearchRef = useRef(false);
+  const debounceTimerRef = useRef(null);
+  const lastFetchedBoundsRef = useRef(null);
+  const pendingBoundsRef = useRef(null);
 
   const nominatimSearch = async (q) => {
     const res = await fetch(
@@ -899,12 +902,16 @@ export default function NearbyServices({
     try {
       localStorage.removeItem("sellers");
     } catch (e) { }
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
   }, []);
 
   // QuickSeva - Map Performance Feature
   const fetchSellersInView = useCallback(async (map) => {
-    setApiLoading(true);
-    setApiError("");
+    if (!map) return;
     try {
       const bounds = map.getBounds();
       const minLat = bounds.getSouthWest().lat;
@@ -912,17 +919,41 @@ export default function NearbyServices({
       const minLng = bounds.getSouthWest().lng;
       const maxLng = bounds.getNorthEast().lng;
 
-      const res = await fetch(
-        `${API_BASE_URL}/sellers/in-view?minLat=${minLat}&maxLat=${maxLat}&minLng=${minLng}&maxLng=${maxLng}`
-      );
-      if (!res.ok) throw new Error("Failed to fetch sellers in view");
-      const data = await res.json();
-      setSellers(data);
+      const currentBoundsStr = `${minLat.toFixed(6)},${maxLat.toFixed(6)},${minLng.toFixed(6)},${maxLng.toFixed(6)}`;
+      if (lastFetchedBoundsRef.current === currentBoundsStr) {
+        return; // Skip if identical bounds were already fetched
+      }
+      if (pendingBoundsRef.current === currentBoundsStr) {
+        return; // Skip if we already scheduled a fetch for this exact viewpoint
+      }
+
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+
+      pendingBoundsRef.current = currentBoundsStr;
+
+      debounceTimerRef.current = setTimeout(async () => {
+        setApiLoading(true);
+        setApiError("");
+        try {
+          const res = await fetch(
+            `${API_BASE_URL}/sellers/in-view?minLat=${minLat}&maxLat=${maxLat}&minLng=${minLng}&maxLng=${maxLng}`
+          );
+          if (!res.ok) throw new Error("Failed to fetch sellers in view");
+          const data = await res.json();
+          setSellers(data);
+          lastFetchedBoundsRef.current = currentBoundsStr;
+        } catch (err) {
+          console.error("fetchSellersInView error:", err);
+          setApiError("Unable to load services in view. Please try again later.");
+        } finally {
+          setApiLoading(false);
+          pendingBoundsRef.current = null;
+        }
+      }, 400);
     } catch (err) {
-      console.error("fetchSellersInView error:", err);
-      setApiError("Unable to load services in view. Please try again later.");
-    } finally {
-      setApiLoading(false);
+      console.error("fetchSellersInView setup error:", err);
     }
   }, []);
 

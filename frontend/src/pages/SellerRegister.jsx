@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import LocationPicker from "../components/LocationPicker";
+import { useAuth } from "../context/AuthContext";
 import apiClient from "../api/axiosConfig";
 import { scrollToFirstError } from "../utils/scrollUtils";
 import { API_BASE_URL } from "../config/api";
@@ -8,6 +8,7 @@ import { API_BASE_URL } from "../config/api";
 const SellerRegister = () => {
   const navigate = useNavigate();
   const formRef = useRef(null);
+  const { authenticateSession } = useAuth();
 
   const [step, setStep] = useState(1); // 1 = Details, 2 = OTP Verification
   const [formData, setFormData] = useState({
@@ -24,6 +25,178 @@ const SellerRegister = () => {
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [isPincodeLoading, setIsPincodeLoading] = useState(false);
+  const [locationQuery, setLocationQuery] = useState("");
+  const [locationResults, setLocationResults] = useState([]);
+  const [locationNotFoundMsg, setLocationNotFoundMsg] = useState("");
+  const suppressNextSearchRef = useRef(false);
+  const locationSearchRef = useRef(null);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (suppressNextSearchRef.current) {
+        suppressNextSearchRef.current = false;
+        return;
+      }
+      if (locationQuery.trim().length >= 3) {
+        searchLocation(locationQuery);
+      } else {
+        setLocationResults([]);
+        setLocationNotFoundMsg("");
+      }
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [locationQuery]);
+
+  useEffect(() => {
+    const handleMouseDown = (e) => {
+      if (locationSearchRef.current && !locationSearchRef.current.contains(e.target)) {
+        setLocationResults([]);
+      }
+    };
+    document.addEventListener("mousedown", handleMouseDown);
+    return () => document.removeEventListener("mousedown", handleMouseDown);
+  }, []);
+
+  const searchLocation = async (queryVal) => {
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(queryVal)}&format=json&limit=5&countrycodes=in&addressdetails=1&email=support@quickseva.com`,
+        {
+          headers: {
+            Accept: "application/json",
+            "User-Agent": "QuickSeva/1.0",
+          },
+        }
+      );
+      if (!res.ok) throw new Error("Search failed");
+      const data = await res.json();
+      if (data && data.length > 0) {
+        setLocationResults(data);
+        setLocationNotFoundMsg("");
+      } else {
+        setLocationResults([]);
+        setLocationNotFoundMsg("No results found");
+      }
+    } catch (err) {
+      console.error("Location search error:", err);
+      setLocationResults([]);
+      setLocationNotFoundMsg("Search failed");
+    }
+  };
+
+  const handleLocationResultClick = (result) => {
+    const lat = parseFloat(result.lat);
+    const lng = parseFloat(result.lon);
+    
+    suppressNextSearchRef.current = true;
+    setLocationQuery(result.display_name || "");
+    setLocationResults([]);
+    
+    const pinVal = result.address?.postcode || "";
+    
+    setFormData((prev) => ({
+      ...prev,
+      location: {
+        lat,
+        lng,
+        address: result.display_name || "",
+        pincode: pinVal || prev.location?.pincode || "",
+      }
+    }));
+    
+    setErrors((prev) => {
+      const next = { ...prev };
+      delete next.location;
+      delete next.pincode;
+      return next;
+    });
+  };
+
+  const handlePincodeLookup = async (pincodeVal) => {
+    if (!/^[1-9][0-9]{5}$/.test(pincodeVal)) return;
+    setIsPincodeLoading(true);
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${pincodeVal}&format=json&limit=1&countrycodes=in&addressdetails=1&email=support@quickseva.com`,
+        {
+          headers: {
+            Accept: "application/json",
+            "User-Agent": "QuickSeva/1.0",
+          },
+        }
+      );
+      if (!res.ok) throw new Error("Lookup failed");
+      const data = await res.json();
+      if (data && data.length > 0) {
+        const result = data[0];
+        const lat = parseFloat(result.lat);
+        const lng = parseFloat(result.lon);
+        
+        const addr = result.address || {};
+        const neighbourhood = addr.neighbourhood || addr.suburb || addr.quarter || addr.residential || "";
+        const cityOrTown = addr.city || addr.town || addr.village || addr.municipality || "";
+        const district = addr.county || addr.state_district || "";
+        const state = addr.state || "";
+        
+        const autoAddress = [neighbourhood, cityOrTown, district, state]
+          .filter((val, index, self) => val && self.indexOf(val) === index)
+          .join(", ");
+        
+        suppressNextSearchRef.current = true;
+        setLocationQuery(autoAddress);
+
+        setFormData((prev) => ({
+          ...prev,
+          location: {
+            lat,
+            lng,
+            address: autoAddress,
+            pincode: pincodeVal,
+          }
+        }));
+        
+        setErrors((prev) => {
+          const next = { ...prev };
+          delete next.location;
+          delete next.pincode;
+          return next;
+        });
+      } else {
+        setErrors((prev) => ({ ...prev, pincode: "Invalid pincode or not found" }));
+      }
+    } catch (err) {
+      console.error("Pincode lookup error:", err);
+    } finally {
+      setIsPincodeLoading(false);
+    }
+  };
+
+  const handlePincodeChange = (e) => {
+    const val = e.target.value.replace(/\D/g, "").slice(0, 6);
+    setFormData((prev) => ({
+      ...prev,
+      location: {
+        ...(prev.location || {}),
+        pincode: val,
+      }
+    }));
+    
+    if (val.length === 6) {
+      handlePincodeLookup(val);
+    }
+  };
+
+  const handleAddressChange = (e) => {
+    const val = e.target.value;
+    setFormData((prev) => ({
+      ...prev,
+      location: {
+        ...(prev.location || {}),
+        address: val,
+      }
+    }));
+  };
   const [successMessage, setSuccessMessage] = useState("");
   const [apiError, setApiError] = useState("");
 
@@ -235,8 +408,14 @@ const SellerRegister = () => {
       const resp = await apiClient.post("/sellers/register", payload);
 
       if (resp?.data?.success) {
-        setSuccessMessage("Partner registration successful! Redirecting to login...");
-        setTimeout(() => navigate("/login", { replace: true }), 1800);
+        setSuccessMessage("Partner registration successful! Logging you in...");
+        const data = resp.data.data || resp.data;
+        if (data?.token && data?.user) {
+          authenticateSession(data.token, data.user);
+          setTimeout(() => navigate("/", { replace: true }), 1800);
+        } else {
+          setTimeout(() => navigate("/login", { replace: true }), 1800);
+        }
       } else {
         setApiError(resp?.data?.message || "Registration failed");
       }
@@ -248,13 +427,13 @@ const SellerRegister = () => {
   };
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-900 via-indigo-950 to-black flex items-center justify-center p-4 py-12">
+    <div className="min-h-screen bg-linear-to-br from-slate-900 via-indigo-950 to-black flex items-center justify-center p-4 py-4">
       <div
         ref={formRef}
         style={{ scrollMarginTop: "90px" }}
-        className="bg-indigo-900/40 backdrop-blur-md rounded-2xl shadow-2xl w-full max-w-md p-5 sm:p-8 border border-indigo-500/30 red-accent-line"
+        className="bg-indigo-900/40 backdrop-blur-md rounded-2xl shadow-2xl w-full max-w-2xl p-4 sm:p-5.5 border border-indigo-500/30 red-accent-line"
       >
-        <div className="text-center mb-6">
+        <div className="text-center mb-4.5">
           <h1 className="text-3xl font-bold text-white mb-2">
             Become a Partner
           </h1>
@@ -283,65 +462,175 @@ const SellerRegister = () => {
 
         {/* STEP 1: Details & Credentials Form */}
         {step === 1 && (
-          <form onSubmit={handleSendOtp} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-indigo-200 mb-2">
-                Business Name <span className="text-red-400">*</span>
-              </label>
-              <input
-                name="businessName"
-                value={formData.businessName}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                placeholder="QuickSeva Partner Pvt. Ltd"
-                disabled={isLoading}
-                className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${
-                  errors.businessName && touched.businessName
-                    ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
-                    : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
-                }`}
-              />
-              {errors.businessName && touched.businessName && (
-                <p className="mt-1 text-xs text-red-300">⚠ {errors.businessName}</p>
-              )}
+          <form onSubmit={handleSendOtp} className="space-y-3">
+            {/* Row 1: Business Name & Owner Name */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-indigo-200 mb-2">
+                  Business Name <span className="text-red-400">*</span>
+                </label>
+                <input
+                  name="businessName"
+                  value={formData.businessName}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  placeholder="QuickSeva Partner Pvt. Ltd"
+                  disabled={isLoading}
+                  className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${
+                    errors.businessName && touched.businessName
+                      ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
+                      : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
+                  }`}
+                />
+                {errors.businessName && touched.businessName && (
+                  <p className="mt-1 text-xs text-red-300">⚠ {errors.businessName}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-indigo-200 mb-2">
+                  Owner Name <span className="text-red-400">*</span>
+                </label>
+                <input
+                  name="ownerName"
+                  value={formData.ownerName}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  placeholder="John Doe"
+                  disabled={isLoading}
+                  className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${
+                    errors.ownerName && touched.ownerName
+                      ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
+                      : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
+                  }`}
+                />
+                {errors.ownerName && touched.ownerName && (
+                  <p className="mt-1 text-xs text-red-300">⚠ {errors.ownerName}</p>
+                )}
+              </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-indigo-200 mb-2">
-                Owner Name <span className="text-red-400">*</span>
-              </label>
-              <input
-                name="ownerName"
-                value={formData.ownerName}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                placeholder="John Doe"
-                disabled={isLoading}
-                className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${
-                  errors.ownerName && touched.ownerName
-                    ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
-                    : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
-                }`}
-              />
-              {errors.ownerName && touched.ownerName && (
-                <p className="mt-1 text-xs text-red-300">⚠ {errors.ownerName}</p>
-              )}
+            {/* Row 2: Email & Mobile Number */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-indigo-200 mb-2">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  placeholder="you@example.com"
+                  disabled={isLoading}
+                  className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${
+                    errors.email && touched.email
+                      ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
+                      : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
+                  }`}
+                />
+                {errors.email && touched.email && (
+                  <p className="mt-1 text-xs text-red-300">⚠ {errors.email}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-indigo-200 mb-2">
+                  Mobile Number <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="tel"
+                  name="mobileNumber"
+                  value={formData.mobileNumber}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  placeholder="98765 43210"
+                  maxLength={10}
+                  disabled={isLoading}
+                  className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${
+                    errors.mobileNumber && touched.mobileNumber
+                      ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
+                      : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
+                  }`}
+                />
+                {errors.mobileNumber && touched.mobileNumber && (
+                  <p className="mt-1 text-xs text-red-300">⚠ {errors.mobileNumber}</p>
+                )}
+              </div>
             </div>
 
-            {/* Partner Type Options */}
-            <div className="space-y-3">
-              <label className="block text-xs font-semibold text-indigo-200 mb-2">
+            {/* Row 3: Password & Pincode */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-indigo-200 mb-2">
+                  Password <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  placeholder="••••••••"
+                  disabled={isLoading}
+                  className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${
+                    errors.password && touched.password
+                      ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
+                      : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
+                  }`}
+                />
+                {errors.password && touched.password && (
+                  <p className="mt-1 text-xs text-red-300">⚠ {errors.password}</p>
+                )}
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-xs font-semibold text-indigo-200">
+                    Pincode <span className="text-red-400">*</span>
+                  </label>
+                  {isPincodeLoading && (
+                    <span className="text-[10px] text-indigo-300 flex items-center gap-1">
+                      <span className="inline-block h-2.5 w-2.5 animate-spin rounded-full border border-indigo-400 border-t-transparent" />
+                      Searching...
+                    </span>
+                  )}
+                </div>
+                <input
+                  type="text"
+                  name="pincode"
+                  value={formData.location?.pincode || ""}
+                  onChange={handlePincodeChange}
+                  placeholder="6-digit pincode"
+                  maxLength={6}
+                  disabled={isLoading}
+                  className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${
+                    errors.pincode
+                      ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
+                      : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
+                  }`}
+                />
+                {errors.pincode && (
+                  <p className="mt-1 text-xs text-red-300">⚠ {errors.pincode}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Row 4: Partner Type Options */}
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold text-indigo-200">
                 Partner Type <span className="text-red-400">*</span>
               </label>
-              <div className="space-y-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {[
                   { value: "individual", label: "Individual / व्यक्तिगत", desc: "I work alone" },
-                  { value: "agency", label: "Agency / ठेकेदार", desc: "I manage a team of workers" },
-                  { value: "business", label: "Shop / Business / दुकान", desc: "I have a physical store" }
+                  { value: "agency", label: "Agency / ठेकेदार", desc: "I manage workers" },
+                  { value: "business", label: "Shop / Business / दुकान", desc: "I have a store" }
                 ].map((opt) => (
                   <label
                     key={opt.value}
-                    className={`flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-all duration-200 ${
+                    className={`flex items-start gap-2.5 rounded-lg border p-2.5 cursor-pointer transition-all duration-200 ${
                       formData.sellerType === opt.value
                         ? "border-[#0284c7] bg-[#0284c7]/15 shadow-[0_0_12px_rgba(2,132,199,0.25)]"
                         : "border-indigo-500/20 bg-indigo-950/20"
@@ -354,105 +643,58 @@ const SellerRegister = () => {
                       checked={formData.sellerType === opt.value}
                       onChange={(e) => setFormData((prev) => ({ ...prev, sellerType: e.target.value }))}
                       disabled={isLoading}
-                      className="mt-1 h-4 w-4 text-indigo-600 border-indigo-500/30 bg-indigo-950/40 focus:ring-indigo-500/50"
+                      className="mt-0.5 h-3.5 w-3.5 text-indigo-600 border-indigo-500/30 bg-indigo-950/40 focus:ring-indigo-500/50"
                     />
                     <div className="min-w-0">
-                      <span className="block text-sm font-bold text-white leading-tight">{opt.label}</span>
-                      <span className="block text-xs text-indigo-300/80 mt-1">{opt.desc}</span>
+                      <span className="block text-xs font-bold text-white leading-tight">{opt.label}</span>
+                      <span className="block text-[10px] text-indigo-300/80 mt-0.5">{opt.desc}</span>
                     </div>
                   </label>
                 ))}
               </div>
             </div>
 
-            <div>
+            {/* Row 5: Search Address */}
+            <div ref={locationSearchRef}>
               <label className="block text-xs font-semibold text-indigo-200 mb-2">
-                Email Address
+                Search Service Location / पता खोजें <span className="text-red-400">*</span>
               </label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                placeholder="you@example.com"
-                disabled={isLoading}
-                className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${
-                  errors.email && touched.email
-                    ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
-                    : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
-                }`}
-              />
-              {errors.email && touched.email && (
-                <p className="mt-1 text-xs text-red-300">⚠ {errors.email}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-indigo-200 mb-2">
-                Mobile Number <span className="text-red-400">*</span>
-              </label>
-              <input
-                type="tel"
-                name="mobileNumber"
-                value={formData.mobileNumber}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                placeholder="98765 43210"
-                maxLength={10}
-                disabled={isLoading}
-                className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${
-                  errors.mobileNumber && touched.mobileNumber
-                    ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
-                    : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
-                }`}
-              />
-              {errors.mobileNumber && touched.mobileNumber && (
-                <p className="mt-1 text-xs text-red-300">⚠ {errors.mobileNumber}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-indigo-200 mb-2">
-                Password <span className="text-red-400">*</span>
-              </label>
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                placeholder="••••••••"
-                disabled={isLoading}
-                className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${
-                  errors.password && touched.password
-                    ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
-                    : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
-                }`}
-              />
-              {errors.password && touched.password && (
-                <p className="mt-1 text-xs text-red-300">⚠ {errors.password}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-indigo-200 mb-2">
-                Your Service Location <span className="text-red-400">*</span>
-              </label>
-              <LocationPicker
-                hideMap={true}
-                onChange={({ lat, lng, address, pincode }) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    location: { lat, lng, address, pincode },
-                  }))
-                }
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  value={locationQuery}
+                  onChange={(e) => setLocationQuery(e.target.value)}
+                  placeholder="Search your area, street, city or landmark..."
+                  disabled={isLoading}
+                  className={`w-full px-3 py-2 rounded-lg text-sm bg-indigo-950/40 border transition-all duration-200 text-white focus:outline-none ${
+                    errors.location
+                      ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
+                      : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
+                  }`}
+                />
+                
+                {(locationResults.length > 0 || locationNotFoundMsg) && (
+                  <div className="absolute left-0 right-0 top-full z-[1100] mt-2 max-h-56 overflow-y-auto rounded-lg shadow-2xl border border-indigo-500/30 bg-[#0c0a1b]">
+                    {locationResults.map((result) => (
+                      <button
+                        key={`${result.place_id}-${result.lat}-${result.lon}`}
+                        type="button"
+                        onClick={() => handleLocationResultClick(result)}
+                        className="block w-full text-left text-[11px] text-indigo-200 px-3 py-2.5 hover:bg-indigo-950/80 transition-colors border-b border-indigo-900/10 cursor-pointer"
+                      >
+                        {result.display_name}
+                      </button>
+                    ))}
+                    {locationNotFoundMsg && (
+                      <div className="text-xs text-indigo-400 px-3 py-2">
+                        {locationNotFoundMsg}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
               {errors.location && (
                 <p className="mt-1 text-xs text-red-300">⚠ {errors.location}</p>
-              )}
-              {errors.pincode && (
-                <p className="mt-1 text-xs text-red-300">⚠ {errors.pincode}</p>
               )}
             </div>
 

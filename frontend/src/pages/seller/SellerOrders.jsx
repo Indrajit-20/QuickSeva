@@ -134,8 +134,20 @@ export default function SellerOrders() {
         }
         await sellerOrdersApi.complete(id);
       }
-      else if (action === "cancel")
-        await sellerOrdersApi.cancel(id, { reason: "Cancelled by seller" });
+      else if (action === "cancel") {
+        const reason = prompt("Please enter the reason why you are cancelling this order / कृपया आर्डर रद्द करने का कारण दर्ज करें:");
+        if (reason === null) {
+          setBusyId(null);
+          return; // Cancel clicked
+        }
+        const trimmed = reason.trim();
+        if (!trimmed) {
+          alert("Reason for cancellation is required / आर्डर रद्द करने का कारण आवश्यक है।");
+          setBusyId(null);
+          return;
+        }
+        await sellerOrdersApi.cancel(id, { reason: trimmed });
+      }
       await fetchOrders();
     } catch (e) {
       alert(e?.response?.data?.message || "Action failed");

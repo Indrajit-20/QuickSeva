@@ -27,6 +27,17 @@ const toast = {
 const mapAuthErrorToUserMessage = (message) => {
   const normalized = String(message || "").toLowerCase();
 
+  // Pass through highly specific validation messages directly
+  if (
+    normalized.includes("already registered") ||
+    normalized.includes("not registered") ||
+    normalized.includes("incorrect password") ||
+    normalized.includes("deactivated") ||
+    normalized.includes("captcha")
+  ) {
+    return message;
+  }
+
   // Check for password mismatch first, so it doesn't get caught by the general "invalid phone" check below
   if (
     normalized.includes("invalid phone number or password") ||

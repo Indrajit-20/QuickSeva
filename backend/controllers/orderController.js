@@ -43,6 +43,36 @@ exports.placeOrder = async (req, res) => {
       return errorRes(res, "Seller is currently unavailable", 400);
     */
 
+    // Check if the requested slot overlaps with an existing booking (within a 2-hour window)
+    if (scheduled_at) {
+      const [conflictingOrders] = await pool.query(
+        `SELECT id, scheduled_at FROM orders 
+         WHERE seller_id = ? 
+           AND status != 'cancelled' 
+           AND ABS(TIMESTAMPDIFF(MINUTE, ?, scheduled_at)) < 120 
+         LIMIT 1`,
+        [seller_id, scheduled_at]
+      );
+
+      if (conflictingOrders && conflictingOrders.length > 0) {
+        const conflictTime = new Date(conflictingOrders[0].scheduled_at);
+        const formattedTime = conflictTime.toLocaleString("en-IN", {
+          timeZone: "Asia/Kolkata",
+          hour12: true,
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+        return errorRes(
+          res,
+          `This slot is unavailable. The seller already has a booking at ${formattedTime}. Please schedule with a gap of at least 2 hours.`,
+          400
+        );
+      }
+    }
+
     const [serviceRows] = await pool.query("SELECT * FROM services WHERE id = ?", [service_id]);
     if (serviceRows.length === 0) return errorRes(res, "Service not found", 404);
     const service = serviceRows[0];
@@ -321,7 +351,7 @@ exports.completeOrder = async (req, res) => {
 // Cancel order
 exports.cancelOrder = async (req, res) => {
   try {
-    const { cancel_reason } = req.body;
+    const reason = req.body.cancel_reason || req.body.reason;
     const order = await OrderModel.findById(req.params.id);
     if (!order) return errorRes(res, "Order not found", 404);
 
@@ -331,6 +361,11 @@ exports.cancelOrder = async (req, res) => {
 
     if (!isBuyer && !isSeller) {
       return errorRes(res, "Unauthorized", 403);
+    }
+
+    // Require reason if seller is cancelling
+    if (isSeller && (!reason || !reason.trim())) {
+      return errorRes(res, "Reason for cancellation is required.", 400);
     }
 
     // Restrict buyer cancellation: not allowed if status is in_progress, completed, or cancelled
@@ -344,7 +379,7 @@ exports.cancelOrder = async (req, res) => {
     }
 
     await OrderModel.updateStatus(req.params.id, "cancelled", {
-      cancel_reason,
+      cancel_reason: reason || (isBuyer ? "Cancelled by buyer" : "Cancelled by seller"),
     });
 
     // Refund wallet if paid via wallet
@@ -352,11 +387,42 @@ exports.cancelOrder = async (req, res) => {
       let refundAmount = 0;
       const feeModel = await getSystemSetting("platform_fee_model", "buyer");
 
+      // Check if buyer cancelled within 2 hours of scheduled time
+      let isLateCancellation = false;
+      if (isBuyer) {
+        const scheduledTime = new Date(order.scheduled_at).getTime();
+        const currentTime = Date.now();
+        isLateCancellation = (scheduledTime - currentTime) < 2 * 60 * 60 * 1000;
+      }
+
       // Only refund visiting charge if cancelled before provider visited (i.e. status is pending or accepted)
       if (order.visiting_payment_status === "paid" && ["pending", "accepted"].includes(order.status)) {
-        const visiting_charge = parseFloat(order.visiting_charge_amount || 0);
-        const visiting_fee = parseFloat(order.visiting_platform_fee || 0);
-        refundAmount += visiting_charge + (feeModel === "buyer" ? visiting_fee : 0);
+        if (isLateCancellation) {
+          // Late cancellation by buyer: no refund to buyer.
+          // Instead, credit the visiting charge to the seller as compensation.
+          const [sellerUserRows] = await pool.query("SELECT user_id FROM sellers WHERE id = ?", [order.seller_id]);
+          const sellerUserId = sellerUserRows[0]?.user_id;
+          if (sellerUserId) {
+            const visiting_charge = parseFloat(order.visiting_charge_amount || 0);
+            const visiting_fee = parseFloat(order.visiting_platform_fee || 0);
+            const sellerPayout = feeModel === "buyer" ? visiting_charge : (visiting_charge - visiting_fee);
+
+            if (sellerPayout > 0) {
+              await WalletModel.credit(
+                sellerUserId,
+                sellerPayout.toFixed(2),
+                "cancellation_compensation",
+                order.order_number,
+                `Compensation for late cancellation of order #${order.order_number}`,
+              );
+            }
+          }
+        } else {
+          // Normal cancellation (early buyer cancellation or any seller cancellation): full refund
+          const visiting_charge = parseFloat(order.visiting_charge_amount || 0);
+          const visiting_fee = parseFloat(order.visiting_platform_fee || 0);
+          refundAmount += visiting_charge + (feeModel === "buyer" ? visiting_fee : 0);
+        }
       }
 
       if (order.final_payment_status === "paid") {

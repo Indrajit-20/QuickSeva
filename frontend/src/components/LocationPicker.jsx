@@ -354,9 +354,48 @@ export default function LocationPicker({ onChange, initialLocation, hideMap = fa
     onChange?.({ lat: position.lat, lng: position.lng, address: val, pincode });
   };
 
-  const handlePincodeChange = (e) => {
+  const handlePincodeChange = async (e) => {
     const val = e.target.value.replace(/\D/g, "").slice(0, 6);
     setPincode(val);
+    
+    if (val.length === 6) {
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${val}&format=json&limit=1&countrycodes=in&addressdetails=1&email=support@quickseva.com`,
+          {
+            headers: {
+              Accept: "application/json",
+              "User-Agent": "QuickSeva/1.0",
+            },
+          }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.length > 0) {
+            const result = data[0];
+            const lat = parseFloat(result.lat);
+            const lng = parseFloat(result.lon);
+            
+            const addr = result.address || {};
+            const neighbourhood = addr.neighbourhood || addr.suburb || addr.quarter || addr.residential || "";
+            const cityOrTown = addr.city || addr.town || addr.village || addr.municipality || "";
+            const district = addr.county || addr.state_district || "";
+            const state = addr.state || "";
+            
+            const autoAddress = [neighbourhood, cityOrTown, district, state]
+              .filter((val, index, self) => val && self.indexOf(val) === index)
+              .join(", ");
+            
+            setAddress(autoAddress);
+            setPosition({ lat, lng });
+            onChange?.({ lat, lng, address: autoAddress, pincode: val });
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Pincode lookup error:", err);
+      }
+    }
     onChange?.({ lat: position.lat, lng: position.lng, address, pincode: val });
   };
 

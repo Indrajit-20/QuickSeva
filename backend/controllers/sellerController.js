@@ -83,10 +83,17 @@ exports.getSellerById = async (req, res) => {
       [seller.id]
     );
 
+    // Fetch active booked slots
+    const [bookings] = await pool.query(
+      "SELECT scheduled_at FROM orders WHERE seller_id = ? AND status != 'cancelled' AND scheduled_at >= NOW()",
+      [seller.id]
+    );
+
     const sellerWithBalanceStatus = {
       ...seller,
       hasSufficientBalance: balance >= 1.00,
       work_images: images || [],
+      booked_slots: bookings.map((b) => b.scheduled_at) || [],
     };
 
     return successRes(res, { seller: sellerWithBalanceStatus });
@@ -362,12 +369,17 @@ exports.registerSeller = async (req, res) => {
     }
 
     const [existingPhoneRows] = await conn.query(
-      `SELECT id FROM users WHERE phone = ? LIMIT 1`,
+      `SELECT role FROM users WHERE phone = ? LIMIT 1`,
       [normalizedPhone],
     );
     if (existingPhoneRows?.length) {
       await conn.rollback();
-      return errorRes(res, "Phone number already registered", 409);
+      const existingRole = existingPhoneRows[0].role;
+      const roleName = existingRole === "buyer" ? "customer" : existingRole === "seller" ? "seller" : existingRole;
+      const suggestion = existingRole === "buyer" 
+        ? "Please use a different number or log in." 
+        : "Please login.";
+      return errorRes(res, `Mobile number is already registered as a ${roleName}. ${suggestion}`, 409);
     }
 
     const hashedPassword = await bcrypt.hash(finalPassword, 12);
@@ -437,8 +449,17 @@ exports.registerSeller = async (req, res) => {
 
     await conn.commit();
 
-    // Contract: return only { success: true, userId, sellerId }
-    return successRes(res, { success: true, userId, sellerId }, null, 201);
+    const { generateToken } = require("../utils/jwtUtils");
+    const token = generateToken({ id: userId, role: "seller" });
+
+    const [userRows] = await conn.query(
+      `SELECT id, name, email, phone, role, profile_pic, address, city, state, pincode, lat, lng, gender, dob, is_verified, is_active, created_at
+       FROM users WHERE id = ?`,
+      [userId]
+    );
+    const user = userRows[0];
+
+    return successRes(res, { success: true, userId, sellerId, user, token }, null, 201);
   } catch (err) {
     console.error("Seller register error:", err);
     try {

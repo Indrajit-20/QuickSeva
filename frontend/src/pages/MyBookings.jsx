@@ -72,8 +72,20 @@ export default function MyBookings() {
     [bookings],
   );
 
-  const cancelBooking = async (id) => {
-    if (!window.confirm("Are you sure you want to cancel this booking?")) return;
+  const cancelBooking = async (bookingOrId) => {
+    const id = typeof bookingOrId === "object" ? bookingOrId.id : bookingOrId;
+    let confirmMsg = "Are you sure you want to cancel this booking?";
+
+    if (typeof bookingOrId === "object" && bookingOrId.scheduled_at && ["pending", "accepted"].includes(bookingOrId.status)) {
+      const scheduledTime = new Date(bookingOrId.scheduled_at).getTime();
+      const currentTime = Date.now();
+      const isWithin2Hours = (scheduledTime - currentTime) < 2 * 60 * 60 * 1000;
+      if (isWithin2Hours) {
+        confirmMsg = `Warning: This booking is scheduled to start in less than 2 hours. If you cancel now, your visiting charge of ₹${parseFloat(bookingOrId.visiting_charge_amount || 0)} will NOT be refunded. Are you sure you want to cancel?`;
+      }
+    }
+
+    if (!window.confirm(confirmMsg)) return;
     setBusyId(id);
     try {
       await buyerOrdersApi.cancel(id, { reason: "Cancelled by buyer" });
@@ -401,11 +413,10 @@ export default function MyBookings() {
                               </>
                             )}
                           </button>
-                          
-                          <button
-                            type="button"
-                            disabled={busyId === booking.id}
-                            onClick={() => cancelBooking(booking.id)}
+                                                    <button
+                             type="button"
+                             disabled={busyId === booking.id}
+                             onClick={() => cancelBooking(booking)}
                             className="flex items-center justify-center gap-1.5 rounded-xl border border-red-500/20 bg-red-500/10 hover:bg-red-500/25 px-4 py-2.5 text-xs font-bold text-red-400 hover:text-red-300 transition duration-300 w-full text-center disabled:opacity-50"
                           >
                             Reject Quotation
@@ -416,7 +427,7 @@ export default function MyBookings() {
                         <button
                           type="button"
                           disabled={busyId === booking.id}
-                          onClick={() => cancelBooking(booking.id)}
+                          onClick={() => cancelBooking(booking)}
                           className="flex items-center justify-center gap-1.5 rounded-xl border border-red-500/20 bg-red-500/10 hover:bg-red-500/25 px-4 py-2.5 text-xs font-bold text-red-400 hover:text-red-300 transition duration-300 w-full text-center disabled:opacity-50"
                         >
                           {busyId === booking.id ? (

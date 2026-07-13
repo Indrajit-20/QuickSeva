@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import apiClient from "../api/axiosConfig";
+import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 
 delete L.Icon.Default.prototype._getIconUrl;
@@ -133,12 +134,17 @@ export default function SellerPublicProfile() {
 
   useEffect(() => {
     let cancelled = false;
+    const controller = new AbortController();
+
     (async () => {
       try {
         setSellerLoading(true);
         const [sellerRes, servicesRes] = await Promise.all([
-          apiClient.get(`/sellers/${id}`),
-          apiClient.get(`/services/seller/${id}`).catch(() => ({ data: {} })),
+          apiClient.get(`/sellers/${id}`, { signal: controller.signal }),
+          apiClient.get(`/services/seller/${id}`, { signal: controller.signal }).catch((err) => {
+            if (axios.isCancel(err)) throw err;
+            return { data: {} };
+          }),
         ]);
         const rawSeller =
           sellerRes?.data?.data?.seller ||
@@ -167,7 +173,8 @@ export default function SellerPublicProfile() {
           setSeller(s);
           setSavedServices(Array.isArray(svc) ? svc : []);
         }
-      } catch {
+      } catch (err) {
+        if (axios.isCancel(err)) return;
         if (!cancelled) {
           setSeller(null);
           setSavedServices([]);
@@ -178,6 +185,7 @@ export default function SellerPublicProfile() {
     })();
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [id]);
 
