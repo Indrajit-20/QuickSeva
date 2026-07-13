@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Clock3, Crown, MapPin, Phone, RefreshCw, User } from "lucide-react";
+import { AlertTriangle, Clock3, Crown, MapPin, Phone, RefreshCw, User, Rocket } from "lucide-react";
 import apiClient from "../../api/axiosConfig";
 import { useAuth } from "../../context/AuthContext";
+import { Link } from "react-router-dom";
+import { isPremiumActive } from "../../utils/premium";
 
 const POLL_MS = 30000;
 
@@ -19,8 +21,13 @@ export default function SellerLeads() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [hasPremium, setHasPremium] = useState(true);
 
   const sellerId = user?.sellerId || user?.seller_id || user?.seller?.id || "";
+
+  useEffect(() => {
+    setHasPremium(isPremiumActive(user) || isPremiumActive());
+  }, [user]);
 
   const fetchLeads = async ({ silent = false } = {}) => {
     if (!silent) setLoading(true);
@@ -97,6 +104,30 @@ export default function SellerLeads() {
           </div>
         </div>
       </div>
+
+      {!hasPremium && (
+        <div className="rounded-xl border border-purple-500/20 bg-purple-950/15 p-6 text-center space-y-4">
+          <div className="flex justify-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-purple-500/10 text-purple-400">
+              <Rocket className="rotate-45" size={24} />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-lg font-bold text-white">Unlock Lead Alerts with Premium Membership</h3>
+            <p className="text-sm text-slate-400 max-w-md mx-auto">
+              Get customer leads routed directly to your dashboard in real-time when clients search for your categories and pincodes.
+            </p>
+          </div>
+          <div>
+            <Link
+              to="/seller/packages"
+              className="inline-flex items-center justify-center px-6 py-2.5 rounded-lg text-sm font-bold text-white bg-purple-600 hover:bg-purple-700 transition-all duration-200 shadow-lg shadow-purple-600/20"
+            >
+              👑 UPGRADE TO PREMIUM
+            </Link>
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="rounded-2xl border border-red-400/25 bg-red-500/10 p-4 text-sm font-semibold text-red-200">

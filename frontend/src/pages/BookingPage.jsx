@@ -886,7 +886,7 @@ export default function BookingPage() {
                 type="button"
                 onClick={() => {
                   setShowInvoiceModal(false);
-                  if (visitingCharge === 0) {
+                  if (visitingCharge === 0 || paymentMethod === "cash") {
                     setShowPaymentGateway(true);
                     setPaymentGatewayStatus("processing");
                     handleSimulatedPayment(true);
@@ -900,7 +900,7 @@ export default function BookingPage() {
                 className="flex-1 rounded-xl bg-sky-600 hover:bg-sky-700 py-3 text-xs font-bold text-white force-text-white shadow-lg shadow-sky-600/20 hover:scale-[1.01] hover:shadow-sky-600/35 transition active:scale-[0.99] cursor-pointer"
                 style={{ color: '#ffffff' }}
               >
-                {visitingCharge === 0 ? "Confirm Booking / बुकिंग पक्की करें" : "Proceed to Pay / भुगतान करें"}
+                {(visitingCharge === 0 || paymentMethod === "cash") ? "Confirm Booking / बुकिंग पक्की करें" : "Proceed to Pay / भुगतान करें"}
               </button>
             </div>
           </div>

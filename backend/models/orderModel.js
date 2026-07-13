@@ -70,8 +70,7 @@ const OrderModel = {
       : [buyer_id, limit, offset];
 
     const [rows] = await pool.query(
-      `SELECT o.id, o.order_number, o.status, o.total_amount, o.payment_method,
-              o.scheduled_at, o.created_at, o.address,
+      `SELECT o.*,
               s.business_name, s.id AS seller_id, su.profile_pic AS seller_pic,
               su.phone AS seller_phone, su.name AS seller_name, sv.title AS service_title,
               bu.name AS buyer_name, bu.phone AS buyer_phone
@@ -95,16 +94,9 @@ const OrderModel = {
 
     const [rows] = await pool.query(
       `SELECT
-          o.id AS id,
-          o.order_number AS order_number,
+          o.*,
           o.order_number AS order_id,
-          o.status,
-          o.total_amount,
-          o.payment_method,
-          o.created_at AS created_at,
           o.created_at AS date,
-          o.scheduled_at AS scheduled_at,
-          o.address AS address,
           u.name AS customer_name,
           u.phone AS customer_phone,
           sv.title AS service_name,

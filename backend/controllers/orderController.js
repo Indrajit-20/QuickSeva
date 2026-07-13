@@ -286,13 +286,7 @@ exports.completeOrder = async (req, res) => {
     if (order.status !== "in_progress")
       return errorRes(res, "Order not in progress", 400);
 
-    // Validate Secure Completion PIN for Cash orders
-    if (order.payment_method === "cash") {
-      const { otp } = req.body;
-      if (!otp || String(order.completion_otp_code) !== String(otp).trim()) {
-        return errorRes(res, "Invalid secure completion PIN. Please count the cash and verify the PIN with the buyer.", 400);
-      }
-    }
+    // No completion PIN check required for cash orders. Seller confirms cash collection directly.
 
     await OrderModel.updateStatus(req.params.id, "completed", {
       completed_at: new Date(),
@@ -368,9 +362,9 @@ exports.cancelOrder = async (req, res) => {
       return errorRes(res, "Reason for cancellation is required.", 400);
     }
 
-    // Restrict buyer cancellation: not allowed if status is in_progress, completed, or cancelled
-    if (isBuyer && ["in_progress", "completed", "cancelled"].includes(order.status)) {
-      return errorRes(res, "You cannot cancel the booking after the work has started", 400);
+    // Restrict buyer cancellation: not allowed if status is in_progress, completed, or cancelled, or if quotation has been paid
+    if (isBuyer && (["in_progress", "completed", "cancelled"].includes(order.status) || order.final_payment_status === "paid")) {
+      return errorRes(res, "You cannot cancel the booking after the work has started or quotation has been paid", 400);
     }
 
     // Cancellation is allowed if not already completed or cancelled
@@ -382,13 +376,14 @@ exports.cancelOrder = async (req, res) => {
       cancel_reason: reason || (isBuyer ? "Cancelled by buyer" : "Cancelled by seller"),
     });
 
+    let refundAmount = 0;
+    let isLateCancellation = false;
+
     // Refund wallet if paid via wallet
     if (order.payment_method === "wallet") {
-      let refundAmount = 0;
       const feeModel = await getSystemSetting("platform_fee_model", "buyer");
 
       // Check if buyer cancelled within 2 hours of scheduled time
-      let isLateCancellation = false;
       if (isBuyer) {
         const scheduledTime = new Date(order.scheduled_at).getTime();
         const currentTime = Date.now();
@@ -425,6 +420,35 @@ exports.cancelOrder = async (req, res) => {
         }
       }
 
+      // If cancelled after provider visited (i.e. status is in_progress or quoted)
+      if (order.visiting_payment_status === "paid" && ["in_progress", "quoted"].includes(order.status)) {
+        if (isBuyer) {
+          // Buyer cancelled/rejected after visit: credit visiting charge to seller as payout for completed inspection
+          const [sellerUserRows] = await pool.query("SELECT user_id FROM sellers WHERE id = ?", [order.seller_id]);
+          const sellerUserId = sellerUserRows[0]?.user_id;
+          if (sellerUserId) {
+            const visiting_charge = parseFloat(order.visiting_charge_amount || 0);
+            const visiting_fee = parseFloat(order.visiting_platform_fee || 0);
+            const sellerPayout = feeModel === "buyer" ? visiting_charge : (visiting_charge - visiting_fee);
+
+            if (sellerPayout > 0) {
+              await WalletModel.credit(
+                sellerUserId,
+                sellerPayout.toFixed(2),
+                "visiting_charge_payout",
+                order.order_number,
+                `Visiting charge payout for completed inspection of order #${order.order_number}`,
+              );
+            }
+          }
+        } else {
+          // Seller cancelled after visit: since seller backed out, refund visiting charge to buyer
+          const visiting_charge = parseFloat(order.visiting_charge_amount || 0);
+          const visiting_fee = parseFloat(order.visiting_platform_fee || 0);
+          refundAmount += visiting_charge + (feeModel === "buyer" ? visiting_fee : 0);
+        }
+      }
+
       if (order.final_payment_status === "paid") {
         const service_charge = parseFloat(order.service_charge_amount || 0);
         const parts_cost = parseFloat(order.parts_cost_amount || 0);
@@ -442,6 +466,63 @@ exports.cancelOrder = async (req, res) => {
           `Refund for cancelled order #${order.order_number}`,
         );
         await OrderModel.updatePaymentStatus(req.params.id, "refunded");
+      }
+    }
+
+    // Fetch seller user ID if not already available
+    let sellerUserId = null;
+    if (isSeller) {
+      sellerUserId = req.user.id;
+    } else {
+      const [sellerRows] = await pool.query("SELECT user_id FROM sellers WHERE id = ?", [order.seller_id]);
+      sellerUserId = sellerRows[0]?.user_id;
+    }
+
+    const displayReason = reason || (isBuyer ? "Cancelled by buyer" : "Cancelled by seller");
+
+    // Send notifications to both buyer and seller
+    if (isBuyer) {
+      // 1. Notify Seller
+      let sellerMessage = `Order #${order.order_number} has been cancelled by the customer. Reason: "${displayReason}".`;
+      if (isLateCancellation) {
+        sellerMessage += ` You have been credited compensation due to late cancellation.`;
+      }
+      if (sellerUserId) {
+        await pool.query(
+          `INSERT INTO notifications (user_id, title, message, type, ref_id) VALUES (?, ?, ?, 'order', ?)`,
+          [sellerUserId, "Order Cancelled by Customer", sellerMessage, order.id]
+        );
+      }
+
+      // 2. Notify Buyer (Confirming cancellation + refund status)
+      let buyerMessage = `Your booking #${order.order_number} has been cancelled successfully.`;
+      if (refundAmount > 0) {
+        buyerMessage += ` Refund of ₹${refundAmount.toFixed(2)} has been credited to your wallet.`;
+      } else if (order.payment_method === "wallet" && isLateCancellation) {
+        buyerMessage += ` Since the booking was cancelled less than 2 hours before the schedule, the visiting charge of ₹${parseFloat(order.visiting_charge_amount || 0).toFixed(2)} was not refunded.`;
+      }
+      await pool.query(
+        `INSERT INTO notifications (user_id, title, message, type, ref_id) VALUES (?, ?, ?, 'order', ?)`,
+        [order.buyer_id, "Booking Cancelled", buyerMessage, order.id]
+      );
+
+    } else if (isSeller) {
+      // 1. Notify Buyer
+      let buyerMessage = `Order #${order.order_number} has been cancelled by the service provider. Reason: "${displayReason}".`;
+      if (refundAmount > 0) {
+        buyerMessage += ` A full refund of ₹${refundAmount.toFixed(2)} has been credited to your wallet.`;
+      }
+      await pool.query(
+        `INSERT INTO notifications (user_id, title, message, type, ref_id) VALUES (?, ?, ?, 'order', ?)`,
+        [order.buyer_id, "Order Cancelled by Provider", buyerMessage, order.id]
+      );
+
+      // 2. Notify Seller (Confirming cancellation)
+      if (sellerUserId) {
+        await pool.query(
+          `INSERT INTO notifications (user_id, title, message, type, ref_id) VALUES (?, ?, ?, 'order', ?)`,
+          [sellerUserId, "Booking Cancelled", `You have cancelled booking #${order.order_number}. Reason: "${displayReason}".`, order.id]
+        );
       }
     }
 
@@ -464,15 +545,28 @@ exports.submitQuotation = async (req, res) => {
     if (order.status !== "in_progress")
       return errorRes(res, "Order must be in progress to submit quotation", 400);
 
+    const sCharge = parseFloat(service_charge || 0);
+    const pCost = parseFloat(parts_cost || 0);
+    const disc = parseFloat(discount || 0);
+
+    if (isNaN(sCharge) || sCharge < 0) {
+      return errorRes(res, "Service charge must be a non-negative number", 400);
+    }
+    if (isNaN(pCost) || pCost < 0) {
+      return errorRes(res, "Parts cost must be a non-negative number", 400);
+    }
+    if (isNaN(disc) || disc < 0) {
+      return errorRes(res, "Discount must be a non-negative number", 400);
+    }
+    if (disc > (sCharge + pCost)) {
+      return errorRes(res, "Discount cannot exceed the sum of service charge and parts cost", 400);
+    }
+
     const feeModel = await getSystemSetting("platform_fee_model", "buyer");
     const feePercentage = parseFloat(await getSystemSetting("platform_fee_percentage", "5.00"));
 
-    // Calculate Stage 2 platform fee on quotation subtotal and cap at max ₹100.00
-    let quote_fee = subtotal * (feePercentage / 100);
-    if (quote_fee > 100.00) {
-      quote_fee = 100.00;
-    }
-    const final_platform_fee = quote_fee.toFixed(2);
+    // No platform fee for Stage 2 (final quotation)
+    const final_platform_fee = "0.00";
     const start_otp_code = Math.floor(1000 + Math.random() * 9000).toString();
 
     await pool.query(
@@ -523,9 +617,13 @@ exports.approveQuotation = async (req, res) => {
     if (order.status !== "quoted")
       return errorRes(res, "No active quotation to approve", 400);
 
+    // Block multiple approvals:
+    if (order.final_payment_status === "paid" || order.completion_otp_code !== null) {
+      return errorRes(res, "Quotation has already been approved", 400);
+    }
+
     const subtotal = parseFloat(order.service_charge_amount || 0) + parseFloat(order.parts_cost_amount || 0) - parseFloat(order.discount_amount || 0);
-    const feeModel = await getSystemSetting("platform_fee_model", "buyer");
-    const remaining = feeModel === "buyer" ? (subtotal + parseFloat(order.final_platform_fee || 0)) : subtotal;
+    const remaining = subtotal; // No platform fee on final bill (Stage 2)
 
     const final_pay_status = (order.payment_method === "wallet" || order.payment_method === "online") ? "paid" : "pending";
 
@@ -556,7 +654,7 @@ exports.approveQuotation = async (req, res) => {
       [
         final_pay_status,
         remaining.toFixed(2),
-        parseFloat(order.final_platform_fee || 0).toFixed(2),
+        "0.00", // No Stage 2 platform fee added
         completion_otp_code,
         req.params.id
       ]

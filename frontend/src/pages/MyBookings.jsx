@@ -74,14 +74,20 @@ export default function MyBookings() {
 
   const cancelBooking = async (bookingOrId) => {
     const id = typeof bookingOrId === "object" ? bookingOrId.id : bookingOrId;
-    let confirmMsg = "Are you sure you want to cancel this booking?";
+    let confirmMsg = "Are you sure you want to cancel this booking? / क्या आप वाकई इस बुकिंग को रद्द करना चाहते हैं?";
 
-    if (typeof bookingOrId === "object" && bookingOrId.scheduled_at && ["pending", "accepted"].includes(bookingOrId.status)) {
-      const scheduledTime = new Date(bookingOrId.scheduled_at).getTime();
-      const currentTime = Date.now();
-      const isWithin2Hours = (scheduledTime - currentTime) < 2 * 60 * 60 * 1000;
-      if (isWithin2Hours) {
-        confirmMsg = `Warning: This booking is scheduled to start in less than 2 hours. If you cancel now, your visiting charge of ₹${parseFloat(bookingOrId.visiting_charge_amount || 0)} will NOT be refunded. Are you sure you want to cancel?`;
+    if (typeof bookingOrId === "object") {
+      if (["pending", "accepted"].includes(bookingOrId.status)) {
+        if (bookingOrId.scheduled_at) {
+          const scheduledTime = new Date(bookingOrId.scheduled_at).getTime();
+          const currentTime = Date.now();
+          const isWithin2Hours = (scheduledTime - currentTime) < 2 * 60 * 60 * 1000;
+          if (isWithin2Hours) {
+            confirmMsg = `Warning: This booking is scheduled to start in less than 2 hours. If you cancel now, your visiting charge of ₹${parseFloat(bookingOrId.visiting_charge_amount || 0)} will NOT be refunded. Are you sure you want to cancel? / चेतावनी: यह बुकिंग 2 घंटे से कम समय में शुरू होने वाली है। यदि आप अभी रद्द करते हैं, तो आपका विजिटिंग चार्ज ₹${parseFloat(bookingOrId.visiting_charge_amount || 0)} वापस नहीं किया जाएगा। क्या आप वाकई रद्द करना चाहते हैं?`;
+          }
+        }
+      } else if (["in_progress", "quoted"].includes(bookingOrId.status)) {
+        confirmMsg = `Warning: The provider has already visited and performed inspections. If you reject/cancel now, your visiting charge of ₹${parseFloat(bookingOrId.visiting_charge_amount || 0)} will NOT be refunded and this order will be cancelled. Are you sure you want to proceed? / चेतावनी: प्रदाता पहले ही दौरा कर चुके हैं और निरीक्षण कर चुके हैं। यदि आप अभी अस्वीकार/रद्द करते हैं, तो आपका विजिटिंग चार्ज ₹${parseFloat(bookingOrId.visiting_charge_amount || 0)} वापस नहीं किया जाएगा और यह बुकिंग रद्द कर दी जाएगी। क्या आप आगे बढ़ना चाहते हैं?`;
       }
     }
 
@@ -98,13 +104,12 @@ export default function MyBookings() {
   };
 
   const triggerApproveQuotation = (booking) => {
+    setActiveBookingForPayment(booking);
     if (booking.payment_method === "cash") {
       if (!window.confirm("Are you sure you want to approve this quotation? / क्या आप कोटेशन मंजूर करना चाहते हैं?")) return;
       executeApproveQuotation(booking.id);
     } else {
-      setActiveBookingForPayment(booking);
       setGatewaySubView("select");
-      setPaymentGatewayStatus("idle");
       setGatewayError("");
       setShowPaymentGateway(true);
     }
@@ -305,7 +310,8 @@ export default function MyBookings() {
                               <div className="flex items-center justify-between text-xs text-indigo-300">
                                 <span>Stage 1: Visiting Charge / विजिटिंग चार्ज:</span>
                                 <span className="font-extrabold text-emerald-400">
-                                  ₹{Number(booking.visiting_charge_amount || booking.total_amount || 0).toLocaleString("en-IN")} (✓ Paid / भुगतान हुआ)
+                                  ₹{Number(booking.visiting_charge_amount || booking.total_amount || 0).toLocaleString("en-IN")}
+                                  {booking.payment_method === "cash" && booking.visiting_payment_status !== "paid" ? " (Pay via Cash / नकद भुगतान)" : " (✓ Paid / भुगतान हुआ)"}
                                 </span>
                               </div>
                               
@@ -317,22 +323,54 @@ export default function MyBookings() {
                                     <span>Service Fee / काम का दाम:</span>
                                     <span>₹{Number(booking.service_charge_amount || 0).toLocaleString("en-IN")}</span>
                                   </div>
-                                  {booking.parts_cost_amount > 0 && (
-                                    <div className="flex justify-between text-indigo-200">
-                                      <span>Parts/Materials / सामान का चार्ज:</span>
-                                      <span>₹{Number(booking.parts_cost_amount || 0).toLocaleString("en-IN")}</span>
-                                    </div>
-                                  )}
+                                  
+                                  {/* Parts breakdown for buyer */}
+                                  {(() => {
+                                    let parsedNotes = { notes: booking.quotation_notes || "", parts: [] };
+                                    try {
+                                      if (booking.quotation_notes && booking.quotation_notes.startsWith("{")) {
+                                        parsedNotes = JSON.parse(booking.quotation_notes);
+                                      }
+                                    } catch (e) {}
+
+                                    return (
+                                      <>
+                                        {parsedNotes.parts && parsedNotes.parts.length > 0 ? (
+                                          <div className="space-y-1.5 pl-2.5 border-l border-indigo-500/25 my-1.5">
+                                            <span className="text-[10px] text-indigo-400 block font-bold">Itemized Parts / सामानों की सूची:</span>
+                                            {parsedNotes.parts.map((p, idx) => (
+                                              <div key={idx} className="flex justify-between text-indigo-300 text-[11px]">
+                                                <span>• {p.name}:</span>
+                                                <span>₹{Number(p.price).toLocaleString("en-IN")}</span>
+                                              </div>
+                                            ))}
+                                            <div className="flex justify-between text-indigo-200 font-semibold border-t border-indigo-500/10 pt-1 mt-1">
+                                              <span>Total Parts Cost:</span>
+                                              <span>₹{Number(booking.parts_cost_amount || 0).toLocaleString("en-IN")}</span>
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          booking.parts_cost_amount > 0 && (
+                                            <div className="flex justify-between text-indigo-200">
+                                              <span>Parts/Materials / सामान का चार्ज:</span>
+                                              <span>₹{Number(booking.parts_cost_amount || 0).toLocaleString("en-IN")}</span>
+                                            </div>
+                                          )
+                                        )}
+
+                                        {parsedNotes.notes && (
+                                          <div className="text-indigo-300/70 italic text-[11px] mt-1.5 border-t border-indigo-500/10 pt-1.5">
+                                            <span className="font-bold not-italic text-indigo-200">Notes:</span> {parsedNotes.notes}
+                                          </div>
+                                        )}
+                                      </>
+                                    );
+                                  })()}
+
                                   {booking.discount_amount > 0 && (
                                     <div className="flex justify-between text-red-400 font-semibold">
                                       <span>Discount / छूट:</span>
                                       <span>-₹{Number(booking.discount_amount || 0).toLocaleString("en-IN")}</span>
-                                    </div>
-                                  )}
-                                  {booking.final_platform_fee > 0 && (
-                                    <div className="flex justify-between text-indigo-300/80">
-                                      <span>Platform Fee / सुरक्षा शुल्क:</span>
-                                      <span>+₹{Number(booking.final_platform_fee || 0).toLocaleString("en-IN")}</span>
                                     </div>
                                   )}
                                   <div className="flex justify-between text-sm font-extrabold text-white border-t border-indigo-500/10 pt-1.5 mt-1">
@@ -356,7 +394,7 @@ export default function MyBookings() {
                             </p>
                             
                             {/* OTP Start Code display */}
-                            {booking.status === "quoted" && booking.final_payment_status === "paid" && booking.start_otp_code && (
+                            {booking.status === "quoted" && (booking.payment_method === "cash" ? booking.completion_otp_code : booking.final_payment_status === "paid") && booking.start_otp_code && (
                               <div className="mt-3.5 p-3.5 rounded-2xl border border-indigo-400/30 bg-indigo-950/60 text-center shadow-lg">
                                 <span className="block text-[10px] font-black text-indigo-400 uppercase tracking-widest">Share this Start Code with Technician / काम शुरू करने का कोड</span>
                                 <span className="block text-2xl font-black text-white mt-1.5 tracking-widest">{booking.start_otp_code}</span>
@@ -364,14 +402,16 @@ export default function MyBookings() {
                               </div>
                             )}
 
-                            {/* Secure Cash Handshake Completion Code */}
-                            {booking.status === "in_progress" && booking.payment_method === "cash" && booking.completion_otp_code && (
-                              <div className="mt-3.5 p-3.5 rounded-2xl border border-amber-500/20 bg-amber-955/20 text-center shadow-md">
-                                <span className="block text-[10px] font-black text-amber-400 uppercase tracking-widest">Secure Cash Completion PIN / भुगतान सत्यापन पिन</span>
-                                <span className="block text-3xl font-black text-white mt-1.5 tracking-wider">{booking.completion_otp_code}</span>
-                                <span className="block text-[10px] text-amber-200/60 mt-1.5 leading-normal">
-                                  🔴 Share this PIN with the technician ONLY after they complete the work and you hand over the cash.
-                                </span>
+                            {/* Cash Payment Information */}
+                            {booking.status === "in_progress" && booking.payment_method === "cash" && (
+                              <div className="mt-3.5 p-3.5 rounded-2xl border border-amber-500/20 bg-amber-950/40 text-center shadow-md">
+                                <span className="block text-[10px] font-black text-amber-400 uppercase tracking-widest">Cash Payment / नकद भुगतान</span>
+                                <p className="text-xs text-amber-200 font-bold mt-1.5">
+                                  Please pay ₹{Number(parseFloat(booking.service_charge_amount || 0) + parseFloat(booking.parts_cost_amount || 0) - parseFloat(booking.discount_amount || 0) + parseFloat(booking.visiting_charge_amount || 0)).toLocaleString("en-IN")} in cash to the technician.
+                                </p>
+                                <p className="text-[10px] text-amber-200/60 mt-1.5 leading-normal">
+                                  तकनीशियन को ₹{Number(parseFloat(booking.service_charge_amount || 0) + parseFloat(booking.parts_cost_amount || 0) - parseFloat(booking.discount_amount || 0) + parseFloat(booking.visiting_charge_amount || 0)).toLocaleString("en-IN")} का नकद भुगतान करें।
+                                </p>
                               </div>
                             )}
                           </div>
@@ -391,7 +431,7 @@ export default function MyBookings() {
                           View Provider
                         </Link>
                       )}
-                      {booking.status === "quoted" && booking.final_payment_status !== "paid" && (
+                      {booking.status === "quoted" && (booking.payment_method === "cash" ? !booking.completion_otp_code : booking.final_payment_status !== "paid") && (
                         <>
                           <button
                             type="button"
@@ -461,7 +501,7 @@ export default function MyBookings() {
                               m.generateInvoicePDF(payload)
                             );
                           }}
-                          className="flex items-center justify-center gap-1.5 rounded-xl border border-purple-500/20 bg-purple-500/10 hover:bg-purple-500/25 px-4 py-2.5 text-xs font-bold text-purple-200 hover:text-purple-100 transition duration-300 w-full text-center shadow-lg shadow-purple-950/40"
+                          className="flex items-center justify-center gap-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 px-4 py-2.5 text-xs font-bold text-white shadow-lg active:scale-95 transition duration-300 w-full text-center hover:scale-[1.01] hover:shadow-purple-600/30 cursor-pointer"
                         >
                           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -511,8 +551,7 @@ export default function MyBookings() {
                     ₹{Number(
                       parseFloat(activeBookingForPayment.service_charge_amount || 0) + 
                       parseFloat(activeBookingForPayment.parts_cost_amount || 0) - 
-                      parseFloat(activeBookingForPayment.discount_amount || 0) +
-                      parseFloat(activeBookingForPayment.final_platform_fee || 0)
+                      parseFloat(activeBookingForPayment.discount_amount || 0)
                     ).toLocaleString("en-IN")}
                   </span>
                 </div>

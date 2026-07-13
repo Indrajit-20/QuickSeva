@@ -101,10 +101,47 @@ export function generateInvoicePDF(order) {
 
   // 5. Line Items Table
   const startY = 85;
+  const bodyRows = [];
+  const visitingCharge = parseFloat(order.visiting_charge_amount || 0);
+  const serviceCharge = parseFloat(order.service_charge_amount || 0);
+  const partsCost = parseFloat(order.parts_cost_amount || 0);
+  const discount = parseFloat(order.discount_amount || 0);
+  const visitingFee = parseFloat(order.visiting_platform_fee || 0);
+  const finalFee = parseFloat(order.final_platform_fee || 0);
+  const totalPlatformFee = visitingFee + finalFee;
+
+  // 1. Visiting Charge
+  if (visitingCharge > 0) {
+    bodyRows.push(["Visiting Charge", "1", formatINR(visitingCharge), formatINR(visitingCharge)]);
+  }
+
+  // 2. Service Charge / Fee
+  if (serviceCharge > 0) {
+    bodyRows.push([`${serviceName} (Service Fee)`, "1", formatINR(serviceCharge), formatINR(serviceCharge)]);
+  }
+
+  // 3. Parts Cost
+  if (partsCost > 0) {
+    bodyRows.push(["Parts & Materials", "1", formatINR(partsCost), formatINR(partsCost)]);
+  }
+
+  // 4. Discount
+  if (discount > 0) {
+    bodyRows.push(["Discount", "1", `-${formatINR(discount)}`, `-${formatINR(discount)}`]);
+  }
+
+  // 5. Platform Fee (Only show if buyer paid it, i.e., total matches visiting + service + parts - discount + fees)
+  const subtotalBeforeFees = visitingCharge + serviceCharge + partsCost - discount;
+  const grandTotal = parseFloat(total || 0);
+  if (grandTotal > subtotalBeforeFees) {
+    const feeDiff = grandTotal - subtotalBeforeFees;
+    bodyRows.push(["Safety & Platform Fee", "1", formatINR(feeDiff), formatINR(feeDiff)]);
+  }
+
   autoTable(doc, {
     startY,
     head: [["Service Description", "Qty", "Unit Price", "Total Price"]],
-    body: [[serviceName, "1", formatINR(total), formatINR(total)]],
+    body: bodyRows.length > 0 ? bodyRows : [[serviceName, "1", formatINR(total), formatINR(total)]],
     headStyles: {
       fillColor: [79, 70, 229],
       textColor: [255, 255, 255],
@@ -191,14 +228,30 @@ export function openWhatsAppInvoice(order) {
   const payment = safeString(order.payment_method || "");
   const sellerBusiness = safeString(order.seller_business || order.business_name || "QuickSeva Partner");
 
+  const visitingCharge = parseFloat(order.visiting_charge_amount || 0);
+  const serviceCharge = parseFloat(order.service_charge_amount || 0);
+  const partsCost = parseFloat(order.parts_cost_amount || 0);
+  const discount = parseFloat(order.discount_amount || 0);
+  const grandTotal = parseFloat(total || 0);
+  const subtotalBeforeFees = visitingCharge + serviceCharge + partsCost - discount;
+  const platformFee = grandTotal > subtotalBeforeFees ? (grandTotal - subtotalBeforeFees) : 0;
+
+  let breakdownText = "";
+  if (visitingCharge > 0) breakdownText += `• Visiting Charge: ${formatINR(visitingCharge)}\n`;
+  if (serviceCharge > 0) breakdownText += `• Service Fee: ${formatINR(serviceCharge)}\n`;
+  if (partsCost > 0) breakdownText += `• Parts & Materials: ${formatINR(partsCost)}\n`;
+  if (discount > 0) breakdownText += `• Discount: -${formatINR(discount)}\n`;
+  if (platformFee > 0) breakdownText += `• Platform & Safety Fee: ${formatINR(platformFee)}\n`;
+
   const message = encodeURIComponent(
     `Hello ${customerName},\n\n` +
-      `Invoice Details\n\n` +
-      `Order ID: ${orderId}\n` +
-      `Service: ${serviceName}\n` +
-      `Amount: ${formatINR(total)}\n` +
-      `Payment: ${payment}\n\n` +
-      `Thank you for choosing ${sellerBusiness}.`,
+      `Invoice Details for Order #${orderId}\n` +
+      `Service: ${serviceName}\n\n` +
+      `Breakdown:\n` +
+      `${breakdownText}\n` +
+      `Grand Total: ${formatINR(grandTotal)}\n` +
+      `Payment Method: ${payment.toUpperCase()}\n\n` +
+      `Thank you for choosing ${sellerBusiness}!`,
   );
 
   window.open(`https://wa.me/${indiaPhone}?text=${message}`, "_blank");
