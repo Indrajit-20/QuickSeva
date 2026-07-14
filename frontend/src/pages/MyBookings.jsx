@@ -43,6 +43,10 @@ export default function MyBookings() {
   const [gatewaySubView, setGatewaySubView] = useState("select");
   const [activeBookingForPayment, setActiveBookingForPayment] = useState(null);
 
+  const [showDisputeModal, setShowDisputeModal] = useState(false);
+  const [disputeBookingItem, setDisputeBookingItem] = useState(null);
+  const [disputeReasonText, setDisputeReasonText] = useState("");
+
   const { user } = useAuth();
 
   const refresh = async () => {
@@ -100,6 +104,32 @@ export default function MyBookings() {
       alert(e?.response?.data?.message || "Failed to cancel");
     } finally {
       setBusyId(null);
+    }
+  };
+
+  const openDisputeModal = (booking) => {
+    setDisputeBookingItem(booking);
+    setDisputeReasonText("");
+    setShowDisputeModal(true);
+  };
+
+  const submitDispute = async () => {
+    if (!disputeReasonText.trim()) {
+      alert("A reason is required to dispute this booking. / बुकिंग पर विवाद दर्ज करने के लिए कारण आवश्यक है।");
+      return;
+    }
+
+    const bookingId = disputeBookingItem.id;
+    setBusyId(bookingId);
+    setShowDisputeModal(false);
+    try {
+      await buyerOrdersApi.dispute(bookingId, { reason: disputeReasonText });
+      await refresh();
+    } catch (e) {
+      alert(e?.response?.data?.message || "Failed to submit dispute");
+    } finally {
+      setBusyId(null);
+      setDisputeBookingItem(null);
     }
   };
 
@@ -257,6 +287,11 @@ export default function MyBookings() {
                           >
                             {(booking.status || "pending").replace("_", " ")}
                           </span>
+                          {booking.scheduled_at && new Date(booking.scheduled_at) < new Date() && ["pending", "accepted", "in_progress", "quoted"].includes(booking.status) && (
+                            <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-0.5 text-[11px] font-black uppercase tracking-wider text-amber-400">
+                              ⚠️ Overdue / समय बीत गया
+                            </span>
+                          )}
                         </div>
 
                         <h2 className="mt-3.5 text-xl font-extrabold text-white leading-tight">
@@ -463,12 +498,12 @@ export default function MyBookings() {
                           </button>
                         </>
                       )}
-                      {["pending", "accepted"].includes(booking.status) && (
+                      {booking.status === "pending" && (
                         <button
                           type="button"
-                          disabled={busyId === booking.id}
+                          disabled={busyId === booking.id || (booking.scheduled_at && new Date(booking.scheduled_at) < new Date())}
                           onClick={() => cancelBooking(booking)}
-                          className="flex items-center justify-center gap-1.5 rounded-xl border border-red-500/20 bg-red-500/10 hover:bg-red-500/25 px-4 py-2.5 text-xs font-bold text-red-400 hover:text-red-300 transition duration-300 w-full text-center disabled:opacity-50"
+                          className="flex items-center justify-center gap-1.5 rounded-xl border border-red-500/20 bg-red-500/10 hover:bg-red-500/25 px-4 py-2.5 text-xs font-bold text-red-400 hover:text-red-300 transition duration-300 w-full text-center disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {busyId === booking.id ? (
                             <>
@@ -480,7 +515,78 @@ export default function MyBookings() {
                               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
                               </svg>
-                              Cancel Booking
+                              {booking.scheduled_at && new Date(booking.scheduled_at) < new Date() ? "Expired" : "Cancel Booking"}
+                            </>
+                          )}
+                        </button>
+                      )}
+
+                      {booking.status === "accepted" && (
+                        <>
+                          {booking.scheduled_at && new Date(booking.scheduled_at) < new Date() ? (
+                            <button
+                              type="button"
+                              disabled={busyId === booking.id}
+                              onClick={() => openDisputeModal(booking)}
+                              className="flex items-center justify-center gap-1.5 rounded-xl border border-amber-500/20 bg-amber-500/10 hover:bg-amber-500/25 px-4 py-2.5 text-xs font-bold text-amber-400 hover:text-amber-300 transition duration-300 w-full text-center disabled:opacity-50 cursor-pointer"
+                            >
+                              {busyId === booking.id ? (
+                                <>
+                                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-amber-400 border-t-white" />
+                                  Submitting Dispute…
+                                </>
+                              ) : (
+                                <>
+                                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                  </svg>
+                                  Report No-Show / Dispute
+                                </>
+                              )}
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              disabled={busyId === booking.id}
+                              onClick={() => cancelBooking(booking)}
+                              className="flex items-center justify-center gap-1.5 rounded-xl border border-red-500/20 bg-red-500/10 hover:bg-red-500/25 px-4 py-2.5 text-xs font-bold text-red-400 hover:text-red-300 transition duration-300 w-full text-center disabled:opacity-50 cursor-pointer"
+                            >
+                              {busyId === booking.id ? (
+                                <>
+                                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-red-400 border-t-white" />
+                                  Cancelling…
+                                </>
+                              ) : (
+                                <>
+                                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                  Cancel Booking
+                                </>
+                              )}
+                            </button>
+                          )}
+                        </>
+                      )}
+
+                      {["in_progress", "quoted"].includes(booking.status) && booking.scheduled_at && new Date(booking.scheduled_at) < new Date() && (
+                        <button
+                          type="button"
+                          disabled={busyId === booking.id}
+                          onClick={() => openDisputeModal(booking)}
+                          className="flex items-center justify-center gap-1.5 rounded-xl border border-amber-500/20 bg-amber-500/10 hover:bg-amber-500/25 px-4 py-2.5 text-xs font-bold text-amber-400 hover:text-amber-300 transition duration-300 w-full text-center disabled:opacity-50 cursor-pointer"
+                        >
+                          {busyId === booking.id ? (
+                            <>
+                              <span className="h-3 w-3 animate-spin rounded-full border-2 border-amber-400 border-t-white" />
+                              Submitting Dispute…
+                            </>
+                          ) : (
+                            <>
+                              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                              </svg>
+                              Dispute Booking
                             </>
                           )}
                         </button>
@@ -715,6 +821,80 @@ export default function MyBookings() {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Custom Dispute Reason Modal */}
+      {showDisputeModal && disputeBookingItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs p-4 animate-fade-in text-white">
+          <div className="w-full max-w-md rounded-2xl bg-[#0f111a] border border-slate-800 shadow-2xl overflow-hidden relative flex flex-col">
+            {/* Modal Header */}
+            <div className="bg-[#0b0c13] p-4 border-b border-slate-800 flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">⚠️</span>
+                <div className="text-left">
+                  <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Raise a Dispute / विवाद दर्ज करें</h2>
+                  <p className="text-[10px] text-slate-500">Order #{disputeBookingItem.order_number || disputeBookingItem.id}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => {
+                  setShowDisputeModal(false);
+                  setDisputeBookingItem(null);
+                }}
+                className="text-slate-400 hover:text-white text-sm cursor-pointer p-1.5"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4 text-left">
+              <div className="space-y-1.5">
+                <span className="block text-[10px] text-slate-500 uppercase font-semibold">Service Details</span>
+                <p className="text-sm font-bold text-indigo-300">{disputeBookingItem.service_title || disputeBookingItem.service_name}</p>
+                <p className="text-xs text-slate-400">Provider: {disputeBookingItem.business_name || disputeBookingItem.seller_name}</p>
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="dispute-reason-input" className="block text-[10px] text-slate-500 uppercase font-semibold">
+                  Reason for Dispute / विवाद का कारण:
+                </label>
+                <textarea
+                  id="dispute-reason-input"
+                  rows={4}
+                  placeholder="e.g. The service provider did not show up at the scheduled time. / उदा. सेवा प्रदाता निर्धारित समय पर नहीं आया।"
+                  value={disputeReasonText}
+                  onChange={(e) => setDisputeReasonText(e.target.value)}
+                  className="w-full text-xs bg-[#0b0c13] border border-slate-800 hover:border-indigo-500/55 focus:border-indigo-500 rounded-xl p-3 text-white outline-none resize-none transition duration-205"
+                />
+                <p className="text-[10px] text-slate-500 italic">
+                  Note: Stating the reason accurately helps support administrators resolve the dispute faster. The reason is stored in the database.
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDisputeModal(false);
+                    setDisputeBookingItem(null);
+                  }}
+                  className="flex-1 py-3 text-xs font-black bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl active:scale-95 transition cursor-pointer text-center"
+                >
+                  Cancel / रद्द
+                </button>
+                <button
+                  type="button"
+                  onClick={submitDispute}
+                  className="flex-1 py-3 text-xs font-black bg-amber-600 hover:bg-amber-700 text-white rounded-xl active:scale-95 transition cursor-pointer text-center shadow-lg shadow-amber-600/20"
+                >
+                  Submit Dispute / विवाद सबमिट करें
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

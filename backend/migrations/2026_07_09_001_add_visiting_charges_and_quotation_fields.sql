@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS system_settings (
 );
 
 INSERT INTO system_settings (`key`, `value`, `description`) VALUES
-('platform_fee_model', 'buyer', 'Who pays the platform fee: "buyer" (Option A) or "seller" (Option B)')
+('platform_fee_model', 'seller', 'Who pays the platform fee: "buyer" (Option A) or "seller" (Option B)')
 ON DUPLICATE KEY UPDATE `description` = VALUES(`description`);
 
 INSERT INTO system_settings (`key`, `value`, `description`) VALUES

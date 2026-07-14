@@ -1826,17 +1826,17 @@ export default function NearbyServices({
                     <input
                       type="range"
                       min={1}
-                      max={20}
+                      max={50}
                       step={1}
                       value={radiusKm}
                       onChange={(e) => setRadiusKm(parseInt(e.target.value || "5", 10))}
                       className="qs-range w-full"
                       style={{
-                        background: `linear-gradient(to right, #0284c7 0%, #0284c7 ${((radiusKm - 1) / 19) * 100}%, rgba(24,95,165,0.08) ${((radiusKm - 1) / 19) * 100}%, rgba(24,95,165,0.08) 100%)`,
+                        background: `linear-gradient(to right, #0284c7 0%, #0284c7 ${((radiusKm - 1) / 49) * 100}%, rgba(24,95,165,0.08) ${((radiusKm - 1) / 49) * 100}%, rgba(24,95,165,0.08) 100%)`,
                       }}
                     />
                     <span className="text-[9px] text-slate-400 mt-1 font-semibold">
-                      → {radiusKm <= 5 ? "Nearby" : "Far"}
+                      → {radiusKm <= 5 ? "Nearby" : radiusKm <= 20 ? "Moderate" : "Far"}
                     </span>
                   </div>
                 </div>

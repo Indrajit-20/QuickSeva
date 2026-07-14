@@ -11,6 +11,7 @@ import {
 import { serviceService } from "../../services/serviceService";
 import { useAuth } from "../../context/AuthContext";
 import apiClient from "../../api/axiosConfig";
+import { getSystemSettings } from "../../api/policyService";
 
 const inputClass =
   "w-full rounded-lg border border-indigo-500/20 bg-[#0f0e1a] px-3 py-2.5 text-sm font-medium text-white outline-none transition placeholder:text-slate-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20";
@@ -595,6 +596,11 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
   const [isInspectionRequired, setIsInspectionRequired] = useState(editingService ? Boolean(editingService.is_inspection_required !== 0) : true);
   const [finalPriceAfterInspection, setFinalPriceAfterInspection] = useState(editingService ? Boolean(editingService.final_price_after_inspection !== 0) : true);
 
+  const [platformSettings, setPlatformSettings] = useState({
+    platform_fee_model: "seller",
+    platform_fee_percentage: "5.00"
+  });
+
   // Step 4 (Title & details)
   const [title, setTitle] = useState(editingService ? (editingService.title || editingService.name) : "");
   const [description, setDescription] = useState(editingService ? editingService.description || "" : "");
@@ -603,6 +609,20 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await getSystemSettings();
+        if (res?.data) {
+          setPlatformSettings(res.data);
+        }
+      } catch (err) {
+        console.error("Failed to load platform settings:", err);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   // 1. Fetch categories
   useEffect(() => {
@@ -718,9 +738,9 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
         sub_service_id: selectedSubService?.id || null,
         title: title || (selectedCategory.name + " Service"),
         description: description || null,
-        price,
+        price: Math.max(1, Number(price || 199)),
         price_type: priceType,
-        visiting_charge: visitingCharge,
+        visiting_charge: Math.max(100, Number(visitingCharge || 100)),
         is_inspection_required: isInspectionRequired ? 1 : 0,
         final_price_after_inspection: finalPriceAfterInspection ? 1 : 0,
       };
@@ -1050,7 +1070,11 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
                 <input
                   type="number"
                   value={price}
-                  onChange={(e) => setPrice(Math.max(1, parseInt(e.target.value) || 0))}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setPrice(val === "" ? "" : parseInt(val) || 0);
+                  }}
+                  onBlur={() => setPrice((p) => Math.max(1, Number(p || 199)))}
                   className="w-28 text-center text-3xl font-black bg-transparent text-white outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
               </div>
@@ -1103,7 +1127,11 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
                 <input
                   type="number"
                   value={visitingCharge}
-                  onChange={(e) => setVisitingCharge(Math.max(100, parseInt(e.target.value) || 100))}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setVisitingCharge(val === "" ? "" : parseInt(val) || 0);
+                  }}
+                  onBlur={() => setVisitingCharge((v) => Math.max(100, Number(v || 100)))}
                   className="w-20 text-center text-2xl font-black bg-transparent text-white outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
               </div>
@@ -1132,6 +1160,64 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
                 </button>
               ))}
             </div>
+
+            {/* Live Payout Calculation Preview */}
+            {Number(visitingCharge || 0) > 0 && (() => {
+              const activeVisitingCharge = Math.max(100, Number(visitingCharge || 100));
+              const activeFee = Math.min(100.00, parseFloat((activeVisitingCharge * (parseFloat(platformSettings.platform_fee_percentage) / 100)).toFixed(2)));
+              const isBuyerModel = platformSettings.platform_fee_model === "buyer";
+              return (
+                <div className="w-full mt-4 p-4 rounded-xl bg-indigo-950/40 border border-indigo-500/10 space-y-2.5 text-xs text-left">
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Visiting Charge / विजिटिंग चार्ज:</span>
+                    <span className="font-bold text-white">₹{activeVisitingCharge}</span>
+                  </div>
+                  
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Platform Commission / प्लेटफॉर्म कमीशन ({platformSettings.platform_fee_percentage}%):</span>
+                    {isBuyerModel ? (
+                      <span className="font-bold text-emerald-400">₹0</span>
+                    ) : (
+                      <span className="font-bold text-red-400">-₹{activeFee}</span>
+                    )}
+                  </div>
+
+                  <div className="h-px bg-indigo-500/10 my-1" />
+
+                  <div className="flex justify-between text-sm font-black">
+                    <span className="text-slate-200">You will receive / आपको मिलेगा:</span>
+                    <span className="text-emerald-400">
+                      ₹{isBuyerModel 
+                        ? activeVisitingCharge 
+                        : parseFloat((activeVisitingCharge - activeFee).toFixed(2))}
+                    </span>
+                  </div>
+
+                  <div className="mt-3.5 p-3 rounded-xl bg-indigo-950/60 border border-indigo-500/10 text-[11px] text-slate-350 leading-relaxed space-y-1 w-full">
+                    <p className="font-bold text-indigo-300">💡 Earning Details / कमाई की जानकारी:</p>
+                    {isBuyerModel ? (
+                      <>
+                        <p>
+                          <strong>EN:</strong> The platform commission is paid by the customer. You receive 100% of your visiting charge.
+                        </p>
+                        <p className="border-t border-indigo-500/5 pt-1 text-[10px] text-slate-400">
+                          <strong>HI:</strong> प्लेटफॉर्म कमीशन का भुगतान ग्राहक द्वारा अतिरिक्त किया जाता है। आपको आपके विजिटिंग चार्ज का 100% मिलेगा।
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p>
+                          <strong>EN:</strong> The platform commission ({platformSettings.platform_fee_percentage}%) is cut from your visiting charge. You will receive the remaining payout.
+                        </p>
+                        <p className="border-t border-indigo-500/5 pt-1 text-[10px] text-slate-400">
+                          <strong>HI:</strong> प्लेटफॉर्म कमीशन ({platformSettings.platform_fee_percentage}%) आपके विजिटिंग चार्ज से काटा जाएगा। आपको शेष भुगतान मिलेगा।
+                        </p>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           <div className="flex justify-between pt-6 border-t border-indigo-500/10">

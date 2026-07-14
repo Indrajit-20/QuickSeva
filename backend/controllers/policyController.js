@@ -63,7 +63,31 @@ const updatePolicy = async (req, res) => {
   }
 };
 
+const getSystemSettingsPublic = async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      "SELECT `key`, `value` FROM system_settings WHERE `key` IN ('platform_fee_model', 'platform_fee_percentage')"
+    );
+
+    const settings = {
+      platform_fee_model: "seller",
+      platform_fee_percentage: "5.00"
+    };
+
+    rows.forEach((row) => {
+      settings[row.key] = row.value;
+    });
+
+    return successRes(res, settings, "Public settings retrieved successfully");
+  } catch (error) {
+    console.error("Error retrieving public settings:", error);
+    return errorRes(res, "Failed to retrieve public settings");
+  }
+};
+
 module.exports = {
   getPolicy,
   updatePolicy,
+  getSystemSettingsPublic,
 };
+

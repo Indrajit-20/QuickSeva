@@ -19,3 +19,11 @@ export const updatePolicy = async (key, { title, content }) => {
   const response = await apiClient.put(`/policies/${key}`, { title, content });
   return unwrapSuccessData(response.data);
 };
+
+// Fetch platform configuration (fee percentage and model)
+// GET /api/policies/settings
+export const getSystemSettings = async () => {
+  const response = await apiClient.get("/policies/settings");
+  return unwrapSuccessData(response.data);
+};
+

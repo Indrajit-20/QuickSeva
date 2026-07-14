@@ -84,7 +84,7 @@ exports.placeOrder = async (req, res) => {
     }
 
     // Fetch platform fee settings
-    const feeModel = await getSystemSetting("platform_fee_model", "buyer");
+    const feeModel = await getSystemSetting("platform_fee_model", "seller");
     const feePercentage = parseFloat(await getSystemSetting("platform_fee_percentage", "5.00"));
 
     // Calculate Stage 1 Platform Fee (based on visiting charge) and cap at max ₹100.00
@@ -294,7 +294,7 @@ exports.completeOrder = async (req, res) => {
 
     // Credit seller wallet (amount minus platform fee) if not cash
     if (order.payment_method !== "cash") {
-      const feeModel = await getSystemSetting("platform_fee_model", "buyer");
+      const feeModel = await getSystemSetting("platform_fee_model", "seller");
       
       const visiting_charge = parseFloat(order.visiting_charge_amount || 0);
       const service_charge = parseFloat(order.service_charge_amount || 0);
@@ -381,7 +381,7 @@ exports.cancelOrder = async (req, res) => {
 
     // Refund wallet if paid via wallet
     if (order.payment_method === "wallet") {
-      const feeModel = await getSystemSetting("platform_fee_model", "buyer");
+      const feeModel = await getSystemSetting("platform_fee_model", "seller");
 
       // Check if buyer cancelled within 2 hours of scheduled time
       if (isBuyer) {
@@ -562,7 +562,7 @@ exports.submitQuotation = async (req, res) => {
       return errorRes(res, "Discount cannot exceed the sum of service charge and parts cost", 400);
     }
 
-    const feeModel = await getSystemSetting("platform_fee_model", "buyer");
+    const feeModel = await getSystemSetting("platform_fee_model", "seller");
     const feePercentage = parseFloat(await getSystemSetting("platform_fee_percentage", "5.00"));
 
     // No platform fee for Stage 2 (final quotation)
@@ -725,5 +725,47 @@ exports.verifyStartCode = async (req, res) => {
   } catch (err) {
     console.error("Verify start code error:", err);
     return errorRes(res, "Failed to verify start code");
+  }
+};
+
+// Dispute order (Option A flow)
+exports.disputeOrder = async (req, res) => {
+  try {
+    const reason = req.body.dispute_reason || req.body.reason || "Disputed by buyer";
+    const order = await OrderModel.findById(req.params.id);
+    if (!order) return errorRes(res, "Order not found", 404);
+
+    const isBuyer = order.buyer_id === req.user.id;
+    if (!isBuyer) {
+      return errorRes(res, "Unauthorized", 403);
+    }
+
+    if (!["accepted", "in_progress", "quoted"].includes(order.status)) {
+      return errorRes(res, "Order cannot be disputed at this stage", 400);
+    }
+
+    await OrderModel.updateStatus(req.params.id, "disputed", {
+      cancel_reason: reason,
+    });
+
+    // Notify the seller
+    const [sellerUserRows] = await pool.query("SELECT user_id FROM sellers WHERE id = ?", [order.seller_id]);
+    const sellerUserId = sellerUserRows[0]?.user_id;
+    if (sellerUserId) {
+      await pool.query(
+        `INSERT INTO notifications (user_id, title, message, type, ref_id) VALUES (?, ?, ?, 'order', ?)`,
+        [
+          sellerUserId,
+          "Order Disputed",
+          `Order #${order.order_number} has been disputed by the customer.`,
+          order.id,
+        ]
+      );
+    }
+
+    return successRes(res, null, "Order has been placed in dispute");
+  } catch (err) {
+    console.error("Dispute order error:", err);
+    return errorRes(res, "Failed to dispute order");
   }
 };

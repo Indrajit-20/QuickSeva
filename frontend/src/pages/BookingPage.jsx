@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import apiClient from "../api/axiosConfig";
 import axios from "axios";
+import { getSystemSettings } from "../api/policyService";
 import DatePicker from "react-multi-date-picker";
 const DatePickerComponent = DatePicker.default || DatePicker;
 import { scrollToFirstError } from "../utils/scrollUtils";
@@ -138,6 +139,24 @@ export default function BookingPage() {
 
   const [seller, setSeller] = useState(null);
   const [sellerLoading, setSellerLoading] = useState(true);
+  const [platformSettings, setPlatformSettings] = useState({
+    platform_fee_model: "seller",
+    platform_fee_percentage: "5.00"
+  });
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await getSystemSettings();
+        if (res?.data) {
+          setPlatformSettings(res.data);
+        }
+      } catch (err) {
+        console.error("Failed to load platform settings:", err);
+      }
+    };
+    fetchSettings();
+  }, []);
   const [sellerServices, setSellerServices] = useState([]);
   const [selectedServiceState, setSelectedServiceState] = useState(selectedService ? { ...selectedService, price_type: "negotiable" } : null);
   const [confirmedBooking, setConfirmedBooking] = useState(null);
@@ -244,6 +263,20 @@ export default function BookingPage() {
     const raw = Number(selectedServiceState?.visiting_charge || 0);
     return raw < 100 ? 100 : raw;
   }, [selectedServiceState?.visiting_charge]);
+
+  const calculatedFee = useMemo(() => {
+    if (visitingCharge <= 0) return 0;
+    const pct = parseFloat(platformSettings.platform_fee_percentage || "5.00");
+    const fee = visitingCharge * (pct / 100);
+    return Math.min(100.00, parseFloat(fee.toFixed(2)));
+  }, [visitingCharge, platformSettings.platform_fee_percentage]);
+
+  const totalPayable = useMemo(() => {
+    if (platformSettings.platform_fee_model === "seller") {
+      return visitingCharge;
+    }
+    return visitingCharge + calculatedFee;
+  }, [visitingCharge, calculatedFee, platformSettings.platform_fee_model]);
 
   const avatarLetter =
     (seller?.business_name || seller?.name || "?")
@@ -845,17 +878,23 @@ export default function BookingPage() {
                   <span className="text-slate-600">Visiting Charge / विजिटिंग चार्ज:</span>
                   <span className="font-bold text-slate-900">₹{visitingCharge}</span>
                 </div>
-                {visitingCharge > 0 && (
+                {platformSettings.platform_fee_model === "buyer" && visitingCharge > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-slate-600">Platform Security Fee / सुरक्षा शुल्क (5%):</span>
-                    <span className="font-bold text-slate-900">+₹{Math.round(visitingCharge * 0.05 * 100) / 100}</span>
+                    <span className="text-slate-600">Platform Security Fee / सुरक्षा शुल्क ({platformSettings.platform_fee_percentage}%):</span>
+                    <span className="font-bold text-slate-900">+₹{calculatedFee}</span>
+                  </div>
+                )}
+                {platformSettings.platform_fee_model === "seller" && visitingCharge > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-500 italic">Platform Security Fee:</span>
+                    <span className="text-emerald-600 text-xs font-semibold">₹0 (Paid by Provider)</span>
                   </div>
                 )}
                 <div className="h-px bg-slate-100 my-1" />
                 <div className="flex justify-between text-base font-black">
                   <span className="text-slate-900">Amount Payable Now / कुल भुगतान (Stage 1):</span>
                   <span className="text-emerald-600" style={{ color: '#059669' }}>
-                    ₹{visitingCharge + (visitingCharge > 0 ? Math.round(visitingCharge * 0.05 * 100) / 100 : 0)}
+                    ₹{totalPayable}
                   </span>
                 </div>
               </div>
@@ -937,7 +976,7 @@ export default function BookingPage() {
                 <div className="bg-[#0b0c13] p-4 rounded-xl border border-slate-800/80 text-center">
                   <span className="block text-[10px] text-slate-500 uppercase font-semibold">Payable Amount / भुगतान राशि</span>
                   <span className="text-3xl font-black text-emerald-400 mt-1 block" style={{ color: '#34d399' }}>
-                    ₹{visitingCharge + (visitingCharge > 0 ? Math.round(visitingCharge * 0.05 * 100) / 100 : 0)}
+                    ₹{totalPayable}
                   </span>
                 </div>
 
@@ -1075,7 +1114,7 @@ export default function BookingPage() {
                       <span className="text-lg">💼</span>
                     </div>
 
-                    {Number(user?.wallet_balance || 0) < (visitingCharge + (visitingCharge > 0 ? Math.round(visitingCharge * 0.05 * 100) / 100 : 0)) ? (
+                    {Number(user?.wallet_balance || 0) < totalPayable ? (
                       <div className="rounded-lg bg-red-955/10 border border-red-900/30 p-3 text-[10px] text-red-400 leading-normal">
                         ⚠️ Insufficient balance. Please use UPI QR or Card to pay directly, or add funds to your wallet first.
                       </div>
@@ -1091,7 +1130,7 @@ export default function BookingPage() {
                       </button>
                       <button
                         type="button"
-                        disabled={Number(user?.wallet_balance || 0) < (visitingCharge + (visitingCharge > 0 ? Math.round(visitingCharge * 0.05 * 100) / 100 : 0))}
+                        disabled={Number(user?.wallet_balance || 0) < totalPayable}
                         onClick={() => handleSimulatedPayment(true)}
                         className="flex-1 py-2.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl active:scale-95 transition cursor-pointer text-center disabled:opacity-50 disabled:cursor-not-allowed"
                       >
