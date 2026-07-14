@@ -59,11 +59,13 @@
   --qs-bg: #f8f9fb;
   --qs-surface: #ffffff;
   --qs-border: #e5e7eb;
-  --qs-primary: #0284c7;
-  --qs-secondary: #0f6e56;
-  --qs-accent: #e53935;
-  --qs-text: #1a1a1a;
-  --qs-muted: #6b7280;
+  --qs-primary: #3b82f6;
+  --qs-primary-hover: #2563eb;
+  --qs-secondary: #10b981;
+  --qs-secondary-dark: #059669;
+  --qs-accent: #f43f5e;
+  --qs-text: #1e293b;
+  --qs-muted: #64748b;
 }
 
 html,
@@ -289,10 +291,7 @@ button:hover,
 
 [class*="text-indigo-600"],
 [class*="text-indigo-700"],
-[class*="text-[#4f46e5]"],
-[class*="text-red-400"],
-[class*="text-red-500"],
-[class*="text-red-600"] {
+[class*="text-[#4f46e5]"] {
   color: var(--qs-primary) !important;
 }
 
@@ -498,10 +497,17 @@ img.qs-avatar {
   animation: none !important;
 }
 
+.badge-success {
+  background: rgba(15, 110, 86, 0.1) !important;
+  border-color: rgba(15, 110, 86, 0.24) !important;
+  color: var(--qs-secondary) !important;
+  box-shadow: none !important;
+  animation: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
 .qs-distance-badge,
-.badge-success,
-.qs-tag-emerald,
-.qs-tag-green,
 .qs-instant-badge {
   background: rgba(15, 110, 86, 0.1) !important;
   border-color: rgba(15, 110, 86, 0.24) !important;
@@ -513,7 +519,6 @@ img.qs-avatar {
 }
 
 .badge-primary,
-.qs-tag-indigo,
 .qs-chip,
 .qs-radius-badge {
   background: rgba(24, 95, 165, 0.1) !important;
@@ -537,12 +542,10 @@ img.qs-avatar {
   color: #ffffff !important;
 }
 
-.qs-tag-gold,
-.qs-tag-amber,
 .badge-warning {
-  background: rgba(229, 57, 53, 0.08) !important;
-  border-color: rgba(229, 57, 53, 0.2) !important;
-  color: var(--qs-accent) !important;
+  background: rgba(245, 158, 11, 0.1) !important;
+  border-color: rgba(245, 158, 11, 0.28) !important;
+  color: #92400e !important;
 }
 
 .qs-contact-btn {
@@ -1034,33 +1037,33 @@ img.qs-avatar {
   }
 
   .qs-tag-gold {
-    color: #fde68a;
-    background: rgba(245, 158, 11, 0.14);
-    border-color: rgba(252, 211, 77, 0.4);
+    color: #92400e;
+    background: rgba(251, 191, 36, 0.12);
+    border-color: rgba(251, 191, 36, 0.35);
   }
 
   .qs-tag-emerald {
-    color: #a7f3d0;
-    background: rgba(16, 185, 129, 0.14);
-    border-color: rgba(52, 211, 153, 0.4);
+    color: #065f46;
+    background: rgba(16, 185, 129, 0.1);
+    border-color: rgba(16, 185, 129, 0.3);
   }
 
   .qs-tag-indigo {
-    color: #c7d2fe;
-    background: rgba(99, 102, 241, 0.16);
-    border-color: rgba(165, 180, 252, 0.4);
+    color: #3730a3;
+    background: rgba(99, 102, 241, 0.08);
+    border-color: rgba(99, 102, 241, 0.2);
   }
 
   .qs-tag-amber {
-    color: #fcd34d;
-    background: rgba(245, 158, 11, 0.12);
-    border-color: rgba(252, 211, 77, 0.35);
+    color: #92400e;
+    background: rgba(245, 158, 11, 0.1);
+    border-color: rgba(245, 158, 11, 0.28);
   }
 
   .qs-tag-green {
-    color: #86efac;
-    background: rgba(34, 197, 94, 0.14);
-    border-color: rgba(74, 222, 128, 0.35);
+    color: #14532d;
+    background: rgba(34, 197, 94, 0.1);
+    border-color: rgba(34, 197, 94, 0.28);
   }
 
   .qs-contact-btn {
@@ -1174,17 +1177,13 @@ img.qs-avatar {
   box-shadow: none !important;
 }
 
-[class*="bg-[#0"],
-[class*="bg-[#1"],
 [class*="bg-indigo-9"],
 [class*="bg-slate-9"],
 [class*="bg-gray-9"],
 [class*="bg-zinc-9"],
 [class*="bg-black"],
-[class*="bg-white/"],
 .qs-glass-panel,
 .qs-card,
-.qs-map-frame,
 .qs-filters-shell,
 .qs-service-card,
 .qs-popover,
@@ -1291,7 +1290,6 @@ a:not(.btn):not([class*="bg-"]):hover {
   box-shadow: 0 12px 24px -16px var(--qs-primary) !important;
 }
 
-.qs-cta,
 [class*="bg-red-5"],
 [class*="bg-red-6"],
 [class*="bg-orange-5"],
@@ -1300,11 +1298,6 @@ a:not(.btn):not([class*="bg-"]):hover {
   border-color: var(--qs-accent) !important;
   color: #ffffff !important;
   box-shadow: none !important;
-}
-
-.qs-cta:hover {
-  box-shadow: 0 12px 24px -16px var(--qs-accent) !important;
-  filter: none !important;
 }
 
 .qs-success,
@@ -1323,12 +1316,16 @@ a:not(.btn):not([class*="bg-"]):hover {
 .qs-map-pill,
 .qs-distance-badge,
 .qs-chip,
-.qs-tag,
 .qs-filter-pill {
   background: var(--qs-surface) !important;
   border: 1px solid var(--qs-border) !important;
   color: var(--qs-text) !important;
   box-shadow: none !important;
+}
+
+/* Tags keep their semantic colors — do NOT reset them to generic surface */
+.qs-tag {
+  /* intentionally not overriding here — per-variant classes handle color */
 }
 
 input,
@@ -1879,31 +1876,30 @@ input[type="range"] {
   color: #ffffff !important;
 }
 
-/* Refine Toggle Button */
+/* Refine Toggle Button — outlined style matching the search panel */
 .qs-refine-toggle-btn {
-  background: #0f172a !important;
-  /* dark slate/black */
-  border: none !important;
-  color: #ffffff !important;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15) !important;
+  background: #ffffff !important;
+  border: 1.5px solid #334155 !important;
+  color: #334155 !important;
+  box-shadow: none !important;
   transition: all 0.2s ease !important;
   cursor: pointer !important;
 }
 
 .qs-refine-toggle-btn:hover {
-  background: #1e293b !important;
-  transform: translateY(-1.5px) !important;
-  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.25) !important;
+  background: #f1f5f9 !important;
+  border-color: #1e293b !important;
+  color: #1e293b !important;
+  transform: translateY(-1px) !important;
 }
 
 .qs-refine-toggle-btn svg {
-  color: #ffffff !important;
+  color: #334155 !important;
 }
 
-/* Map Option Toggle Button on the Top Side */
+/* Map Option Toggle Button — solid brand blue */
 .qs-map-toggle-btn {
   background: var(--qs-primary) !important;
-  /* brand blue */
   border: none !important;
   color: #ffffff !important;
   box-shadow: 0 4px 12px rgba(24, 95, 165, 0.2) !important;
@@ -1912,7 +1908,7 @@ input[type="range"] {
 }
 
 .qs-map-toggle-btn:hover {
-  background: #124d85 !important;
+  background: #1565C0 !important;
   transform: translateY(-1.5px) !important;
   box-shadow: 0 6px 16px rgba(24, 95, 165, 0.28) !important;
 }
@@ -2517,4 +2513,159 @@ input[type="range"] {
 
 .form-input.dark::placeholder {
   color: var(--qs-muted) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   QUICKSEVA — FINAL TAG & BADGE COLOR ENFORCEMENT
+   High-specificity overrides to ensure readable colors on light bg.
+   ════════════════════════════════════════════════════════════════════ */
+
+/* Semantic tag colors — applied AFTER all generic overrides */
+.qs-tag.qs-tag-indigo {
+  color: #2563eb !important;
+  background: rgba(37, 99, 235, 0.08) !important;
+  border-color: rgba(37, 99, 235, 0.22) !important;
+}
+
+.qs-tag.qs-tag-emerald {
+  color: #059669 !important;
+  background: rgba(5, 150, 105, 0.08) !important;
+  border-color: rgba(5, 150, 105, 0.25) !important;
+}
+
+.qs-tag.qs-tag-gold,
+.qs-tag.qs-tag-amber {
+  color: #b45309 !important;
+  background: rgba(180, 83, 9, 0.08) !important;
+  border-color: rgba(180, 83, 9, 0.22) !important;
+}
+
+.qs-tag.qs-tag-green {
+  color: #15803d !important;
+  background: rgba(21, 128, 61, 0.08) !important;
+  border-color: rgba(21, 128, 61, 0.22) !important;
+}
+
+/* Pincode "Go" button — distinct from white background */
+.qs-search-panel-card button[disabled] {
+  background: #f1f5f9 !important;
+  color: #94a3b8 !important;
+  border: 1.5px solid #e2e8f0 !important;
+  cursor: not-allowed !important;
+}
+
+/* "Search" submit button in location form */
+.qs-search-panel-card button[type="submit"],
+.qs-search-panel-card form>div button[type="submit"] {
+  background: var(--qs-primary) !important;
+  color: #ffffff !important;
+  border: none !important;
+  box-shadow: 0 4px 14px rgba(24, 95, 165, 0.2) !important;
+}
+
+.qs-search-panel-card button[type="submit"]:hover {
+  background: #1565C0 !important;
+}
+
+/* Map frame — keep it as a proper container (not white surface) */
+.qs-map-frame {
+  background: #e2e8f0 !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 8px 24px rgba(24, 95, 165, 0.1) !important;
+}
+
+/* Map pills — white cards with clear readable text */
+.qs-map-pill {
+  background: #ffffff !important;
+  border: 1px solid rgba(24, 95, 165, 0.12) !important;
+  color: #1e293b !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+  padding: 6px 11px !important;
+  border-radius: 10px !important;
+}
+
+.qs-map-pill *,
+.qs-map-pill div,
+.qs-map-pill span {
+  color: #1e293b !important;
+}
+
+.qs-map-pill .text-\[10px\],
+.qs-map-pill div:first-child {
+  color: #64748b !important;
+}
+
+/* Hover uplift on cards */
+.qs-card:hover {
+  box-shadow: 0 10px 30px rgba(24, 95, 165, 0.1) !important;
+  border-color: rgba(24, 95, 165, 0.18) !important;
+}
+
+/* Seller card CTA button — clear blue outlined */
+.qs-seller-card-btn {
+  background: #ffffff !important;
+  border: 1.5px solid var(--qs-primary) !important;
+  color: var(--qs-primary) !important;
+  box-shadow: none !important;
+}
+
+.qs-seller-card-btn:hover {
+  background: var(--qs-primary) !important;
+  color: #ffffff !important;
+  box-shadow: 0 6px 18px rgba(24, 95, 165, 0.22) !important;
+}
+
+/* Quick filter buttons keep gray border on idle, blue when active */
+.qs-quick-filter-btn {
+  background: #ffffff !important;
+  border: 1.5px solid #d1d5db !important;
+  color: #374151 !important;
+}
+
+.qs-quick-filter-btn:hover {
+  border-color: var(--qs-primary) !important;
+  color: var(--qs-primary) !important;
+  background: rgba(24, 95, 165, 0.04) !important;
+}
+
+.qs-quick-filter-btn.active {
+  background: var(--qs-primary) !important;
+  border-color: var(--qs-primary) !important;
+  color: #ffffff !important;
+}
+
+/* Refine option buttons */
+.qs-refine-option-btn {
+  background: #ffffff !important;
+  border: 1.5px solid #d1d5db !important;
+  color: #374151 !important;
+}
+
+.qs-refine-option-btn:hover {
+  border-color: var(--qs-primary) !important;
+  color: var(--qs-primary) !important;
+  background: rgba(24, 95, 165, 0.04) !important;
+}
+
+.qs-refine-option-btn.active {
+  background: var(--qs-primary) !important;
+  border-color: var(--qs-primary) !important;
+  color: #ffffff !important;
+}
+
+/* Distance slider thumb color */
+.qs-range::-webkit-slider-thumb {
+  border-color: var(--qs-primary) !important;
+  background: #ffffff !important;
+}
+
+/* Search panel label and helper text */
+.qs-search-panel-card .text-xs.font-bold.uppercase {
+  color: #374151 !important;
+}
+
+/* Distance range km badge */
+span.bg-\[#0284c7\] {
+  background: var(--qs-primary) !important;
+  color: #ffffff !important;
 }

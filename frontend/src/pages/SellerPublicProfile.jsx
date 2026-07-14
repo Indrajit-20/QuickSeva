@@ -122,7 +122,7 @@ export default function SellerPublicProfile() {
   const [seller, setSeller] = useState(null);
   const [sellerLoading, setSellerLoading] = useState(true);
   const [savedServices, setSavedServices] = useState([]);
-  
+
   // Lightbox & image helper
   const [lightboxImage, setLightboxImage] = useState(null);
   const getImageUrl = (url) => {
@@ -409,7 +409,7 @@ export default function SellerPublicProfile() {
             <h1 className="mt-4 text-3xl font-black text-slate-800 flex items-center gap-2 justify-center">
               {seller.name}
             </h1>
-            
+
             <div className="mt-2 flex flex-wrap gap-2 justify-center items-center">
               <span className="rounded-full border border-purple-200 bg-purple-50 px-3 py-1 text-xs font-black text-purple-700">
                 {seller.service || "Service Provider"}
@@ -543,8 +543,8 @@ export default function SellerPublicProfile() {
                   type="button"
                   onClick={() => handleSelectService(service)}
                   className={`rounded-2xl border-2 p-4 text-left transition duration-200 ${active
-                      ? "qs-selected-active shadow-md"
-                      : "border-slate-200 bg-white hover:border-[#0284c7]/30 shadow-sm"
+                    ? "qs-selected-active shadow-md"
+                    : "border-slate-200 bg-white hover:border-[#0284c7]/30 shadow-sm"
                     }`}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -571,8 +571,8 @@ export default function SellerPublicProfile() {
                     </div>
                     <div
                       className={`mt-1 h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition duration-150 ${active
-                          ? "qs-selected-dot border-[#0284c7]"
-                          : "border-slate-300 bg-white"
+                        ? "qs-selected-dot border-[#0284c7]"
+                        : "border-slate-300 bg-white"
                         }`}
                     >
                       {active && (
@@ -631,19 +631,19 @@ export default function SellerPublicProfile() {
 
       {/* Lightbox Modal */}
       {lightboxImage && (
-        <div 
+        <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
           onClick={() => setLightboxImage(null)}
         >
-          <button 
+          <button
             className="absolute top-4 right-4 text-white hover:text-slate-300"
             onClick={() => setLightboxImage(null)}
           >
             <X size={28} />
           </button>
-          <img 
-            src={getImageUrl(lightboxImage)} 
-            alt="Portfolio Lightbox" 
+          <img
+            src={getImageUrl(lightboxImage)}
+            alt="Portfolio Lightbox"
             className="max-w-full max-h-[90vh] object-contain rounded shadow-2xl"
           />
         </div>

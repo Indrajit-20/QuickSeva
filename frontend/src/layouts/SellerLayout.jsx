@@ -46,8 +46,8 @@ function SellerNavLink({ item, onClick, badgeCount }) {
       to={item.path}
       onClick={onClick}
       className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm font-semibold transition-all ${active
-          ? "bg-[#0284c7]/10 text-[#0284c7] shadow-[inset_3px_0_0_#0284c7]"
-          : "text-[#6b7280] hover:bg-[#f8f9fb] hover:text-[#0284c7]"
+        ? "bg-[#0284c7]/10 text-[#0284c7] shadow-[inset_3px_0_0_#0284c7]"
+        : "text-[#6b7280] hover:bg-[#f8f9fb] hover:text-[#0284c7]"
         }`}
     >
       <div className="flex items-center gap-3">
@@ -201,7 +201,7 @@ export default function SellerLayout() {
           >
             <Menu size={20} />
           </button>
-          
+
           <div className="text-center">
             <div className="text-sm font-bold text-[#1a1a1a]">
               {user?.name || "Seller"}
@@ -221,7 +221,7 @@ export default function SellerLayout() {
                 className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${user?.is_available ? 'translate-x-4' : 'translate-x-0'}`}
               />
             </button>
-            
+
             {user?.profile_pic ? (
               <img
                 src={getImageUrl(user.profile_pic)}

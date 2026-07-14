@@ -88,13 +88,13 @@ const SellerRegister = () => {
   const handleLocationResultClick = (result) => {
     const lat = parseFloat(result.lat);
     const lng = parseFloat(result.lon);
-    
+
     suppressNextSearchRef.current = true;
     setLocationQuery(result.display_name || "");
     setLocationResults([]);
-    
+
     const pinVal = result.address?.postcode || "";
-    
+
     setFormData((prev) => ({
       ...prev,
       location: {
@@ -104,7 +104,7 @@ const SellerRegister = () => {
         pincode: pinVal || prev.location?.pincode || "",
       }
     }));
-    
+
     setErrors((prev) => {
       const next = { ...prev };
       delete next.location;
@@ -132,17 +132,17 @@ const SellerRegister = () => {
         const result = data[0];
         const lat = parseFloat(result.lat);
         const lng = parseFloat(result.lon);
-        
+
         const addr = result.address || {};
         const neighbourhood = addr.neighbourhood || addr.suburb || addr.quarter || addr.residential || "";
         const cityOrTown = addr.city || addr.town || addr.village || addr.municipality || "";
         const district = addr.county || addr.state_district || "";
         const state = addr.state || "";
-        
+
         const autoAddress = [neighbourhood, cityOrTown, district, state]
           .filter((val, index, self) => val && self.indexOf(val) === index)
           .join(", ");
-        
+
         suppressNextSearchRef.current = true;
         setLocationQuery(autoAddress);
 
@@ -155,7 +155,7 @@ const SellerRegister = () => {
             pincode: pincodeVal,
           }
         }));
-        
+
         setErrors((prev) => {
           const next = { ...prev };
           delete next.location;
@@ -181,7 +181,7 @@ const SellerRegister = () => {
         pincode: val,
       }
     }));
-    
+
     if (val.length === 6) {
       handlePincodeLookup(val);
     }
@@ -476,11 +476,10 @@ const SellerRegister = () => {
                   onBlur={handleBlur}
                   placeholder="QuickSeva Partner Pvt. Ltd"
                   disabled={isLoading}
-                  className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${
-                    errors.businessName && touched.businessName
+                  className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${errors.businessName && touched.businessName
                       ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
                       : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
-                  }`}
+                    }`}
                 />
                 {errors.businessName && touched.businessName && (
                   <p className="mt-1 text-xs text-red-300">⚠ {errors.businessName}</p>
@@ -498,11 +497,10 @@ const SellerRegister = () => {
                   onBlur={handleBlur}
                   placeholder="John Doe"
                   disabled={isLoading}
-                  className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${
-                    errors.ownerName && touched.ownerName
+                  className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${errors.ownerName && touched.ownerName
                       ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
                       : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
-                  }`}
+                    }`}
                 />
                 {errors.ownerName && touched.ownerName && (
                   <p className="mt-1 text-xs text-red-300">⚠ {errors.ownerName}</p>
@@ -524,11 +522,10 @@ const SellerRegister = () => {
                   onBlur={handleBlur}
                   placeholder="you@example.com"
                   disabled={isLoading}
-                  className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${
-                    errors.email && touched.email
+                  className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${errors.email && touched.email
                       ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
                       : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
-                  }`}
+                    }`}
                 />
                 {errors.email && touched.email && (
                   <p className="mt-1 text-xs text-red-300">⚠ {errors.email}</p>
@@ -548,11 +545,10 @@ const SellerRegister = () => {
                   placeholder="98765 43210"
                   maxLength={10}
                   disabled={isLoading}
-                  className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${
-                    errors.mobileNumber && touched.mobileNumber
+                  className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${errors.mobileNumber && touched.mobileNumber
                       ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
                       : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
-                  }`}
+                    }`}
                 />
                 {errors.mobileNumber && touched.mobileNumber && (
                   <p className="mt-1 text-xs text-red-300">⚠ {errors.mobileNumber}</p>
@@ -574,11 +570,10 @@ const SellerRegister = () => {
                   onBlur={handleBlur}
                   placeholder="••••••••"
                   disabled={isLoading}
-                  className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${
-                    errors.password && touched.password
+                  className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${errors.password && touched.password
                       ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
                       : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
-                  }`}
+                    }`}
                 />
                 {errors.password && touched.password && (
                   <p className="mt-1 text-xs text-red-300">⚠ {errors.password}</p>
@@ -605,11 +600,10 @@ const SellerRegister = () => {
                   placeholder="6-digit pincode"
                   maxLength={6}
                   disabled={isLoading}
-                  className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${
-                    errors.pincode
+                  className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${errors.pincode
                       ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
                       : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
-                  }`}
+                    }`}
                 />
                 {errors.pincode && (
                   <p className="mt-1 text-xs text-red-300">⚠ {errors.pincode}</p>
@@ -630,11 +624,10 @@ const SellerRegister = () => {
                 ].map((opt) => (
                   <label
                     key={opt.value}
-                    className={`flex items-start gap-2.5 rounded-lg border p-2.5 cursor-pointer transition-all duration-200 ${
-                      formData.sellerType === opt.value
+                    className={`flex items-start gap-2.5 rounded-lg border p-2.5 cursor-pointer transition-all duration-200 ${formData.sellerType === opt.value
                         ? "border-[#0284c7] bg-[#0284c7]/15 shadow-[0_0_12px_rgba(2,132,199,0.25)]"
                         : "border-indigo-500/20 bg-indigo-950/20"
-                    }`}
+                      }`}
                   >
                     <input
                       type="radio"
@@ -666,13 +659,12 @@ const SellerRegister = () => {
                   onChange={(e) => setLocationQuery(e.target.value)}
                   placeholder="Search your area, street, city or landmark..."
                   disabled={isLoading}
-                  className={`w-full px-3 py-2 rounded-lg text-sm bg-indigo-950/40 border transition-all duration-200 text-white focus:outline-none ${
-                    errors.location
+                  className={`w-full px-3 py-2 rounded-lg text-sm bg-indigo-950/40 border transition-all duration-200 text-white focus:outline-none ${errors.location
                       ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
                       : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
-                  }`}
+                    }`}
                 />
-                
+
                 {(locationResults.length > 0 || locationNotFoundMsg) && (
                   <div className="absolute left-0 right-0 top-full z-[1100] mt-2 max-h-56 overflow-y-auto rounded-lg shadow-2xl border border-indigo-500/30 bg-[#0c0a1b]">
                     {locationResults.map((result) => (
@@ -770,11 +762,10 @@ const SellerRegister = () => {
                 type="button"
                 onClick={handleResendOtp}
                 disabled={isLoading || resendCountdown > 0}
-                className={`w-full px-4 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-700 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 shadow-md ${
-                  isLoading || resendCountdown > 0
+                className={`w-full px-4 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-700 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 shadow-md ${isLoading || resendCountdown > 0
                     ? "opacity-50 cursor-not-allowed"
                     : "opacity-100"
-                }`}
+                  }`}
               >
                 {resendCountdown > 0 ? `Resend OTP in ${resendCountdown}s` : "Resend OTP"}
               </button>

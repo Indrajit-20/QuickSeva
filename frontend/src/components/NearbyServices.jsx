@@ -2020,11 +2020,10 @@ export default function NearbyServices({
       >
         <MapErrorBoundary>
           <div
-            className={`qs-map-frame overflow-hidden ${
-              isMapFullScreen
+            className={`qs-map-frame overflow-hidden ${isMapFullScreen
                 ? "fixed inset-0 z-[2000] w-screen h-screen rounded-none"
                 : "relative isolate rounded-3xl h-[300px] sm:h-[350px] lg:h-[520px] w-full"
-            }`}
+              }`}
           >
 
             {/* Top-left: providers count */}
@@ -2124,7 +2123,7 @@ export default function NearbyServices({
                 >
                   <X className="h-3 w-3" />
                 </button>
-                
+
                 <div className="flex items-center gap-3 pr-6">
                   <div className="relative h-9 w-9 flex-shrink-0">
                     {(selectedSeller.profilePhotoUrl || selectedSeller.profile_pic) ? (
@@ -2148,7 +2147,7 @@ export default function NearbyServices({
                     </p>
                   </div>
                 </div>
-                
+
                 <div className="mt-2.5 flex items-center justify-between text-[11px] border-t border-slate-100 pt-2.5">
                   <span className="font-bold text-slate-600">
                     ⭐ {Number(selectedSeller.rating || 0).toFixed(1)} ({selectedSeller.reviews || 0} reviews)

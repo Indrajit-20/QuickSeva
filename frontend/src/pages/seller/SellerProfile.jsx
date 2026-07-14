@@ -479,209 +479,53 @@ export default function SellerProfile() {
               Cancel
             </button>
           </div>
-            {/* Service Settings */}
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <h3 className="text-lg font-black text-slate-800">Service Settings</h3>
-                <span className="rounded-full border border-slate-200 bg-slate-200/50 px-3 py-1 text-[11px] font-bold text-slate-700">
-                  {profile.serviceModeLabel || "Service Availability"}
-                </span>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <label className={labelClass}>Service Mode</label>
-                  <div className="space-y-2">
-                    {[
-                      { value: "online", label: "Online Only", hint: "Remote work" },
-                      { value: "offline", label: "Offline Only", hint: "Visit customer location" },
-                      { value: "both", label: "Both Online & Offline", hint: "Hybrid" },
-                    ].map((opt) => {
-                      const checked = profile.serviceMode === opt.value;
-                      return (
-                        <label
-                          key={opt.value}
-                          className={`flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-3 transition ${checked
-                            ? "qs-selected-active shadow-sm"
-                            : "border-slate-200 bg-white hover:border-slate-300"
-                            }`}
-                        >
-                          <input
-                            type="radio"
-                            name="serviceMode"
-                            value={opt.value}
-                            checked={checked}
-                            onChange={() =>
-                              setProfile((prev) => ({
-                                ...prev,
-                                serviceMode: opt.value,
-                                serviceModeLabel: opt.label,
-                              }))
-                            }
-                            className="mt-0.5 accent-indigo-500"
-                          />
-                          <div className="min-w-0">
-                            <div className="text-sm font-black text-slate-800">
-                              {opt.label}
-                            </div>
-                            <div className="mt-1 text-xs font-semibold text-slate-500">
-                              {opt.hint}
-                            </div>
-                          </div>
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div>
-                  <label className={labelClass}>Availability</label>
-                  <label
-                    className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border px-3 py-3 transition ${profile.instantService
-                      ? "border-emerald-200 bg-emerald-50"
-                      : "border-slate-200 bg-white hover:border-slate-300"
-                      }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="checkbox"
-                        checked={Boolean(profile.instantService)}
-                        onChange={(e) =>
-                          setProfile((prev) => ({
-                            ...prev,
-                            instantService: e.target.checked,
-                          }))
-                        }
-                        className="h-4 w-4 accent-emerald-400"
-                      />
-                      <div>
-                        <div className="text-sm font-black text-slate-800">
-                          Instant Service Available
-                        </div>
-                        <div className="mt-1 text-xs font-semibold text-slate-500">
-                          Show ⚡ Instant Service badge
-                        </div>
-                      </div>
-                    </div>
-                    <span
-                      className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-black ${profile.instantService
-                        ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                        : "bg-slate-100 text-slate-600 border border-slate-200"
-                        }`}
-                    >
-                      {profile.instantService ? "Enabled" : "Disabled"}
-                    </span>
-                  </label>
-                </div>
-              </div>
+          {/* Service Settings */}
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h3 className="text-lg font-black text-slate-800">Service Settings</h3>
+              <span className="rounded-full border border-slate-200 bg-slate-200/50 px-3 py-1 text-[11px] font-bold text-slate-700">
+                {profile.serviceModeLabel || "Service Availability"}
+              </span>
             </div>
 
-            {/* Form Inputs */}
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <label className={labelClass}>Full Name</label>
-                <input
-                  name="fullName"
-                  value={profile.fullName}
-                  onChange={handleChange}
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Phone Number</label>
-                <input
-                  name="phoneNumber"
-                  value={profile.phoneNumber}
-                  onChange={handleChange}
-                  className={inputClass}
-                  disabled
-                />
-              </div>
-              <div>
-                <label className={labelClass}>GST Number (Optional)</label>
-                <input
-                  name="gstnumber"
-                  value={profile.gstnumber}
-                  onChange={(e) => {
-                    const raw = e.target.value;
-                    const next = raw
-                      .toUpperCase()
-                      .replace(/[^A-Z0-9]/g, "");
-                    setProfile((prev) => ({ ...prev, gstnumber: next }));
-                  }}
-                  className={
-                    profile.gstnumber
-                      ? /^(\d{2}[A-Z]{5}\d{4}[A-Z]{1}[A-Z\d]{1}Z[A-Z\d]{1})$/.test(
-                        profile.gstnumber
-                      )
-                        ? inputClass
-                        : `${inputClass} border-red-500/60 focus:border-red-500 focus:ring-red-500/20`
-                      : inputClass
-                  }
-                  placeholder="Eg: 27ABCDE1234F2Z5"
-                  inputMode="text"
-                  autoComplete="off"
-                />
-                {profile.gstnumber &&
-                  !/^(\d{2}[A-Z]{5}\d{4}[A-Z]{1}[A-Z\d]{1}Z[A-Z\d]{1})$/.test(
-                    profile.gstnumber
-                  ) && (
-                    <div className="mt-1 text-xs font-semibold text-red-500">
-                      Invalid GSTIN format. Example: 27ABCDE1234F2Z5
-                    </div>
-                  )}
-              </div>
-
-              <div>
-                <label className={labelClass}>Years of Experience</label>
-                <input
-                  name="experience"
-                  type="number"
-                  min="0"
-                  value={profile.experience}
-                  onChange={handleChange}
-                  className={inputClass}
-                />
-              </div>
-
-              {/* Partner Type Selection */}
-              <div className="md:col-span-2 space-y-3">
-                <label className={labelClass}>Partner Type / पार्टनर का प्रकार</label>
-                <div className="grid gap-4 sm:grid-cols-3">
+                <label className={labelClass}>Service Mode</label>
+                <div className="space-y-2">
                   {[
-                    { value: "individual", label: "Individual / व्यक्तिगत", desc: "I work as a sole professional" },
-                    { value: "agency", label: "Contractor / Agency / ठेकेदार या एजेंसी", desc: "I have a team of workers" },
-                    { value: "business", label: "Business / व्यवसाय या दुकान", desc: "I have a business or shop" }
+                    { value: "online", label: "Online Only", hint: "Remote work" },
+                    { value: "offline", label: "Offline Only", hint: "Visit customer location" },
+                    { value: "both", label: "Both Online & Offline", hint: "Hybrid" },
                   ].map((opt) => {
-                    const checked = profile.sellerType === opt.value;
+                    const checked = profile.serviceMode === opt.value;
                     return (
                       <label
                         key={opt.value}
-                        className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition duration-150 ${
-                          checked
-                            ? "border-[#0284c7] bg-[#0284c7]/5 shadow-sm"
-                            : "border-slate-200 bg-white hover:border-slate-300"
-                        }`}
+                        className={`flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-3 transition ${checked
+                          ? "qs-selected-active shadow-sm"
+                          : "border-slate-200 bg-white hover:border-slate-300"
+                          }`}
                       >
                         <input
                           type="radio"
-                          name="sellerType"
+                          name="serviceMode"
                           value={opt.value}
                           checked={checked}
                           onChange={() =>
                             setProfile((prev) => ({
                               ...prev,
-                              sellerType: opt.value,
+                              serviceMode: opt.value,
+                              serviceModeLabel: opt.label,
                             }))
                           }
-                          className="mt-1 accent-indigo-500"
+                          className="mt-0.5 accent-indigo-500"
                         />
                         <div className="min-w-0">
-                          <div className="text-sm font-bold text-slate-800 leading-tight">
+                          <div className="text-sm font-black text-slate-800">
                             {opt.label}
                           </div>
-                          <div className="mt-1 text-xs text-slate-500 leading-normal">
-                            {opt.desc}
+                          <div className="mt-1 text-xs font-semibold text-slate-500">
+                            {opt.hint}
                           </div>
                         </div>
                       </label>
@@ -690,140 +534,295 @@ export default function SellerProfile() {
                 </div>
               </div>
 
-              <div className="md:col-span-2">
-                <label className={labelClass}>About/Bio</label>
-                <textarea
-                  name="bio"
-                  rows="4"
-                  value={profile.bio}
-                  onChange={handleChange}
-                  className={inputClass}
-                  placeholder="Tell customers about your work and experience"
-                />
+              <div>
+                <label className={labelClass}>Availability</label>
+                <label
+                  className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border px-3 py-3 transition ${profile.instantService
+                    ? "border-emerald-200 bg-emerald-50"
+                    : "border-slate-200 bg-white hover:border-slate-300"
+                    }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(profile.instantService)}
+                      onChange={(e) =>
+                        setProfile((prev) => ({
+                          ...prev,
+                          instantService: e.target.checked,
+                        }))
+                      }
+                      className="h-4 w-4 accent-emerald-400"
+                    />
+                    <div>
+                      <div className="text-sm font-black text-slate-800">
+                        Instant Service Available
+                      </div>
+                      <div className="mt-1 text-xs font-semibold text-slate-500">
+                        Show ⚡ Instant Service badge
+                      </div>
+                    </div>
+                  </div>
+                  <span
+                    className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-black ${profile.instantService
+                      ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                      : "bg-slate-100 text-slate-600 border border-slate-200"
+                      }`}
+                  >
+                    {profile.instantService ? "Enabled" : "Disabled"}
+                  </span>
+                </label>
               </div>
             </div>
+          </div>
 
-            {/* Service Location Settings */}
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-4">
-              <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                <MapPin className="text-[#0284c7]" size={20} />
-                <span>Service Location / सेवा का स्थान</span>
-              </h3>
-              <p className="text-xs text-slate-500">
-                Update your service coverage area using your current location, pincode, or search query.
-              </p>
-              
-              <LocationPicker
-                hideMap={true}
-                initialLocation={{
-                  lat: profile.lat,
-                  lng: profile.lng,
-                  address: profile.address,
-                  pincode: profile.pincode,
+          {/* Form Inputs */}
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label className={labelClass}>Full Name</label>
+              <input
+                name="fullName"
+                value={profile.fullName}
+                onChange={handleChange}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Phone Number</label>
+              <input
+                name="phoneNumber"
+                value={profile.phoneNumber}
+                onChange={handleChange}
+                className={inputClass}
+                disabled
+              />
+            </div>
+            <div>
+              <label className={labelClass}>GST Number (Optional)</label>
+              <input
+                name="gstnumber"
+                value={profile.gstnumber}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  const next = raw
+                    .toUpperCase()
+                    .replace(/[^A-Z0-9]/g, "");
+                  setProfile((prev) => ({ ...prev, gstnumber: next }));
                 }}
-                onChange={({ lat, lng, address, pincode }) => {
-                  setProfile((prev) => ({
-                    ...prev,
-                    lat,
-                    lng,
-                    address,
-                    pincode,
-                  }));
-                }}
+                className={
+                  profile.gstnumber
+                    ? /^(\d{2}[A-Z]{5}\d{4}[A-Z]{1}[A-Z\d]{1}Z[A-Z\d]{1})$/.test(
+                      profile.gstnumber
+                    )
+                      ? inputClass
+                      : `${inputClass} border-red-500/60 focus:border-red-500 focus:ring-red-500/20`
+                    : inputClass
+                }
+                placeholder="Eg: 27ABCDE1234F2Z5"
+                inputMode="text"
+                autoComplete="off"
+              />
+              {profile.gstnumber &&
+                !/^(\d{2}[A-Z]{5}\d{4}[A-Z]{1}[A-Z\d]{1}Z[A-Z\d]{1})$/.test(
+                  profile.gstnumber
+                ) && (
+                  <div className="mt-1 text-xs font-semibold text-red-500">
+                    Invalid GSTIN format. Example: 27ABCDE1234F2Z5
+                  </div>
+                )}
+            </div>
+
+            <div>
+              <label className={labelClass}>Years of Experience</label>
+              <input
+                name="experience"
+                type="number"
+                min="0"
+                value={profile.experience}
+                onChange={handleChange}
+                className={inputClass}
               />
             </div>
 
-            {/* Redesigned Drag & Drop Multi-file Work Portfolio Section */}
-            <div className="space-y-4 border-t border-slate-100 pt-6">
-              <div>
-                <h3 className="text-lg font-bold text-slate-800">Work Portfolio / Images of Your Work</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Showcase your skills and past projects to users.</p>
-              </div>
-
-              {/* Drag & Drop Upload Zone */}
-              <div
-                onDragEnter={handleDrag}
-                onDragOver={handleDrag}
-                onDragLeave={handleDrag}
-                onDrop={handleDrop}
-                onClick={() => workFileInputRef.current?.click()}
-                className={`flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-6 transition duration-200 cursor-pointer ${dragActive
-                    ? "border-[#0284c7] bg-[#0284c7]/5"
-                    : "border-slate-200 bg-slate-50 hover:border-slate-300"
-                  }`}
-              >
-                <input
-                  type="file"
-                  ref={workFileInputRef}
-                  onChange={handleWorkFilesChange}
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                />
-                <UploadCloud className="text-slate-400 mb-2" size={36} />
-                <p className="text-sm font-semibold text-slate-700">Drag & drop images here, or click to browse</p>
-                <p className="text-xs text-slate-400 mt-1">Supports JPEG, PNG, WEBP (Max 5MB each)</p>
-
-                {isUploadingWork && (
-                  <div className="mt-3 flex items-center gap-2 text-indigo-600 text-xs font-bold">
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
-                    <span>Uploading files...</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Grid preview with Delete */}
-              {workImages.length > 0 && (
-                <div className="space-y-2">
-                  <h4 className="text-sm font-bold text-slate-600">Portfolio Previews ({workImages.length})</h4>
-                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
-                    {workImages.map((img) => (
-                      <div
-                        key={img.id}
-                        className="group relative aspect-square rounded-lg overflow-hidden border border-slate-200 bg-white"
-                      >
-                        <img
-                          src={getImageUrl(img.image_url)}
-                          alt="Preview"
-                          className="w-full h-full object-cover"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteWorkImage(img.id)}
-                          className="absolute top-1.5 right-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-red-600/90 text-white opacity-0 transition duration-150 shadow group-hover:opacity-100 hover:bg-red-700"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+            {/* Partner Type Selection */}
+            <div className="md:col-span-2 space-y-3">
+              <label className={labelClass}>Partner Type / पार्टनर का प्रकार</label>
+              <div className="grid gap-4 sm:grid-cols-3">
+                {[
+                  { value: "individual", label: "Individual / व्यक्तिगत", desc: "I work as a sole professional" },
+                  { value: "agency", label: "Contractor / Agency / ठेकेदार या एजेंसी", desc: "I have a team of workers" },
+                  { value: "business", label: "Business / व्यवसाय या दुकान", desc: "I have a business or shop" }
+                ].map((opt) => {
+                  const checked = profile.sellerType === opt.value;
+                  return (
+                    <label
+                      key={opt.value}
+                      className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition duration-150 ${checked
+                          ? "border-[#0284c7] bg-[#0284c7]/5 shadow-sm"
+                          : "border-slate-200 bg-white hover:border-slate-300"
+                        }`}
+                    >
+                      <input
+                        type="radio"
+                        name="sellerType"
+                        value={opt.value}
+                        checked={checked}
+                        onChange={() =>
+                          setProfile((prev) => ({
+                            ...prev,
+                            sellerType: opt.value,
+                          }))
+                        }
+                        className="mt-1 accent-indigo-500"
+                      />
+                      <div className="min-w-0">
+                        <div className="text-sm font-bold text-slate-800 leading-tight">
+                          {opt.label}
+                        </div>
+                        <div className="mt-1 text-xs text-slate-500 leading-normal">
+                          {opt.desc}
+                        </div>
                       </div>
-                    ))}
-                  </div>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="md:col-span-2">
+              <label className={labelClass}>About/Bio</label>
+              <textarea
+                name="bio"
+                rows="4"
+                value={profile.bio}
+                onChange={handleChange}
+                className={inputClass}
+                placeholder="Tell customers about your work and experience"
+              />
+            </div>
+          </div>
+
+          {/* Service Location Settings */}
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-4">
+            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+              <MapPin className="text-[#0284c7]" size={20} />
+              <span>Service Location / सेवा का स्थान</span>
+            </h3>
+            <p className="text-xs text-slate-500">
+              Update your service coverage area using your current location, pincode, or search query.
+            </p>
+
+            <LocationPicker
+              hideMap={true}
+              initialLocation={{
+                lat: profile.lat,
+                lng: profile.lng,
+                address: profile.address,
+                pincode: profile.pincode,
+              }}
+              onChange={({ lat, lng, address, pincode }) => {
+                setProfile((prev) => ({
+                  ...prev,
+                  lat,
+                  lng,
+                  address,
+                  pincode,
+                }));
+              }}
+            />
+          </div>
+
+          {/* Redesigned Drag & Drop Multi-file Work Portfolio Section */}
+          <div className="space-y-4 border-t border-slate-100 pt-6">
+            <div>
+              <h3 className="text-lg font-bold text-slate-800">Work Portfolio / Images of Your Work</h3>
+              <p className="text-xs text-slate-500 mt-0.5">Showcase your skills and past projects to users.</p>
+            </div>
+
+            {/* Drag & Drop Upload Zone */}
+            <div
+              onDragEnter={handleDrag}
+              onDragOver={handleDrag}
+              onDragLeave={handleDrag}
+              onDrop={handleDrop}
+              onClick={() => workFileInputRef.current?.click()}
+              className={`flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-6 transition duration-200 cursor-pointer ${dragActive
+                ? "border-[#0284c7] bg-[#0284c7]/5"
+                : "border-slate-200 bg-slate-50 hover:border-slate-300"
+                }`}
+            >
+              <input
+                type="file"
+                ref={workFileInputRef}
+                onChange={handleWorkFilesChange}
+                accept="image/*"
+                multiple
+                className="hidden"
+              />
+              <UploadCloud className="text-slate-400 mb-2" size={36} />
+              <p className="text-sm font-semibold text-slate-700">Drag & drop images here, or click to browse</p>
+              <p className="text-xs text-slate-400 mt-1">Supports JPEG, PNG, WEBP (Max 5MB each)</p>
+
+              {isUploadingWork && (
+                <div className="mt-3 flex items-center gap-2 text-indigo-600 text-xs font-bold">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
+                  <span>Uploading files...</span>
                 </div>
               )}
             </div>
 
-            {/* Form Action Buttons */}
-            <div className="flex gap-3 pt-4 border-t border-slate-100">
-              <button
-                type="submit"
-                disabled={isSaving}
-                className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white force-text-white shadow-lg transition duration-150 hover:bg-indigo-700 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSaving ? (
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                ) : (
-                  <Save size={17} />
-                )}
-                {isSaving ? "Saving..." : "Save Profile"}
-              </button>
+            {/* Grid preview with Delete */}
+            {workImages.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-sm font-bold text-slate-600">Portfolio Previews ({workImages.length})</h4>
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                  {workImages.map((img) => (
+                    <div
+                      key={img.id}
+                      className="group relative aspect-square rounded-lg overflow-hidden border border-slate-200 bg-white"
+                    >
+                      <img
+                        src={getImageUrl(img.image_url)}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteWorkImage(img.id)}
+                        className="absolute top-1.5 right-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-red-600/90 text-white opacity-0 transition duration-150 shadow group-hover:opacity-100 hover:bg-red-700"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
 
-              <button
-                type="button"
-                onClick={() => setIsEditing(false)}
-                className="rounded-lg border border-slate-200 bg-slate-50 px-5 py-2.5 text-sm font-bold text-slate-700 transition duration-150 hover:bg-slate-100 hover:text-slate-900 active:scale-[0.98]"
-              >
-                Cancel
-              </button>
-            </div>
+          {/* Form Action Buttons */}
+          <div className="flex gap-3 pt-4 border-t border-slate-100">
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white force-text-white shadow-lg transition duration-150 hover:bg-indigo-700 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSaving ? (
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              ) : (
+                <Save size={17} />
+              )}
+              {isSaving ? "Saving..." : "Save Profile"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsEditing(false)}
+              className="rounded-lg border border-slate-200 bg-slate-50 px-5 py-2.5 text-sm font-bold text-slate-700 transition duration-150 hover:bg-slate-100 hover:text-slate-900 active:scale-[0.98]"
+            >
+              Cancel
+            </button>
+          </div>
         </form>
       )}
 
