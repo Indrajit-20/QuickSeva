@@ -8,7 +8,7 @@ import { Link } from "react-router-dom";
 import { isPremiumActive } from "../../utils/premium";
 
 const cardBase =
-  "rounded-xl border border-[rgba(99,102,241,0.2)] bg-[#1a1830] p-5";
+  "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
 
 function formatDateShort(iso) {
   try {
@@ -25,12 +25,10 @@ function formatDateShort(iso) {
 }
 
 function balanceColorClasses(balance) {
-  if (balance <= 0) return "bg-red-500/15 text-red-200 border-red-400/30";
-  if (balance < 10)
-    return "bg-yellow-500/15 text-yellow-200 border-yellow-400/30";
+  if (balance <= 0) return "bg-red-50 text-red-700 border-red-200";
   if (balance < 20)
-    return "bg-yellow-500/15 text-yellow-200 border-yellow-400/30";
-  return "bg-emerald-500/15 text-emerald-200 border-emerald-400/30";
+    return "bg-amber-50 text-amber-700 border-amber-200";
+  return "bg-emerald-50 text-emerald-700 border-emerald-200";
 }
 
 function formatDescription(desc) {
@@ -72,10 +70,10 @@ function formatDescription(desc) {
 
       return (
         <div className="flex flex-col">
-          <span className="font-bold text-white">
+          <span className="font-bold text-slate-800">
             {typeInfo.eng} {planInfo.eng}
           </span>
-          <span className="text-xs text-indigo-300">
+          <span className="text-xs text-slate-500">
             {typeInfo.hin} {planInfo.hin}
             {expiryStr}
           </span>
@@ -90,13 +88,13 @@ function formatDescription(desc) {
   if (trimmed.toLowerCase() === "wallet top-up") {
     return (
       <div className="flex flex-col">
-        <span className="font-bold text-white">Wallet Top-up</span>
-        <span className="text-xs text-indigo-300">वॉलेट में पैसे जोड़े</span>
+        <span className="font-bold text-slate-800">Wallet Top-up</span>
+        <span className="text-xs text-slate-500">वॉलेट में पैसे जोड़े</span>
       </div>
     );
   }
 
-  return desc;
+  return <span className="text-slate-700">{desc}</span>;
 }
 
 export default function SellerWallet() {
@@ -121,11 +119,11 @@ export default function SellerWallet() {
     <div className="animate-fade-in space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold text-indigo-300">Seller Wallet</p>
-          <h1 className="mt-1 text-3xl font-bold text-white">
+          <p className="text-sm font-semibold text-blue-600">Seller Wallet</p>
+          <h1 className="mt-1 text-2xl font-bold text-slate-800">
             Manage search credits
           </h1>
-          <p className="mt-2 text-sm text-slate-300">
+          <p className="mt-1 text-sm text-slate-500">
             Logged in as: {user?.name || "Seller"}
           </p>
         </div>
@@ -140,52 +138,51 @@ export default function SellerWallet() {
       <section className={cardBase}>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-white/5">
-              <Wallet size={22} className="text-indigo-200" />
+            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-slate-100">
+              <Wallet size={22} className="text-slate-600" />
             </div>
             <div>
-              <div className="text-sm font-semibold text-slate-300">
+              <div className="text-sm font-semibold text-slate-500">
                 Balance
               </div>
-              <div className="text-4xl font-black text-white">₹{balance}</div>
+              <div className="text-4xl font-black text-slate-800">₹{balance}</div>
             </div>
           </div>
 
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <div
-              className="rounded-xl border px-4 py-2 text-sm font-bold bg-emerald-500/15 text-emerald-200 border-emerald-400/30"
+              className="rounded-xl border px-4 py-2 text-sm font-bold bg-emerald-50 text-emerald-700 border-emerald-200"
             >
               Free Listing Active
             </div>
             <button
               onClick={() => setRechargeOpen(true)}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-bold text-white hover:bg-indigo-500"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700 shadow-sm cursor-pointer"
             >
               <Plus size={16} />
               Add Funds
             </button>
           </div>
         </div>
-
       </section>
 
       {/* Premium Boost Banner */}
       {!hasPremium && (
-        <div className="rounded-xl border border-purple-500/20 bg-purple-950/10 p-5 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="rounded-xl border border-purple-200 bg-purple-50 p-5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-purple-500/10 text-purple-400">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-purple-100 text-purple-600">
               <Rocket className="rotate-45" size={20} />
             </div>
             <div className="text-left">
-              <h3 className="text-sm font-bold text-white">Boost your profile with Premium Membership</h3>
-              <p className="text-xs text-slate-400">
+              <h3 className="text-sm font-bold text-slate-800">Boost your profile with Premium Membership</h3>
+              <p className="text-xs text-slate-500">
                 Get top results in searches, highlight your map pin, and display a gold badge to attract more customers.
               </p>
             </div>
           </div>
           <Link
             to="/seller/packages"
-            className="shrink-0 inline-flex items-center justify-center px-4 py-2 rounded-lg text-xs font-bold force-text-white bg-purple-600 hover:bg-purple-700 transition-all duration-200 shadow-md shadow-purple-600/20"
+            className="shrink-0 inline-flex items-center justify-center px-4 py-2 rounded-lg text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 transition-all duration-200 shadow-sm"
           >
             GET PREMIUM MEMBERSHIP
           </Link>
@@ -194,45 +191,45 @@ export default function SellerWallet() {
 
       <section className={cardBase}>
         <div className="flex items-center justify-between gap-3">
-          <h2 className="flex items-center gap-2 text-xl font-bold text-white">
+          <h2 className="flex items-center gap-2 text-lg font-bold text-slate-800">
             <History size={18} /> Transaction History
           </h2>
-          <span className="rounded-full border border-indigo-400/30 bg-indigo-500/10 px-3 py-1 text-xs font-semibold text-indigo-200">
+          <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
             {transactions.length} transactions
           </span>
         </div>
 
         <div className="mt-4 overflow-x-auto">
           <table className="w-full min-w-[560px] text-left text-sm">
-            <thead className="border-b border-indigo-500/20 text-xs uppercase text-[#94a3b8]">
+            <thead className="border-b border-slate-200 text-xs uppercase text-slate-400 tracking-wide">
               <tr>
-                <th className="py-3 pr-4">Date</th>
-                <th className="py-3 pr-4">Description</th>
-                <th className="py-3 pr-4">Amount</th>
-                <th className="py-3">Balance After</th>
+                <th className="py-3 pr-4 font-semibold">Date</th>
+                <th className="py-3 pr-4 font-semibold">Description</th>
+                <th className="py-3 pr-4 font-semibold">Amount</th>
+                <th className="py-3 font-semibold">Balance After</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-indigo-500/10">
+            <tbody className="divide-y divide-slate-100">
               {transactions.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="py-8 text-center text-[#94a3b8]">
+                  <td colSpan={4} className="py-8 text-center text-slate-400">
                     No transactions yet
                   </td>
                 </tr>
               ) : (
                 transactions.slice(0, 20).map((tx) => (
-                  <tr key={tx.id} className="text-slate-200">
-                    <td className="py-4 pr-4 text-[#94a3b8]">
+                  <tr key={tx.id} className="text-slate-600 hover:bg-slate-50 transition-colors">
+                    <td className="py-4 pr-4 text-slate-400">
                       {formatDateShort(tx.created_at || tx.timestamp)}
                     </td>
                     <td className="py-4 pr-4">{formatDescription(tx.description)}</td>
                     <td className={`py-4 pr-4 font-bold ${
-                      tx.type === "debit" ? "text-red-300" : "text-emerald-300"
+                      tx.type === "debit" ? "text-red-600" : "text-emerald-600"
                     }`}>
                       {tx.type === "debit" ? "-₹" : "+₹"}
                       {Number(tx.amount || 0)}
                     </td>
-                    <td className="py-4 font-bold">
+                    <td className="py-4 font-bold text-slate-800">
                       ₹{Number(tx.balance_after || tx.balanceAfter || 0)}
                     </td>
                   </tr>

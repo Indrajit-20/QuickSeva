@@ -99,14 +99,14 @@ const Home = () => {
   return (
     <main className="min-h-screen flex flex-col" style={{ backgroundColor: "#f8fafc" }}>
 
-      {/* ── Services Near You Section (dark hero) ── */}
-      <section className="bg-indigo-950 py-12">
+      {/* ── Services Near You Section (light hero) ── */}
+      <section className="bg-white py-12 border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col items-center text-center mb-8">
-            <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-850 tracking-tight">
               Services Near You
             </h1>
-            <p className="text-sm text-indigo-200/80 mt-1 max-w-xl">
+            <p className="text-sm text-slate-500 mt-1 max-w-xl font-semibold">
               Find verified professionals within 5km of your location
             </p>
           </div>
@@ -187,29 +187,28 @@ const Home = () => {
         </div>
       </section>
 
-      {/* ── Call to Action ── */}
+      {/* ── Call to Action (light theme) ── */}
       <section
-        className="py-20 flex-grow flex items-center justify-center relative overflow-hidden"
-        style={{ background: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)" }}
+        className="py-20 flex-grow flex items-center justify-center relative overflow-hidden bg-slate-50 border-t border-slate-100"
       >
         {/* subtle dot pattern */}
         <div
-          className="absolute inset-0 opacity-10 pointer-events-none"
+          className="absolute inset-0 opacity-5 pointer-events-none"
           style={{
-            backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)",
+            backgroundImage: "radial-gradient(circle, #3b82f6 1px, transparent 1px)",
             backgroundSize: "24px 24px",
           }}
         />
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-          <h2 className="text-4xl font-bold text-white mb-4">
+          <h2 className="text-4xl font-bold text-slate-850 mb-4">
             Ready to Get Started?
           </h2>
-          <p className="text-xl text-indigo-100 mb-8">
+          <p className="text-xl text-slate-500 font-semibold mb-8">
             Join thousands of partners who trust QuickSeva for their onboarding.
           </p>
           <Link
             to="/seller-register"
-            className="inline-block bg-white hover:bg-slate-50 text-indigo-700 font-bold py-3 px-8 rounded-xl transition-all duration-200 hover:shadow-lg hover:scale-[1.02]"
+            className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-xl transition-all duration-200 hover:shadow-md cursor-pointer"
           >
             Become a Partner
           </Link>

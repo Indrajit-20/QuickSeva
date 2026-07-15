@@ -7,6 +7,7 @@ import { getSystemSettings } from "../api/policyService";
 import DatePicker from "react-multi-date-picker";
 const DatePickerComponent = DatePicker.default || DatePicker;
 import { scrollToFirstError } from "../utils/scrollUtils";
+import { MapPin, Star, AlertTriangle } from "lucide-react";
 
 const TIME_SLOTS = [
   "8:00 AM",
@@ -383,11 +384,10 @@ export default function BookingPage() {
 
   if (sellerLoading) {
     return (
-      <main className="min-h-screen bg-[#0b0a17] text-white px-4 py-12 flex items-center justify-center relative overflow-hidden">
-        <div className="absolute -top-40 -left-40 h-[600px] w-[600px] rounded-full bg-indigo-600/10 blur-[150px]" />
-        <div className="mx-auto w-full max-w-xl qs-glass-panel p-8 text-center shadow-2xl relative z-10">
-          <h1 className="text-xl font-black text-indigo-200">
-            <span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-indigo-400 border-t-white mr-3 align-middle" />
+      <main className="min-h-screen bg-slate-50 text-slate-800 px-4 py-12 flex items-center justify-center relative overflow-hidden">
+        <div className="mx-auto w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm relative z-10">
+          <h1 className="text-xl font-bold text-slate-700">
+            <span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-blue-500 border-t-transparent mr-3 align-middle" />
             Loading provider details…
           </h1>
         </div>
@@ -397,16 +397,15 @@ export default function BookingPage() {
 
   if (!seller) {
     return (
-      <main className="min-h-screen bg-[#0b0a17] text-white px-4 py-12 flex items-center justify-center relative overflow-hidden">
-        <div className="absolute -top-40 -left-40 h-[600px] w-[600px] rounded-full bg-indigo-600/10 blur-[150px]" />
-        <div className="mx-auto w-full max-w-xl qs-glass-panel p-8 text-center shadow-2xl relative z-10">
-          <h1 className="text-2xl font-black text-white">
+      <main className="min-h-screen bg-slate-50 text-slate-800 px-4 py-12 flex items-center justify-center relative overflow-hidden">
+        <div className="mx-auto w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm relative z-10">
+          <h1 className="text-2xl font-bold text-slate-800">
             Provider not found
           </h1>
           <button
             type="button"
             onClick={() => navigate("/services")}
-            className="mt-6 rounded-xl bg-gradient-to-r from-indigo-500 to-indigo-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-500/25 hover:scale-[1.01] transition duration-300"
+            className="mt-6 rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow-sm hover:bg-blue-700 transition"
           >
             Find Services
           </button>
@@ -444,14 +443,14 @@ export default function BookingPage() {
             </p>
             <p className="flex justify-between pt-1">
               <span className="font-semibold text-slate-500">Provider:</span>
-              <span className="font-bold text-slate-850">{confirmedBooking.sellerName}</span>
+              <span className="font-bold text-slate-800">{confirmedBooking.sellerName}</span>
             </p>
           </div>
 
           <div className="mt-8 grid gap-3 sm:grid-cols-2">
             <Link
               to="/my-bookings"
-              className="rounded-xl bg-sky-600 hover:bg-sky-700 px-5 py-3 text-xs font-bold text-white text-center shadow-lg shadow-sky-600/20 active:scale-95 transition cursor-pointer"
+              className="rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-3 text-xs font-bold text-white text-center shadow-sm transition active:scale-95 cursor-pointer"
             >
               View My Bookings
             </Link>
@@ -468,58 +467,62 @@ export default function BookingPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[var(--qs-bg)] py-10 px-4 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-slate-50 py-10 px-4 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-xl space-y-6">
         
         {/* ── 1. Provider Profile Card (Mehta home painters...) ── */}
-        <section className="bg-white rounded-2xl border border-[var(--qs-border)] p-5 shadow-sm relative overflow-hidden transition hover:shadow-md">
+        <section className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm relative overflow-hidden transition hover:shadow-md">
           <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--qs-primary-light)]/10 text-lg font-black text-[var(--qs-primary)] shadow-sm">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-700 font-extrabold text-xl shadow-[inset_0_2px_4px_rgba(59,130,246,0.06)] border border-blue-100">
               {avatarLetter}
             </div>
-            <div className="flex-1 space-y-1">
-              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--qs-primary-light)]/10 px-2 py-0.5 text-[10px] font-bold text-[var(--qs-primary)]">
+            <div className="flex-1 space-y-1.5 text-left">
+              <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-[10px] font-bold text-blue-600">
                 ⚡ Professional partner
               </span>
-              <h1 className="text-lg font-extrabold text-[var(--qs-text)] leading-tight">
+              <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-snug">
                 {seller.business_name || seller.name}
               </h1>
-              <p className="text-xs text-[var(--qs-muted)] flex flex-wrap items-center gap-1.5">
-                <span>📍</span> {seller.address || "Service Location"}
+              <div className="text-xs text-slate-500 flex flex-wrap items-center gap-1.5 font-medium mt-1">
+                <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                <span>{seller.address || "Service Location"}</span>
                 {seller.avg_rating && (
                   <>
-                    <span className="text-[var(--qs-muted-light)]">•</span>
-                    <span className="text-amber-500 font-bold">★ {seller.avg_rating} rating</span>
+                    <span className="text-slate-300">•</span>
+                    <span className="text-amber-600 font-bold flex items-center gap-0.5">
+                      <Star className="h-3.5 w-3.5 text-amber-500 fill-current shrink-0" />
+                      {seller.avg_rating} rating
+                    </span>
                   </>
                 )}
-              </p>
+              </div>
             </div>
           </div>
         </section>
 
         {/* ── 2. Selected Service Card ── */}
         {selectedServiceState && (
-          <section className="bg-white rounded-2xl border border-[var(--qs-border)] p-5 shadow-sm space-y-4">
+          <section className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-base font-extrabold text-[var(--qs-text)]">
+              <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
                 {selectedServiceState.name || selectedServiceState.title}
               </h2>
-              <span className="px-2.5 py-0.5 text-[10.5px] font-bold text-[var(--qs-secondary)] bg-[var(--qs-secondary)]/10 rounded-full border border-[var(--qs-secondary)]/20">
+              <span className="px-2.5 py-0.5 text-[10.5px] font-bold text-emerald-700 bg-emerald-50 rounded-full border border-emerald-100">
                 Selected
               </span>
             </div>
             
-            <div className="border-t border-[var(--qs-border-light)] pt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <div className="text-xs text-[var(--qs-muted)]">
+            <div className="border-t border-slate-100 pt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-left">
+              <div className="text-xs text-slate-500">
                 {selectedServiceState?.price_type === "negotiable" ? (
                   <>Work price <span className="mx-1">•</span> quoted onsite / ऑन-साइट तय होगा</>
                 ) : (
                   <>Work price <span className="mx-1">•</span> due after service completion / काम के बाद देय</>
                 )}
               </div>
-              <div className="text-lg font-black text-[var(--qs-primary)]">
+              <div className="text-lg font-bold text-blue-600">
                 {selectedServiceState?.price_type === "negotiable" ? (
-                  <span className="text-xs font-bold text-sky-750 bg-sky-50 px-2 py-0.5 rounded-md border border-sky-200">
+                  <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
                     Starts from ₹{selectedServicePrice} / से शुरू (Final quote onsite)
                   </span>
                 ) : selectedServiceState?.price_type === "hourly" ? (
@@ -538,15 +541,15 @@ export default function BookingPage() {
           className="space-y-6"
         >
           {/* Card: Configure Schedule */}
-          <div className="bg-white rounded-2xl border border-[var(--qs-border)] p-5 shadow-sm space-y-5">
-            <div>
-              <h2 className="text-base font-black text-[var(--qs-text)]">Configure your schedule</h2>
-              <p className="text-xs text-[var(--qs-muted)]">Choose a convenient date and time slot.</p>
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-5">
+            <div className="text-left">
+              <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">Configure your schedule</h2>
+              <p className="text-xs font-semibold text-slate-400 mt-1">Choose a convenient date and time slot.</p>
             </div>
 
             {/* Date Picker (Added back as requested) */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-[var(--qs-text-2)] uppercase tracking-wider">
+            <div className="space-y-1.5 text-left">
+              <label className="block text-xs font-bold text-slate-655 uppercase tracking-wider">
                 Select Date / तारीख चुनें
               </label>
               <DatePickerComponent
@@ -562,20 +565,20 @@ export default function BookingPage() {
                 maxDate={getMaxDate()}
                 format="DD-MM-YYYY"
                 portal
-                inputClass="w-full px-3 py-2.5 rounded-xl border border-[var(--qs-border)] bg-white text-[var(--qs-text)] text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[var(--qs-primary)]/10 focus:border-[var(--qs-primary)] transition cursor-pointer"
+                inputClass="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition cursor-pointer"
                 containerClassName="qs-date-picker__container"
                 placeholder="Select a date / तारीख चुनें"
               />
               {errors.date && (
-                <p className="text-xs font-semibold text-[var(--qs-danger)] flex items-center gap-1 mt-1">
+                <p className="text-xs font-semibold text-red-600 flex items-center gap-1 mt-1">
                   <span>⚠</span> {errors.date}
                 </p>
               )}
             </div>
 
             {/* Time Slot Picker */}
-            <div className="space-y-2">
-              <label className="block text-xs font-bold text-[var(--qs-text-2)] uppercase tracking-wider">
+            <div className="space-y-2 text-left">
+              <label className="block text-xs font-bold text-slate-655 uppercase tracking-wider">
                 Select Time Slot / समय चुनें
               </label>
               <div className="flex flex-wrap gap-1.5">
@@ -592,8 +595,8 @@ export default function BookingPage() {
                         disabled
                           ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed line-through opacity-50"
                           : active
-                          ? "bg-[var(--qs-primary)] border-[var(--qs-primary)] text-white shadow-sm cursor-pointer active:scale-95"
-                          : "bg-white border-[var(--qs-border)] text-[var(--qs-text-2)] hover:bg-[var(--qs-surface-2)] cursor-pointer active:scale-95"
+                          ? "bg-blue-600 border-blue-600 text-white shadow-sm cursor-pointer active:scale-95"
+                          : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 cursor-pointer active:scale-95"
                       }`}
                     >
                       {slot}
@@ -602,7 +605,7 @@ export default function BookingPage() {
                 })}
               </div>
               {errors.timeSlot && (
-                <p className="text-xs font-semibold text-[var(--qs-danger)] flex items-center gap-1 mt-1">
+                <p className="text-xs font-semibold text-red-600 flex items-center gap-1 mt-1">
                   <span>⚠</span> {errors.timeSlot}
                 </p>
               )}
@@ -610,15 +613,15 @@ export default function BookingPage() {
           </div>
 
           {/* Card: Arrival Details & Contact */}
-          <div className="bg-white rounded-2xl border border-[var(--qs-border)] p-5 shadow-sm space-y-4">
-            <div>
-              <h2 className="text-base font-black text-[var(--qs-text)]">Where should we deliver?</h2>
-              <p className="text-xs text-[var(--qs-muted)]">Address & contact details for the booking.</p>
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+            <div className="text-left">
+              <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">Where should we deliver?</h2>
+              <p className="text-xs font-semibold text-slate-400 mt-1">Address & contact details for the booking.</p>
             </div>
 
             {/* Address field */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-[var(--qs-text-2)] uppercase tracking-wider">
+            <div className="space-y-1.5 text-left">
+              <label className="block text-xs font-bold text-slate-655 uppercase tracking-wider">
                 Delivery Address / आपका पता
               </label>
               <textarea
@@ -626,18 +629,18 @@ export default function BookingPage() {
                 onChange={(e) => updateField("address", e.target.value)}
                 placeholder="Enter your full address with house number, street and landmark"
                 rows={3}
-                className="w-full px-3 py-2.5 rounded-xl border border-[var(--qs-border)] bg-white text-[var(--qs-text)] text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[var(--qs-primary)]/10 focus:border-[var(--qs-primary)] transition"
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition"
               />
               {errors.address && (
-                <p className="text-xs font-semibold text-[var(--qs-danger)] flex items-center gap-1 mt-1">
+                <p className="text-xs font-semibold text-red-600 flex items-center gap-1 mt-1">
                   <span>⚠</span> {errors.address}
                 </p>
               )}
             </div>
 
             {/* Mobile Number */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-[var(--qs-text-2)] uppercase tracking-wider">
+            <div className="space-y-1.5 text-left">
+              <label className="block text-xs font-bold text-slate-655 uppercase tracking-wider">
                 Mobile Number / मोबाइल नंबर
               </label>
               <input
@@ -649,18 +652,18 @@ export default function BookingPage() {
                   )
                 }
                 placeholder="E.g., 9876543210"
-                className="w-full px-3 py-2.5 rounded-xl border border-[var(--qs-border)] bg-white text-[var(--qs-text)] text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[var(--qs-primary)]/10 focus:border-[var(--qs-primary)] transition"
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition"
               />
               {errors.mobile && (
-                <p className="text-xs font-semibold text-[var(--qs-danger)] flex items-center gap-1 mt-1">
+                <p className="text-xs font-semibold text-red-600 flex items-center gap-1 mt-1">
                   <span>⚠</span> {errors.mobile}
                 </p>
               )}
             </div>
 
             {/* Instructions */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-[var(--qs-text-2)] uppercase tracking-wider">
+            <div className="space-y-1.5 text-left">
+              <label className="block text-xs font-bold text-slate-655 uppercase tracking-wider">
                 Special Instructions (Optional)
               </label>
               <textarea
@@ -668,47 +671,47 @@ export default function BookingPage() {
                 onChange={(e) => updateField("instructions", e.target.value)}
                 placeholder="Any special requests, gate codes, or instructions..."
                 rows={2}
-                className="w-full px-3 py-2.5 rounded-xl border border-[var(--qs-border)] bg-white text-[var(--qs-text)] text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[var(--qs-primary)]/10 focus:border-[var(--qs-primary)] transition"
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition"
               />
             </div>
           </div>
 
           {/* ── 4. How this booking works ── */}
-          <div className="bg-white rounded-2xl border border-[var(--qs-border)] p-5 shadow-sm space-y-4">
-            <h2 className="text-base font-black text-[var(--qs-text)]">How this booking works</h2>
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+            <h2 className="text-xl font-extrabold text-slate-900 tracking-tight text-left">How this booking works</h2>
             
-            <div className="space-y-4">
+            <div className="space-y-4 text-left">
               <div className="flex gap-3">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--qs-primary)] text-[10px] font-black text-white mt-0.5">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[10px] font-black text-white mt-0.5">
                   1
                 </span>
                 <div className="space-y-0.5">
-                  <h3 className="text-xs font-bold text-[var(--qs-text)]">Pay the visiting fee now</h3>
-                  <p className="text-xs text-[var(--qs-muted)] leading-relaxed">
+                  <h3 className="text-xs font-bold text-slate-800">Pay the visiting fee now</h3>
+                  <p className="text-xs text-slate-500 leading-relaxed font-semibold">
                     Confirms your slot and covers the partner's travel and inspection.
                   </p>
                 </div>
               </div>
 
               <div className="flex gap-3">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--qs-primary)] text-[10px] font-black text-white mt-0.5">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[10px] font-black text-white mt-0.5">
                   2
                 </span>
                 <div className="space-y-0.5">
-                  <h3 className="text-xs font-bold text-[var(--qs-text)]">Partner inspects and quotes the final price</h3>
-                  <p className="text-xs text-[var(--qs-muted)] leading-relaxed">
+                  <h3 className="text-xs font-bold text-slate-800">Partner inspects and quotes the final price</h3>
+                  <p className="text-xs text-slate-500 leading-relaxed font-semibold">
                     Visiting charge is settled once the inspection is done.
                   </p>
                 </div>
               </div>
 
               <div className="flex gap-3">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--qs-primary)] text-[10px] font-black text-white mt-0.5">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[10px] font-black text-white mt-0.5">
                   3
                 </span>
                 <div className="space-y-0.5">
-                  <h3 className="text-xs font-bold text-[var(--qs-text)]">You approve and pay for the work</h3>
-                  <p className="text-xs text-[var(--qs-muted)] leading-relaxed">
+                  <h3 className="text-xs font-bold text-slate-800">You approve and pay for the work</h3>
+                  <p className="text-xs text-slate-500 leading-relaxed font-semibold">
                     Work only starts after your approval of the final quote.
                   </p>
                 </div>
@@ -717,23 +720,23 @@ export default function BookingPage() {
           </div>
 
           {/* ── 5. Note / Warning banner (Notice) ── */}
-          <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-4 text-xs leading-relaxed text-amber-900 space-y-1 shadow-2xs">
-            <p className="font-bold flex items-center gap-1.5 text-amber-950">
-              <span>⚠️</span> Note / महत्वपूर्ण निर्देश:
+          <div className="rounded-2xl border border-amber-250 bg-amber-50 p-5 text-xs leading-relaxed text-amber-800 space-y-1.5 shadow-2xs text-left">
+            <p className="font-bold flex items-center gap-1.5 text-amber-950 text-sm">
+              <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" /> Note / महत्वपूर्ण निर्देश:
             </p>
-            <p className="pl-5 text-[11px] leading-relaxed text-amber-850">
+            <p className="pl-5 text-[11px] leading-relaxed text-amber-800 font-semibold">
               <strong>English:</strong> The Visiting Charge covers the seller's travel & inspection, and must be paid online to confirm this booking. The final service price will be provided after onsite inspection and requires your approval.
             </p>
-            <p className="pl-5 text-[11px] leading-relaxed text-amber-850 border-t border-amber-200/30 pt-1.5 mt-1.5">
+            <p className="pl-5 text-[11px] leading-relaxed text-amber-800 font-semibold border-t border-amber-200/30 pt-1.5 mt-1.5">
               <strong>Hindi:</strong> विजिटिंग चार्ज सेलर के आने-जाने और जांच का शुल्क है, बुकिंग कन्फर्म करने के लिए इसका भुगतान ऑनलाइन करना होगा। काम का पक्का बिल (फाइनल रेट) सेलर द्वारा जांच के बाद दिया जाएगा और आपकी मंजूरी के बाद ही काम शुरू होगा।
             </p>
           </div>
 
           {/* ── 6. Payment Method selection ── */}
-          <div className="bg-white rounded-2xl border border-[var(--qs-border)] p-5 shadow-sm space-y-4">
-            <div>
-              <h2 className="text-base font-black text-[var(--qs-text)]">Payment Method for Final Work</h2>
-              <p className="text-xs text-[var(--qs-muted)]">Choose how you pay the remaining balance once work is complete.</p>
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+            <div className="text-left">
+              <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">Payment Method for Final Work</h2>
+              <p className="text-xs font-semibold text-slate-400 mt-1">Choose how you pay the remaining balance once work is complete.</p>
             </div>
 
             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
@@ -761,16 +764,16 @@ export default function BookingPage() {
                     onClick={() => setPaymentMethod(pm.value)}
                     className={`rounded-xl border p-3 text-left transition duration-200 active:scale-98 flex items-start gap-2.5 cursor-pointer hover:shadow-xs ${
                       active
-                        ? "bg-[var(--qs-primary-light)]/5 border-[var(--qs-primary)] shadow-xs"
-                        : "border-[var(--qs-border)] bg-white hover:border-[var(--qs-muted-light)]"
+                        ? "bg-blue-50 border-blue-400 shadow-xs text-blue-700"
+                        : "border-slate-200 bg-white hover:border-slate-300"
                     }`}
                   >
                     <span className="text-lg">{pm.icon}</span>
                     <div className="flex-1 space-y-0.5">
-                      <span className="block text-xs font-bold text-[var(--qs-text)]">
+                      <span className="block text-xs font-bold text-slate-800">
                         {pm.title}
                       </span>
-                      <span className="block text-[10px] text-[var(--qs-muted)] leading-normal">{pm.desc}</span>
+                      <span className="block text-[10px] text-slate-500 leading-normal font-semibold">{pm.desc}</span>
                     </div>
                   </button>
                 );
@@ -778,41 +781,41 @@ export default function BookingPage() {
             </div>
 
             {/* Clarification note explaining the distinction to avoid user confusion */}
-            <div className="rounded-xl bg-sky-50 border border-sky-200/60 p-3.5 text-xs text-sky-950 space-y-1">
-              <p className="font-bold flex items-center gap-1.5 text-sky-900" style={{ color: '#0369a1' }}>
+            <div className="rounded-xl bg-blue-50 border border-blue-200 p-3.5 text-xs text-blue-950 space-y-1 text-left">
+              <p className="font-bold flex items-center gap-1.5 text-blue-900">
                 <span>ℹ️</span> Clarification / स्पष्टीकरण:
               </p>
-              <p className="pl-5 text-[11px] text-sky-800 leading-relaxed">
+              <p className="pl-5 text-[11px] text-blue-800 leading-relaxed font-semibold">
                 <strong>English:</strong> The payment method selected here is only for paying the final bill after the service is completed. The visiting charge (if any) is a separate fee paid online now to secure your booking.
               </p>
-              <p className="pl-5 text-[11px] text-sky-800 leading-relaxed border-t border-sky-200/30 pt-1.5 mt-1.5">
+              <p className="pl-5 text-[11px] text-blue-800 leading-relaxed font-semibold border-t border-blue-200/30 pt-1.5 mt-1.5">
                 <strong>Hindi:</strong> यहाँ चुना गया विकल्प केवल काम पूरा होने के बाद का भुगतान करने के लिए है। विजिटिंग चार्ज (यदि कोई हो) बुकिंग पक्की करने के लिए अभी ऑनलाइन जमा करना होगा।
               </p>
             </div>
           </div>
 
           {/* ── 7. Visiting Fee Summary Card (Green Tint) ── */}
-          <div className="bg-[var(--qs-secondary)]/5 border border-[var(--qs-secondary)]/20 px-4 py-3.5 rounded-xl flex justify-between items-center shadow-2xs">
+          <div className="bg-emerald-50 border border-emerald-200 px-4 py-3.5 rounded-xl flex justify-between items-center shadow-2xs text-left">
             <div>
               <div className="flex items-center gap-2">
-                <span className="block text-xs font-bold text-[var(--qs-secondary-dark)] uppercase tracking-wider">Visiting fee</span>
+                <span className="block text-xs font-bold text-emerald-700 uppercase tracking-wider">Visiting fee</span>
                 {visitingCharge === 0 && (
-                  <span className="px-1.5 py-0.5 text-[10px] font-black text-emerald-700 bg-emerald-100 rounded-md border border-emerald-200" style={{ color: '#0f6e56' }}>
+                  <span className="px-1.5 py-0.5 text-[10px] font-black text-emerald-700 bg-emerald-100 rounded-md border border-emerald-250">
                     FREE / मुफ्त
                   </span>
                 )}
               </div>
-              <span className="text-[11px] text-[var(--qs-muted)]">
+              <span className="text-[11px] text-slate-500 font-semibold">
                 {visitingCharge === 0 ? "No advance payment required" : "Payable now to confirm booking"}
               </span>
             </div>
-            <span className="text-xl font-black text-[var(--qs-secondary)]">
+            <span className="text-xl font-bold text-emerald-700 font-mono">
               {visitingCharge === 0 ? "₹0" : `₹${visitingCharge}`}
             </span>
           </div>
 
           {submitError && (
-            <p className="text-xs font-semibold text-[var(--qs-danger)] flex items-center gap-1 mt-1">
+            <p className="text-xs font-semibold text-red-650 flex items-center gap-1 mt-1">
               <span>⚠</span> {submitError}
             </p>
           )}
@@ -821,8 +824,7 @@ export default function BookingPage() {
           <button
             type="submit"
             disabled={bookingLoading}
-            className="w-full rounded-xl bg-[var(--qs-primary)] hover:bg-[var(--qs-primary)]/90 px-5 py-3.5 text-sm font-extrabold text-white force-text-white shadow-md shadow-[var(--qs-primary)]/20 hover:scale-[1.01] hover:shadow-lg transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
-            style={{ color: '#ffffff' }}
+            className="w-full rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-3.5 text-sm font-bold text-white shadow-sm transition disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
           >
             {bookingLoading ? (
               <>
@@ -841,15 +843,15 @@ export default function BookingPage() {
 
       {/* Invoice Type Breakdown Modal */}
       {showInvoiceModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in">
-          <div className="w-full max-w-md rounded-2xl bg-white border border-slate-200 p-5 shadow-2xl space-y-4 text-slate-800 relative force-text-dark">
-            <div className="border-b border-slate-100 pb-3 flex justify-between items-center">
-              <h2 className="text-lg font-extrabold text-slate-900">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="w-full max-w-md rounded-2xl bg-white border border-slate-200 p-5 shadow-2xl space-y-4 text-slate-800 relative">
+            <div className="border-b border-slate-100 pb-3 flex justify-between items-center text-left">
+              <h2 className="text-lg font-bold text-slate-800">
                 Invoice Preview / पक्का बिल (रसीद)
               </h2>
               <button 
                 onClick={() => setShowInvoiceModal(false)}
-                className="text-slate-400 hover:text-slate-600 text-lg font-bold"
+                className="text-slate-400 hover:text-slate-600 text-lg font-bold cursor-pointer"
               >
                 ✕
               </button>
@@ -857,51 +859,51 @@ export default function BookingPage() {
 
             {/* Bill details */}
             <div className="space-y-3.5 text-left">
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-2">
-                <div className="flex justify-between text-xs">
-                  <span className="font-semibold text-slate-500">Service / सेवा:</span>
-                  <span className="font-bold text-slate-800 text-right">{formData.service}</span>
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+                <div className="flex justify-between text-xs font-semibold text-slate-600">
+                  <span>Service / सेवा:</span>
+                  <span className="text-slate-800 text-right">{formData.service}</span>
                 </div>
-                <div className="flex justify-between text-xs">
-                  <span className="font-semibold text-slate-500">Date & Slot / तिथि व समय:</span>
-                  <span className="font-bold text-slate-800">{formData.date} | {formData.timeSlot}</span>
+                <div className="flex justify-between text-xs font-semibold text-slate-600">
+                  <span>Date & Slot / तिथि व समय:</span>
+                  <span className="text-slate-800">{formData.date} | {formData.timeSlot}</span>
                 </div>
-                <div className="flex justify-between text-xs">
-                  <span className="font-semibold text-slate-500">Provider / सेलर:</span>
-                  <span className="font-bold text-slate-800">{seller.business_name || seller.name}</span>
+                <div className="flex justify-between text-xs font-semibold text-slate-600">
+                  <span>Provider / सेलर:</span>
+                  <span className="text-slate-800">{seller.business_name || seller.name}</span>
                 </div>
               </div>
 
               <div className="space-y-2.5 px-1.5">
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Pricing Summary / बिल विवरण</h3>
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-600">Visiting Charge / विजिटिंग चार्ज:</span>
-                  <span className="font-bold text-slate-900">₹{visitingCharge}</span>
+                <div className="flex justify-between text-sm text-slate-600 font-semibold">
+                  <span>Visiting Charge / विजिटिंग चार्ज:</span>
+                  <span className="text-slate-800 font-mono">₹{visitingCharge}</span>
                 </div>
                 {platformSettings.platform_fee_model === "buyer" && visitingCharge > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-600">Platform Security Fee / सुरक्षा शुल्क ({platformSettings.platform_fee_percentage}%):</span>
-                    <span className="font-bold text-slate-900">+₹{calculatedFee}</span>
+                  <div className="flex justify-between text-sm text-slate-600 font-semibold">
+                    <span>Platform Security Fee / सुरक्षा शुल्क ({platformSettings.platform_fee_percentage}%):</span>
+                    <span className="text-slate-800 font-mono">+₹{calculatedFee}</span>
                   </div>
                 )}
                 {platformSettings.platform_fee_model === "seller" && visitingCharge > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-500 italic">Platform Security Fee:</span>
-                    <span className="text-emerald-600 text-xs font-semibold">₹0 (Paid by Provider)</span>
+                  <div className="flex justify-between text-sm text-slate-550">
+                    <span className="italic">Platform Security Fee:</span>
+                    <span className="text-emerald-700 text-xs font-semibold">₹0 (Paid by Provider)</span>
                   </div>
                 )}
-                <div className="h-px bg-slate-100 my-1" />
-                <div className="flex justify-between text-base font-black">
-                  <span className="text-slate-900">Amount Payable Now / कुल भुगतान (Stage 1):</span>
-                  <span className="text-emerald-600" style={{ color: '#059669' }}>
+                <div className="h-px bg-slate-200 my-1" />
+                <div className="flex justify-between text-base font-bold text-slate-800">
+                  <span>Amount Payable Now / कुल भुगतान (Stage 1):</span>
+                  <span className="text-emerald-600 font-mono">
                     ₹{totalPayable}
                   </span>
                 </div>
               </div>
 
               {/* Ultra Compact Warning Box */}
-              <div className="rounded-xl bg-amber-50 border border-amber-200/80 p-2.5 text-[10px] leading-normal text-amber-900 font-medium text-left space-y-1">
-                <p className="flex items-center gap-1 font-bold text-amber-950 uppercase tracking-wider">
+              <div className="rounded-xl bg-amber-50 border border-amber-200 p-2.5 text-[10px] leading-normal text-amber-900 font-semibold text-left space-y-1">
+                <p className="flex items-center gap-1 font-bold text-amber-955 uppercase tracking-wider">
                   <span>⚠️</span> Service Notice / महत्वपूर्ण सूचना:
                 </p>
                 <p className="leading-relaxed">
@@ -917,7 +919,7 @@ export default function BookingPage() {
               <button
                 type="button"
                 onClick={() => setShowInvoiceModal(false)}
-                className="flex-1 rounded-xl border border-slate-300 py-3 text-xs font-bold text-slate-700 hover:bg-slate-50 transition active:scale-95 cursor-pointer"
+                className="flex-1 rounded-xl border border-slate-250 bg-slate-50 py-3 text-xs font-bold text-slate-700 hover:bg-slate-100 transition active:scale-95 cursor-pointer"
               >
                 Back / वापस जाएं
               </button>
@@ -936,8 +938,7 @@ export default function BookingPage() {
                     setGatewayError("");
                   }
                 }}
-                className="flex-1 rounded-xl bg-sky-600 hover:bg-sky-700 py-3 text-xs font-bold text-white force-text-white shadow-lg shadow-sky-600/20 hover:scale-[1.01] hover:shadow-sky-600/35 transition active:scale-[0.99] cursor-pointer"
-                style={{ color: '#ffffff' }}
+                className="flex-1 rounded-xl bg-blue-600 hover:bg-blue-700 py-3 text-xs font-bold text-white shadow-sm transition active:scale-[0.99] cursor-pointer"
               >
                 {(visitingCharge === 0 || paymentMethod === "cash") ? "Confirm Booking / बुकिंग पक्की करें" : "Proceed to Pay / भुगतान करें"}
               </button>
@@ -948,13 +949,13 @@ export default function BookingPage() {
 
       {/* Fake Razorpay/PhonePe Payment Gateway Modal */}
       {showPaymentGateway && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 animate-fade-in">
-          <div className="w-full max-w-sm rounded-2xl bg-[#0f111a] border border-slate-800 shadow-2xl overflow-hidden text-white relative flex flex-col force-text-white">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-fade-in text-slate-800">
+          <div className="w-full max-w-sm rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden relative flex flex-col">
             {/* Gateway Header */}
-            <div className="bg-[#0b0c13] p-4 border-b border-slate-800 flex justify-between items-center">
-              <div className="flex items-center gap-2">
+            <div className="bg-slate-50 p-4 border-b border-slate-200 flex justify-between items-center">
+              <div className="flex items-center gap-2 text-left">
                 <span className="text-xl">💳</span>
-                <div className="text-left">
+                <div>
                   <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">QuickSeva Secure Pay</h2>
                   <p className="text-[10px] text-slate-500">Razorpay / PhonePe Emulator</p>
                 </div>
@@ -964,7 +965,7 @@ export default function BookingPage() {
                   setShowPaymentGateway(false);
                   setGatewaySubView("select");
                 }}
-                className="text-slate-400 hover:text-white text-sm"
+                className="text-slate-400 hover:text-slate-600 text-sm cursor-pointer p-1"
               >
                 ✕
               </button>
@@ -973,9 +974,9 @@ export default function BookingPage() {
             {paymentGatewayStatus === "idle" && (
               <div className="p-6 space-y-5 flex-1 text-left">
                 {/* Total box */}
-                <div className="bg-[#0b0c13] p-4 rounded-xl border border-slate-800/80 text-center">
+                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-center">
                   <span className="block text-[10px] text-slate-500 uppercase font-semibold">Payable Amount / भुगतान राशि</span>
-                  <span className="text-3xl font-black text-emerald-400 mt-1 block" style={{ color: '#34d399' }}>
+                  <span className="text-3xl font-black text-emerald-600 mt-1 block font-mono">
                     ₹{totalPayable}
                   </span>
                 </div>
@@ -998,11 +999,11 @@ export default function BookingPage() {
                             setGatewaySubView(opt.id);
                             setPaymentMethod(opt.method);
                           }}
-                          className="w-full text-left p-3.5 rounded-xl border border-slate-800 bg-[#08090e] hover:bg-slate-900 hover:border-slate-750 transition flex items-center gap-3 cursor-pointer group active:scale-[0.99]"
+                          className="w-full text-left p-3.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition flex items-center gap-3 cursor-pointer group active:scale-[0.99]"
                         >
-                          <span className="text-lg bg-slate-850 p-1.5 rounded-lg group-hover:bg-slate-700">{opt.icon}</span>
-                          <span className="text-xs font-bold text-slate-200 group-hover:text-slate-100 flex-1">{opt.name}</span>
-                          <span className="text-slate-500 text-xs">➔</span>
+                          <span className="text-lg bg-slate-100 p-1.5 rounded-lg group-hover:bg-slate-200">{opt.icon}</span>
+                          <span className="text-xs font-bold text-slate-700 group-hover:text-slate-800 flex-1">{opt.name}</span>
+                          <span className="text-slate-400 text-xs">➔</span>
                         </button>
                       ))}
                     </div>
@@ -1011,7 +1012,7 @@ export default function BookingPage() {
                       <button
                         type="button"
                         onClick={() => handleSimulatedPayment(false)}
-                        className="w-full py-2.5 text-xs font-bold text-red-400 bg-red-955/10 border border-red-900/30 rounded-xl hover:bg-red-955/20 active:scale-95 transition cursor-pointer text-center"
+                        className="w-full py-2.5 text-xs font-bold text-red-700 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 active:scale-95 transition cursor-pointer text-center"
                       >
                         Simulate Failure ❌
                       </button>
@@ -1034,7 +1035,7 @@ export default function BookingPage() {
                       <button
                         type="button"
                         onClick={() => setGatewaySubView("select")}
-                        className="flex-1 py-2.5 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-white rounded-xl active:scale-95 transition cursor-pointer"
+                        className="flex-1 py-2.5 text-xs font-bold bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl active:scale-95 transition cursor-pointer"
                       >
                         Back / पीछे
                       </button>
@@ -1051,7 +1052,7 @@ export default function BookingPage() {
 
                 {gatewaySubView === "card_info" && (
                   <div className="space-y-4">
-                    <span className="block text-[10px] text-slate-500 uppercase font-bold tracking-wider">Card Details</span>
+                    <span className="block text-[10px] text-slate-500 uppercase font-bold tracking-wider text-left">Card Details</span>
                     <div className="space-y-3">
                       <div>
                         <label className="text-[10px] text-slate-400 block mb-1">Card Number</label>
@@ -1059,26 +1060,26 @@ export default function BookingPage() {
                           type="text"
                           placeholder="4111 2222 3333 4444"
                           maxLength="19"
-                          className="w-full text-xs bg-[#0b0c13] border border-slate-850 rounded-lg p-2.5 text-white outline-none focus:border-sky-500"
+                          className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                         />
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-2 gap-3 text-left">
                         <div>
-                          <label className="text-[10px] text-slate-400 block mb-1">Expiry Date</label>
+                          <label className="text-[10px] text-slate-450 block mb-1">Expiry Date</label>
                           <input
                             type="text"
                             placeholder="MM/YY"
                             maxLength="5"
-                            className="w-full text-xs bg-[#0b0c13] border border-slate-850 rounded-lg p-2.5 text-white outline-none focus:border-sky-500"
+                            className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                           />
                         </div>
                         <div>
-                          <label className="text-[10px] text-slate-400 block mb-1">CVV</label>
+                          <label className="text-[10px] text-slate-455 block mb-1">CVV</label>
                           <input
                             type="password"
                             placeholder="•••"
                             maxLength="3"
-                            className="w-full text-xs bg-[#0b0c13] border border-slate-850 rounded-lg p-2.5 text-white outline-none focus:border-sky-500"
+                            className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                           />
                         </div>
                       </div>
@@ -1088,7 +1089,7 @@ export default function BookingPage() {
                       <button
                         type="button"
                         onClick={() => setGatewaySubView("select")}
-                        className="flex-1 py-2.5 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-white rounded-xl active:scale-95 transition cursor-pointer text-center"
+                        className="flex-1 py-2.5 text-xs font-bold bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl active:scale-95 transition cursor-pointer text-center"
                       >
                         Back / पीछे
                       </button>
@@ -1105,17 +1106,17 @@ export default function BookingPage() {
 
                 {gatewaySubView === "wallet_pay" && (
                   <div className="space-y-4">
-                    <span className="block text-[10px] text-slate-500 uppercase font-bold tracking-wider">Wallet Balance Payment</span>
-                    <div className="bg-[#0b0c13] p-4 rounded-xl border border-slate-850 flex justify-between items-center">
+                    <span className="block text-[10px] text-slate-500 uppercase font-bold tracking-wider text-left">Wallet Balance Payment</span>
+                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex justify-between items-center">
                       <div>
                         <span className="block text-[10px] text-slate-500">Your Current Balance</span>
-                        <span className="text-sm font-bold text-white">₹{Number(user?.wallet_balance || 0).toLocaleString("en-IN")}</span>
+                        <span className="text-sm font-bold text-slate-800 font-mono">₹{Number(user?.wallet_balance || 0).toLocaleString("en-IN")}</span>
                       </div>
                       <span className="text-lg">💼</span>
                     </div>
 
                     {Number(user?.wallet_balance || 0) < totalPayable ? (
-                      <div className="rounded-lg bg-red-955/10 border border-red-900/30 p-3 text-[10px] text-red-400 leading-normal">
+                      <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-[10px] text-red-700 leading-normal font-semibold">
                         ⚠️ Insufficient balance. Please use UPI QR or Card to pay directly, or add funds to your wallet first.
                       </div>
                     ) : null}
@@ -1124,7 +1125,7 @@ export default function BookingPage() {
                       <button
                         type="button"
                         onClick={() => setGatewaySubView("select")}
-                        className="flex-1 py-2.5 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-white rounded-xl active:scale-95 transition cursor-pointer text-center"
+                        className="flex-1 py-2.5 text-xs font-bold bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl active:scale-95 transition cursor-pointer text-center"
                       >
                         Back / पीछे
                       </button>
@@ -1144,31 +1145,31 @@ export default function BookingPage() {
 
             {paymentGatewayStatus === "processing" && (
               <div className="p-8 text-center space-y-4 flex flex-col items-center justify-center flex-1 min-h-[300px]">
-                <div className="h-12 w-12 animate-spin rounded-full border-4 border-slate-800 border-t-sky-500" />
-                <h3 className="text-sm font-extrabold text-white text-left">Processing Transaction...</h3>
-                <p className="text-xs text-slate-400 text-left">Verifying secure wallet signatures and banking gateway protocols. Do not refresh or press back.</p>
+                <div className="h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600" />
+                <h3 className="text-sm font-bold text-slate-800 text-left">Processing Transaction...</h3>
+                <p className="text-xs text-slate-500 text-left font-semibold">Verifying secure wallet signatures and banking gateway protocols. Do not refresh or press back.</p>
               </div>
             )}
 
             {paymentGatewayStatus === "failed" && (
               <div className="p-6 text-center space-y-5 flex flex-col items-center justify-center flex-1">
                 <span className="text-5xl text-red-500">❌</span>
-                <h3 className="text-base font-extrabold text-red-400">Payment Failed / भुगतान असफल</h3>
-                <p className="text-xs text-slate-400">
+                <h3 className="text-base font-bold text-red-750">Payment Failed / भुगतान असफल</h3>
+                <p className="text-xs text-slate-500 font-semibold">
                   {gatewayError || "Insufficient wallet balance or transaction rejected by server."}
                 </p>
                 <div className="flex gap-2 w-full pt-3">
                   <button
                     type="button"
                     onClick={() => setPaymentGatewayStatus("idle")}
-                    className="flex-1 py-2.5 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-white rounded-lg active:scale-95 transition cursor-pointer"
+                    className="flex-1 py-2.5 text-xs font-bold bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-lg active:scale-95 transition cursor-pointer"
                   >
                     Try Again / पुनः प्रयास
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowPaymentGateway(false)}
-                    className="flex-1 py-2.5 text-xs font-bold bg-transparent text-slate-400 border border-slate-800 hover:bg-white/5 rounded-lg active:scale-95 transition cursor-pointer"
+                    className="flex-1 py-2.5 text-xs font-bold bg-transparent text-slate-500 border border-slate-200 hover:bg-slate-50 rounded-lg active:scale-95 transition cursor-pointer"
                   >
                     Cancel / रद्द करें
                   </button>

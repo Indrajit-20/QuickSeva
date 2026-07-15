@@ -129,69 +129,68 @@ export default function BecomeSeller() {
     }
   };
 
+  const inputClass =
+    "w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-105 focus:border-blue-500 transition font-medium shadow-xs";
+
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-900 via-indigo-950 to-black flex items-center justify-center p-4 py-12">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 py-12">
       <div
         ref={formRef}
         style={{ scrollMarginTop: "90px" }}
-        className="bg-indigo-900/40 backdrop-blur-md rounded-2xl shadow-2xl w-full max-w-lg p-5 sm:p-8 border border-indigo-500/30 red-accent-line"
+        className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 sm:p-8 border border-slate-200 text-slate-850"
       >
-        <div className="text-center mb-6">
-          <h1 className="text-3xl font-bold text-white mb-2">
+        <div className="text-center mb-6 text-slate-850">
+          <h1 className="text-3xl font-bold text-slate-800 mb-2">
             Register as a Seller
           </h1>
-          <p className="text-indigo-200 text-sm">
+          <p className="text-slate-500 text-sm font-semibold">
             Upgrade your account to offer services on QuickSeva
           </p>
         </div>
 
         {apiError && (
-          <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg">
-            <p className="text-red-200 text-xs flex items-center">
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-left">
+            <p className="text-red-700 text-xs flex items-center font-semibold">
               <span className="mr-2">⚠</span>
               {apiError}
             </p>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-5 text-left">
           {/* Read-only User Details */}
-          <div className="grid grid-cols-2 gap-4 p-3 rounded-xl bg-indigo-950/50 border border-indigo-500/10">
+          <div className="grid grid-cols-2 gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
             <div>
-              <span className="block text-[10px] text-indigo-300 uppercase font-semibold">Owner Name</span>
-              <span className="text-white text-sm font-medium">{user?.name}</span>
+              <span className="block text-[10px] text-slate-400 uppercase font-bold tracking-wider">Owner Name</span>
+              <span className="text-slate-800 text-sm font-bold mt-0.5 block">{user?.name}</span>
             </div>
             <div>
-              <span className="block text-[10px] text-indigo-300 uppercase font-semibold">Phone</span>
-              <span className="text-white text-sm font-medium">{user?.phone}</span>
+              <span className="block text-[10px] text-slate-400 uppercase font-bold tracking-wider">Phone</span>
+              <span className="text-slate-800 text-sm font-bold mt-0.5 block">{user?.phone}</span>
             </div>
           </div>
 
           {/* Business Name */}
           <div>
-            <label className="block text-xs font-semibold text-indigo-200 mb-2">
-              Business Name <span className="text-red-400">*</span>
+            <label className="block text-xs font-bold text-slate-600 mb-2 uppercase tracking-wider">
+              Business Name <span className="text-red-500">*</span>
             </label>
             <input
               name="businessName"
               value={formData.businessName}
               onChange={handleChange}
               placeholder="e.g. Super Clean Services"
-              className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${
-                errors.businessName && touched.businessName
-                  ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30"
-                  : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
-              }`}
+              className={`${inputClass} ${errors.businessName && touched.businessName ? "border-red-300 focus:ring-red-100" : ""}`}
             />
             {errors.businessName && touched.businessName && (
-              <p className="mt-1 text-xs text-red-300">⚠ {errors.businessName}</p>
+              <p className="mt-1.5 text-xs font-semibold text-red-600">⚠ {errors.businessName}</p>
             )}
           </div>
 
           {/* Experience */}
           <div>
-            <label className="block text-xs font-semibold text-indigo-200 mb-2">
-              Years of Experience <span className="text-red-400">*</span>
+            <label className="block text-xs font-bold text-slate-600 mb-2 uppercase tracking-wider">
+              Years of Experience <span className="text-red-500">*</span>
             </label>
             <input
               type="number"
@@ -200,20 +199,16 @@ export default function BecomeSeller() {
               onChange={handleChange}
               placeholder="e.g. 3"
               min="0"
-              className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${
-                errors.experienceYrs && touched.experienceYrs
-                  ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30"
-                  : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
-              }`}
+              className={`${inputClass} ${errors.experienceYrs && touched.experienceYrs ? "border-red-300 focus:ring-red-100" : ""}`}
             />
             {errors.experienceYrs && touched.experienceYrs && (
-              <p className="mt-1 text-xs text-red-300">⚠ {errors.experienceYrs}</p>
+              <p className="mt-1.5 text-xs font-semibold text-red-600">⚠ {errors.experienceYrs}</p>
             )}
           </div>
 
           {/* Bio */}
           <div>
-            <label className="block text-xs font-semibold text-indigo-200 mb-2">
+            <label className="block text-xs font-bold text-slate-600 mb-2 uppercase tracking-wider">
               Bio / Business Description
             </label>
             <textarea
@@ -222,14 +217,14 @@ export default function BecomeSeller() {
               onChange={handleChange}
               rows={3}
               placeholder="Describe the services you offer..."
-              className="w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border border-indigo-500/30 placeholder-indigo-400 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all duration-200"
+              className={inputClass}
             />
           </div>
 
           {/* Location Picker */}
           <div>
-            <label className="block text-xs font-semibold text-indigo-200 mb-2">
-              Service Location <span className="text-red-400">*</span>
+            <label className="block text-xs font-bold text-slate-600 mb-2 uppercase tracking-wider">
+              Service Location <span className="text-red-500">*</span>
             </label>
             <LocationPicker
               hideMap={true}
@@ -241,17 +236,17 @@ export default function BecomeSeller() {
               }
             />
             {errors.location && touched.location && (
-              <p className="mt-1 text-xs text-red-300">⚠ {errors.location}</p>
+              <p className="mt-1.5 text-xs font-semibold text-red-600">⚠ {errors.location}</p>
             )}
             {errors.pincode && touched.pincode && (
-              <p className="mt-1 text-xs text-red-300">⚠ {errors.pincode}</p>
+              <p className="mt-1.5 text-xs font-semibold text-red-600">⚠ {errors.pincode}</p>
             )}
           </div>
 
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full mt-4 px-4 py-2.5 rounded-lg font-semibold text-white bg-indigo-600 force-text-white hover:bg-indigo-700 hover:scale-[1.01] hover:shadow-lg active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+            className="w-full mt-4 px-4 py-3 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             {isLoading ? "Upgrading Account..." : "Register as Seller"}
           </button>

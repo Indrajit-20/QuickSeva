@@ -94,36 +94,41 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-900 via-indigo-950 to-black flex items-center justify-center p-4">
-      <div className="bg-indigo-900/40 backdrop-blur-md rounded-2xl shadow-2xl w-full max-w-md p-5 sm:p-8 border border-indigo-500/30 red-accent-line">
+    <div className="auth-page">
+      <div className="auth-card animate-scale-in">
 
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">Welcome Back</h1>
-          <p className="text-indigo-200">Login to your account</p>
+          {/* Logo accent */}
+          <div className="inline-flex items-center justify-center w-14 h-14 bg-blue-50 rounded-2xl mb-4 mx-auto">
+            <span className="text-2xl">⚡</span>
+          </div>
+          <h1 className="auth-heading">Welcome Back</h1>
+          <p className="auth-subheading mt-1">Sign in to your QuickSeva account</p>
         </div>
 
         {/* Global Errors */}
         {(authError || localErrors.submit) && (
-          <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 text-red-200 rounded-lg text-sm flex items-center gap-2">
+          <div className="auth-alert-error mb-4">
             <span>⚠️</span>
             <span>{authError || localErrors.submit}</span>
           </div>
         )}
 
         {localMessage && (
-          <div className="mb-4 p-3 bg-emerald-500/15 border border-emerald-500/30 text-emerald-100 rounded-lg text-sm">
+          <div className="auth-alert-success mb-4">
             {localMessage}
           </div>
         )}
 
-        <form onSubmit={handleLogin} className="space-y-5">
+        <form onSubmit={handleLogin} className="space-y-4">
           {/* Phone Field */}
-          <div>
-            <label className="block text-xs font-semibold text-indigo-200 mb-2">
-              Phone Number <span className="text-red-400">*</span>
+          <div className="form-group">
+            <label className="form-label" htmlFor="login-phone">
+              Phone Number <span className="required">*</span>
             </label>
             <input
+              id="login-phone"
               type="tel"
               value={phone}
               onChange={(e) => {
@@ -134,30 +139,29 @@ const Login = () => {
               placeholder="98765 43210"
               maxLength={10}
               disabled={isLoading}
-              className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${localErrors.phone
-                  ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
-                  : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
-                }`}
+              className={`form-input${localErrors.phone ? " error" : ""}`}
             />
             {localErrors.phone && (
-              <p className="mt-1 text-xs text-red-300">⚠ {localErrors.phone}</p>
+              <p className="form-error">⚠ {localErrors.phone}</p>
             )}
           </div>
 
           {/* Password Field */}
-          <div>
-            <div className="flex justify-between items-center mb-2">
-              <label className="block text-xs font-semibold text-indigo-200">
-                Password <span className="text-red-400">*</span>
+          <div className="form-group">
+            <div className="flex justify-between items-center">
+              <label className="form-label" htmlFor="login-password">
+                Password <span className="required">*</span>
               </label>
               <Link
                 to="/forgot-password"
-                className="text-xs text-indigo-400 hover:text-indigo-300 hover:underline"
+                className="text-xs font-semibold"
+                style={{ backgroundImage: "none" }}
               >
                 Forgot Password?
               </Link>
             </div>
             <input
+              id="login-password"
               type="password"
               value={password}
               onChange={(e) => {
@@ -166,31 +170,38 @@ const Login = () => {
               }}
               placeholder="••••••••"
               disabled={isLoading}
-              className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${localErrors.password
-                  ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
-                  : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
-                }`}
+              className={`form-input${localErrors.password ? " error" : ""}`}
             />
             {localErrors.password && (
-              <p className="mt-1 text-xs text-red-300">⚠ {localErrors.password}</p>
+              <p className="form-error">⚠ {localErrors.password}</p>
             )}
           </div>
 
           {/* Captcha Field */}
-          <div>
-            <label className="block text-xs font-semibold text-indigo-200 mb-2">
-              Verify Captcha <span className="text-red-400">*</span>
+          <div className="form-group">
+            <label className="form-label">
+              Verify Captcha <span className="required">*</span>
             </label>
-            <div className="flex gap-2">
-              <div className="grow flex items-center justify-center bg-indigo-950/60 border border-indigo-500/30 rounded-lg text-white font-bold select-none py-2 px-3 text-center tracking-wider text-base">
+            <div className="flex gap-2 mb-2">
+              <div className="auth-captcha-box">
                 {fetchingCaptcha ? "Generating..." : captchaQuestion}
               </div>
               <button
                 type="button"
                 onClick={fetchNewCaptcha}
                 disabled={fetchingCaptcha || isLoading}
-                className="px-3 py-2 bg-indigo-900/60 border border-indigo-500/30 hover:bg-indigo-800 rounded-lg text-indigo-300 text-sm font-semibold active:scale-95 transition-transform"
                 title="Refresh Captcha"
+                style={{
+                  padding: "0.5rem 0.75rem",
+                  background: "var(--qs-surface-2)",
+                  border: "1.5px solid var(--qs-border)",
+                  borderRadius: "var(--qs-radius-sm)",
+                  color: "var(--qs-muted)",
+                  fontSize: "1rem",
+                  cursor: "pointer",
+                  transition: "var(--qs-transition)",
+                  flexShrink: 0,
+                }}
               >
                 🔄
               </button>
@@ -205,42 +216,51 @@ const Login = () => {
               }}
               placeholder="Enter answer"
               disabled={isLoading}
-              className={`w-full mt-2 px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${localErrors.captcha
-                  ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
-                  : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
-                }`}
+              className={`form-input${localErrors.captcha ? " error" : ""}`}
             />
             {localErrors.captcha && (
-              <p className="mt-1 text-xs text-red-300">⚠ {localErrors.captcha}</p>
+              <p className="form-error">⚠ {localErrors.captcha}</p>
             )}
           </div>
 
           {/* Login Button */}
           <button
             type="submit"
+            id="login-submit-btn"
             disabled={isLoading || fetchingCaptcha}
-            className="w-full mt-2 px-4 py-2.5 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-700 hover:scale-[1.01] hover:shadow-lg active:scale-[0.99] transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn btn-primary"
+            style={{ width: "100%", marginTop: "0.5rem", padding: "0.75rem 1.25rem", fontSize: "0.9375rem" }}
           >
-            {isLoading ? "Logging in..." : "Login"}
+            {isLoading ? (
+              <>
+                <span style={{ display: "inline-block", width: 16, height: 16, border: "2.5px solid rgba(255,255,255,0.4)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
+                Logging in...
+              </>
+            ) : "Sign In"}
           </button>
         </form>
 
-        <div className="my-6 flex items-center red-accent-top pt-6">
-          <div className="grow border-t border-indigo-500/30" />
-          <span className="px-4 text-indigo-300 text-sm">or</span>
-          <div className="grow border-t border-indigo-500/30" />
+        {/* Divider */}
+        <div className="auth-divider">
+          <span>or</span>
         </div>
 
-        <p className="text-center text-indigo-200 text-sm">
-          Don't have an account?{" "}
+        <p className="text-center text-sm" style={{ color: "var(--qs-muted)" }}>
+          Don&apos;t have an account?{" "}
           <Link
             to="/register"
-            className="font-bold text-red-400 hover:text-red-300 hover:underline"
+            style={{ color: "var(--qs-primary)", fontWeight: 700, backgroundImage: "none", textDecoration: "none" }}
           >
             Create one now
           </Link>
         </p>
       </div>
+
+      <style>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 };

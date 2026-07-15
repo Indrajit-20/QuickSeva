@@ -7,9 +7,6 @@ import { Link } from "react-router-dom";
 import { isPremiumActive } from "../../utils/premium";
 import apiClient from "../../api/axiosConfig";
 
-const cardBase =
-  "rounded-xl border border-[rgba(99,102,241,0.2)] bg-[#1a1830] p-5";
-
 export default function SellerDashboard() {
   const { user, updateUser } = useAuth();
 
@@ -56,25 +53,29 @@ export default function SellerDashboard() {
       label: "Total Orders",
       value: orders.length,
       icon: ClipboardList,
-      color: "text-indigo-300 bg-indigo-500/15",
+      iconBg: "bg-blue-50",
+      iconColor: "text-blue-600",
     },
     {
       label: "Pending Orders",
       value: pending.length,
       icon: Clock3,
-      color: "text-amber-300 bg-amber-500/15",
+      iconBg: "bg-amber-50",
+      iconColor: "text-amber-600",
     },
     {
       label: "Completed Orders",
       value: completed.length,
       icon: CheckCircle2,
-      color: "text-emerald-300 bg-emerald-500/15",
+      iconBg: "bg-emerald-50",
+      iconColor: "text-emerald-600",
     },
     {
       label: "Total Earnings",
       value: formatCurrency(earnings),
       icon: IndianRupee,
-      color: "text-violet-300 bg-violet-500/15",
+      iconBg: "bg-violet-50",
+      iconColor: "text-violet-600",
     },
   ];
 
@@ -86,17 +87,18 @@ export default function SellerDashboard() {
 
   return (
     <div className="animate-fade-in space-y-6">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold text-indigo-300">{today}</p>
-          <h1 className="mt-1 text-3xl font-bold text-white">
+          <p className="text-sm font-semibold text-blue-600">{today}</p>
+          <h1 className="mt-1 text-2xl font-bold text-slate-800">
             Welcome back, {user?.name || "Seller"}!
           </h1>
         </div>
-        
+
         <div className="flex flex-wrap items-center gap-3 self-start sm:self-center">
           {/* Availability Status Badge & Toggle */}
-          <div className="inline-flex items-center gap-3 rounded-full border border-slate-200/80 bg-white px-3.5 py-1.5 text-xs shadow-sm">
+          <div className="inline-flex items-center gap-3 rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-xs shadow-sm">
             <span className={`h-2 w-2 rounded-full ${user?.is_available ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
             <span className={`font-bold ${user?.is_available ? 'text-emerald-600' : 'text-rose-500'}`}>
               {user?.is_available ? 'Active / चालू' : 'Inactive / बंद'}
@@ -114,7 +116,7 @@ export default function SellerDashboard() {
                 }
               }}
               className={`relative inline-flex h-5 w-8 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${user?.is_available ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-slate-300 hover:bg-slate-400'}`}
-              title={user?.is_available ? "Active: Customers can see and book your services / चालू: ग्राहक आपकी सेवाएं देख सकते हैं" : "Inactive: Customers cannot see or book your services / बंद: ग्राहक आपकी सेवाएं नहीं देख सकते"}
+              title={user?.is_available ? "Active: Customers can see and book your services" : "Inactive: Customers cannot see or book your services"}
               aria-label="Toggle availability"
             >
               <span
@@ -124,7 +126,7 @@ export default function SellerDashboard() {
           </div>
 
           {hasPremium && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 shadow-sm">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 shadow-sm">
               👑 Premium Member
             </span>
           )}
@@ -133,17 +135,17 @@ export default function SellerDashboard() {
 
       {/* Offline Status Alert Banner */}
       {!user?.is_available && (
-        <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-5 flex items-start gap-3.5 animate-pulse">
+        <div className="rounded-xl border border-rose-200 bg-rose-50 p-5 flex items-start gap-3.5">
           <span className="text-2xl mt-0.5 select-none">⚠️</span>
           <div>
-            <h3 className="text-base font-bold text-rose-300">
+            <h3 className="text-base font-bold text-rose-700">
               You are currently Offline / आप अभी ऑफ़लाइन हैं
             </h3>
-            <p className="text-sm text-rose-200/90 mt-1 font-medium leading-relaxed">
-              Your services are hidden from customers. Switch your status to <strong className="text-white bg-rose-600/50 px-1.5 py-0.5 rounded font-bold">Active / चालू</strong> in the top header or sidebar to start showing up in searches and receiving new bookings.
+            <p className="text-sm text-rose-600 mt-1 font-medium leading-relaxed">
+              Your services are hidden from customers. Switch your status to <strong className="text-rose-800 bg-rose-100 px-1.5 py-0.5 rounded font-bold">Active / चालू</strong> in the top header or sidebar to start showing up in searches and receiving new bookings.
             </p>
-            <p className="text-xs text-rose-300/80 mt-1 font-medium">
-              आपकी सेवाएं ग्राहकों को दिखाई नहीं दे रही हैं। ग्राहकों की खोज में दिखने और नई बुकिंग प्राप्त करने के लिए ऊपर या साइडबार में अपनी स्थिति को <strong className="text-white bg-rose-600/50 px-1.5 py-0.5 rounded font-bold">Active / चालू</strong> पर बदलें।
+            <p className="text-xs text-rose-500 mt-1 font-medium">
+              आपकी सेवाएं ग्राहकों को दिखाई नहीं दे रही हैं। ग्राहकों की खोज में दिखने और नई बुकिंग प्राप्त करने के लिए ऊपर या साइडबार में अपनी स्थिति को <strong className="text-rose-800 bg-rose-100 px-1.5 py-0.5 rounded font-bold">Active / चालू</strong> पर बदलें।
             </p>
           </div>
         </div>
@@ -151,22 +153,22 @@ export default function SellerDashboard() {
 
       {/* Premium Boost Banner */}
       {!hasPremium && (
-        <div className="rounded-xl border border-purple-500/20 bg-purple-950/10 p-6 text-center space-y-4">
+        <div className="rounded-xl border border-purple-200 bg-purple-50 p-6 text-center space-y-4">
           <div className="flex justify-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-purple-500/10 text-purple-400">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-purple-100 text-purple-600">
               <Rocket className="rotate-45" size={24} />
             </div>
           </div>
           <div className="space-y-1">
-            <h3 className="text-lg font-bold text-white">Boost your profile with Premium Membership</h3>
-            <p className="text-sm text-slate-400 max-w-md mx-auto">
+            <h3 className="text-lg font-bold text-slate-800">Boost your profile with Premium Membership</h3>
+            <p className="text-sm text-slate-500 max-w-md mx-auto">
               Get top results in searches, highlight your map pin, and display a gold badge to attract more customers.
             </p>
           </div>
           <div>
             <Link
               to="/seller/packages"
-              className="inline-flex items-center justify-center px-6 py-2.5 rounded-lg text-sm font-bold force-text-white bg-purple-600 hover:bg-purple-700 transition-all duration-200 shadow-lg shadow-purple-600/20"
+              className="inline-flex items-center justify-center px-6 py-2.5 rounded-lg text-sm font-bold text-white bg-purple-600 hover:bg-purple-700 transition-all duration-200 shadow-sm"
             >
               GET PREMIUM MEMBERSHIP
             </Link>
@@ -175,25 +177,26 @@ export default function SellerDashboard() {
       )}
 
       {error && (
-        <div className="rounded-xl border border-red-400/30 bg-red-500/10 p-4 text-sm font-bold text-red-200">
-          {error}
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
+          ⚠ {error}
         </div>
       )}
 
+      {/* Stats Grid */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (
-            <div key={stat.label} className={cardBase}>
+            <div key={stat.label} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow">
               <div
-                className={`mb-4 flex h-11 w-11 items-center justify-center rounded-lg ${stat.color}`}
+                className={`mb-4 flex h-11 w-11 items-center justify-center rounded-xl ${stat.iconBg} ${stat.iconColor}`}
               >
                 <Icon size={22} />
               </div>
-              <div className="text-3xl font-black text-white">
+              <div className="text-3xl font-bold text-slate-800">
                 {loading ? "…" : stat.value}
               </div>
-              <div className="mt-1 text-sm font-medium text-[#94a3b8]">
+              <div className="mt-1 text-sm font-medium text-slate-500">
                 {stat.label}
               </div>
             </div>
@@ -201,61 +204,62 @@ export default function SellerDashboard() {
         })}
       </div>
 
-      <section className={cardBase}>
+      {/* Recent Orders */}
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-white">Recent Orders</h2>
-          <span className="rounded-full border border-indigo-400/30 bg-indigo-500/10 px-3 py-1 text-xs font-semibold text-indigo-200">
+          <h2 className="text-lg font-bold text-slate-800">Recent Orders</h2>
+          <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
             {orders.length} total
           </span>
         </div>
 
         {loading ? (
-          <div className="rounded-lg border border-dashed border-indigo-400/30 p-8 text-center text-[#94a3b8]">
+          <div className="rounded-lg border border-dashed border-slate-200 p-8 text-center text-slate-400">
             Loading orders…
           </div>
         ) : orders.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-indigo-400/30 p-8 text-center text-[#94a3b8]">
+          <div className="rounded-lg border border-dashed border-slate-200 p-8 text-center text-slate-400">
             No orders yet — your bookings will appear here
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px] text-left text-sm">
-              <thead className="border-b border-indigo-500/20 text-xs uppercase text-[#94a3b8]">
+              <thead className="border-b border-slate-200 text-xs uppercase text-slate-400 tracking-wide">
                 <tr>
-                  <th className="py-3 pr-4">Order #</th>
-                  <th className="py-3 pr-4">Customer</th>
-                  <th className="py-3 pr-4">Service</th>
-                  <th className="py-3 pr-4">Amount</th>
-                  <th className="py-3 pr-4">Status</th>
-                  <th className="py-3">Date</th>
+                  <th className="py-3 pr-4 font-semibold">Order #</th>
+                  <th className="py-3 pr-4 font-semibold">Customer</th>
+                  <th className="py-3 pr-4 font-semibold">Service</th>
+                  <th className="py-3 pr-4 font-semibold">Amount</th>
+                  <th className="py-3 pr-4 font-semibold">Status</th>
+                  <th className="py-3 font-semibold">Date</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-indigo-500/10">
+              <tbody className="divide-y divide-slate-100">
                 {orders.slice(0, 6).map((order) => (
-                  <tr key={order.id} className="text-slate-200">
-                    <td className="py-4 pr-4 font-bold text-white">
+                  <tr key={order.id} className="text-slate-600 hover:bg-slate-50 transition-colors">
+                    <td className="py-4 pr-4 font-bold text-slate-800">
                       {order.order_number || order.id}
                     </td>
                     <td className="py-4 pr-4">
                       {order.buyer_name || order.customer_name || "—"}
                     </td>
-                    <td className="py-4 pr-4">
+                    <td className="py-4 pr-4 text-blue-600 font-medium">
                       {order.service_title || order.service_name || "—"}
                     </td>
-                    <td className="py-4 pr-4 font-semibold">
+                    <td className="py-4 pr-4 font-semibold text-emerald-600">
                       {formatCurrency(order.total_amount)}
                     </td>
                     <td className="py-4 pr-4">
                       <span
-                        className={`rounded-full border px-3 py-1 text-xs font-bold capitalize ${
+                        className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold capitalize ${
                           statusClasses[order.status] ||
-                          "border-slate-400/30 bg-slate-400/10 text-slate-300"
+                          "border-slate-200 bg-slate-50 text-slate-600"
                         }`}
                       >
                         {order.status}
                       </span>
                     </td>
-                    <td className="py-4 text-[#94a3b8]">
+                    <td className="py-4 text-slate-400">
                       {order.created_at
                         ? new Date(order.created_at).toLocaleDateString("en-IN")
                         : "—"}

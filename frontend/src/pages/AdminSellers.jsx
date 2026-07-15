@@ -4,7 +4,6 @@ import { adminService } from "../api/adminService";
 import {
   Search,
   CheckCircle,
-  AlertCircle,
   FileText,
   UserCheck,
   UserX,
@@ -115,27 +114,30 @@ const AdminSellers = () => {
     setShowDetailModal(true);
   };
 
+  const inputClass =
+    "w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-slate-805 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 text-xs font-semibold shadow-xs";
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 text-left">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight">
+          <h1 className="text-3xl font-bold text-slate-800 tracking-tight">
             {activeTab === "pending"
               ? "Verification Requests"
               : activeTab === "verified"
               ? "Verified Seller Partners"
               : "Suspended Seller Partners"}
           </h1>
-          <p className="text-slate-400 mt-1">
+          <p className="text-slate-500 font-semibold text-sm mt-1">
             Review uploaded certificates, verify business compliance, or suspend accounts.
           </p>
         </div>
       </div>
 
       {/* Filters & Search */}
-      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-slate-900/40 p-4 rounded-2xl border border-indigo-950/40 backdrop-blur-md">
+      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
         <div className="relative w-full sm:w-80">
-          <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500">
+          <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 pointer-events-none">
             <Search size={16} />
           </span>
           <input
@@ -143,7 +145,7 @@ const AdminSellers = () => {
             placeholder="Search business name, contact..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-slate-950 border border-indigo-900/50 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 text-xs font-semibold"
+            className={inputClass}
           />
         </div>
 
@@ -153,7 +155,7 @@ const AdminSellers = () => {
       </div>
 
       {error && (
-        <div className="bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl p-4 text-xs">
+        <div className="bg-red-50 border border-red-200 text-red-750 rounded-xl p-4 text-xs font-semibold shadow-xs">
           ⚠️ {error}
         </div>
       )}
@@ -161,11 +163,11 @@ const AdminSellers = () => {
       {/* Sellers Grid List */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {loading ? (
-          <div className="col-span-full py-12 text-center text-slate-500 text-xs animate-pulse font-medium">
+          <div className="col-span-full py-12 text-center text-slate-400 text-xs animate-pulse font-bold">
             Loading partner profiles...
           </div>
         ) : sellers.length === 0 ? (
-          <div className="col-span-full py-12 text-center text-slate-500 text-xs font-medium">
+          <div className="col-span-full py-12 text-center text-slate-400 text-xs font-bold">
             No seller accounts in this category.
           </div>
         ) : (
@@ -173,39 +175,39 @@ const AdminSellers = () => {
             <div
               key={seller.id}
               onClick={() => handleOpenDetails(seller)}
-              className="bg-slate-900/40 border border-indigo-950/40 rounded-2xl p-6 hover:border-indigo-500/40 hover:bg-slate-900/60 transition-all duration-300 cursor-pointer flex flex-col justify-between space-y-4"
+              className="bg-white border border-slate-200 rounded-2xl p-6 hover:border-blue-400 hover:shadow-md transition-all duration-300 cursor-pointer flex flex-col justify-between space-y-4 shadow-sm"
             >
               <div>
                 <div className="flex justify-between items-start gap-2">
-                  <h3 className="font-extrabold text-white text-base truncate">
+                  <h3 className="font-bold text-slate-800 text-base truncate">
                     {seller.business_name || "QuickSeva Partner"}
                   </h3>
                   <span
-                    className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                    className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border ${
                       seller.is_verified
-                        ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/25"
-                        : "bg-amber-500/10 text-amber-400 border border-amber-500/25"
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                        : "bg-amber-50 text-amber-705 border-amber-200"
                     }`}
                   >
                     {seller.is_verified ? "Verified" : "Pending"}
                   </span>
                 </div>
 
-                <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mt-1">
+                <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mt-1">
                   {seller.category_name || "General Services"}
                 </p>
 
-                <div className="mt-4 space-y-2 text-xs text-slate-400">
+                <div className="mt-4 space-y-2 text-xs text-slate-500 font-semibold">
                   <div className="flex items-center gap-2">
-                    <Briefcase size={12} />
+                    <Briefcase size={12} className="text-slate-400" />
                     <span>Experience: {seller.experience_yrs} Yrs</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <MapPin size={12} className="shrink-0" />
+                    <MapPin size={12} className="text-slate-400 shrink-0" />
                     <span className="truncate">{seller.city || "Unknown City"}</span>
                   </div>
                   {seller.documents && seller.documents.length > 0 && (
-                    <div className="flex items-center gap-2 text-emerald-400 font-semibold text-[11px] mt-1 bg-emerald-500/5 px-2.5 py-1 rounded-lg border border-emerald-500/10 w-fit">
+                    <div className="flex items-center gap-2 text-emerald-700 font-bold text-[11px] mt-1 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 w-fit">
                       <FileText size={12} />
                       <span>{seller.documents.length} docs uploaded</span>
                     </div>
@@ -213,9 +215,9 @@ const AdminSellers = () => {
                 </div>
               </div>
 
-              <div className="border-t border-indigo-950/60 pt-4 flex items-center justify-between text-xs text-slate-500">
+              <div className="border-t border-slate-100 pt-4 flex items-center justify-between text-xs text-slate-550">
                 <span className="font-bold">By: {seller.name}</span>
-                <span className="flex items-center gap-1 font-bold text-slate-300">
+                <span className="flex items-center gap-1 font-bold text-slate-700">
                   <Star size={12} className="text-amber-400 fill-amber-400" />
                   <span>{seller.avg_rating || "0.0"}</span>
                 </span>
@@ -227,12 +229,12 @@ const AdminSellers = () => {
 
       {/* Verification Detailed Audit Modal */}
       {showDetailModal && selectedSeller && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-          <div className="bg-slate-900 border border-indigo-900/40 rounded-2xl max-w-2xl w-full p-6 space-y-6 shadow-2xl animate-fade-in max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-2xl w-full p-6 space-y-6 shadow-2xl animate-fade-in max-h-[90vh] overflow-y-auto text-slate-800">
             {/* Header */}
-            <div className="flex justify-between items-center border-b border-indigo-950 pb-3">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
               <div>
-                <h3 className="text-lg font-bold text-white">
+                <h3 className="text-lg font-bold text-slate-800">
                   {selectedSeller.business_name || "QuickSeva Partner"}
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
@@ -241,7 +243,7 @@ const AdminSellers = () => {
               </div>
               <button
                 onClick={() => setShowDetailModal(false)}
-                className="text-slate-400 hover:text-white"
+                className="text-slate-400 hover:text-slate-655 cursor-pointer p-1"
               >
                 <X size={18} />
               </button>
@@ -251,33 +253,33 @@ const AdminSellers = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
               <div className="space-y-4">
                 <div>
-                  <span className="text-slate-500 font-bold block mb-1">OWNER CONTACT</span>
-                  <p className="text-slate-200 font-semibold">{selectedSeller.name}</p>
-                  <p className="text-indigo-400 font-semibold">{selectedSeller.phone}</p>
-                  <p className="text-slate-400 font-medium">{selectedSeller.email || "No email address"}</p>
+                  <span className="text-slate-450 font-bold block mb-1 uppercase tracking-wider">OWNER CONTACT</span>
+                  <p className="text-slate-800 font-bold">{selectedSeller.name}</p>
+                  <p className="text-blue-600 font-bold">{selectedSeller.phone}</p>
+                  <p className="text-slate-500 font-medium">{selectedSeller.email || "No email address"}</p>
                 </div>
 
                 <div>
-                  <span className="text-slate-500 font-bold block mb-1">BUSINESS DETAILS</span>
-                  <p className="text-slate-200 font-semibold">Category: {selectedSeller.category_name || "General"}</p>
-                  <p className="text-slate-200 font-semibold">Experience: {selectedSeller.experience_yrs} Years</p>
-                  <p className="text-slate-200 font-semibold">Seller Type: {selectedSeller.seller_type || "individual"}</p>
-                  <p className="text-slate-300 font-medium">GST number: {selectedSeller.gst_number || "Not Registered"}</p>
+                  <span className="text-slate-450 font-bold block mb-1 uppercase tracking-wider">BUSINESS DETAILS</span>
+                  <p className="text-slate-700 font-semibold">Category: {selectedSeller.category_name || "General"}</p>
+                  <p className="text-slate-700 font-semibold">Experience: {selectedSeller.experience_yrs} Years</p>
+                  <p className="text-slate-700 font-semibold">Seller Type: {selectedSeller.seller_type || "individual"}</p>
+                  <p className="text-slate-600 font-semibold">GST number: {selectedSeller.gst_number || "Not Registered"}</p>
                 </div>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <span className="text-slate-500 font-bold block mb-1">SERVICE LOCATION</span>
-                  <p className="text-slate-200 font-semibold">{selectedSeller.address || "No address listed"}</p>
-                  <p className="text-slate-400 font-medium">
+                  <span className="text-slate-450 font-bold block mb-1 uppercase tracking-wider">SERVICE LOCATION</span>
+                  <p className="text-slate-800 font-bold">{selectedSeller.address || "No address listed"}</p>
+                  <p className="text-slate-500 font-semibold mt-0.5">
                     {selectedSeller.city}, {selectedSeller.state} - {selectedSeller.pincode}
                   </p>
                 </div>
 
                 <div>
-                  <span className="text-slate-500 font-bold block mb-1">SHORT BIO</span>
-                  <p className="text-slate-400 italic bg-slate-950/40 p-3 rounded-xl border border-indigo-950 font-medium leading-relaxed">
+                  <span className="text-slate-450 font-bold block mb-1 uppercase tracking-wider">SHORT BIO</span>
+                  <p className="text-slate-600 italic bg-slate-50 p-3 rounded-xl border border-slate-200 font-medium leading-relaxed">
                     {selectedSeller.bio || "No biography provided by partner."}
                   </p>
                 </div>
@@ -286,7 +288,7 @@ const AdminSellers = () => {
 
             {/* Uploaded Documents List */}
             <div>
-              <span className="text-slate-500 text-xs font-bold block mb-3">SUBMITTED IDENTIFICATION/DOCUMENTS</span>
+              <span className="text-slate-450 text-xs font-bold block mb-3 uppercase tracking-wider">SUBMITTED IDENTIFICATION/DOCUMENTS</span>
               {selectedSeller.documents && selectedSeller.documents.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {selectedSeller.documents.map((doc, idx) => (
@@ -295,10 +297,10 @@ const AdminSellers = () => {
                       href={getDocUrl(doc)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center justify-between p-3.5 bg-slate-950/60 border border-indigo-950 hover:border-indigo-500/30 rounded-xl text-xs text-indigo-400 hover:text-indigo-200 transition-all font-semibold"
+                      className="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-200 hover:border-blue-400 rounded-xl text-xs text-blue-600 hover:text-blue-700 transition-all font-bold shadow-2xs"
                     >
                       <div className="flex items-center gap-2">
-                        <FileText size={14} />
+                        <FileText size={14} className="text-slate-450" />
                         <span>Document_{idx + 1}.pdf</span>
                       </div>
                       <Download size={14} />
@@ -306,19 +308,19 @@ const AdminSellers = () => {
                   ))}
                 </div>
               ) : (
-                <div className="text-slate-600 italic text-xs bg-slate-950/30 p-4 rounded-xl border border-indigo-950/30 text-center font-medium">
+                <div className="text-slate-500 italic text-xs bg-slate-50 p-4 rounded-xl border border-slate-200 text-center font-semibold">
                   ⚠️ No verification documents uploaded yet.
                 </div>
               )}
             </div>
 
             {/* Actions Footer */}
-            <div className="flex justify-end gap-3 pt-4 border-t border-indigo-950">
+            <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
               <button
                 type="button"
                 onClick={() => setShowDetailModal(false)}
                 disabled={actionLoading}
-                className="px-4 py-2 bg-slate-950 text-slate-400 font-semibold rounded-xl border border-slate-900 transition-all text-xs"
+                className="px-4 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold rounded-xl border border-slate-200 transition-all text-xs cursor-pointer"
               >
                 Cancel
               </button>
@@ -328,7 +330,7 @@ const AdminSellers = () => {
                   type="button"
                   onClick={() => handleToggleSuspension(selectedSeller)}
                   disabled={actionLoading}
-                  className="px-4 py-2 bg-red-950/30 hover:bg-red-900/40 border border-red-500/20 text-red-400 hover:text-white font-bold rounded-xl transition-all text-xs flex items-center gap-1"
+                  className="px-4 py-2.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-bold rounded-xl transition-all text-xs flex items-center gap-1 cursor-pointer"
                 >
                   <UserX size={14} />
                   <span>Suspend Account</span>
@@ -340,7 +342,7 @@ const AdminSellers = () => {
                   type="button"
                   onClick={() => handleToggleSuspension(selectedSeller)}
                   disabled={actionLoading}
-                  className="px-4 py-2 bg-emerald-950/30 hover:bg-emerald-900/40 border border-emerald-500/20 text-emerald-400 hover:text-white font-bold rounded-xl transition-all text-xs flex items-center gap-1"
+                  className="px-4 py-2.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 font-bold rounded-xl transition-all text-xs flex items-center gap-1 cursor-pointer"
                 >
                   <UserCheck size={14} />
                   <span>Reactivate Account</span>
@@ -352,7 +354,7 @@ const AdminSellers = () => {
                   type="button"
                   onClick={() => handleVerifySeller(selectedSeller.id)}
                   disabled={actionLoading}
-                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all text-xs flex items-center gap-1.5 shadow-lg shadow-indigo-950/40"
+                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
                 >
                   <CheckCircle size={14} />
                   <span>Approve Partner</span>

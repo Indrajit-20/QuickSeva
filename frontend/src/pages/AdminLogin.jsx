@@ -151,22 +151,25 @@ const AdminLogin = () => {
     window.location.reload();
   };
 
+  const inputClass =
+    "w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-805 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition font-medium shadow-xs";
+
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-900 via-indigo-950 to-black flex items-center justify-center p-4">
-      <div className="bg-indigo-900/40 backdrop-blur-md rounded-2xl shadow-2xl w-full max-w-md p-8 border border-indigo-500/30">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 sm:p-8 border border-slate-200 text-slate-850">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">Admin Login</h1>
-          <p className="text-indigo-200">Manage QuickSeva Platform</p>
+          <h1 className="text-3xl font-bold text-slate-800 mb-2">Admin Login</h1>
+          <p className="text-slate-500 font-semibold text-sm">Manage QuickSeva Platform</p>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-4 text-left">
           {/* Username Field */}
           <div>
             <label
               htmlFor="username"
-              className="block text-sm font-medium text-indigo-200 mb-2"
+              className="block text-xs font-bold text-slate-600 mb-2 uppercase tracking-wider"
             >
               Admin Username
             </label>
@@ -177,16 +180,12 @@ const AdminLogin = () => {
               value={formData.username}
               onChange={handleChange}
               onBlur={handleBlur}
-              className={`w-full px-4 py-3 rounded-lg bg-indigo-800/50 border-2 text-white placeholder-indigo-300 focus:outline-none transition-all ${
-                touched.username && errors.username
-                  ? "border-red-500 focus:border-red-500"
-                  : "border-indigo-500/30 focus:border-indigo-400"
-              }`}
+              className={`${inputClass} ${touched.username && errors.username ? "border-red-300 focus:ring-red-105" : ""}`}
               placeholder="e.g., admin"
               disabled={loading}
             />
             {touched.username && errors.username && (
-              <p className="text-red-400 text-sm mt-1">⚠️ {errors.username}</p>
+              <p className="text-red-600 font-semibold text-xs mt-1.5">⚠️ {errors.username}</p>
             )}
           </div>
 
@@ -194,7 +193,7 @@ const AdminLogin = () => {
           <div>
             <label
               htmlFor="password"
-              className="block text-sm font-medium text-indigo-200 mb-2"
+              className="block text-xs font-bold text-slate-600 mb-2 uppercase tracking-wider"
             >
               Password
             </label>
@@ -205,30 +204,26 @@ const AdminLogin = () => {
               value={formData.password}
               onChange={handleChange}
               onBlur={handleBlur}
-              className={`w-full px-4 py-3 rounded-lg bg-indigo-800/50 border-2 text-white placeholder-indigo-300 focus:outline-none transition-all ${
-                touched.password && errors.password
-                  ? "border-red-500 focus:border-red-500"
-                  : "border-indigo-500/30 focus:border-indigo-400"
-              }`}
+              className={`${inputClass} ${touched.password && errors.password ? "border-red-300 focus:ring-red-105" : ""}`}
               placeholder="Enter admin password"
               disabled={loading}
             />
             {touched.password && errors.password && (
-              <p className="text-red-400 text-sm mt-1">⚠️ {errors.password}</p>
+              <p className="text-red-600 font-semibold text-xs mt-1.5">⚠️ {errors.password}</p>
             )}
           </div>
 
           {/* Submit Errors */}
           {errors.submit && (
-            <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-3">
-              <p className="text-red-300 text-sm">❌ {errors.submit}</p>
+            <div className="bg-red-50 border border-red-200 rounded-xl p-3">
+              <p className="text-red-700 text-xs font-semibold">❌ {errors.submit}</p>
             </div>
           )}
 
           {/* Success Message */}
           {successMessage && (
-            <div className="bg-green-500/20 border border-green-500/50 rounded-lg p-3">
-              <p className="text-green-300 text-sm">{successMessage}</p>
+            <div className="bg-emerald-50 border border-emerald-250 rounded-xl p-3">
+              <p className="text-emerald-700 text-xs font-semibold">{successMessage}</p>
             </div>
           )}
 
@@ -236,7 +231,7 @@ const AdminLogin = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 px-4 bg-linear-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-700 text-white font-bold rounded-lg transition-all duration-200 transform hover:scale-105 disabled:scale-100"
+            className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold rounded-xl transition shadow-sm cursor-pointer"
           >
             {loading ? "🔄 Logging in..." : "🔐 Admin Login"}
           </button>
@@ -244,40 +239,40 @@ const AdminLogin = () => {
 
         {/* Divider */}
         <div className="my-6 flex items-center">
-          <div className="flex-1 border-t border-indigo-500/30"></div>
-          <p className="px-4 text-indigo-300 text-sm">Testing Credentials</p>
-          <div className="flex-1 border-t border-indigo-500/30"></div>
+          <div className="flex-1 border-t border-slate-200"></div>
+          <p className="px-4 text-slate-400 text-xs font-bold uppercase tracking-wider">Testing Credentials</p>
+          <div className="flex-1 border-t border-slate-200"></div>
         </div>
 
         {/* Test Credentials Info */}
-        <div className="bg-indigo-800/30 border border-indigo-500/30 rounded-lg p-4 mb-6">
-          <p className="text-indigo-200 text-sm font-semibold mb-2">
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-6 text-left">
+          <p className="text-slate-700 text-xs font-bold uppercase tracking-wider mb-2">
             📋 Use these to test:
           </p>
-          <p className="text-indigo-300 text-xs">
-            Username: <span className="font-mono text-indigo-100">admin</span>
+          <p className="text-slate-600 text-xs font-semibold">
+            Username: <span className="font-mono text-slate-900 bg-white border border-slate-200 px-1 rounded">admin</span>
           </p>
-          <p className="text-indigo-300 text-xs">
+          <p className="text-slate-600 text-xs font-semibold mt-1.5">
             Password:{" "}
-            <span className="font-mono text-indigo-100">Admin@123</span>
+            <span className="font-mono text-slate-900 bg-white border border-slate-200 px-1 rounded">Admin@123</span>
           </p>
         </div>
 
         {/* Footer Links */}
         <div className="text-center space-y-3">
-          <p className="text-indigo-300 text-sm">
+          <p className="text-slate-500 text-sm font-semibold">
             Not an admin?{" "}
             <button
               onClick={handleSwitchToUser}
-              className="text-indigo-400 hover:text-indigo-300 font-semibold bg-transparent border-none p-0 cursor-pointer outline-none"
+              className="text-blue-600 hover:text-blue-700 font-bold bg-transparent border-none p-0 cursor-pointer outline-none"
             >
               User Login
             </button>
           </p>
-          <p className="text-indigo-300 text-sm">
+          <p className="text-slate-500 text-sm font-semibold">
             <button
               onClick={handleGoHome}
-              className="text-indigo-400 hover:text-indigo-300 font-semibold bg-transparent border-none p-0 cursor-pointer outline-none"
+              className="text-blue-600 hover:text-blue-700 font-bold bg-transparent border-none p-0 cursor-pointer outline-none"
             >
               Back to Home
             </button>

@@ -19,13 +19,13 @@ const InputField = ({
   disabled,
   required = true,
 }) => (
-  <div>
-    <label className="block text-xs font-semibold text-indigo-200 mb-2">
-      {label} {required && <span className="text-red-400">*</span>}
+  <div className="text-left">
+    <label className="block text-xs font-bold text-slate-600 mb-2 uppercase tracking-wider">
+      {label} {required && <span className="text-red-500">*</span>}
     </label>
     <div className="relative">
       {prefix && (
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-400 font-semibold text-sm pointer-events-none select-none">
+        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-450 font-bold text-sm pointer-events-none select-none">
           {prefix}
         </span>
       )}
@@ -38,17 +38,17 @@ const InputField = ({
         placeholder={placeholder}
         maxLength={maxLength}
         disabled={disabled}
-        className={`w-full ${prefix ? "pl-12 pr-3" : "px-3"} py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed ${
+        className={`w-full ${prefix ? "pl-12 pr-3" : "px-3.5"} py-2.5 rounded-xl border text-sm font-medium bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-105 transition disabled:opacity-60 disabled:cursor-not-allowed ${
           error && isTouched
-            ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
+            ? "border-red-300 focus:border-red-500 focus:ring-red-100"
             : !error && isTouched && value
-            ? "border-green-500/50 focus:ring-2 focus:ring-green-500/30 focus:border-green-500"
-            : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
+            ? "border-emerald-300 focus:border-emerald-500 focus:ring-emerald-50"
+            : "border-slate-200 focus:border-blue-500 focus:ring-blue-100"
         }`}
       />
     </div>
     {error && isTouched && (
-      <p className="mt-1 text-xs text-red-300">⚠ {error}</p>
+      <p className="mt-1.5 text-xs font-semibold text-red-650">⚠ {error}</p>
     )}
   </div>
 );
@@ -200,13 +200,13 @@ const ForgotPassword = () => {
   };
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-900 via-indigo-950 to-black flex items-center justify-center p-4">
-      <div className="bg-indigo-900/40 backdrop-blur-md rounded-2xl shadow-2xl w-full max-w-md p-5 sm:p-8 border border-indigo-500/30 red-accent-line">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 sm:p-8 border border-slate-200 text-slate-850">
         
         {/* Header */}
         <div className="text-center mb-6">
-          <h1 className="text-3xl font-bold text-white mb-1">Reset Password</h1>
-          <p className="text-indigo-300 text-sm">
+          <h1 className="text-3xl font-bold text-slate-800 mb-1">Reset Password</h1>
+          <p className="text-slate-500 text-sm">
             {step === 1
               ? "Verify your mobile number to reset password"
               : `Enter OTP sent to +91 ${phone}`}
@@ -215,8 +215,8 @@ const ForgotPassword = () => {
 
         {/* Success Banner */}
         {successMessage && (
-          <div className="mb-4 p-3 bg-green-500/20 border border-green-500/50 rounded-lg">
-            <p className="text-green-200 text-xs font-semibold flex items-center gap-2">
+          <div className="mb-4 p-3 bg-emerald-50 border border-emerald-250 rounded-xl text-left">
+            <p className="text-emerald-700 text-xs font-semibold flex items-center gap-2">
               <span>✓</span> {successMessage}
             </p>
           </div>
@@ -224,8 +224,8 @@ const ForgotPassword = () => {
 
         {/* Server Errors */}
         {serverError && (
-          <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg">
-            <p className="text-red-200 text-xs flex items-center gap-2">
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-left">
+            <p className="text-red-750 text-xs font-semibold flex items-center gap-2">
               <span>⚠️</span> {serverError}
             </p>
           </div>
@@ -254,7 +254,7 @@ const ForgotPassword = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full mt-2 px-4 py-2.5 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-700 hover:scale-[1.01] hover:shadow-lg active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+              className="w-full mt-2 px-4 py-3 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {isLoading ? "Sending OTP..." : "Get OTP →"}
             </button>
@@ -264,9 +264,9 @@ const ForgotPassword = () => {
         {/* STEP 2: Verify OTP and Enter New Password */}
         {step === 2 && (
           <form onSubmit={handleResetPassword} className="space-y-4" noValidate>
-            <div className="text-center bg-indigo-950/30 border border-indigo-500/20 rounded-lg p-3">
-              <p className="text-sm text-indigo-200">
-                OTP sent to <span className="font-semibold text-white">{phone}</span>
+            <div className="text-center bg-slate-50 border border-slate-200 rounded-xl p-4">
+              <p className="text-sm text-slate-650 font-semibold">
+                OTP sent to <span className="font-bold text-slate-800">{phone}</span>
               </p>
               <button
                 type="button"
@@ -276,7 +276,7 @@ const ForgotPassword = () => {
                   setServerError("");
                   setErrors({});
                 }}
-                className="mt-1 text-xs text-red-400 hover:text-red-300 font-medium underline focus:outline-none"
+                className="mt-2 text-xs text-red-650 hover:text-red-700 font-bold underline focus:outline-none cursor-pointer"
               >
                 Change Phone Number
               </button>
@@ -331,18 +331,18 @@ const ForgotPassword = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full mt-2 px-4 py-2.5 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-700 hover:scale-[1.01] hover:shadow-lg active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+              className="w-full mt-2 px-4 py-3 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {isLoading ? "Resetting Password..." : "Reset Password"}
             </button>
 
-            <div className="border-t border-indigo-500/20 pt-4 text-center">
-              <p className="text-xs text-indigo-300 mb-2">Didn't receive the OTP?</p>
+            <div className="border-t border-slate-200 pt-4 text-center">
+              <p className="text-xs text-slate-500 mb-2 font-semibold">Didn't receive the OTP?</p>
               <button
                 type="button"
                 onClick={handleResendOtp}
                 disabled={isLoading || resendCountdown > 0}
-                className={`w-full px-4 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-700 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 shadow-md ${
+                className={`w-full px-4 py-2.5 rounded-xl font-bold text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition shadow-xs cursor-pointer ${
                   isLoading || resendCountdown > 0
                     ? "opacity-50 cursor-not-allowed"
                     : "opacity-100"
@@ -354,10 +354,10 @@ const ForgotPassword = () => {
           </form>
         )}
 
-        <div className="my-6 border-t border-indigo-500/30 pt-6 text-center">
+        <div className="my-6 border-t border-slate-200 pt-6 text-center">
           <Link
             to="/login"
-            className="text-sm font-semibold text-indigo-400 hover:text-indigo-300 hover:underline"
+            className="text-sm font-bold text-blue-600 hover:text-blue-700 hover:underline"
           >
             ← Back to Login
           </Link>

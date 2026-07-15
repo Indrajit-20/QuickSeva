@@ -67,10 +67,13 @@ export default function AddFundsModal({
 
   if (!open) return null;
 
+  const inputClass =
+    "mt-2 w-full rounded-xl border border-slate-205 bg-white px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-450 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition font-medium shadow-xs";
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm px-4">
       <div
-        className="relative w-full max-w-md rounded-2xl border border-indigo-400/30 bg-[#1a1830] p-6 shadow-2xl"
+        className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl text-slate-800"
         role="dialog"
         aria-modal="true"
       >
@@ -80,7 +83,7 @@ export default function AddFundsModal({
             if (processing) return;
             onClose?.();
           }}
-          className="absolute right-4 top-4 rounded-lg bg-white/5 p-2 text-slate-300 hover:text-white disabled:opacity-50"
+          className="absolute right-4 top-4 rounded-lg p-2 text-slate-400 hover:text-slate-600 disabled:opacity-50 cursor-pointer"
           aria-label="Close"
           disabled={processing}
         >
@@ -88,23 +91,23 @@ export default function AddFundsModal({
         </button>
 
         {!isSuccess ? (
-          <>
-            <div className="flex items-start justify-between gap-4">
+          <div className="text-left">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
               <div>
-                <h2 className="text-2xl font-black text-white">Add Funds</h2>
-                <p className="mt-1 text-sm text-slate-400">
+                <h2 className="text-2xl font-bold text-slate-800">Add Funds</h2>
+                <p className="mt-1 text-sm text-slate-500 font-semibold">
                   Choose a payment method and add money to your wallet.
                 </p>
               </div>
-              <div className="flex items-center gap-2 rounded-xl border border-indigo-400/30 bg-indigo-500/10 px-3 py-2">
-                <Plus size={16} className="text-indigo-200" />
-                <span className="text-sm font-bold text-indigo-200">
+              <div className="flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3.5 py-2 self-start">
+                <Plus size={16} className="text-blue-600" />
+                <span className="text-sm font-bold text-blue-700">
                   Wallet: ₹{walletBalance}
                 </span>
               </div>
             </div>
 
-            <div className="mt-5 flex gap-2 rounded-xl border border-indigo-400/20 bg-white/5 p-1">
+            <div className="mt-5 flex gap-2 rounded-xl border border-slate-200 bg-slate-50 p-1">
               {[
                 { key: "upi", label: "UPI" },
                 { key: "card", label: "Card" },
@@ -114,10 +117,10 @@ export default function AddFundsModal({
                   key={t.key}
                   type="button"
                   onClick={() => setActiveTab(t.key)}
-                  className={`flex-1 rounded-lg px-3 py-2 text-sm font-bold transition ${
+                  className={`flex-1 rounded-lg px-3 py-2 text-sm font-bold transition cursor-pointer ${
                     activeTab === t.key
-                      ? "bg-indigo-500/20 text-indigo-200"
-                      : "text-slate-300 hover:text-white"
+                      ? "bg-white text-blue-600 shadow-xs border border-slate-200/50"
+                      : "text-slate-500 hover:text-slate-800"
                   }`}
                 >
                   {t.label}
@@ -126,7 +129,7 @@ export default function AddFundsModal({
             </div>
 
             <div className="mt-4">
-              <label className="block text-xs font-semibold text-indigo-200">
+              <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider">
                 Amount (₹)
               </label>
               <input
@@ -134,16 +137,18 @@ export default function AddFundsModal({
                 onChange={(e) => setAmountStr(e.target.value)}
                 inputMode="numeric"
                 placeholder="Enter amount"
-                className="mt-2 w-full rounded-lg border border-indigo-500/30 bg-indigo-950/40 px-3 py-2 text-sm text-white focus:outline-none"
+                className={inputClass}
               />
 
-              <div className="mt-3 rounded-xl border border-indigo-400/20 bg-white/5 p-3 text-xs text-slate-300">
+              <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-500 font-semibold">
                 Selected method:{" "}
-                {activeTab === "upi"
-                  ? "UPI"
-                  : activeTab === "card"
-                    ? "Card"
-                    : "Net Banking"}
+                <span className="font-bold text-slate-700 uppercase">
+                  {activeTab === "upi"
+                    ? "UPI"
+                    : activeTab === "card"
+                      ? "Card"
+                      : "Net Banking"}
+                </span>
               </div>
             </div>
 
@@ -151,24 +156,24 @@ export default function AddFundsModal({
               type="button"
               onClick={handleFakePay}
               disabled={processing || amount <= 0}
-              className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2.5 text-sm font-bold text-white transition hover:from-indigo-500 hover:to-violet-500 disabled:cursor-not-allowed disabled:opacity-50"
+              className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-4 py-3 text-sm font-bold text-white transition disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer shadow-sm"
             >
               {processing && <Loader2 size={16} className="animate-spin" />}
-              {processing ? "Processing" : `Pay ₹${amount || 0}`}
+              {processing ? "Processing..." : `Pay ₹${amount || 0}`}
             </button>
-          </>
+          </div>
         ) : (
           <div className="mt-2 text-center">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/15 border border-emerald-400/30">
-              <div className="text-emerald-200 font-black text-2xl">✓</div>
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 border border-emerald-250">
+              <div className="text-emerald-700 font-bold text-2xl">✓</div>
             </div>
 
-            <h3 className="mt-4 text-xl font-black text-white">
+            <h3 className="mt-4 text-xl font-bold text-slate-800">
               {successMessage ||
                 `₹${paidAmount} added! You can now purchase the plan.`}
             </h3>
 
-            <div className="mt-5 rounded-xl border border-indigo-400/20 bg-white/5 p-3 text-sm text-slate-300">
+            <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-500 font-semibold">
               Wallet top-up completed successfully.
             </div>
 
@@ -183,7 +188,7 @@ export default function AddFundsModal({
                 // Let parent decide reopen/close; default just close
                 onClose?.();
               }}
-              className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2.5 text-sm font-bold text-white hover:from-indigo-500 hover:to-violet-500"
+              className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-4 py-3 text-sm font-bold text-white transition cursor-pointer shadow-sm"
             >
               {continueButtonLabel}
             </button>

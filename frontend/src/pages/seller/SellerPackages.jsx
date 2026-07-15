@@ -64,7 +64,7 @@ const STORAGE_KEYS = {
 };
 
 const cardBase =
-  "rounded-xl border border-[rgba(99,102,241,0.2)] bg-[#1a1830] p-5";
+  "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
 
 function readJson(key, fallback) {
   try {
@@ -78,10 +78,6 @@ function readJson(key, fallback) {
 function readArray(key) {
   const parsed = readJson(key, []);
   return Array.isArray(parsed) ? parsed : [];
-}
-
-function readPremium() {
-  return readJson(STORAGE_KEYS.premium, null);
 }
 
 function formatDate(iso) {
@@ -124,44 +120,22 @@ function getExpiryForPurchase(plan, activePremium, purchaseType) {
   return new Date(Date.now() + plan.days * 24 * 60 * 60 * 1000).toISOString();
 }
 
-function getPurchaseType(plan, activePremium) {
+// Custom purchase plan rank
+const getPurchaseType = (plan, activePremium) => {
   if (!activePremium?.plan) return "new";
   const currentRank = getPlanRank(activePremium.plan);
   const selectedRank = getPlanRank(plan.id);
   if (selectedRank === currentRank) return "extend";
   if (selectedRank > currentRank) return "upgrade";
   return "downgrade";
-}
+};
 
-function updateSellerPremium(user, premiumData) {
-  const { sellerId, userPhone, userName } = getSellerIdentity(user);
-  const sellers = readArray(STORAGE_KEYS.sellers);
-
-  const updated = sellers.map((seller) => {
-    const matches =
-      seller.id === sellerId ||
-      (userPhone && seller.phone === userPhone) ||
-      (userName && seller.name === userName);
-
-    if (!matches) return seller;
-
-    return {
-      ...seller,
-      isPremium: true,
-      plan: premiumData.plan,
-      premiumExpiresAt: premiumData.expiresAt,
-    };
-  });
-
-  localStorage.setItem(STORAGE_KEYS.sellers, JSON.stringify(updated));
-}
-
-function FeatureList({ features }) {
+function FeatureList({ features, isLight = true }) {
   return (
-    <ul className="space-y-2 text-sm text-slate-200">
+    <ul className="space-y-2 text-sm text-slate-600">
       {features.map((feature) => (
         <li key={feature} className="flex items-center gap-2">
-          <CheckCircle2 size={16} className="text-emerald-300" />
+          <CheckCircle2 size={16} className="text-emerald-600" />
           <span>{feature}</span>
         </li>
       ))}
@@ -174,7 +148,7 @@ function PlanActionCopy({ type, activePremium, selectedPlan }) {
 
   if (type === "extend") {
     return (
-      <p className="text-sm text-amber-100">
+      <p className="text-sm text-amber-800">
         Your current {selectedPlan.name} plan will be extended by{" "}
         {selectedPlan.days} days.
       </p>
@@ -184,14 +158,14 @@ function PlanActionCopy({ type, activePremium, selectedPlan }) {
   if (type === "upgrade") {
     const gained = getUpgradedFeatures(activePremium?.plan, selectedPlan.id);
     return (
-      <div className="space-y-2">
-        <p className="text-sm text-amber-100">
+      <div className="space-y-2 text-slate-700">
+        <p className="text-sm text-slate-700">
           Upgrading from {getPlanLabel(activePremium?.plan)} to{" "}
           {selectedPlan.name} starts the new plan immediately. Remaining days on
           the old plan are forfeited.
         </p>
         {gained.length > 0 && (
-          <p className="text-sm text-emerald-200">
+          <p className="text-sm text-emerald-700 font-semibold">
             New benefits: {gained.join(", ")}
           </p>
         )}
@@ -201,7 +175,7 @@ function PlanActionCopy({ type, activePremium, selectedPlan }) {
 
   if (type === "downgrade") {
     return (
-      <p className="text-sm text-amber-100">
+      <p className="text-sm text-amber-800">
         Downgrading starts {selectedPlan.name} today and forfeits remaining days
         on {getPlanLabel(activePremium?.plan)}.
       </p>
@@ -209,7 +183,7 @@ function PlanActionCopy({ type, activePremium, selectedPlan }) {
   }
 
   return (
-    <p className="text-sm text-slate-300">
+    <p className="text-sm text-slate-600">
       The package benefit activates immediately after wallet deduction.
     </p>
   );
@@ -279,7 +253,6 @@ export default function SellerPackages() {
   const [addFundsOpen, setAddFundsOpen] = useState(false);
   const [addFundsPrefill, setAddFundsPrefill] = useState(0);
   const [resumeConfirmAfterTopUp, setResumeConfirmAfterTopUp] = useState(false);
-  const [topUpDonePulse, setTopUpDonePulse] = useState(0);
 
   // Reusable modal flow state for adding wallet balance from this page
   const [addFundsSuccessTick, setAddFundsSuccessTick] = useState(0);
@@ -428,7 +401,7 @@ export default function SellerPackages() {
     } finally {
       setProcessing(false);
     }
-  }, [selectedPlan, purchasePreview, processing, refreshWallet, activePremium]);
+  }, [selectedPlan, purchasePreview, processing, refreshWallet, updateUser]);
 
   // Flag for UI: whether current wallet balance can cover selected plan price
   const insufficient = purchasePreview?.balanceAfter < 0;
@@ -436,7 +409,7 @@ export default function SellerPackages() {
   if (loadingProfile) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-indigo-400" />
+        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
       </div>
     );
   }
@@ -445,25 +418,25 @@ export default function SellerPackages() {
     <div className="animate-fade-in space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-sm font-semibold text-indigo-300">
+          <p className="text-sm font-semibold text-blue-600">
             Premium Packages
           </p>
-          <h1 className="mt-1 text-3xl font-bold text-white">
+          <h1 className="mt-1 text-2xl font-bold text-slate-800">
             Grow your QuickSeva business
           </h1>
-          <p className="mt-2 max-w-2xl text-sm text-slate-300">
+          <p className="mt-1 max-w-2xl text-sm text-slate-500">
             Buy a package from your wallet. The plan starts immediately after a
             successful wallet debit.
           </p>
         </div>
 
-        <div className="flex items-center gap-3 rounded-xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3">
-          <Wallet size={20} className="text-emerald-200" />
+        <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+          <Wallet size={20} className="text-emerald-700" />
           <div>
-            <p className="text-xs font-semibold text-emerald-200">
+            <p className="text-xs font-semibold text-emerald-600">
               Wallet Balance
             </p>
-            <p className="text-2xl font-black text-white">Rs {walletBalance}</p>
+            <p className="text-2xl font-black text-slate-800">Rs {walletBalance}</p>
           </div>
         </div>
       </div>
@@ -471,9 +444,9 @@ export default function SellerPackages() {
       {toast && (
         <div
           className={`rounded-xl border p-4 text-sm font-semibold ${
-            toast.startsWith("Insufficient")
-              ? "border-red-400/30 bg-red-500/10 text-red-200"
-              : "border-emerald-400/30 bg-emerald-500/10 text-emerald-200"
+            toast.startsWith("Insufficient") || toast.startsWith("Failed") || toast.startsWith("Error")
+              ? "border-red-200 bg-red-50 text-red-700"
+              : "border-emerald-200 bg-emerald-50 text-emerald-700"
           }`}
         >
           {toast}
@@ -481,14 +454,14 @@ export default function SellerPackages() {
       )}
 
       {activePremium && remainingDays <= 2 && (
-        <div className="flex items-start gap-3 rounded-xl border border-amber-400/30 bg-amber-500/10 p-4 text-sm font-semibold text-amber-100">
+        <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-700">
           <AlertTriangle size={18} className="mt-0.5 flex-shrink-0" />
           <span>Your plan expires soon. Renew to keep your visibility.</span>
         </div>
       )}
 
       {expiredPremium && (
-        <div className="rounded-xl border border-red-400/30 bg-red-500/10 p-4 text-sm font-semibold text-red-200">
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
           Your {getPlanLabel(expiredPremium.plan)} plan expired on{" "}
           {formatDate(expiredPremium.expiresAt)}. Choose a package below to
           renew.
@@ -501,38 +474,38 @@ export default function SellerPackages() {
             <div className="mb-2 flex items-center gap-2">
               <Crown
                 size={20}
-                className={activePremium ? "text-amber-300" : "text-slate-500"}
+                className={activePremium ? "text-amber-500" : "text-slate-400"}
               />
-              <h2 className="text-xl font-bold text-white">Current Status</h2>
+              <h2 className="text-lg font-bold text-slate-850">Current Status</h2>
               <span
                 className={`rounded-full border px-3 py-1 text-xs font-bold ${
                   activePremium
-                    ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-300"
-                    : "border-slate-500/30 bg-white/5 text-slate-300"
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                    : "border-slate-200 bg-slate-50 text-slate-600"
                 }`}
               >
                 {activePremium ? "Active" : "Free Plan"}
               </span>
             </div>
 
-            <p className="text-sm text-slate-300">
+            <p className="text-sm text-slate-600">
               {activePremium
                 ? `${activePlan?.name || "Premium"} plan active until ${expiryLabel}`
                 : "No active package. You still appear to customers, but below active package sellers."}
             </p>
 
             {activePremium && (
-              <p className="mt-2 text-sm font-bold text-emerald-200">
+              <p className="mt-2 text-sm font-bold text-emerald-600">
                 {remainingDays} {remainingDays === 1 ? "day" : "days"} remaining
               </p>
             )}
           </div>
 
-          <div className="rounded-lg bg-white/5 p-4">
+          <div className="rounded-lg bg-slate-50 border border-slate-200 p-4">
             {activePlan ? (
               <FeatureList features={activePlan.features} />
             ) : (
-              <ul className="space-y-2 text-sm text-slate-300">
+              <ul className="space-y-2 text-sm text-slate-500">
                 <li>Top placement locked</li>
                 <li>Contact hidden until booking</li>
                 <li>Badge and highlighted pin unavailable</li>
@@ -550,28 +523,28 @@ export default function SellerPackages() {
               key={plan.id}
               className={`${cardBase} ${
                 isCurrent
-                  ? "border-emerald-400/50 shadow-[0_0_25px_rgba(16,185,129,0.12)]"
+                  ? "border-emerald-350 shadow-sm"
                   : plan.id === "pro"
-                    ? "border-amber-400/40"
+                    ? "border-amber-250"
                     : ""
               }`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h3 className="text-xl font-bold text-white">{plan.name}</h3>
-                  <p className="mt-1 text-sm text-indigo-200">
+                  <h3 className="text-xl font-bold text-slate-800">{plan.name}</h3>
+                  <p className="mt-1 text-sm text-blue-600 font-semibold">
                     {plan.highlight}
                   </p>
                 </div>
                 {isCurrent && (
-                  <span className="rounded-full bg-emerald-400 px-3 py-1 text-xs font-black text-emerald-950">
+                  <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800 border border-emerald-250">
                     Active
                   </span>
                 )}
               </div>
 
               <div className="mt-5 flex items-end gap-2">
-                <span className="text-4xl font-black text-white">
+                <span className="text-4xl font-black text-slate-800">
                   Rs {plan.price}
                 </span>
                 <span className="pb-1 text-sm text-slate-400">
@@ -586,7 +559,7 @@ export default function SellerPackages() {
               <button
                 type="button"
                 onClick={() => openConfirmation(plan)}
-                className="mt-6 w-full rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2.5 text-sm font-bold text-white transition hover:from-indigo-500 hover:to-violet-500"
+                className="mt-6 w-full rounded-lg bg-blue-600 hover:bg-blue-700 px-4 py-2.5 text-sm font-bold text-white transition shadow-sm cursor-pointer"
               >
                 {isCurrent ? "Renew / Extend" : "Buy Now"}
               </button>
@@ -597,25 +570,25 @@ export default function SellerPackages() {
 
       <section className={cardBase}>
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-xl font-bold text-white">Package History</h2>
-          <span className="rounded-full border border-indigo-400/30 bg-indigo-500/10 px-3 py-1 text-xs font-semibold text-indigo-200">
+          <h2 className="text-lg font-bold text-slate-800">Package History</h2>
+          <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
             {history.length} purchases
           </span>
         </div>
 
         <div className="mt-4 overflow-x-auto">
           <table className="w-full min-w-[640px] text-left text-sm">
-            <thead className="border-b border-indigo-500/20 text-xs uppercase text-slate-400">
+            <thead className="border-b border-slate-200 text-xs uppercase text-slate-400 tracking-wide">
               <tr>
-                <th className="py-3 pr-4">Date</th>
-                <th className="py-3 pr-4">Plan</th>
-                <th className="py-3 pr-4">Type</th>
-                <th className="py-3 pr-4">Amount</th>
-                <th className="py-3">Expires</th>
-                <th className="py-3 pl-4">Invoice</th>
+                <th className="py-3 pr-4 font-semibold">Date</th>
+                <th className="py-3 pr-4 font-semibold">Plan</th>
+                <th className="py-3 pr-4 font-semibold">Type</th>
+                <th className="py-3 pr-4 font-semibold">Amount</th>
+                <th className="py-3 font-semibold">Expires</th>
+                <th className="py-3 pl-4 font-semibold">Invoice</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-indigo-500/10">
+            <tbody className="divide-y divide-slate-100">
               {history.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-8 text-center text-slate-400">
@@ -624,21 +597,21 @@ export default function SellerPackages() {
                 </tr>
               ) : (
                 history.slice(0, 10).map((entry) => (
-                  <tr key={entry.receiptId} className="text-slate-200">
+                  <tr key={entry.receiptId} className="text-slate-600 hover:bg-slate-50 transition-colors">
                     <td className="py-4 pr-4 text-slate-400">
                       {formatDateTime(entry.purchasedAt)}
                     </td>
-                    <td className="py-4 pr-4 font-bold">
+                    <td className="py-4 pr-4 font-bold text-slate-800">
                       {getPlanLabel(entry.plan)}
                     </td>
                     <td className="py-4 pr-4 capitalize">{entry.type}</td>
-                    <td className="py-4 pr-4 font-bold">-Rs {entry.price}</td>
+                    <td className="py-4 pr-4 font-bold text-red-600">-Rs {entry.price}</td>
                     <td className="py-4">{formatDate(entry.expiresAt)}</td>
                     <td className="py-4 pl-4">
                       <button
                         type="button"
                         onClick={() => openInvoice(entry)}
-                        className="rounded-lg border border-indigo-400/30 bg-indigo-500/10 px-3 py-1.5 text-xs font-bold text-indigo-200 transition hover:bg-indigo-500/20 hover:text-white"
+                        className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 transition hover:bg-slate-100 cursor-pointer"
                       >
                         Invoice
                       </button>
@@ -653,7 +626,7 @@ export default function SellerPackages() {
 
       {invoiceOpen && invoice && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm px-4"
           role="dialog"
           aria-modal="true"
         >
@@ -664,12 +637,12 @@ export default function SellerPackages() {
             onClick={closeInvoice}
           />
 
-          <div className="relative w-full max-w-2xl rounded-2xl border border-indigo-400/30 bg-[#1a1830] p-6 shadow-2xl">
+          <div className="relative w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
             <button
               type="button"
               onClick={closeInvoice}
               disabled={invoicePrinting}
-              className="absolute right-4 top-4 rounded-lg bg-white/5 p-2 text-slate-300 hover:text-white disabled:opacity-50"
+              className="absolute right-4 top-4 rounded-lg bg-slate-100 p-2 text-slate-500 hover:text-slate-700 disabled:opacity-50 cursor-pointer"
               aria-label="Close invoice modal"
             >
               <X size={18} />
@@ -677,11 +650,11 @@ export default function SellerPackages() {
 
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-sm font-semibold text-indigo-300">Invoice</p>
-                <p className="mt-1 text-2xl font-black text-white">
+                <p className="text-sm font-semibold text-blue-600">Invoice</p>
+                <p className="mt-1 text-2xl font-black text-slate-805">
                   {invoice.id}
                 </p>
-                <p className="mt-1 text-sm text-slate-300">
+                <p className="mt-1 text-sm text-slate-400">
                   Invoice date:{" "}
                   {formatDate(invoice.meta?.purchasedAt || invoice.meta?.date)}
                 </p>
@@ -695,42 +668,42 @@ export default function SellerPackages() {
                     window.print();
                     window.setTimeout(() => setInvoicePrinting(false), 1000);
                   }}
-                  className="rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2.5 text-sm font-bold text-white hover:from-indigo-500 hover:to-violet-500"
+                  className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-700 shadow-sm cursor-pointer"
                 >
                   Download / Print
                 </button>
               </div>
             </div>
 
-            <div className="rounded-xl border border-indigo-500/20 bg-white p-6 text-black">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-6 text-slate-800">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <div className="text-xl font-black">QuickSeva</div>
-                  <div className="text-sm text-slate-600">
+                  <div className="text-xl font-bold">QuickSeva</div>
+                  <div className="text-sm text-slate-500">
                     Premium Seller Invoice
                   </div>
                 </div>
                 <div className="text-sm">
-                  <div className="font-semibold">Invoice No:</div>
+                  <div className="font-semibold text-slate-500">Invoice No:</div>
                   <div>{invoice.id}</div>
                 </div>
               </div>
 
               <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <div className="text-sm font-semibold text-slate-700">
+                  <div className="text-sm font-semibold text-slate-500">
                     Seller
                   </div>
-                  <div className="text-sm text-slate-600">
+                  <div className="text-sm text-slate-700 font-bold">
                     {invoice.seller?.name || "User"} —{" "}
                     {invoice.seller?.phone || "8160977394"}
                   </div>
                 </div>
                 <div>
-                  <div className="text-sm font-semibold text-slate-700">
+                  <div className="text-sm font-semibold text-slate-500">
                     Date
                   </div>
-                  <div className="text-sm text-slate-600">
+                  <div className="text-sm text-slate-700">
                     {formatDate(
                       invoice.meta?.purchasedAt || invoice.meta?.date,
                     )}
@@ -739,17 +712,17 @@ export default function SellerPackages() {
               </div>
 
               <div className="mt-6">
-                <div className="mb-2 text-sm font-semibold text-slate-700">
+                <div className="mb-2 text-sm font-semibold text-slate-500 border-b border-slate-200 pb-1">
                   Plan Details
                 </div>
                 <div className="space-y-2 text-sm">
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-600">Plan</span>
-                    <span className="font-semibold">{invoice.plan?.name}</span>
+                    <span className="text-slate-500">Plan</span>
+                    <span className="font-semibold text-slate-800">{invoice.plan?.name}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-600">Type</span>
-                    <span className="font-semibold capitalize">
+                    <span className="text-slate-500">Type</span>
+                    <span className="font-semibold capitalize text-slate-800">
                       {(
                         invoice.plan?.type ||
                         invoice.payment?.status ||
@@ -758,14 +731,14 @@ export default function SellerPackages() {
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-600">Amount</span>
-                    <span className="font-semibold">
+                    <span className="text-slate-500">Amount</span>
+                    <span className="font-semibold text-slate-800 font-mono">
                       Rs {invoice.pricing?.subtotal}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-600">Expiry date</span>
-                    <span className="font-semibold">
+                    <span className="text-slate-500">Expiry date</span>
+                    <span className="font-semibold text-slate-800">
                       {formatDate(invoice.plan?.expiresAt)}
                     </span>
                   </div>
@@ -774,20 +747,20 @@ export default function SellerPackages() {
 
               <div className="mt-6 border-t border-slate-200 pt-4 text-sm">
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-600">GST (18%)</span>
-                  <span className="font-semibold">
+                  <span className="text-slate-500">GST (18%)</span>
+                  <span className="font-semibold text-slate-700 font-mono">
                     Rs {invoice.pricing?.gstAmount}
                   </span>
                 </div>
                 <div className="mt-2 flex items-center justify-between">
                   <span className="font-semibold text-slate-800">Total</span>
-                  <span className="font-black">
+                  <span className="font-bold text-slate-800 text-lg font-mono">
                     Rs {invoice.pricing?.grandTotal}
                   </span>
                 </div>
               </div>
 
-              <div className="mt-8 text-xs text-slate-500">
+              <div className="mt-8 text-xs text-slate-400">
                 Payment method: {invoice.payment?.method || "UPI (Fake)"}
               </div>
             </div>
@@ -796,7 +769,7 @@ export default function SellerPackages() {
               <button
                 type="button"
                 onClick={closeInvoice}
-                className="rounded-lg border border-slate-600/50 bg-white/5 px-4 py-2.5 text-sm font-bold text-slate-200 hover:bg-white/10 disabled:opacity-50"
+                className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-100 cursor-pointer"
               >
                 Close
               </button>
@@ -806,10 +779,10 @@ export default function SellerPackages() {
       )}
 
       {selectedPlan && purchasePreview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-          <div className="relative w-full max-w-md rounded-2xl border border-indigo-400/30 bg-[#1a1830] p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm px-4">
+          <div className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
             {insufficient ? (
-              <div className="mt-4 rounded-xl border border-red-400/30 bg-red-500/10 p-4 text-sm font-semibold text-red-200">
+              <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
                 Insufficient wallet balance. Please recharge your wallet.
               </div>
             ) : null}
@@ -818,24 +791,24 @@ export default function SellerPackages() {
               type="button"
               onClick={closeConfirmation}
               disabled={processing}
-              className="absolute right-4 top-4 rounded-lg bg-white/5 p-2 text-slate-300 hover:text-white disabled:opacity-50"
+              className="absolute right-4 top-4 rounded-lg bg-slate-100 p-2 text-slate-500 hover:text-slate-700 disabled:opacity-50 cursor-pointer"
               aria-label="Close confirmation"
             >
               <X size={18} />
             </button>
 
-            <div className="flex items-center gap-2 text-amber-300">
+            <div className="flex items-center gap-2 text-amber-600">
               <Crown size={18} />
               <span className="text-sm font-bold">
                 Confirm package purchase
               </span>
             </div>
 
-            <h2 className="mt-2 text-2xl font-black text-white">
+            <h2 className="mt-2 text-2xl font-bold text-slate-800">
               {selectedPlan.name} Plan
             </h2>
 
-            <div className="mt-4 rounded-xl border border-amber-400/30 bg-amber-500/10 p-4">
+            <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
               <PlanActionCopy
                 type={purchasePreview.type}
                 activePremium={activePremium}
@@ -843,32 +816,32 @@ export default function SellerPackages() {
               />
             </div>
 
-            <div className="mt-4 space-y-3 rounded-xl bg-white/5 p-4 text-sm">
+            <div className="mt-4 space-y-3 rounded-xl bg-slate-50 border border-slate-200 p-4 text-sm text-slate-650">
               <div className="flex items-center justify-between gap-4">
-                <span className="text-slate-300">Plan amount</span>
-                <span className="font-bold text-white">
+                <span>Plan amount</span>
+                <span className="font-bold text-slate-800 font-mono">
                   Rs {selectedPlan.price}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span className="text-slate-300">Current wallet balance</span>
-                <span className="font-bold text-white">Rs {walletBalance}</span>
+                <span>Current wallet balance</span>
+                <span className="font-bold text-slate-800 font-mono">Rs {walletBalance}</span>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span className="text-slate-300">Balance after deduction</span>
+                <span>Balance after deduction</span>
                 <span
-                  className={`font-bold ${
+                  className={`font-bold font-mono ${
                     purchasePreview.balanceAfter < 0
-                      ? "text-red-200"
-                      : "text-emerald-200"
+                      ? "text-red-700"
+                      : "text-emerald-700"
                   }`}
                 >
                   Rs {purchasePreview.balanceAfter}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span className="text-slate-300">New expiry</span>
-                <span className="font-bold text-white">
+                <span>New expiry</span>
+                <span className="font-bold text-slate-800">
                   {purchasePreview.expiryLabel}
                 </span>
               </div>
@@ -879,7 +852,7 @@ export default function SellerPackages() {
                 type="button"
                 onClick={closeConfirmation}
                 disabled={processing}
-                className="rounded-lg border border-slate-600/50 bg-white/5 px-4 py-2.5 text-sm font-bold text-slate-200 hover:bg-white/10 disabled:opacity-50"
+                className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-100 cursor-pointer"
               >
                 Cancel
               </button>
@@ -889,7 +862,7 @@ export default function SellerPackages() {
                   type="button"
                   onClick={openAddFundsFromConfirmation}
                   disabled={processing}
-                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#7c3aed] px-4 py-2.5 text-sm font-bold text-white hover:brightness-105 disabled:opacity-50"
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-purple-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-purple-700 disabled:opacity-50 cursor-pointer shadow-sm"
                 >
                   {processing && <Loader2 size={16} className="animate-spin" />}
                   + Add Money to Wallet
@@ -899,7 +872,7 @@ export default function SellerPackages() {
                   type="button"
                   onClick={handleConfirmPurchase}
                   disabled={processing || purchasePreview.balanceAfter < 0}
-                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2.5 text-sm font-bold text-white hover:from-indigo-500 hover:to-violet-500 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 hover:bg-blue-700 px-4 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer shadow-sm"
                 >
                   {processing && <Loader2 size={16} className="animate-spin" />}
                   Confirm

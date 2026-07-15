@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { createPortal } from "react-dom";
 import { Clock, IndianRupee, Pencil, Plus, Trash2, CalendarDays } from "lucide-react";
 import { Calendar } from "react-multi-date-picker";
 import { days, formatCurrency, serviceOptions } from "./sellerData";
@@ -14,9 +15,9 @@ import apiClient from "../../api/axiosConfig";
 import { getSystemSettings } from "../../api/policyService";
 
 const inputClass =
-  "w-full rounded-lg border border-indigo-500/20 bg-[#0f0e1a] px-3 py-2.5 text-sm font-medium text-white outline-none transition placeholder:text-slate-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20";
+  "w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 shadow-sm";
 
-const labelClass = "mb-2 block text-sm font-semibold text-slate-300";
+const labelClass = "mb-2 block text-sm font-semibold text-slate-600";
 
 // Helper to extract YYYY-MM-DD from Date or react-multi-date-picker DateObject
 const extractYMD = (dt) => {
@@ -164,12 +165,12 @@ export default function SellerServices() {
     return (
       <div className="animate-fade-in space-y-6">
         <div>
-          <h1 className="text-3xl font-black text-white">My Services</h1>
-          <p className="mt-1 text-[#94a3b8]">
+          <h1 className="text-3xl font-bold text-slate-800">My Services</h1>
+          <p className="mt-1 text-slate-500">
             Configure availability and manage services.
           </p>
         </div>
-        <div className="text-center py-20 text-indigo-300 font-bold text-lg animate-pulse">
+        <div className="text-center py-20 text-blue-600 font-bold text-lg animate-pulse">
           🔄 Loading services / सेवाएं लोड हो रही हैं...
         </div>
       </div>
@@ -177,13 +178,13 @@ export default function SellerServices() {
   }
 
   return (
-    <div className="animate-fade-in space-y-10 bottom-nav-spacer pb-20">
+    <div className="animate-fade-in space-y-10 bottom-nav-spacer pb-6 lg:pb-0">
       {Number(user?.profile_completed ?? 0) === 1 && Number(user?.services_count ?? 0) === 0 && (
-        <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-200 text-sm font-semibold flex items-center gap-3 animate-pulse">
+        <div className="p-4 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-sm font-semibold flex items-center gap-3 animate-pulse">
           <span className="text-xl">⚠️</span>
           <div>
-            <p className="font-bold text-amber-300">Add Your First Service / अपनी पहली सेवा जोड़ें</p>
-            <p className="text-xs font-normal text-amber-200/80 mt-0.5">
+            <p className="font-bold text-amber-900">Add Your First Service / अपनी पहली सेवा जोड़ें</p>
+            <p className="text-xs font-normal text-amber-800/80 mt-0.5">
               Please add at least one service below to unlock the Seller Dashboard, Orders, and Wallet pages.
             </p>
           </div>
@@ -191,12 +192,12 @@ export default function SellerServices() {
       )}
 
       {/* HEADER SECTION */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-indigo-500/10 pb-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-6">
         <div>
-          <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-indigo-100 to-indigo-300">
+          <h1 className="text-2xl font-bold text-slate-800">
             My Services / मेरी सेवाएं
           </h1>
-          <p className="mt-1 text-sm text-slate-400">
+          <p className="mt-1 text-sm text-slate-500">
             Manage your service list first, and configure availability days below.
           </p>
         </div>
@@ -206,7 +207,7 @@ export default function SellerServices() {
             setEditingService(null);
             setActiveOverlay('wizard');
           }}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 via-indigo-600 to-purple-600 hover:from-indigo-600 hover:via-indigo-700 hover:to-purple-700 px-6 py-3.5 text-sm font-black text-white transition hover:scale-[1.02] active:scale-95 shadow-lg shadow-indigo-500/20 cursor-pointer"
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-6 py-3 text-sm font-bold text-white transition hover:scale-[1.02] active:scale-95 shadow-sm cursor-pointer"
         >
           <Plus size={18} />
           Add New Service / नया काम जोड़ें
@@ -216,139 +217,185 @@ export default function SellerServices() {
       {/* 1. MY SERVICES LIST - PRIMARY COMPONENT */}
       <div className="space-y-6">
         {loadError && (
-          <div className="p-4 rounded-xl border border-red-500/30 bg-red-500/10 text-red-200 text-sm font-semibold">
+          <div className="p-4 rounded-xl border border-red-200 bg-red-50 text-red-700 text-sm font-semibold">
             ⚠️ {loadError}
           </div>
         )}
 
         {services.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-indigo-500/20 bg-[#1a1830]/40 p-12 text-center text-[#94a3b8] backdrop-blur-sm shadow-inner">
+          <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-12 text-center text-slate-400 shadow-sm">
             <div className="max-w-md mx-auto space-y-5 py-4">
               <div className="flex justify-center">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-indigo-500/10 border border-indigo-500/25 text-indigo-400">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-50 border border-slate-200 text-slate-500">
                   <Plus size={32} />
                 </div>
               </div>
               <div>
-                <h3 className="text-xl font-bold text-white">No services added yet / कोई सेवा नहीं जोड़ी गई</h3>
-                <p className="text-sm text-slate-400 mt-2">
+                <h3 className="text-xl font-bold text-slate-800">No services added yet / कोई सेवा नहीं जोड़ी गई</h3>
+                <p className="text-sm text-slate-500 mt-2">
                   You haven't listed any services. Click the button above to add your very first service.
                 </p>
               </div>
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-2xl border border-indigo-500/15 bg-[#16142a]/90 backdrop-blur-md shadow-2xl">
-            <table className="w-full text-left border-collapse min-w-[700px]">
-              <thead>
-                <tr className="border-b border-indigo-500/10 bg-indigo-950/10 text-xs font-bold text-indigo-300 uppercase tracking-wider">
-                  <th className="px-6 py-5">Category / प्रकार</th>
-                  <th className="px-6 py-5">Service Name / नाम</th>
-                  <th className="px-6 py-5">Price / रेट</th>
-                  <th className="px-6 py-5">Status / स्थिति</th>
-                  <th className="px-6 py-5 text-right font-black">Actions / काम</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-indigo-500/5 text-sm">
-                {services.map((service) => (
-                  <tr key={service.id} className="hover:bg-white/[0.01] transition-colors duration-150">
-                    <td className="px-6 py-5 whitespace-nowrap">
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl bg-indigo-500/10 p-2.5 rounded-xl border border-indigo-500/20 shadow-inner block">
-                          {service.category_icon || "🔧"}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {services.map((service) => {
+              // Custom colors based on categories
+              const catLower = service.category_name?.toLowerCase() || "";
+              let catTheme = {
+                badge: "bg-blue-50 text-blue-700 border-blue-100",
+                iconBg: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+              };
+              if (catLower.includes("ac")) {
+                catTheme = {
+                  badge: "bg-sky-50 text-sky-700 border-sky-100",
+                  iconBg: "bg-sky-500/10 text-sky-655 border-sky-500/20",
+                };
+              } else if (catLower.includes("electr")) {
+                catTheme = {
+                  badge: "bg-amber-50 text-amber-700 border-amber-100",
+                  iconBg: "bg-amber-500/10 text-amber-600 border-amber-500/20",
+                };
+              } else if (catLower.includes("clean")) {
+                catTheme = {
+                  badge: "bg-emerald-50 text-emerald-700 border-emerald-100",
+                  iconBg: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
+                };
+              } else if (catLower.includes("plumb")) {
+                catTheme = {
+                  badge: "bg-teal-50 text-teal-700 border-teal-100",
+                  iconBg: "bg-teal-500/10 text-teal-600 border-teal-500/20",
+                };
+              } else if (catLower.includes("carp")) {
+                catTheme = {
+                  badge: "bg-orange-50 text-orange-700 border-orange-100",
+                  iconBg: "bg-orange-500/10 text-orange-600 border-orange-500/20",
+                };
+              }
+
+              return (
+                <div
+                  key={service.id}
+                  className="group relative flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:border-slate-300 animate-fade-in text-left"
+                >
+                  {/* Status Toggle Switch (Top Right) */}
+                  <div className="absolute top-4 right-4 flex items-center gap-1.5 bg-slate-50/80 pl-2.5 pr-2 py-1 rounded-full border border-slate-100">
+                    <span className={`text-[9px] font-extrabold tracking-wide uppercase ${service.is_active !== 0 ? "text-emerald-700" : "text-slate-450"}`}>
+                      {service.is_active !== 0 ? "Active" : "Inactive"}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleStatus(service)}
+                      className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border border-transparent transition-colors duration-200 ease-in-out outline-none active:scale-95 ${
+                        service.is_active !== 0 ? "bg-emerald-500" : "bg-slate-300"
+                      }`}
+                      title="Click to toggle status / चालू या बंद करें"
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition duration-200 ease-in-out ${
+                          service.is_active !== 0 ? "translate-x-3" : "translate-x-0"
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Top info block */}
+                  <div className="space-y-3 mt-4">
+                    {/* Category icon and name */}
+                    <div className="flex items-center gap-2">
+                      <span className={`flex h-9 w-9 items-center justify-center rounded-xl border text-xl ${catTheme.iconBg}`}>
+                        {service.category_icon || "🔧"}
+                      </span>
+                      <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${catTheme.badge}`}>
+                        {service.category_name || "General"}
+                      </span>
+                    </div>
+
+                    {/* Title */}
+                    <div>
+                      <h3 className="font-bold text-slate-800 text-base leading-snug group-hover:text-blue-600 transition-colors">
+                        {service.title || service.name}
+                      </h3>
+                      {service.sub_service_name ? (
+                        <span className="text-[10px] text-blue-650 font-bold block mt-1">
+                          🎯 {service.sub_service_name.split("/")[0].trim()}
                         </span>
-                        <div>
-                          <span className="text-xs font-black text-indigo-400 uppercase tracking-wider block">
-                            {service.category_name || "General"}
-                          </span>
-                        </div>
+                      ) : (
+                        <span className="text-[10px] text-slate-400 font-semibold block mt-1">
+                          ✨ Custom Service / अन्य काम
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Description */}
+                    {service.description && (
+                      <p className="text-xs text-slate-500 leading-relaxed line-clamp-2">
+                        {service.description.replace(/<[^>]*>/g, "")}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Divider */}
+                  <div className="my-4 h-px bg-slate-100" />
+
+                  {/* Bottom pricing and action block */}
+                  <div className="space-y-4">
+                    <div className="flex items-end justify-between">
+                      <div>
+                        <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Starting Price / रेट</span>
+                        <span className="text-lg font-extrabold text-slate-800 mt-0.5 flex items-center">
+                          ₹{Number(service.price || 0).toLocaleString("en-IN")}
+                        </span>
                       </div>
-                    </td>
-                    <td className="px-6 py-5">
-                      <div className="max-w-xs md:max-w-md">
-                        <h3 className="font-bold text-white text-base">
-                          {service.title || service.name}
-                        </h3>
-                        {service.sub_service_name ? (
-                          <span className="text-[10px] bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1 mt-1 shadow-inner">
-                            🎯 {service.sub_service_name}
-                          </span>
-                        ) : (
-                          <span className="text-[10px] bg-indigo-500/5 border border-indigo-500/10 text-indigo-400 font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1 mt-1 shadow-inner">
-                            ✨ Custom Service / अन्य काम
-                          </span>
-                        )}
-                        {service.description && (
-                          <p className="text-xs text-slate-400 mt-2 line-clamp-2 leading-relaxed">
-                            {service.description.replace(/<[^>]*>/g, '')}
-                          </p>
-                        )}
+                      <div className="text-right">
+                        <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Visiting Charge / फीस</span>
+                        <span className="text-sm font-bold text-slate-700 mt-0.5 block">
+                          ₹{Number(service.visiting_charge) || 100}
+                        </span>
                       </div>
-                    </td>
-                    <td className="px-6 py-5 whitespace-nowrap">
-                      <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/20 bg-emerald-400/5 px-3 py-1 text-sm font-black text-emerald-300">
-                        <IndianRupee size={12} />
-                        {Number(service.price || 0).toLocaleString("en-IN")}
-                      </span>
-                      <span className="text-[10px] text-indigo-300 font-semibold block mt-1">
-                        {service.price_type === "negotiable" ? "शुरुआत (Starts from)" : "पक्का रेट (Fixed)"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-5 whitespace-nowrap">
+                    </div>
+
+                    {/* Actions buttons */}
+                    <div className="grid grid-cols-2 gap-2">
                       <button
                         type="button"
-                        onClick={() => handleToggleStatus(service)}
-                        className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-bold transition duration-200 active:scale-95 cursor-pointer ${service.is_active !== 0
-                            ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20"
-                            : "border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-500/20"
-                          }`}
-                        title="Click to toggle status / स्थिति बदलने के लिए क्लिक करें"
+                        onClick={() => handleEdit(service)}
+                        className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 py-2 text-xs font-bold transition active:scale-95 cursor-pointer"
                       >
-                        <span className={`h-1.5 w-1.5 rounded-full ${service.is_active !== 0 ? "bg-emerald-400" : "bg-red-400"}`} />
-                        {service.is_active !== 0 ? "Active / चालू" : "Inactive / बंद"}
+                        <Pencil size={11} />
+                        Edit / बदलें
                       </button>
-                    </td>
-                    <td className="px-6 py-5 text-right whitespace-nowrap">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleEdit(service)}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-400/30 bg-indigo-500/10 px-3.5 py-2 text-xs font-bold text-indigo-200 transition hover:bg-indigo-500/20 active:scale-95 cursor-pointer"
-                        >
-                          <Pencil size={12} />
-                          Edit / सुधारें
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(service.id)}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-red-400/30 bg-red-500/10 px-3.5 py-2 text-xs font-bold text-red-200 transition hover:bg-red-500/20 active:scale-95 cursor-pointer"
-                        >
-                          <Trash2 size={12} />
-                          Delete / हटाएँ
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(service.id)}
+                        className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 text-red-755 py-2 text-xs font-bold transition active:scale-95 cursor-pointer"
+                      >
+                        <Trash2 size={11} />
+                        Delete / हटाएं
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
 
       {/* 2. WEEKLY AVAILABILITY & BLACKOUT DATES - SECONDARY COMPONENT (BELOW SERVICES) */}
-      <div className="rounded-2xl border border-indigo-500/15 bg-[#16142a]/90 backdrop-blur-md p-6 space-y-6 shadow-2xl">
-        <div className="border-b border-indigo-500/10 pb-4">
-          <h2 className="text-xl font-black text-white flex items-center gap-2">
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 space-y-6 shadow-sm">
+        <div className="border-b border-slate-200 pb-4">
+          <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
             📅 Weekly Availability & Leave Calendar / साप्ताहिक उपलब्धता और छुट्टियां
           </h2>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-slate-500 mt-1">
             Configure the days and dates you are available to take customer bookings.
           </p>
         </div>
 
         <div className="space-y-3">
-          <label className="text-sm font-bold text-slate-300 block">
+          <label className="text-sm font-bold text-slate-700 block">
             Select Active Days / काम के दिन चुनें:
           </label>
           <div className="flex flex-wrap gap-2">
@@ -364,12 +411,12 @@ export default function SellerServices() {
                   key={day}
                   type="button"
                   onClick={() => toggleWeeklyDay(day)}
-                  className={`cursor-pointer rounded-xl border px-4 py-3 text-xs font-black transition-all duration-200 active:scale-95 flex flex-col items-center min-w-[90px] ${checked
-                      ? "border-indigo-400 bg-indigo-500/20 text-white shadow-lg shadow-indigo-500/10"
-                      : "border-indigo-500/10 bg-[#0f0e1a] text-[#94a3b8] hover:border-indigo-500/30"
+                  className={`cursor-pointer rounded-xl border px-4 py-3 text-xs font-bold transition-all duration-200 active:scale-95 flex flex-col items-center min-w-[90px] ${checked
+                      ? "border-blue-500 bg-blue-50 text-blue-700 shadow-sm"
+                      : "border-slate-200 bg-white text-slate-500 hover:border-slate-300"
                     }`}
                 >
-                  <span className="text-sm font-black">{day}</span>
+                  <span className="text-sm font-bold">{day}</span>
                   <span className="text-[10px] font-semibold opacity-70 mt-0.5">{hindiDays[day]}</span>
                 </button>
               );
@@ -378,9 +425,9 @@ export default function SellerServices() {
         </div>
 
         {/* Date picker grid (moved below available days) */}
-        <div className="grid gap-6 md:grid-cols-2 pt-2 border-t border-indigo-500/5">
+        <div className="grid gap-6 md:grid-cols-2 pt-2 border-t border-slate-100">
           <div className="space-y-3">
-            <label className="text-sm font-bold text-slate-300 block">
+            <label className="text-sm font-bold text-slate-700 block">
               Mark Specific Holidays / छुट्टी के दिन चुनें:
             </label>
 
@@ -389,14 +436,14 @@ export default function SellerServices() {
               <button
                 type="button"
                 onClick={() => setActiveOverlay('calendar')}
-                className="w-full flex items-center justify-center gap-2 rounded-xl bg-indigo-600/10 border border-indigo-500/30 hover:bg-indigo-600/20 text-indigo-300 font-bold px-4 py-3.5 text-sm transition duration-200"
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-blue-50 border border-blue-200 hover:bg-blue-100 text-blue-700 font-bold px-4 py-3.5 text-sm transition duration-200"
               >
                 📅 Manage Leave Calendar ({blackoutDates.length} marked)
               </button>
             </div>
 
             {/* On Desktop (hidden on mobile) */}
-            <div className="hidden md:flex bg-[#0f0e1a] p-4 rounded-xl border border-indigo-500/10 justify-center" style={{ minHeight: "340px" }}>
+            <div className="hidden md:flex bg-slate-50 p-4 rounded-xl border border-slate-200 justify-center" style={{ minHeight: "340px" }}>
               <Calendar
                 ref={calendarRef}
                 multiple
@@ -426,28 +473,28 @@ export default function SellerServices() {
 
           <div className="space-y-3 flex flex-col justify-between">
             <div>
-              <label className="text-sm font-bold text-slate-300 block mb-1">
+              <label className="text-sm font-bold text-slate-700 block mb-1">
                 Leave Calendar / छुट्टी की सूची:
               </label>
               {(blackoutDates || []).length === 0 ? (
-                <div className="rounded-xl border border-dashed border-indigo-500/10 bg-[#0f0e1a] p-5 text-center text-xs text-[#94a3b8] font-medium leading-relaxed">
+                <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-5 text-center text-xs text-slate-400 font-semibold leading-relaxed">
                   No holidays marked yet. Tapping dates on the calendar will add leaves.
-                  <br /><span className="text-[10px] text-slate-500">(कोई छुट्टी नहीं चुनी गई है। कैलेंडर पर तारीख दबाएं)</span>
+                  <br /><span className="text-[10px] text-slate-400">(कोई छुट्टी नहीं चुनी गई है। कैलेंडर पर तारीख दबाएं)</span>
                 </div>
               ) : (
-                <div className="max-h-[180px] overflow-y-auto space-y-2 pr-1">
+                <div className="max-h-[180px] overflow-y-auto no-scrollbar space-y-2 pr-1">
                   {blackoutDates.map((ymd) => (
                     <div
                       key={ymd}
-                      className="flex items-center justify-between gap-3 rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2"
+                      className="flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2"
                     >
-                      <span className="text-xs font-bold text-red-200">
+                      <span className="text-xs font-bold text-red-700">
                         ❌ {ymdToDisplay(ymd)}
                       </span>
                       <button
                         type="button"
                         onClick={() => setBlackoutDates(prev => prev.filter(d => d !== ymd))}
-                        className="rounded-md border border-red-500/20 bg-red-500/10 px-2 py-1 text-[10px] font-bold text-red-200 transition hover:bg-red-500/20 cursor-pointer"
+                        className="rounded-md border border-red-200 bg-red-100 px-2 py-1 text-[10px] font-bold text-red-700 transition hover:bg-red-200 cursor-pointer"
                       >
                         Remove
                       </button>
@@ -461,7 +508,7 @@ export default function SellerServices() {
               <button
                 type="button"
                 onClick={() => setBlackoutDates([])}
-                className="w-full py-2 text-center rounded-lg border border-red-500/20 bg-red-500/5 hover:bg-red-500/10 text-xs font-bold text-red-300 transition duration-150 active:scale-95 cursor-pointer"
+                className="w-full py-2 text-center rounded-lg border border-red-250 bg-red-50 hover:bg-red-100 text-xs font-bold text-red-700 transition duration-150 active:scale-95 cursor-pointer"
               >
                 Clear All Leaves / सभी छुट्टियां हटाएं
               </button>
@@ -470,20 +517,20 @@ export default function SellerServices() {
         </div>
 
         {/* Save Availability Footer */}
-        <div className="flex items-center justify-between pt-4 border-t border-indigo-500/10">
+        <div className="flex items-center justify-between pt-4 border-t border-slate-200">
           <div>
             {availError && (
-              <p className="text-xs font-semibold text-red-400">⚠️ {availError}</p>
+              <p className="text-xs font-semibold text-red-655">⚠️ {availError}</p>
             )}
             {availSuccess && (
-              <p className="text-xs font-semibold text-emerald-400">✓ Availability settings saved / उपलब्धता सुरक्षित की गई</p>
+              <p className="text-xs font-semibold text-emerald-650">✓ Availability settings saved / उपलब्धता सुरक्षित की गई</p>
             )}
           </div>
           <button
             type="button"
             disabled={savingAvailability}
             onClick={handleSaveAvailability}
-            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black px-6 py-3 text-sm transition-all duration-200 active:scale-95 disabled:opacity-50 shadow-lg shadow-indigo-500/20 cursor-pointer"
+            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 text-sm transition-all duration-200 active:scale-95 disabled:opacity-50 shadow-sm cursor-pointer"
           >
             {savingAvailability ? "Saving Settings..." : "Save Availability / उपलब्धता सुरक्षित करें"}
           </button>
@@ -491,16 +538,16 @@ export default function SellerServices() {
       </div>
 
       {/* Wizard Modal Overlay */}
-      {showWizard && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm overflow-y-auto">
-          <div className="relative w-full max-w-xl bg-[#17152b] rounded-3xl border border-[rgba(99,102,241,0.25)] shadow-2xl p-6 my-8 max-h-[90vh] overflow-y-auto">
+      {showWizard && createPortal(
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="relative w-full max-w-xl bg-white rounded-3xl border border-slate-200 shadow-2xl p-6 max-h-[85vh] overflow-y-auto text-left">
             <button
               type="button"
               onClick={() => {
                 setActiveOverlay(null);
                 setEditingService(null);
               }}
-              className="absolute top-4 right-4 text-slate-400 hover:text-white transition text-lg font-bold p-1 bg-white/5 rounded-full hover:bg-white/10 w-8 h-8 flex items-center justify-center cursor-pointer"
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition text-lg font-bold p-1 bg-slate-100 rounded-full hover:bg-slate-200 w-8 h-8 flex items-center justify-center cursor-pointer"
             >
               ✕
             </button>
@@ -519,28 +566,29 @@ export default function SellerServices() {
               }}
             />
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Calendar Bottom Sheet / Modal Overlay for Mobile */}
       {activeOverlay === 'calendar' && (
         <div className="qs-mobile-sheet-backdrop md:hidden" onClick={() => setActiveOverlay(null)}>
-          <div className="qs-mobile-sheet-container" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between border-b border-indigo-500/15 pb-3 mb-4">
+          <div className="qs-mobile-sheet-container bg-white" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-4">
               <div>
-                <h3 className="text-base font-black text-white">Select Leave Dates / छुट्टियां चुनें</h3>
-                <p className="text-[10px] text-slate-400">Tap dates on the calendar to mark holidays</p>
+                <h3 className="text-base font-bold text-slate-800">Select Leave Dates / छुट्टियां चुनें</h3>
+                <p className="text-[10px] text-slate-500">Tap dates on the calendar to mark holidays</p>
               </div>
               <button
                 type="button"
                 onClick={() => setActiveOverlay(null)}
-                className="text-indigo-300 hover:text-white transition text-xs font-black px-3 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-lg cursor-pointer"
+                className="text-blue-600 hover:text-blue-700 transition text-xs font-bold px-3 py-1.5 bg-blue-550 border border-blue-200 rounded-lg cursor-pointer"
               >
                 Done / हो गया
               </button>
             </div>
 
-            <div className="flex justify-center p-3 rounded-2xl bg-[#0f0e1a] border border-indigo-500/10 min-h-[320px]">
+            <div className="flex justify-center p-3 rounded-2xl bg-slate-50 border border-slate-200 min-h-[320px]">
               <Calendar
                 ref={calendarRef}
                 multiple
@@ -566,7 +614,7 @@ export default function SellerServices() {
               />
             </div>
 
-            <div className="mt-4 text-[10px] text-center text-slate-500 font-medium">
+            <div className="mt-4 text-[10px] text-center text-slate-400 font-semibold">
               💡 Marked leave dates will prevent clients from booking on those days.
             </div>
           </div>
@@ -854,15 +902,15 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
     return (
       <div className="text-center py-6 space-y-6 animate-fade-in">
         <div className="flex justify-center">
-          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/10 border-2 border-emerald-500/40 text-4xl text-emerald-400">
+          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-50 border-2 border-emerald-200 text-4xl text-emerald-600">
             ✓
           </div>
         </div>
         <div>
-          <h2 className="text-2xl font-black text-white">
+          <h2 className="text-2xl font-bold text-slate-800">
             {editingService ? "Service Updated! / काम अपडेट हुआ!" : "Service Added! / नया काम जुड़ गया!"}
           </h2>
-          <p className="mt-2 text-slate-300 font-bold text-sm">
+          <p className="mt-2 text-slate-500 font-semibold text-sm">
             {editingService
               ? "Your service has been successfully updated."
               : "Your service has been successfully created."}
@@ -873,7 +921,7 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
             <button
               type="button"
               onClick={handleReset}
-              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black px-6 py-3 transition hover:scale-[1.01] active:scale-95 text-sm cursor-pointer"
+              className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 transition hover:scale-[1.01] active:scale-95 text-sm cursor-pointer"
             >
               Add Another Service / दूसरा काम जोड़ें
             </button>
@@ -881,7 +929,7 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
           <button
             type="button"
             onClick={onSuccess}
-            className="rounded-xl border border-indigo-400/30 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-200 font-black px-6 py-3 transition hover:scale-[1.01] active:scale-95 text-sm cursor-pointer"
+            className="rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold px-6 py-3 transition hover:scale-[1.01] active:scale-95 text-sm cursor-pointer"
           >
             Go to My Services / मेरी सेवाएं देखें
           </button>
@@ -900,18 +948,18 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
               type="button"
               disabled={step < s && !editingService}
               onClick={() => setStep(s)}
-              className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-black transition-all ${step === s
-                  ? "bg-indigo-600 border border-indigo-400 text-white ring-4 ring-indigo-500/20"
+              className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-all ${step === s
+                  ? "bg-blue-600 border border-blue-400 text-white ring-4 ring-blue-100"
                   : step > s
                     ? "bg-emerald-500 text-white"
-                    : "bg-[#0f0e1a] border border-indigo-500/20 text-slate-500"
+                    : "bg-slate-50 border border-slate-200 text-slate-400"
                 }`}
             >
               {step > s ? "✓" : s}
             </button>
             {s < 5 && (
               <div
-                className={`h-0.5 grow mx-2 transition-all ${step > s ? "bg-emerald-500" : "bg-indigo-500/10"
+                className={`h-0.5 grow mx-2 transition-all ${step > s ? "bg-emerald-500" : "bg-slate-100"
                   }`}
               />
             )}
@@ -921,18 +969,18 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
 
       {/* STEP 1: CATEGORY SELECTION */}
       {step === 1 && (
-        <div className="space-y-6 animate-fade-in">
+        <div className="space-y-4 animate-fade-in text-left">
           <div className="text-center">
-            <h2 className="text-2xl font-black text-white">What service do you provide? / आपका मुख्य काम क्या है?</h2>
-            <p className="mt-1 text-sm text-slate-400">Select your category below / नीचे अपनी काम की श्रेणी चुनें</p>
+            <h2 className="text-xl font-bold text-slate-800">What service do you provide? / आपका मुख्य काम क्या है?</h2>
+            <p className="mt-1 text-xs text-slate-500">Select your category below / नीचे अपनी काम की श्रेणी चुनें</p>
           </div>
 
           {loadingCats ? (
-            <div className="text-center py-12 text-indigo-300 font-bold animate-pulse">Loading categories / श्रेणियां लोड हो रही हैं...</div>
+            <div className="text-center py-8 text-blue-600 font-bold animate-pulse">Loading categories / श्रेणियां लोड हो रही हैं...</div>
           ) : categories.length === 0 ? (
-            <div className="text-center py-12 text-red-300 font-bold">No categories found / कोई श्रेणी नहीं मिली।</div>
+            <div className="text-center py-8 text-red-500 font-bold">No categories found / कोई श्रेणी नहीं मिली।</div>
           ) : (
-            <div className="grid grid-cols-2 gap-4 max-h-[350px] overflow-y-auto pr-1">
+            <div className="grid grid-cols-3 gap-3">
               {categories.map((cat) => {
                 const isSelected = selectedCategory?.id === cat.id;
                 return (
@@ -940,24 +988,24 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
                     key={cat.id}
                     type="button"
                     onClick={() => handleCategorySelect(cat)}
-                    className={`flex flex-col items-center justify-center gap-3 rounded-2xl border p-5 text-center transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer ${isSelected
-                        ? "border-indigo-400 bg-indigo-500/25 text-white ring-2 ring-indigo-500/40"
-                        : "border-indigo-500/20 bg-[#0f0e1a] text-slate-300 hover:border-indigo-400/60 hover:bg-indigo-500/5"
+                    className={`flex flex-col items-center justify-center gap-1.5 rounded-2xl border p-3.5 text-center transition-all duration-155 hover:scale-[1.02] active:scale-[0.98] cursor-pointer ${isSelected
+                        ? "border-blue-400 bg-blue-50 text-blue-700 ring-2 ring-blue-100"
+                        : "border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 hover:bg-slate-100"
                       }`}
                   >
-                    <span className="text-4xl">{cat.icon || "🔧"}</span>
-                    <span className="text-base font-bold">{cat.name}</span>
+                    <span className="text-3xl">{cat.icon || "🔧"}</span>
+                    <span className="text-xs font-bold truncate max-w-full">{cat.name}</span>
                   </button>
                 );
               })}
             </div>
           )}
 
-          <div className="flex justify-end pt-4 border-t border-indigo-500/10">
+          <div className="flex justify-end pt-4 border-t border-slate-200">
             <button
               type="button"
               onClick={onCancel}
-              className="px-5 py-2.5 rounded-xl border border-slate-500/30 text-slate-300 hover:bg-white/5 font-black transition text-sm active:scale-95 cursor-pointer"
+              className="px-4 py-2 rounded-xl border border-slate-200 text-slate-655 hover:bg-slate-50 font-bold transition text-xs active:scale-95 cursor-pointer"
             >
               Cancel / रद्द करें
             </button>
@@ -967,77 +1015,64 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
 
       {/* STEP 2: SUB-SERVICE SELECTION */}
       {step === 2 && (
-        <div className="space-y-6 animate-fade-in">
+        <div className="space-y-4 animate-fade-in text-left">
           <div className="text-center">
-            <h2 className="text-2xl font-black text-white">Select Specific Work / काम का प्रकार चुनें</h2>
-            <p className="mt-1 text-sm text-slate-400">Choose what specific service you are listing / आप क्या सेवा देना चाहते हैं</p>
+            <h2 className="text-xl font-bold text-slate-800">Select Specific Work / काम का प्रकार चुनें</h2>
+            <p className="mt-1 text-xs text-slate-500">Choose what specific service you are listing / आप क्या सेवा देना चाहते हैं</p>
           </div>
 
           {loadingSubServices ? (
-            <div className="text-center py-12 text-indigo-300 font-bold animate-pulse">Loading parts / काम के हिस्से लोड हो रहे हैं...</div>
+            <div className="text-center py-8 text-blue-600 font-bold animate-pulse">Loading options...</div>
           ) : subServicesError ? (
-            <div className="text-center py-8 text-red-300 font-bold">{subServicesError}</div>
+            <div className="text-center py-6 text-red-500 font-bold">{subServicesError}</div>
           ) : (
             <div className="space-y-4">
-              <div className="grid grid-cols-1 gap-3 max-h-[300px] overflow-y-auto pr-1">
-                {subServices.map((sub) => {
-                  const isSelected = selectedSubService?.id === sub.id;
-                  const [engPart, hinPart] = sub.name.split("/");
-                  return (
-                    <button
-                      key={sub.id}
-                      type="button"
-                      onClick={() => handleSubServiceSelect(sub)}
-                      className={`flex flex-col items-start gap-1 rounded-xl border p-4 text-left transition-all duration-150 hover:scale-[1.01] active:scale-[0.99] cursor-pointer ${isSelected
-                          ? "border-indigo-400 bg-indigo-500/25 text-white ring-2 ring-indigo-500/40"
-                          : "border-indigo-500/10 bg-[#0f0e1a] text-slate-300 hover:border-indigo-400/40 hover:bg-indigo-500/5"
-                        }`}
-                    >
-                      <span className="text-sm font-black text-white">
-                        {engPart?.trim()}
-                      </span>
-                      {hinPart && (
-                        <span className="text-xs font-semibold text-indigo-300">
-                          {hinPart.trim()}
-                        </span>
-                      )}
-                      {sub.description && (
-                        <span className="text-xs text-slate-400 mt-1 block">
-                          {sub.description}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
+              <div className="form-group text-left">
+                <label className="text-xs font-bold text-slate-600 mb-1.5 block">Select Service / सेवा चुनें:</label>
+                <select
+                  value={selectedSubService?.id || ""}
+                  onChange={(e) => {
+                    const sub = subServices.find(s => s.id === parseInt(e.target.value));
+                    if (sub) handleSubServiceSelect(sub);
+                  }}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition shadow-sm"
+                >
+                  <option value="">-- Choose specific work / काम चुनें --</option>
+                  {subServices.map((sub) => (
+                    <option key={sub.id} value={sub.id}>
+                      {sub.name.split("/")[0].trim()} {sub.default_price ? `(₹${sub.default_price})` : ""}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Custom / General service option */}
-              <div className="border-t border-indigo-500/10 pt-3 flex flex-col gap-2">
-                <p className="text-xs font-bold text-slate-400 text-center uppercase tracking-widest">Or list another service / या अन्य कोई काम</p>
+              <div className="border-t border-slate-100 pt-3 flex flex-col gap-2">
+                <p className="text-[10px] font-bold text-slate-400 text-center uppercase tracking-wider">Or list a custom service / या अन्य कोई नया काम:</p>
                 <button
                   type="button"
                   onClick={handleCustomServiceSelect}
-                  className="w-full py-4 px-4 rounded-xl border border-dashed border-indigo-400/30 hover:border-indigo-400/60 bg-indigo-500/5 hover:bg-indigo-500/10 transition text-center text-sm font-black text-indigo-300 active:scale-95 cursor-pointer"
+                  className="w-full py-2.5 px-4 rounded-xl border border-dashed border-blue-300 hover:border-blue-500 bg-blue-50/40 hover:bg-blue-50/75 transition text-center text-xs font-bold text-blue-600 active:scale-95 cursor-pointer"
                 >
-                  ➕ Custom Service / अन्य सामान्य काम
+                  ➕ Create Custom Service / नया अन्य काम जोड़ें
                 </button>
               </div>
             </div>
           )}
 
-          <div className="flex justify-between pt-4 border-t border-indigo-500/10">
+          <div className="flex justify-between pt-4 border-t border-slate-200">
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={onCancel}
-                className="px-4 py-2.5 rounded-xl border border-red-500/30 text-red-300 hover:bg-red-500/10 font-bold transition text-xs active:scale-95 cursor-pointer"
+                className="px-4 py-2 rounded-xl border border-red-250 text-red-655 hover:bg-red-50 font-bold transition text-xs active:scale-95 cursor-pointer"
               >
                 Cancel / रद्द करें
               </button>
               <button
                 type="button"
                 onClick={() => setStep(1)}
-                className="px-5 py-2.5 rounded-xl border border-slate-500/30 text-slate-300 hover:bg-white/5 font-black transition text-sm active:scale-95 cursor-pointer"
+                className="px-5 py-2 rounded-xl border border-slate-200 text-slate-650 hover:bg-slate-50 font-bold transition text-xs active:scale-95 cursor-pointer"
               >
                 Back / पीछे
               </button>
@@ -1048,191 +1083,124 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
 
       {/* STEP 3: PRICING DETAILS */}
       {step === 3 && (
-        <div className="space-y-6 animate-fade-in text-left">
+        <div className="space-y-4 animate-fade-in text-left">
           <div className="text-center">
-            <h2 className="text-2xl font-black text-white">Pricing & Visit Fee / दाम और विजिटिंग चार्ज</h2>
-            <p className="mt-1 text-sm text-slate-400">Set your baseline rates below / अपने काम का अनुमानित दाम तय करें</p>
+            <h2 className="text-xl font-bold text-slate-800">Pricing & Visit Fee / दाम और विजिटिंग चार्ज</h2>
+            <p className="mt-1 text-xs text-slate-500">Set your baseline rates below / अपने काम का अनुमानित दाम तय करें</p>
           </div>
 
-          {/* Starting Price Slider (Work rate) */}
-          <div className="flex flex-col items-center justify-center gap-3 py-4 bg-[#0f0e1a]/50 rounded-2xl border border-indigo-500/5 w-full">
-            <span className="text-xs font-black text-[#94a3b8] tracking-widest uppercase">Starting Price / शुरुआत का दाम (Starts From)</span>
-            <div className="flex items-center gap-4">
-              <button
-                type="button"
-                onClick={() => setPrice((p) => Math.max(50, p - 50))}
-                className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-600 hover:bg-indigo-700 text-xl font-black text-white transition hover:scale-105 active:scale-95 shadow-lg shadow-indigo-500/20 cursor-pointer"
-              >
-                -
-              </button>
-              <div className="flex items-center bg-[#0f0e1a] border border-indigo-500/20 rounded-xl px-4 py-2">
-                <span className="text-2xl font-bold text-indigo-300 mr-1">₹</span>
-                <input
-                  type="number"
-                  value={price}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setPrice(val === "" ? "" : parseInt(val) || 0);
-                  }}
-                  onBlur={() => setPrice((p) => Math.max(1, Number(p || 199)))}
-                  className="w-28 text-center text-3xl font-black bg-transparent text-white outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                />
-              </div>
-              <button
-                type="button"
-                onClick={() => setPrice((p) => p + 50)}
-                className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-600 hover:bg-indigo-700 text-xl font-black text-white transition hover:scale-105 active:scale-95 shadow-lg shadow-indigo-500/20 cursor-pointer"
-              >
-                +
-              </button>
-            </div>
-
-            {/* Quick Price Preset Buttons */}
-            <div className="mt-3 flex flex-wrap justify-center gap-2 px-4 max-w-sm">
-              {[100, 200, 350, 500, 800, 1000, 1500, 2000].map((preset) => (
-                <button
-                  key={preset}
-                  type="button"
-                  onClick={() => setPrice(preset)}
-                  className={`px-3 py-2 text-xs font-black rounded-lg border transition duration-150 active:scale-95 cursor-pointer ${price === preset
-                      ? "border-emerald-400 bg-emerald-500/20 text-emerald-300"
-                      : "border-indigo-500/10 bg-[#0f0e1a] text-slate-400 hover:border-indigo-500/30"
-                    }`}
-                >
-                  ₹{preset}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex flex-col items-center justify-center gap-2 py-3 px-4 bg-indigo-950/20 rounded-2xl border border-indigo-500/10 text-center w-full">
-            <span className="text-[11px] text-slate-450 leading-normal">
-              💡 This is a **starting rate reference** for buyers. The final quotation will be calculated and approved onsite after diagnostic inspection.
-            </span>
-          </div>
-
-          {/* Visiting Charge Selection */}
-          <div className="flex flex-col items-center justify-center gap-3 py-4 bg-[#0f0e1a]/50 rounded-2xl border border-indigo-500/5">
-            <span className="text-xs font-black text-[#94a3b8] tracking-widest uppercase">Visiting Charge / विजिटिंग चार्ज</span>
-            <div className="flex items-center gap-4">
-              <button
-                type="button"
-                onClick={() => setVisitingCharge((v) => Math.max(100, v - 10))}
-                className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 hover:bg-indigo-700 text-lg font-black text-white transition hover:scale-105 active:scale-95 shadow-md cursor-pointer"
-              >
-                -
-              </button>
-              <div className="flex items-center bg-[#0f0e1a] border border-indigo-500/20 rounded-xl px-4 py-2">
-                <span className="text-xl font-bold text-indigo-300 mr-1">₹</span>
-                <input
-                  type="number"
-                  value={visitingCharge}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setVisitingCharge(val === "" ? "" : parseInt(val) || 0);
-                  }}
-                  onBlur={() => setVisitingCharge((v) => Math.max(100, Number(v || 100)))}
-                  className="w-20 text-center text-2xl font-black bg-transparent text-white outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                />
-              </div>
-              <button
-                type="button"
-                onClick={() => setVisitingCharge((v) => v + 10)}
-                className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 hover:bg-indigo-700 text-lg font-black text-white transition hover:scale-105 active:scale-95 shadow-md cursor-pointer"
-              >
-                +
-              </button>
-            </div>
-
-            {/* Quick Visiting presets */}
-            <div className="flex flex-wrap justify-center gap-2 px-4 mt-2">
-              {[100, 150, 200, 250, 300].map((preset) => (
-                <button
-                  key={preset}
-                  type="button"
-                  onClick={() => setVisitingCharge(preset)}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition duration-150 active:scale-95 cursor-pointer ${visitingCharge === preset
-                      ? "border-emerald-400 bg-emerald-500/20 text-emerald-300"
-                      : "border-indigo-500/10 bg-[#0f0e1a] text-slate-400 hover:border-indigo-500/30"
-                    }`}
-                >
-                  ₹{preset}
-                </button>
-              ))}
-            </div>
-
-            {/* Live Payout Calculation Preview */}
-            {Number(visitingCharge || 0) > 0 && (() => {
-              const activeVisitingCharge = Math.max(100, Number(visitingCharge || 100));
-              const activeFee = Math.min(100.00, parseFloat((activeVisitingCharge * (parseFloat(platformSettings.platform_fee_percentage) / 100)).toFixed(2)));
-              const isBuyerModel = platformSettings.platform_fee_model === "buyer";
-              return (
-                <div className="w-full mt-4 p-4 rounded-xl bg-indigo-950/40 border border-indigo-500/10 space-y-2.5 text-xs text-left">
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Visiting Charge / विजिटिंग चार्ज:</span>
-                    <span className="font-bold text-white">₹{activeVisitingCharge}</span>
-                  </div>
-                  
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Platform Commission / प्लेटफॉर्म कमीशन ({platformSettings.platform_fee_percentage}%):</span>
-                    {isBuyerModel ? (
-                      <span className="font-bold text-emerald-400">₹0</span>
-                    ) : (
-                      <span className="font-bold text-red-400">-₹{activeFee}</span>
-                    )}
-                  </div>
-
-                  <div className="h-px bg-indigo-500/10 my-1" />
-
-                  <div className="flex justify-between text-sm font-black">
-                    <span className="text-slate-200">You will receive / आपको मिलेगा:</span>
-                    <span className="text-emerald-400">
-                      ₹{isBuyerModel 
-                        ? activeVisitingCharge 
-                        : parseFloat((activeVisitingCharge - activeFee).toFixed(2))}
-                    </span>
-                  </div>
-
-                  <div className="mt-3.5 p-3 rounded-xl bg-indigo-950/60 border border-indigo-500/10 text-[11px] text-slate-350 leading-relaxed space-y-1 w-full">
-                    <p className="font-bold text-indigo-300">💡 Earning Details / कमाई की जानकारी:</p>
-                    {isBuyerModel ? (
-                      <>
-                        <p>
-                          <strong>EN:</strong> The platform commission is paid by the customer. You receive 100% of your visiting charge.
-                        </p>
-                        <p className="border-t border-indigo-500/5 pt-1 text-[10px] text-slate-400">
-                          <strong>HI:</strong> प्लेटफॉर्म कमीशन का भुगतान ग्राहक द्वारा अतिरिक्त किया जाता है। आपको आपके विजिटिंग चार्ज का 100% मिलेगा।
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <p>
-                          <strong>EN:</strong> The platform commission ({platformSettings.platform_fee_percentage}%) is cut from your visiting charge. You will receive the remaining payout.
-                        </p>
-                        <p className="border-t border-indigo-500/5 pt-1 text-[10px] text-slate-400">
-                          <strong>HI:</strong> प्लेटफॉर्म कमीशन ({platformSettings.platform_fee_percentage}%) आपके विजिटिंग चार्ज से काटा जाएगा। आपको शेष भुगतान मिलेगा।
-                        </p>
-                      </>
-                    )}
-                  </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Starting Price Box */}
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 flex flex-col justify-between">
+              <div>
+                <span className="text-xs font-bold text-slate-500 block mb-1.5 uppercase tracking-wide">Starting Price (Starts From) / शुरुआती दाम</span>
+                <div className="relative flex items-center">
+                  <span className="absolute text-lg font-bold text-slate-400" style={{ left: "12px" }}>₹</span>
+                  <input
+                    type="number"
+                    value={price}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setPrice(val === "" ? "" : parseInt(val) || 0);
+                    }}
+                    onBlur={() => setPrice((p) => Math.max(1, Number(p || 199)))}
+                    className="w-full rounded-xl border border-slate-200 bg-white pr-3.5 py-2 text-base font-bold text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition shadow-sm"
+                    style={{ paddingLeft: "32px" }}
+                    placeholder="e.g. 500"
+                  />
                 </div>
-              );
-            })()}
+              </div>
+
+              {/* Compact Presets */}
+              <div className="mt-2.5 flex flex-wrap gap-1">
+                {[100, 200, 350, 500, 1000].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => setPrice(preset)}
+                    className={`px-2 py-1 text-[10px] font-bold rounded-lg border transition duration-100 active:scale-95 cursor-pointer ${price === preset
+                        ? "border-emerald-500 bg-emerald-50 text-emerald-700"
+                        : "border-slate-200 bg-white text-slate-500 hover:border-slate-300"
+                      }`}
+                  >
+                    ₹{preset}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Visiting Charge Box */}
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 flex flex-col justify-between">
+              <div>
+                <span className="text-xs font-bold text-slate-500 block mb-1.5 uppercase tracking-wide">Visiting Charge / विजिटिंग चार्ज</span>
+                <div className="relative flex items-center">
+                  <span className="absolute text-lg font-bold text-slate-400" style={{ left: "12px" }}>₹</span>
+                  <input
+                    type="number"
+                    value={visitingCharge}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setVisitingCharge(val === "" ? "" : parseInt(val) || 0);
+                    }}
+                    onBlur={() => setVisitingCharge((v) => Math.max(100, Number(v || 100)))}
+                    className="w-full rounded-xl border border-slate-200 bg-white pr-3.5 py-2 text-base font-bold text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition shadow-sm"
+                    style={{ paddingLeft: "32px" }}
+                    placeholder="e.g. 150"
+                  />
+                </div>
+              </div>
+
+              {/* Compact Presets */}
+              <div className="mt-2.5 flex flex-wrap gap-1">
+                {[100, 150, 200, 250, 300].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => setVisitingCharge(preset)}
+                    className={`px-2 py-1 text-[10px] font-bold rounded-lg border transition duration-100 active:scale-95 cursor-pointer ${visitingCharge === preset
+                        ? "border-emerald-500 bg-emerald-50 text-emerald-700"
+                        : "border-slate-200 bg-white text-slate-500 hover:border-slate-300"
+                      }`}
+                  >
+                    ₹{preset}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
-          <div className="flex justify-between pt-6 border-t border-indigo-500/10">
+          <div className="text-[10px] text-slate-400 font-semibold leading-relaxed px-1">
+            💡 Starting rate is a reference. Final rates will be approved onsite after diagnostic inspection.
+          </div>
+
+          {/* Live Payout Badge (Single Row) */}
+          {Number(visitingCharge || 0) > 0 && (() => {
+            const activeVisitingCharge = Math.max(100, Number(visitingCharge || 100));
+            const activeFee = Math.min(100.00, parseFloat((activeVisitingCharge * (parseFloat(platformSettings.platform_fee_percentage) / 100)).toFixed(2)));
+            const isBuyerModel = platformSettings.platform_fee_model === "buyer";
+            const payout = isBuyerModel ? activeVisitingCharge : activeVisitingCharge - activeFee;
+            return (
+              <div className="flex items-center justify-between p-3.5 bg-emerald-50 border border-emerald-250 rounded-xl text-xs">
+                <span className="font-bold text-emerald-800 flex items-center gap-1.5">
+                  🛡️ Payout: You receive ₹{payout} (Visiting Charge ₹{activeVisitingCharge} {isBuyerModel ? "" : `- platform fee ₹${activeFee}`})
+                </span>
+              </div>
+            );
+          })()}
+
+          <div className="flex justify-between pt-4 border-t border-slate-200">
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={onCancel}
-                className="px-4 py-2.5 rounded-xl border border-red-500/30 text-red-300 hover:bg-red-500/10 font-bold transition text-xs active:scale-95 cursor-pointer"
+                className="px-4 py-2 rounded-xl border border-red-250 text-red-655 hover:bg-red-50 font-bold transition text-xs active:scale-95 cursor-pointer"
               >
                 Cancel / रद्द करें
               </button>
               <button
                 type="button"
                 onClick={() => setStep(2)}
-                className="px-5 py-2.5 rounded-xl border border-slate-500/30 text-slate-300 hover:bg-white/5 font-black transition text-sm active:scale-95 cursor-pointer"
+                className="px-5 py-2 rounded-xl border border-slate-200 text-slate-655 hover:bg-slate-50 font-bold transition text-xs active:scale-95 cursor-pointer"
               >
                 Back / पीछे
               </button>
@@ -1240,7 +1208,7 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
             <button
               type="button"
               onClick={() => setStep(4)}
-              className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black transition text-sm hover:scale-[1.01] active:scale-95 cursor-pointer"
+              className="px-6 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition text-xs hover:scale-[1.01] active:scale-95 cursor-pointer"
             >
               Next / आगे बढ़ें
             </button>
@@ -1250,42 +1218,39 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
 
       {/* STEP 4: TITLE & DESCRIPTION DETAILS */}
       {step === 4 && (
-        <div className="space-y-6 animate-fade-in">
+        <div className="space-y-4 animate-fade-in text-left">
           <div className="text-center">
-            <h2 className="text-2xl font-black text-white">Add details / काम की जानकारी दें</h2>
-            <p className="mt-1 text-sm text-slate-400">Describe what you do for customers / ग्राहकों को समझाने के लिए विवरण लिखें</p>
+            <h2 className="text-xl font-bold text-slate-800">Add details / काम की जानकारी दें</h2>
+            <p className="mt-1 text-xs text-slate-500">Describe what you do for customers / ग्राहकों को समझाने के लिए विवरण लिखें</p>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div>
-              <label className="mb-1.5 block text-sm font-bold text-slate-300">Service Title / काम का नाम</label>
+              <label className="mb-1 block text-xs font-bold text-slate-600">Service Title / काम का नाम</label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="E.g. Tap repair, Fan fitting / जैसे: नल रिपेयर, पंखा लगाना"
-                className="w-full rounded-xl border border-indigo-500/20 bg-[#0f0e1a] px-4 py-3.5 text-sm text-white outline-none transition focus:border-indigo-500 placeholder:text-slate-500 font-semibold"
+                placeholder="E.g. Tap repair / जैसे: नल रिपेयर"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 placeholder:text-slate-400 font-semibold"
               />
-              <span className="text-[10px] text-slate-400 mt-1 block">
-                💡 You can type in English, Hindi, or your preferred language / आप इसे इंग्लिश, हिंदी या अपनी भाषा में लिख सकते हैं
-              </span>
             </div>
 
             <div>
-              <label className="mb-1.5 block text-sm font-bold text-slate-300">Description / जानकारी विवरण</label>
+              <label className="mb-1 block text-xs font-bold text-slate-600">Description / जानकारी विवरण</label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Write service details here... / यहाँ काम की जानकारी लिखें..."
-                rows="3"
-                className="w-full rounded-xl border border-indigo-500/20 bg-[#0f0e1a] px-4 py-3 text-sm text-white outline-none transition focus:border-indigo-500 resize-none placeholder:text-slate-500 font-medium"
+                rows="2"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 resize-none placeholder:text-slate-400 font-semibold"
               />
             </div>
 
             {/* Tap suggestions to auto-fill description */}
-            <div className="space-y-2">
-              <span className="text-[11px] font-black text-slate-500 uppercase tracking-widest block">Quick Suggestions / एक बार छूकर विवरण भरें:</span>
-              <div className="flex flex-wrap gap-2">
+            <div className="space-y-1.5 text-left">
+              <span className="text-[10px] font-bold text-slate-450 uppercase tracking-wider block">Quick Suggestions / विवरण चुनें:</span>
+              <div className="flex flex-wrap gap-1.5 max-h-[80px] overflow-y-auto no-scrollbar">
                 {suggestions.map((sug, idx) => (
                   <button
                     key={idx}
@@ -1293,32 +1258,32 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
                     onClick={() => {
                       setDescription((prev) => {
                         const cleanStr = prev ? prev.trim() : "";
-                        if (cleanStr.includes(sug)) return prev; // Avoid repeats
+                        if (cleanStr.includes(sug)) return prev;
                         return cleanStr ? `${cleanStr}\n• ${sug}` : `• ${sug}`;
                       });
                     }}
-                    className="text-[11px] font-bold border border-indigo-500/10 bg-indigo-500/5 hover:bg-indigo-500/15 text-indigo-300 px-3 py-1.5 rounded-lg transition text-left cursor-pointer active:scale-95"
+                    className="text-[10px] font-semibold border border-blue-100 bg-blue-50 hover:bg-blue-100/50 text-blue-700 px-2.5 py-1 rounded-lg transition text-left cursor-pointer active:scale-95"
                   >
-                    💡 {sug}
+                    💡 {sug.split("/")[0].trim()}
                   </button>
                 ))}
               </div>
             </div>
           </div>
 
-          <div className="flex justify-between pt-6 border-t border-indigo-500/10">
+          <div className="flex justify-between pt-4 border-t border-slate-200">
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={onCancel}
-                className="px-4 py-2.5 rounded-xl border border-red-500/30 text-red-300 hover:bg-red-500/10 font-bold transition text-xs active:scale-95 cursor-pointer"
+                className="px-4 py-2 rounded-xl border border-red-250 text-red-650 hover:bg-red-50 font-bold transition text-xs active:scale-95 cursor-pointer"
               >
                 Cancel / रद्द करें
               </button>
               <button
                 type="button"
                 onClick={() => setStep(3)}
-                className="px-5 py-2.5 rounded-xl border border-slate-500/30 text-slate-300 hover:bg-white/5 font-black transition text-sm active:scale-95 cursor-pointer"
+                className="px-5 py-2 rounded-xl border border-slate-200 text-slate-655 hover:bg-slate-50 font-bold transition text-xs active:scale-95 cursor-pointer"
               >
                 Back / पीछे
               </button>
@@ -1328,16 +1293,15 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
                 type="button"
                 onClick={() => {
                   setDescription("");
-                  setStep(5);
                 }}
-                className="px-5 py-2.5 rounded-xl border border-indigo-400/25 bg-indigo-500/5 text-indigo-200 font-black transition text-sm hover:bg-indigo-500/15 active:scale-95 cursor-pointer"
+                className="px-4 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-650 font-bold transition text-xs hover:bg-slate-100 active:scale-95 cursor-pointer"
               >
-                Clear Details / विवरण हटाएं
+                Clear / साफ करें
               </button>
               <button
                 type="button"
                 onClick={() => setStep(5)}
-                className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black transition text-sm hover:scale-[1.01] active:scale-95 cursor-pointer"
+                className="px-6 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition text-xs hover:scale-[1.01] active:scale-95 cursor-pointer"
               >
                 Next / आगे बढ़ें
               </button>
@@ -1348,67 +1312,68 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
 
       {/* STEP 5: REVIEW & CONFIRM */}
       {step === 5 && (
-        <div className="space-y-6 animate-fade-in">
+        <div className="space-y-4 animate-fade-in text-left">
           <div className="text-center">
-            <h2 className="text-2xl font-black text-white">Confirm & Submit / पुष्टि करें</h2>
-            <p className="mt-1 text-sm text-slate-400">Please review your service offer / अपनी सेवा की जांच करें</p>
+            <h2 className="text-xl font-bold text-slate-800">Confirm & Submit / पुष्टि करें</h2>
+            <p className="mt-1 text-xs text-slate-500">Please review your service offer / अपनी सेवा की जांच करें</p>
           </div>
 
-          <div className="rounded-2xl border border-indigo-400/30 bg-[#0f0e1a] p-5 space-y-4 shadow-inner">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-3.5 shadow-inner text-xs">
             <div className="flex items-center gap-3">
-              <span className="text-4xl bg-indigo-500/10 p-3 rounded-xl border border-indigo-500/20 shadow-inner block">
+              <span className="text-3xl bg-white p-2 rounded-xl border border-slate-200 block">
                 {selectedCategory?.icon || "🔧"}
               </span>
               <div>
-                <span className="text-[10px] font-black text-indigo-400 block uppercase tracking-widest">
+                <span className="text-[10px] font-bold text-slate-450 block uppercase">
                   {selectedCategory?.name}
                 </span>
-                <span className="text-lg font-black text-white block mt-0.5">
+                <span className="text-base font-bold text-slate-800 block mt-0.5">
                   {title || (selectedCategory?.name + " Service")}
                 </span>
-                {selectedSubService ? (
-                  <span className="text-[10px] bg-indigo-500/20 text-indigo-200 font-bold px-2 py-0.5 rounded-full inline-block mt-1">
-                    🎯 {selectedSubService.name.split("/")[0].trim()}
-                  </span>
-                ) : (
-                  <span className="text-[10px] bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 font-bold px-2 py-0.5 rounded-full inline-block mt-1 shadow-inner">
-                    ✨ Custom Service / अन्य काम
-                  </span>
-                )}
               </div>
             </div>
 
-            <div className="border-t border-indigo-500/10 pt-4 flex justify-between items-center text-sm font-semibold">
-              <span className="text-slate-400">Price Details / सेवा का रेट:</span>
-              <span className="text-base font-black text-white bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-lg text-emerald-350">
-                {priceType === "negotiable" ? (
-                  "Onsite Quote / जांच के बाद तय होगा"
-                ) : (
-                  <>₹{price} ({priceTypeLabels[priceType]})</>
-                )}
-              </span>
+            <div className="grid grid-cols-2 gap-3 border-t border-slate-200 pt-3">
+              <div>
+                <span className="text-slate-400 block font-semibold">Service Type / सेवा का प्रकार:</span>
+                <span className="font-bold text-slate-700">
+                  {selectedSubService ? "Standard / स्टैंडर्ड" : "Custom / कस्टम"}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400 block font-semibold">Price Type / रेट का प्रकार:</span>
+                <span className="font-bold text-slate-700">{priceTypeLabels[priceType]}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block font-semibold">Starting Rate / अनुमानित रेट:</span>
+                <span className="font-bold text-emerald-700">₹{price}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block font-semibold">Visiting Charge / विजिटिंग चार्ज:</span>
+                <span className="font-bold text-slate-700">₹{visitingCharge}</span>
+              </div>
             </div>
 
             {description && (
-              <div className="border-t border-indigo-500/10 pt-4">
-                <span className="text-xs font-black text-slate-500 block uppercase mb-1 tracking-wider">Details / सेवा का विवरण</span>
-                <p className="text-xs text-slate-300 font-medium whitespace-pre-wrap leading-relaxed bg-[#16142a]/30 p-3 rounded-xl border border-indigo-500/5">{description}</p>
+              <div className="border-t border-slate-200 pt-3">
+                <span className="text-[10px] font-bold text-slate-400 block uppercase mb-1 tracking-wider">Details / सेवा का विवरण</span>
+                <p className="text-xs text-slate-655 whitespace-pre-wrap leading-relaxed bg-white p-2.5 rounded-xl border border-slate-200 max-h-[80px] overflow-y-auto no-scrollbar font-medium">{description}</p>
               </div>
             )}
           </div>
 
           {submitError && (
-            <div className="p-3 bg-red-500/15 border border-red-500/30 rounded-xl text-red-200 text-xs font-semibold">
+            <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-semibold">
               ⚠️ {submitError}
             </div>
           )}
 
-          <div className="flex justify-between pt-6 border-t border-indigo-500/10">
+          <div className="flex justify-between pt-6 border-t border-slate-200">
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={onCancel}
-                className="px-4 py-2.5 rounded-xl border border-red-500/30 text-red-300 hover:bg-red-500/10 font-bold transition text-xs active:scale-95 cursor-pointer"
+                className="px-4 py-2.5 rounded-xl border border-red-250 text-red-650 hover:bg-red-50 font-bold transition text-xs active:scale-95 cursor-pointer"
               >
                 Cancel / रद्द करें
               </button>
@@ -1416,7 +1381,7 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
                 type="button"
                 onClick={() => setStep(4)}
                 disabled={isSubmitting}
-                className="px-5 py-2.5 rounded-xl border border-slate-500/30 text-slate-300 hover:bg-white/5 font-black transition text-sm disabled:opacity-50 active:scale-95 cursor-pointer"
+                className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-650 hover:bg-slate-50 font-bold transition text-sm disabled:opacity-50 active:scale-95 cursor-pointer"
               >
                 Back / पीछे
               </button>
@@ -1425,7 +1390,7 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
               type="button"
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className="px-8 py-3.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-black transition text-sm hover:scale-[1.01] active:scale-95 disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-indigo-500/25 cursor-pointer"
+              className="px-8 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition text-sm hover:scale-[1.01] active:scale-95 disabled:opacity-50 flex items-center gap-2 shadow-sm cursor-pointer"
             >
               {isSubmitting
                 ? (editingService ? "Updating..." : "Adding...")
@@ -1434,7 +1399,7 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
           </div>
         </div>
       )}
-      <div className="h-28" />
+      <div className="h-8 md:hidden" />
     </div>
   );
 }

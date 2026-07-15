@@ -14,6 +14,7 @@ import LocationErrorModal from "./LocationErrorModal";
 import {
   Sparkles,
   Zap,
+  Globe,
   Droplets,
   Hammer,
   Snowflake,
@@ -33,6 +34,8 @@ import {
   Radar,
   Users,
   MapPin,
+  Search,
+  Hash,
   SlidersHorizontal,
   ChevronDown,
   Map,
@@ -1583,12 +1586,12 @@ export default function NearbyServices({
     <div className={`qs-main-grid-layout ${showMap ? "" : "map-hidden"} ${isMapFullScreen ? "" : "animate-fade-in"}`}>
       {/* QuickSeva - Map Performance Feature: Floating Toast Message */}
       {toastMessage && (
-        <div className="fixed top-20 right-4 z-[9999] flex items-center gap-2 rounded-xl bg-indigo-900/90 border border-indigo-500/50 px-4 py-3 text-sm font-semibold text-white shadow-[0_0_20px_rgba(99,102,241,0.5)] backdrop-blur-md">
+        <div className="fixed top-20 right-4 z-[9999] flex items-center gap-2 rounded-xl bg-blue-600 border border-blue-400/30 px-4 py-3 text-sm font-semibold text-white shadow-lg backdrop-blur-md">
           <span>{toastMessage}</span>
           <button
             type="button"
             onClick={() => setToastMessage(null)}
-            className="ml-2 text-indigo-300 hover:text-white font-bold text-lg leading-none cursor-pointer"
+            className="ml-2 text-blue-200 hover:text-white font-bold text-lg leading-none cursor-pointer"
           >
             &times;
           </button>
@@ -1632,9 +1635,7 @@ export default function NearbyServices({
                 Service / सेवा
               </label>
               <div className="relative">
-                <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
-                  🔍
-                </span>
+                <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-450 h-4.5 w-4.5" />
                 <input
                   value={search}
                   onChange={(e) => {
@@ -1643,7 +1644,8 @@ export default function NearbyServices({
                   }}
                   onFocus={() => setShowServiceDrop(true)}
                   placeholder="Search services (e.g. Plumber, AC Repair, Cleaning...)"
-                  className="w-full rounded-xl bg-[#f8fafc] border border-slate-100 py-3.5 pl-11 pr-10 text-sm font-semibold text-slate-800 placeholder-slate-400 focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-indigo-500/10"
+                  className="w-full rounded-xl bg-[#f8fafc] border border-slate-200 py-3.5 pl-12 pr-10 text-sm font-semibold text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-500/10"
+                  style={{ paddingLeft: "3.25rem" }}
                 />
                 {search && (
                   <button
@@ -1705,9 +1707,7 @@ export default function NearbyServices({
                     </label>
                     <div className="flex gap-2 items-center">
                       <div className="relative flex-1">
-                        <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-rose-500 text-sm">
-                          📍
-                        </span>
+                        <MapPin className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-rose-500 h-4.5 w-4.5" />
                         <input
                           value={locationQuery}
                           onChange={(e) => setLocationQuery(e.target.value)}
@@ -1717,8 +1717,9 @@ export default function NearbyServices({
                             }
                           }}
                           autoComplete="off"
-                          className="w-full rounded-xl bg-[#f8fafc] border border-slate-100 py-3 pl-11 pr-10 text-sm font-semibold text-slate-800 placeholder-slate-400 focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-indigo-500/10"
+                          className="w-full rounded-xl bg-[#f8fafc] border border-slate-200 py-3 pl-12 pr-10 text-sm font-semibold text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-500/10"
                           placeholder="Search Area or Landmark (e.g. Nikol)"
+                          style={{ paddingLeft: "3.25rem" }}
                         />
                         {locationQuery && (
                           <button
@@ -1756,9 +1757,7 @@ export default function NearbyServices({
                     </label>
                     <div className="flex gap-2 items-center">
                       <div className="relative flex-1">
-                        <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
-                          📋
-                        </span>
+                        <Hash className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-450 h-4.5 w-4.5" />
                         <input
                           value={pincode}
                           onChange={(e) => {
@@ -1768,9 +1767,10 @@ export default function NearbyServices({
                             setLocationNotFoundMsg("");
                           }}
                           onKeyDown={(e) => e.key === "Enter" && handlePincodeSearch()}
-                          className="w-full rounded-xl bg-[#f8fafc] border border-slate-100 py-3 pl-11 pr-10 text-sm font-semibold text-slate-800 placeholder-slate-400 focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-indigo-500/10"
+                          className="w-full rounded-xl bg-[#f8fafc] border border-slate-200 py-3 pl-12 pr-10 text-sm font-semibold text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-500/10"
                           placeholder="Enter 6-digit Pincode (e.g. 382350)"
                           maxLength={6}
+                          style={{ paddingLeft: "3.25rem" }}
                         />
                         {pincode && (
                           <button
@@ -1820,7 +1820,7 @@ export default function NearbyServices({
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                       Distance Range
                     </span>
-                    <span className="text-[10px] font-bold bg-[#0284c7] px-2 py-0.5 rounded-md text-white">{radiusKm} km</span>
+                    <span className="qs-distance-badge text-[10px] font-bold bg-blue-600 px-2 py-0.5 rounded-md text-white">{radiusKm} km</span>
                   </div>
                   <div className="flex flex-col">
                     <input
@@ -1832,7 +1832,7 @@ export default function NearbyServices({
                       onChange={(e) => setRadiusKm(parseInt(e.target.value || "5", 10))}
                       className="qs-range w-full"
                       style={{
-                        background: `linear-gradient(to right, #0284c7 0%, #0284c7 ${((radiusKm - 1) / 49) * 100}%, rgba(24,95,165,0.08) ${((radiusKm - 1) / 49) * 100}%, rgba(24,95,165,0.08) 100%)`,
+                        background: `linear-gradient(to right, var(--qs-primary, #2563eb) 0%, var(--qs-primary, #2563eb) ${((radiusKm - 1) / 49) * 100}%, #e2e8f0 ${((radiusKm - 1) / 49) * 100}%, #e2e8f0 100%)`,
                       }}
                     />
                     <span className="text-[9px] text-slate-400 mt-1 font-semibold">
@@ -1868,12 +1868,12 @@ export default function NearbyServices({
                       <button
                         type="button"
                         onClick={() => setFiltersOpen((prev) => !prev)}
-                        className="qs-refine-toggle-btn inline-flex items-center justify-center gap-2 rounded-full px-5 py-2 text-xs font-bold cursor-pointer whitespace-nowrap ml-1"
+                        className={`qs-refine-toggle-btn inline-flex items-center justify-center gap-2 rounded-full px-5 py-2 text-xs font-bold cursor-pointer whitespace-nowrap ml-1 ${filtersOpen ? "active" : ""}`}
                       >
                         <SlidersHorizontal className="h-3.5 w-3.5 shrink-0" />
                         <span>Refine Results</span>
                         {activeFilterCount > 0 && (
-                          <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-white text-[10px] font-extrabold text-[#0f172a]">
+                          <span className="qs-filter-badge inline-flex h-4 w-4 items-center justify-center rounded-full bg-white text-[10px] font-extrabold text-[#0f172a]">
                             {activeFilterCount}
                           </span>
                         )}
@@ -2077,9 +2077,9 @@ export default function NearbyServices({
               (Math.abs(searchCenter.lat - buyerPos.lat) > 0.0001 ||
                 Math.abs(searchCenter.lng - buyerPos.lng) > 0.0001) && (
                 <div className="pointer-events-none absolute bottom-14 left-1/2 z-[600] -translate-x-1/2">
-                  <div className="qs-map-pill flex items-center gap-2 bg-indigo-900/80 border-indigo-400/40">
+                  <div className="qs-map-pill flex items-center gap-2 bg-blue-600/90 border border-blue-400/40">
                     <Crosshair className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-                    <span className="text-xs font-semibold text-emerald-300">
+                    <span className="text-xs font-semibold text-emerald-350">
                       Searching here
                     </span>
                   </div>
@@ -2092,7 +2092,7 @@ export default function NearbyServices({
                 type="button"
                 onClick={handleUseMyLocation}
                 disabled={geoLoading}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-[#0284c7] text-white shadow-lg hover:bg-[#0284c7]/95 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
                 title="Locate Me / मेरी स्थिति"
               >
                 {geoLoading ? (
@@ -2155,7 +2155,7 @@ export default function NearbyServices({
                   <a
                     href={`/seller/${selectedSeller.id || selectedSeller.sellerId}`}
                     onClick={(e) => handleViewDetailsClick(selectedSeller, e)}
-                    className="bg-[#0284c7] text-white px-3 py-1.5 rounded-lg font-bold text-[10px] hover:bg-[#0284c7]/95 transition-all text-center force-text-white"
+                    className="bg-blue-600 text-white px-3 py-1.5 rounded-lg font-bold text-[10px] hover:bg-blue-700 transition-all text-center force-text-white"
                   >
                     View Profile →
                   </a>
@@ -2165,12 +2165,12 @@ export default function NearbyServices({
 
             {/* Loading overlay */}
             {!buyerPos && (
-              <div className="absolute inset-0 z-[500] flex flex-col items-center justify-center bg-indigo-950/80 backdrop-blur-sm">
+              <div className="absolute inset-0 z-[500] flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm">
                 <div className="relative h-12 w-12">
-                  <div className="absolute inset-0 animate-ping rounded-full bg-indigo-500/40" />
-                  <div className="absolute inset-2 rounded-full bg-indigo-500 shadow-[0_0_30px_rgba(99,102,241,0.8)]" />
+                  <div className="absolute inset-0 animate-ping rounded-full bg-blue-500/40" />
+                  <div className="absolute inset-2 rounded-full bg-blue-600 shadow-[0_0_30px_rgba(37,99,235,0.4)]" />
                 </div>
-                <p className="mt-4 text-sm font-semibold text-indigo-200">
+                <p className="mt-4 text-sm font-bold text-slate-700">
                   Locating you on the map…
                 </p>
               </div>
@@ -2497,7 +2497,7 @@ export default function NearbyServices({
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
-                      <h4 className="truncate text-[15px] font-bold text-slate-800">
+                      <h4 className="text-[15px] font-extrabold text-slate-850 tracking-tight leading-snug">
                         {seller.name}
                       </h4>
                     </div>
@@ -2506,14 +2506,14 @@ export default function NearbyServices({
                     </div>
                   </div>
                   <div className="qs-custom-distance-badge">
-                    <span className="text-[10px] opacity-80">📍</span>
+                    <MapPin className="h-3 w-3 shrink-0" />
                     <span>{`${distanceLabel}km away`}</span>
                   </div>
                 </div>
 
                 {/* Address */}
                 <div className="mt-3.5 flex items-start gap-1.5 text-xs text-slate-500">
-                  <span className="mt-0.5 opacity-70">📍</span>
+                  <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400 mt-0.5" />
                   <span className="truncate">{seller.address}</span>
                 </div>
 
@@ -2522,17 +2522,20 @@ export default function NearbyServices({
                   {/* Service Mode badges */}
                   {seller?.serviceMode === "online" && (
                     <span className="qs-tag qs-tag-indigo">
-                      🌐 Online Service
+                      <Globe className="h-3 w-3 shrink-0" />
+                      <span>Online Service</span>
                     </span>
                   )}
                   {seller?.serviceMode === "offline" && (
                     <span className="qs-tag qs-tag-emerald">
-                      📍 Offline Service
+                      <MapPin className="h-3 w-3 shrink-0" />
+                      <span>On-site Service</span>
                     </span>
                   )}
                   {seller?.serviceMode === "both" && (
-                    <span className="qs-tag qs-tag-amber">
-                      🔄 Online + Offline
+                    <span className="qs-tag qs-tag-indigo">
+                      <Globe className="h-3 w-3 shrink-0" />
+                      <span>Online + On-site</span>
                     </span>
                   )}
 
@@ -2540,31 +2543,36 @@ export default function NearbyServices({
                   {seller?.instantService && (
                     <span
                       className="qs-custom-instant-badge"
-                      title="⚡ Instant Service"
+                      title="Instant Service"
                     >
                       <span className="qs-custom-instant-badge-dot" />
-                      <span>⚡ Instant Service</span>
+                      <Zap className="h-3 w-3 fill-current text-amber-600 shrink-0" />
+                      <span>Instant Service</span>
                     </span>
                   )}
 
                   {/* Rating badge */}
-                  <span className="qs-tag qs-tag-indigo">
-                    ⭐ {Number(seller?.rating || 0).toFixed(1)}
-                    <span className="opacity-80">
-                      {" "}
+                  <span className="qs-tag qs-tag-gold">
+                    <Star className="h-3 w-3 fill-current text-amber-500 shrink-0" />
+                    <span className="font-bold">{Number(seller?.rating || 0).toFixed(1)}</span>
+                    <span className="opacity-80 font-normal">
                       ({Number(seller?.reviews || 0)} Reviews)
                     </span>
                   </span>
 
                   {/* Top Rated */}
                   {seller?.isTopRated && (
-                    <span className="qs-tag qs-tag-gold">⭐ Top Rated</span>
+                    <span className="qs-tag qs-tag-gold">
+                      <Sparkles className="h-3 w-3 fill-current text-yellow-600 shrink-0" />
+                      <span>Top Rated</span>
+                    </span>
                   )}
 
                   {/* Verification-related UI temporarily hidden */}
                   {packageRank >= 2 && (
                     <span className="qs-tag qs-tag-amber">
-                      ⚡ Fast Response
+                      <Zap className="h-3 w-3 fill-current text-amber-600 shrink-0" />
+                      <span>Fast Response</span>
                     </span>
                   )}
                 </div>

@@ -5,29 +5,28 @@ const Footer = () => {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-indigo-950 text-indigo-100 border-t border-indigo-900 pb-20">
+    <footer className="bg-slate-50 text-slate-600 border-t border-slate-200 pb-20 text-left">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Footer Content Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
           {/* Company Info */}
           <div>
-            <h3 className="text-white font-bold text-xl mb-4">QuickSeva</h3>
-            <p className="text-indigo-200 text-sm leading-relaxed">
-              A modern authentication solution built with React. Secure, fast,
-              and user-friendly.
+            <h3 className="text-slate-800 font-bold text-xl mb-4">QuickSeva</h3>
+            <p className="text-slate-500 text-sm leading-relaxed font-semibold">
+              A modern localized service solution. Find and book verified local service experts near you instantly.
             </p>
           </div>
 
           {/* Quick Links */}
           <div>
-            <h4 className="text-white font-semibold text-lg mb-4">
+            <h4 className="text-slate-800 font-bold text-lg mb-4">
               Quick Links
             </h4>
-            <ul className="space-y-2">
+            <ul className="space-y-2 font-bold text-sm">
               <li>
                 <Link
                   to="/"
-                  className="text-indigo-200 hover:text-red-400 transition duration-200"
+                  className="text-slate-500 hover:text-blue-650 transition duration-200"
                 >
                   Home
                 </Link>
@@ -35,7 +34,7 @@ const Footer = () => {
               <li>
                 <Link
                   to="/login"
-                  className="text-indigo-200 hover:text-red-400 transition duration-200"
+                  className="text-slate-500 hover:text-blue-650 transition duration-200"
                 >
                   Login
                 </Link>
@@ -43,7 +42,7 @@ const Footer = () => {
               <li>
                 <Link
                   to="/register"
-                  className="text-indigo-200 hover:text-red-400 transition duration-200"
+                  className="text-slate-500 hover:text-blue-650 transition duration-200"
                 >
                   Register
                 </Link>
@@ -53,12 +52,12 @@ const Footer = () => {
 
           {/* Contact & Social */}
           <div>
-            <h4 className="text-white font-semibold text-lg mb-4">Connect</h4>
-            <ul className="space-y-2">
+            <h4 className="text-slate-800 font-bold text-lg mb-4">Connect</h4>
+            <ul className="space-y-2 font-bold text-sm">
               <li>
                 <a
                   href="mailto:contact@quickseva.com"
-                  className="text-indigo-200 hover:text-red-400 transition duration-200"
+                  className="text-slate-500 hover:text-blue-650 transition duration-200"
                 >
                   contact@quickseva.com
                 </a>
@@ -66,7 +65,7 @@ const Footer = () => {
               <li>
                 <a
                   href="#"
-                  className="text-indigo-200 hover:text-red-400 transition duration-200"
+                  className="text-slate-500 hover:text-blue-650 transition duration-200"
                 >
                   Twitter
                 </a>
@@ -74,7 +73,7 @@ const Footer = () => {
               <li>
                 <a
                   href="#"
-                  className="text-indigo-200 hover:text-red-400 transition duration-200"
+                  className="text-slate-500 hover:text-blue-650 transition duration-200"
                 >
                   GitHub
                 </a>
@@ -84,23 +83,23 @@ const Footer = () => {
         </div>
 
         {/* Divider */}
-        <div className="border-t border-indigo-900 mb-6"></div>
+        <div className="border-t border-slate-200 mb-6"></div>
 
         {/* Bottom Section */}
-        <div className="flex flex-col md:flex-row justify-between items-center">
-          <p className="text-indigo-200 text-sm mb-4 md:mb-0">
+        <div className="flex flex-col md:flex-row justify-between items-center text-sm font-semibold">
+          <p className="text-slate-450 mb-4 md:mb-0">
             &copy; {currentYear} QuickSeva. All rights reserved.
           </p>
           <div className="flex space-x-6">
             <Link
               to="/privacy-policy"
-              className="text-indigo-200 hover:text-red-400 text-sm transition duration-200"
+              className="text-slate-450 hover:text-blue-650 transition duration-200"
             >
               Privacy Policy
             </Link>
             <Link
               to="/terms-of-service"
-              className="text-indigo-200 hover:text-red-400 text-sm transition duration-200"
+              className="text-slate-455 hover:text-blue-650 transition duration-200"
             >
               Terms of Service
             </Link>

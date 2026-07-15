@@ -115,8 +115,8 @@ const AdminDashboard = () => {
 
   if (!adminData) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="text-white text-2xl animate-pulse">Loading Admin Console...</div>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-800">
+        <div className="text-slate-600 text-2xl font-bold animate-pulse">Loading Admin Console...</div>
       </div>
     );
   }
@@ -128,7 +128,7 @@ const AdminDashboard = () => {
       subtitle: `${dashboardStats.activeUsers} active accounts`,
       icon: Users,
       color: "from-blue-500 to-indigo-600",
-      borderColor: "border-blue-500/30",
+      iconColor: "text-blue-600 bg-blue-50",
     },
     {
       title: "Total Services",
@@ -136,7 +136,7 @@ const AdminDashboard = () => {
       subtitle: "Active category items",
       icon: Briefcase,
       color: "from-purple-500 to-pink-600",
-      borderColor: "border-purple-500/30",
+      iconColor: "text-purple-600 bg-purple-50",
     },
     {
       title: "Completed Jobs",
@@ -144,7 +144,7 @@ const AdminDashboard = () => {
       subtitle: "Successful transactions",
       icon: CheckCircle,
       color: "from-emerald-500 to-teal-600",
-      borderColor: "border-emerald-500/30",
+      iconColor: "text-emerald-600 bg-emerald-50",
     },
     {
       title: "Pending Bookings",
@@ -152,7 +152,7 @@ const AdminDashboard = () => {
       subtitle: "In-progress requests",
       icon: Clock,
       color: "from-amber-500 to-orange-600",
-      borderColor: "border-amber-500/30",
+      iconColor: "text-amber-600 bg-amber-50",
     },
     {
       title: "Disputed Bookings",
@@ -160,7 +160,7 @@ const AdminDashboard = () => {
       subtitle: "Awaiting resolution",
       icon: AlertTriangle,
       color: "from-rose-500 to-red-600",
-      borderColor: "border-rose-500/30",
+      iconColor: "text-red-600 bg-red-50",
     },
     {
       title: "Total Revenue",
@@ -168,7 +168,7 @@ const AdminDashboard = () => {
       subtitle: "Platform commission fee sum",
       icon: IndianRupee,
       color: "from-cyan-500 to-blue-600",
-      borderColor: "border-cyan-500/30",
+      iconColor: "text-sky-600 bg-sky-50",
     },
   ];
 
@@ -196,30 +196,33 @@ const AdminDashboard = () => {
     return new Date(dateString).toLocaleDateString();
   };
 
+  const inputClass =
+    "w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-105 focus:border-blue-500 transition font-medium shadow-xs";
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 text-left">
       {/* Welcome Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight">
+          <h1 className="text-3xl font-bold text-slate-800 tracking-tight">
             Dashboard Overview
           </h1>
-          <p className="text-slate-400 mt-1">
-            Logged in as: <span className="text-indigo-400 font-semibold">{adminData.email}</span>
+          <p className="text-slate-500 mt-1 font-semibold text-sm">
+            Logged in as: <span className="text-blue-600 font-bold">{adminData.email}</span>
           </p>
         </div>
         <button
           onClick={fetchStats}
           disabled={statsLoading}
-          className="px-4 py-2 text-xs font-bold bg-indigo-950/80 border border-indigo-500/30 text-indigo-300 hover:text-white hover:border-indigo-400 rounded-xl transition-all flex items-center gap-2 self-start"
+          className="px-4 py-2.5 text-xs font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl transition shadow-xs flex items-center gap-2 self-start cursor-pointer active:scale-95"
         >
-          <Activity size={14} className={statsLoading ? "animate-spin" : ""} />
+          <Activity size={14} className={statsLoading ? "animate-spin text-blue-600" : "text-blue-600"} />
           <span>Refresh Data</span>
         </button>
       </div>
 
       {statsError && (
-        <div className="bg-red-500/10 border border-red-500/20 text-red-400 rounded-2xl p-4 text-sm">
+        <div className="bg-red-50 border border-red-200 text-red-750 rounded-2xl p-4 text-sm font-semibold shadow-xs">
           ⚠️ {statsError}
         </div>
       )}
@@ -231,22 +234,22 @@ const AdminDashboard = () => {
           return (
             <div
               key={index}
-              className={`bg-slate-900/40 backdrop-blur-md rounded-2xl p-6 border ${card.borderColor} hover:border-indigo-500/40 transition-all duration-300 group`}
+              className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow group flex flex-col justify-between"
             >
               <div className="flex justify-between items-start">
                 <div className="space-y-1">
-                  <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">
+                  <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">
                     {card.title}
                   </p>
-                  <p className="text-white text-2xl font-black tracking-tight pt-1">
+                  <p className="text-slate-800 text-2xl font-black tracking-tight pt-1 font-mono">
                     {card.value}
                   </p>
                 </div>
-                <div className={`p-3 rounded-xl bg-linear-to-br ${card.color} text-white shadow-lg shadow-indigo-950/20`}>
+                <div className={`p-3 rounded-xl ${card.iconColor} shadow-2xs`}>
                   <Icon size={20} />
                 </div>
               </div>
-              <p className="text-slate-500 text-xs mt-4 flex items-center gap-1.5 font-medium">
+              <p className="text-slate-500 text-xs mt-4 flex items-center gap-1.5 font-bold">
                 <span>{card.subtitle}</span>
               </p>
             </div>
@@ -256,57 +259,57 @@ const AdminDashboard = () => {
 
       {/* Policy Editor Overlay Block */}
       {showPolicyEditor && (
-        <div className="bg-slate-900/60 backdrop-blur-lg rounded-2xl p-6 border border-indigo-900/40 shadow-2xl transition-all duration-300">
-          <div className="flex justify-between items-center mb-6 border-b border-indigo-950 pb-4">
-            <h2 className="text-xl font-bold text-white flex items-center gap-2">
-              <BookOpen size={20} className="text-indigo-400" />
+        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xl space-y-5">
+          <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-4">
+            <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+              <BookOpen size={20} className="text-blue-600" />
               <span>Manage Site Policies</span>
             </h2>
             <button
               onClick={() => setShowPolicyEditor(false)}
-              className="text-slate-400 hover:text-white text-xs bg-slate-800/60 px-3 py-1.5 rounded-lg border border-slate-700/20 transition-all"
+              className="text-slate-500 hover:text-slate-800 text-xs bg-slate-50 hover:bg-slate-100 px-3.5 py-2 rounded-xl border border-slate-200 transition-all cursor-pointer font-bold"
             >
               Close Editor
             </button>
           </div>
 
           {editorError && (
-            <div className="bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl p-4 mb-6 text-xs">
+            <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 text-xs font-semibold">
               ⚠️ {editorError}
             </div>
           )}
 
           {editorSuccess && (
-            <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl p-4 mb-6 text-xs">
+            <div className="bg-emerald-50 border border-emerald-250 text-emerald-700 rounded-xl p-4 text-xs font-semibold">
               ✅ {editorSuccess}
             </div>
           )}
 
-          <div className="space-y-5">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-slate-950/40 p-4 rounded-xl border border-indigo-950/60">
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
               <div className="flex items-center gap-3">
-                <label htmlFor="policy-select" className="text-slate-400 text-xs font-semibold">Select Document:</label>
+                <label htmlFor="policy-select" className="text-slate-600 text-xs font-bold uppercase tracking-wider">Select Document:</label>
                 <select
                   id="policy-select"
                   value={selectedPolicyKey}
                   onChange={(e) => handleLoadPolicy(e.target.value)}
                   disabled={editorLoading}
-                  className="bg-slate-900 border border-indigo-900/50 text-white rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-indigo-500"
+                  className="bg-white border border-slate-200 text-slate-800 rounded-lg px-3 py-1.5 text-xs font-medium focus:outline-none focus:border-blue-500"
                 >
                   <option value="privacy_policy">Privacy Policy</option>
                   <option value="terms_of_service">Terms of Service</option>
                 </select>
               </div>
               {editorLoading && (
-                <div className="flex items-center gap-2 text-indigo-400 text-xs">
-                  <div className="w-3.5 h-3.5 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
+                <div className="flex items-center gap-2 text-blue-600 text-xs font-semibold">
+                  <div className="w-3.5 h-3.5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
                   <span>Loading Document...</span>
                 </div>
               )}
             </div>
 
             <div>
-              <label htmlFor="policy-title" className="block text-slate-400 text-xs font-semibold mb-2">Document Title</label>
+              <label htmlFor="policy-title" className="block text-slate-655 text-xs font-bold uppercase tracking-wider mb-2">Document Title</label>
               <input
                 id="policy-title"
                 type="text"
@@ -314,14 +317,14 @@ const AdminDashboard = () => {
                 onChange={(e) => setPolicyTitle(e.target.value)}
                 disabled={editorLoading}
                 placeholder="e.g., Privacy Policy"
-                className="bg-slate-950/30 border border-indigo-900/30 text-white rounded-lg px-4 py-2.5 w-full focus:outline-none focus:border-indigo-500 text-xs font-medium"
+                className={inputClass}
               />
             </div>
 
             <div>
               <div className="flex justify-between items-center mb-2">
-                <label htmlFor="policy-content" className="block text-slate-400 text-xs font-semibold">Document Content (HTML format)</label>
-                <span className="text-[10px] text-slate-500 italic">Supports basic markup tags</span>
+                <label htmlFor="policy-content" className="block text-slate-655 text-xs font-bold uppercase tracking-wider">Document Content (HTML format)</label>
+                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Supports basic markup tags</span>
               </div>
               <textarea
                 id="policy-content"
@@ -329,22 +332,22 @@ const AdminDashboard = () => {
                 onChange={(e) => setPolicyContent(e.target.value)}
                 disabled={editorLoading}
                 placeholder="Enter HTML formatted text..."
-                className="bg-slate-950/30 border border-indigo-900/30 text-white rounded-lg px-4 py-3 w-full h-80 focus:outline-none focus:border-indigo-500 font-mono text-xs leading-relaxed"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 font-mono text-xs leading-relaxed h-80 resize-y"
               />
             </div>
 
-            <div className="flex justify-end gap-3 border-t border-indigo-950 pt-5">
+            <div className="flex justify-end gap-3 border-t border-slate-100 pt-5">
               <button
                 onClick={() => setShowPolicyEditor(false)}
                 disabled={editorLoading}
-                className="px-4 py-2 bg-slate-950 hover:bg-slate-900 text-slate-400 font-semibold rounded-xl border border-slate-900 transition-all text-xs"
+                className="px-4 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold rounded-xl border border-slate-200 transition-all text-xs cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSavePolicy}
                 disabled={editorLoading || !policyTitle || !policyContent}
-                className="px-5 py-2 bg-linear-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:from-indigo-600/40 disabled:to-purple-600/40 text-white font-bold rounded-xl transition-all shadow-lg flex items-center text-xs"
+                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold rounded-xl transition-all shadow-xs flex items-center text-xs cursor-pointer"
               >
                 {editorLoading ? (
                   <>
@@ -363,28 +366,28 @@ const AdminDashboard = () => {
       {/* Main Grid: Recent Activity & Quick Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Activity Section */}
-        <div className="lg:col-span-2 bg-slate-900/40 backdrop-blur-md rounded-2xl p-6 border border-indigo-900/30 flex flex-col">
-          <div className="flex items-center gap-2 mb-6">
-            <Activity className="text-indigo-400" size={18} />
-            <h2 className="text-lg font-bold text-white">Recent Activity Log</h2>
+        <div className="lg:col-span-2 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col">
+          <div className="flex items-center gap-2 mb-6 border-b border-slate-105 pb-3">
+            <Activity className="text-blue-600" size={18} />
+            <h2 className="text-lg font-bold text-slate-800">Recent Activity Log</h2>
           </div>
 
           <div className="space-y-4 flex-1">
             {statsLoading ? (
-              <div className="py-8 text-center text-slate-500 text-xs animate-pulse">Loading updates...</div>
+              <div className="py-8 text-center text-slate-400 text-xs animate-pulse font-semibold">Loading updates...</div>
             ) : recentActivity.length === 0 ? (
-              <div className="py-8 text-center text-slate-500 text-xs">No recent updates in the log logs.</div>
+              <div className="py-8 text-center text-slate-400 text-xs font-semibold">No recent updates in the log logs.</div>
             ) : (
               recentActivity.map((item, index) => (
                 <div
                   key={index}
-                  className="flex items-center justify-between p-4 bg-slate-950/20 rounded-xl border border-indigo-950/40 hover:border-indigo-500/20 transition-all"
+                  className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200 hover:border-blue-100 transition-all"
                 >
                   <div className="flex items-center gap-3">
-                    <span className="text-xl p-2 bg-indigo-950/30 rounded-lg">{getActivityIcon(item.type)}</span>
-                    <p className="text-slate-300 text-xs font-semibold">{item.action}</p>
+                    <span className="text-xl p-2 bg-white rounded-lg border border-slate-200/50 shadow-2xs">{getActivityIcon(item.type)}</span>
+                    <p className="text-slate-700 text-xs font-bold">{item.action}</p>
                   </div>
-                  <span className="text-slate-500 text-[10px] font-bold">
+                  <span className="text-slate-550 text-[10px] font-bold">
                     {formatActivityTime(item.created_at)}
                   </span>
                 </div>
@@ -394,12 +397,12 @@ const AdminDashboard = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="bg-slate-900/40 backdrop-blur-md rounded-2xl p-6 border border-indigo-900/30 space-y-4">
-          <h2 className="text-lg font-bold text-white mb-2">Platform Controls</h2>
+        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
+          <h2 className="text-lg font-bold text-slate-800 mb-2 border-b border-slate-105 pb-3">Platform Controls</h2>
 
           <button
             onClick={() => navigate("/admin/users")}
-            className="w-full flex items-center justify-between p-4 bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-xl transition-all shadow-md transform hover:-translate-y-0.5"
+            className="w-full flex items-center justify-between p-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition shadow-xs cursor-pointer active:scale-99"
           >
             <div className="flex items-center gap-3 text-xs">
               <Users size={16} />
@@ -410,7 +413,7 @@ const AdminDashboard = () => {
 
           <button
             onClick={() => navigate("/admin/sellers")}
-            className="w-full flex items-center justify-between p-4 bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold rounded-xl transition-all shadow-md transform hover:-translate-y-0.5"
+            className="w-full flex items-center justify-between p-4 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl transition shadow-xs cursor-pointer active:scale-99"
           >
             <div className="flex items-center gap-3 text-xs">
               <UserCheck size={16} />
@@ -421,7 +424,7 @@ const AdminDashboard = () => {
 
           <button
             onClick={() => navigate("/admin/disputes")}
-            className="w-full flex items-center justify-between p-4 bg-linear-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-bold rounded-xl transition-all shadow-md transform hover:-translate-y-0.5"
+            className="w-full flex items-center justify-between p-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition shadow-xs cursor-pointer active:scale-99"
           >
             <div className="flex items-center gap-3 text-xs">
               <ShieldCheck size={16} />
@@ -435,10 +438,10 @@ const AdminDashboard = () => {
               setShowPolicyEditor(true);
               handleLoadPolicy("privacy_policy");
             }}
-            className="w-full flex items-center justify-between p-4 bg-slate-950/60 hover:bg-slate-900 text-indigo-300 hover:text-white font-semibold rounded-xl border border-indigo-900/30 transition-all"
+            className="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold rounded-xl border border-slate-200 transition cursor-pointer active:scale-99"
           >
             <div className="flex items-center gap-3 text-xs">
-              <BookOpen size={16} />
+              <BookOpen size={16} className="text-blue-600" />
               <span>Manage CMS Policies</span>
             </div>
             <span>⚙</span>

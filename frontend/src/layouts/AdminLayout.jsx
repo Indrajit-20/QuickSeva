@@ -198,27 +198,27 @@ const AdminLayout = () => {
   ];
 
   const renderSidebarContent = () => (
-    <div className="flex h-full flex-col bg-slate-900 border-r border-indigo-900/30 text-slate-100">
+    <div className="flex h-full flex-col bg-white border-r border-slate-200 text-slate-700">
       {/* Brand logo */}
-      <div className="px-6 py-5 border-b border-indigo-950 flex items-center justify-between">
+      <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
         <div>
-          <span className="text-2xl font-black text-white">
-            Quick<span className="text-indigo-400">Seva</span>
+          <span className="text-2xl font-black text-slate-800">
+            Quick<span className="text-blue-600">Seva</span>
           </span>
-          <p className="text-[10px] uppercase tracking-widest text-indigo-300/80 font-bold mt-0.5">
+          <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mt-0.5">
             System Control Panel
           </p>
         </div>
         <button
           onClick={() => setIsMobileOpen(false)}
-          className="lg:hidden text-slate-400 hover:text-white"
+          className="lg:hidden text-slate-400 hover:text-slate-600 cursor-pointer p-1"
         >
           <X size={20} />
         </button>
       </div>
 
       {/* Nav items list */}
-      <nav className="flex-1 overflow-y-auto px-4 py-4 space-y-1.5 scrollbar-thin scrollbar-thumb-indigo-950">
+      <nav className="flex-1 overflow-y-auto px-4 py-4 space-y-1.5 scrollbar-thin">
         {menuConfig.map((item, idx) => {
           if (item.type === "link") {
             const Icon = item.icon;
@@ -231,8 +231,8 @@ const AdminLayout = () => {
                 onClick={() => setIsMobileOpen(false)}
                 className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                   isActive
-                    ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/30"
-                    : "text-slate-400 hover:bg-indigo-950/40 hover:text-indigo-200"
+                    ? "bg-blue-50 text-blue-600 border border-blue-100 shadow-xs"
+                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
                 }`}
               >
                 <Icon size={18} />
@@ -252,10 +252,10 @@ const AdminLayout = () => {
               <div key={idx} className="space-y-1">
                 <button
                   onClick={() => toggleMenu(item.id)}
-                  className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                  className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
                     isChildActive
-                      ? "text-indigo-300"
-                      : "text-slate-400 hover:bg-indigo-950/40 hover:text-indigo-200"
+                      ? "text-blue-600 font-bold"
+                      : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
                   }`}
                 >
                   <div className="flex items-center gap-3">
@@ -280,8 +280,8 @@ const AdminLayout = () => {
                           onClick={() => setIsMobileOpen(false)}
                           className={`block px-3 py-2 rounded-lg text-xs font-medium transition-all ${
                             isActive
-                              ? "bg-indigo-600/10 text-indigo-300 font-bold border-l-2 border-indigo-500"
-                              : "text-slate-500 hover:text-slate-200"
+                              ? "bg-blue-50/50 text-blue-600 font-bold border-l-2 border-blue-500"
+                              : "text-slate-500 hover:text-slate-800"
                           }`}
                         >
                           {sub.label}
@@ -298,23 +298,23 @@ const AdminLayout = () => {
       </nav>
 
       {/* User profile & logout footer */}
-      <div className="p-4 border-t border-indigo-950 bg-indigo-950/20 flex flex-col gap-2">
+      <div className="p-4 border-t border-slate-200 bg-slate-50 flex flex-col gap-2">
         <div className="flex items-center gap-3 px-2 py-1.5">
-          <div className="w-9 h-9 rounded-full bg-indigo-700 flex items-center justify-center font-bold text-white text-sm shadow-md border border-indigo-500/20">
+          <div className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center font-bold text-white text-sm shadow-sm">
             {user?.name ? user.name[0].toUpperCase() : "A"}
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-white truncate">
+          <div className="flex-1 min-w-0 text-left">
+            <p className="text-sm font-bold text-slate-800 truncate">
               {user?.name || "System Admin"}
             </p>
-            <p className="text-xs text-indigo-400 truncate">
+            <p className="text-xs text-slate-500 truncate">
               {user?.email || "admin@quickseva.com"}
             </p>
           </div>
         </div>
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3 py-2.5 text-rose-400 hover:text-rose-300 hover:bg-rose-950/30 rounded-xl text-sm font-semibold transition-all"
+          className="w-full flex items-center gap-3 px-3 py-2.5 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-xl text-sm font-semibold transition-all cursor-pointer"
         >
           <LogOut size={18} />
           <span>Logout</span>
@@ -324,7 +324,7 @@ const AdminLayout = () => {
   );
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col lg:flex-row overflow-hidden font-sans">
+    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col lg:flex-row overflow-hidden font-sans">
       {/* Desktop Sidebar */}
       <aside className="hidden lg:block w-64 shrink-0 h-screen sticky top-0 overflow-y-hidden">
         {renderSidebarContent()}
@@ -332,7 +332,7 @@ const AdminLayout = () => {
 
       {/* Mobile Drawer */}
       {isMobileOpen && (
-        <div className="fixed inset-0 z-50 flex lg:hidden bg-black/60 backdrop-blur-xs">
+        <div className="fixed inset-0 z-50 flex lg:hidden bg-slate-900/40 backdrop-blur-xs">
           <div className="w-64 h-full animate-slide-in">
             {renderSidebarContent()}
           </div>
@@ -343,21 +343,21 @@ const AdminLayout = () => {
       {/* Main content wrapper */}
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
         {/* Top bar */}
-        <header className="h-16 px-6 bg-slate-900/50 border-b border-indigo-950/50 backdrop-blur-md flex items-center justify-between sticky top-0 z-40">
+        <header className="h-16 px-6 bg-white border-b border-slate-200 backdrop-blur-md flex items-center justify-between sticky top-0 z-40">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setIsMobileOpen(true)}
-              className="lg:hidden text-slate-400 hover:text-white"
+              className="lg:hidden text-slate-500 hover:text-slate-800 cursor-pointer"
             >
               <Menu size={24} />
             </button>
-            <h2 className="text-lg font-bold text-slate-200">
+            <h2 className="text-lg font-bold text-slate-850">
               System Admin Console
             </h2>
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-bold bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/25">
+            <div className="flex items-center gap-1.5 text-xs text-emerald-700 font-bold bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               <span>LIVE CONTROL</span>
             </div>
@@ -365,7 +365,7 @@ const AdminLayout = () => {
         </header>
 
         {/* Content workspace */}
-        <main className="flex-1 p-6 md:p-8 bg-linear-to-br from-slate-950 via-indigo-950/30 to-black overflow-x-hidden">
+        <main className="flex-1 p-6 md:p-8 bg-slate-50 overflow-x-hidden">
           <Outlet />
         </main>
       </div>

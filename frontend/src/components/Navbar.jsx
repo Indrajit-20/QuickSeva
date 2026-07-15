@@ -23,7 +23,7 @@ const getInitials = (name) => {
   return (parts[0][0] + parts[1][0]).toUpperCase();
 };
 
-import { Search } from "lucide-react";
+import { Search, MapPin } from "lucide-react";
 import SearchOverlay from "./SearchOverlay";
 
 function NavbarSearch({ className = "", onTriggerSearch }) {
@@ -97,9 +97,9 @@ const Navbar = () => {
             </span>
           </Link>
 
-          <div className="hidden max-w-[260px] items-center gap-1 rounded-full border border-[#e5e7eb] bg-white px-3 py-1 text-xs text-[#6b7280] sm:flex">
-            <span>📍</span>
-            <span className="truncate">
+          <div className="hidden max-w-[260px] items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-500 sm:flex">
+            <MapPin className="h-3.5 w-3.5 text-rose-500 shrink-0" />
+            <span className="truncate font-semibold">
               {loading ? "Locating..." : address || "Allow location"}
             </span>
           </div>

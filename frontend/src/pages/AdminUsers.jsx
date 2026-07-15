@@ -6,7 +6,6 @@ import {
   UserX,
   UserCheck,
   PlusCircle,
-  TrendingUp,
   X,
   Wallet,
 } from "lucide-react";
@@ -117,23 +116,26 @@ const AdminUsers = () => {
     }
   };
 
+  const inputClass =
+    "w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-slate-805 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 text-xs font-semibold shadow-xs";
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 text-left">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight">
+          <h1 className="text-3xl font-bold text-slate-800 tracking-tight">
             {activeTab === "blocked" ? "Suspended Accounts" : "User Database"}
           </h1>
-          <p className="text-slate-400 mt-1">
+          <p className="text-slate-500 font-semibold text-sm mt-1">
             Manage roles, view balances, and suspend/reactivate client accounts.
           </p>
         </div>
       </div>
 
       {/* Filters & Search */}
-      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-slate-900/40 p-4 rounded-2xl border border-indigo-950/40 backdrop-blur-md">
+      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
         <div className="relative w-full sm:w-80">
-          <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500">
+          <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 pointer-events-none">
             <Search size={16} />
           </span>
           <input
@@ -141,7 +143,7 @@ const AdminUsers = () => {
             placeholder="Search by name, phone, email..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-slate-950 border border-indigo-900/50 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 text-xs font-semibold"
+            className={inputClass}
           />
         </div>
 
@@ -151,17 +153,17 @@ const AdminUsers = () => {
       </div>
 
       {error && (
-        <div className="bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl p-4 text-xs">
+        <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 text-xs font-semibold">
           ⚠️ {error}
         </div>
       )}
 
       {/* Users Table */}
-      <div className="bg-slate-900/40 border border-indigo-950/40 rounded-2xl overflow-hidden backdrop-blur-md">
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-indigo-950 text-slate-400 text-[10px] font-extrabold uppercase tracking-widest bg-slate-950/40">
+              <tr className="border-b border-slate-200 text-slate-400 text-[10px] font-bold uppercase tracking-wider bg-slate-50">
                 <th className="px-6 py-4">Name / Info</th>
                 <th className="px-6 py-4">Contact</th>
                 <th className="px-6 py-4">Role</th>
@@ -170,27 +172,27 @@ const AdminUsers = () => {
                 <th className="px-6 py-4 text-center">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-indigo-950/50 text-xs">
+            <tbody className="divide-y divide-slate-100 text-xs">
               {loading ? (
                 <tr>
-                  <td colSpan="6" className="px-6 py-8 text-center text-slate-500 animate-pulse font-medium">
+                  <td colSpan="6" className="px-6 py-8 text-center text-slate-400 animate-pulse font-bold">
                     Loading accounts database...
                   </td>
                 </tr>
               ) : users.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="px-6 py-8 text-center text-slate-500 font-medium">
+                  <td colSpan="6" className="px-6 py-8 text-center text-slate-400 font-bold">
                     No accounts found matching query.
                   </td>
                 </tr>
               ) : (
                 users.map((user) => (
-                  <tr key={user.id} className="hover:bg-indigo-950/10 transition-colors">
+                  <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
                     {/* Name */}
                     <td className="px-6 py-4">
                       <div>
-                        <p className="font-extrabold text-white text-sm">{user.name}</p>
-                        <p className="text-[10px] text-slate-500 font-medium mt-0.5">
+                        <p className="font-bold text-slate-800 text-sm">{user.name}</p>
+                        <p className="text-[10px] text-slate-450 font-bold mt-0.5">
                           ID: QS-USR-{user.id} • Joined: {new Date(user.created_at).toLocaleDateString()}
                         </p>
                       </div>
@@ -198,19 +200,19 @@ const AdminUsers = () => {
 
                     {/* Contact */}
                     <td className="px-6 py-4 space-y-0.5">
-                      <p className="text-slate-300 font-semibold">{user.phone}</p>
+                      <p className="text-slate-700 font-semibold">{user.phone}</p>
                       <p className="text-slate-500 font-medium">{user.email || "No email"}</p>
                     </td>
 
                     {/* Role */}
                     <td className="px-6 py-4">
                       <span
-                        className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                        className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border ${
                           user.role === "seller"
-                            ? "bg-purple-500/10 text-purple-400 border border-purple-500/25"
+                            ? "bg-purple-50 text-purple-700 border-purple-200"
                             : user.role === "admin"
-                            ? "bg-rose-500/10 text-rose-400 border border-rose-500/25"
-                            : "bg-blue-500/10 text-blue-400 border border-blue-500/25"
+                            ? "bg-red-50 text-red-700 border-red-200"
+                            : "bg-blue-50 text-blue-700 border-blue-200"
                         }`}
                       >
                         {user.role}
@@ -219,11 +221,11 @@ const AdminUsers = () => {
 
                     {/* Wallet */}
                     <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5 font-bold text-slate-200">
+                      <div className="flex items-center justify-end gap-1.5 font-bold text-slate-850 font-mono">
                         <span>₹{parseFloat(user.wallet_balance).toFixed(2)}</span>
                         <button
                           onClick={() => handleOpenWalletModal(user)}
-                          className="p-1 hover:text-indigo-400 text-slate-500 transition-colors"
+                          className="p-1 hover:text-blue-600 text-slate-400 transition-colors cursor-pointer"
                           title="Credit Wallet"
                         >
                           <PlusCircle size={14} />
@@ -234,10 +236,10 @@ const AdminUsers = () => {
                     {/* Status */}
                     <td className="px-6 py-4 text-center">
                       <span
-                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
                           user.is_active
-                            ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/25"
-                            : "bg-red-500/10 text-red-400 border border-red-500/25"
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            : "bg-red-50 text-red-750 border-red-200"
                         }`}
                       >
                         <span className={`w-1.5 h-1.5 rounded-full ${user.is_active ? "bg-emerald-500" : "bg-red-500"}`} />
@@ -249,10 +251,10 @@ const AdminUsers = () => {
                     <td className="px-6 py-4 text-center">
                       <button
                         onClick={() => handleToggleStatus(user)}
-                        className={`p-2 rounded-lg border text-xs font-bold transition-all ${
+                        className={`p-2 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
                           user.is_active
-                            ? "bg-red-950/30 border-red-500/20 text-red-400 hover:bg-red-900/40 hover:text-white"
-                            : "bg-emerald-950/30 border-emerald-500/20 text-emerald-400 hover:bg-emerald-900/40 hover:text-white"
+                            ? "bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
+                            : "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100"
                         }`}
                         title={user.is_active ? "Suspend User" : "Activate User"}
                       >
@@ -269,43 +271,43 @@ const AdminUsers = () => {
 
       {/* Credit Wallet Dialog Modal */}
       {showWalletModal && selectedUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-          <div className="bg-slate-900 border border-indigo-900/40 rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl animate-fade-in">
-            <div className="flex justify-between items-center border-b border-indigo-950 pb-3">
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <Wallet size={16} className="text-indigo-400" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl animate-fade-in text-slate-800">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                <Wallet size={16} className="text-blue-600" />
                 <span>Credit Wallet Payout</span>
               </h3>
               <button
                 onClick={() => setShowWalletModal(false)}
-                className="text-slate-400 hover:text-white"
+                className="text-slate-400 hover:text-slate-600 cursor-pointer p-1"
               >
                 <X size={16} />
               </button>
             </div>
 
-            <div className="text-xs text-slate-400 bg-slate-950/50 p-3 rounded-lg border border-indigo-950">
-              Account Name: <span className="text-slate-200 font-bold">{selectedUser.name}</span> <br />
-              Current Balance: <span className="text-indigo-400 font-bold">₹{parseFloat(selectedUser.wallet_balance).toFixed(2)}</span>
+            <div className="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-200 leading-normal">
+              Account Name: <span className="text-slate-900 font-bold">{selectedUser.name}</span> <br />
+              Current Balance: <span className="text-blue-600 font-bold">₹{parseFloat(selectedUser.wallet_balance).toFixed(2)}</span>
             </div>
 
             {walletError && (
-              <div className="bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl p-3 text-xs">
+              <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 text-xs font-semibold">
                 ⚠️ {walletError}
               </div>
             )}
 
             {walletSuccess && (
-              <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl p-3 text-xs">
+              <div className="bg-emerald-50 border border-emerald-250 text-emerald-700 rounded-xl p-3 text-xs font-semibold">
                 ✅ {walletSuccess}
               </div>
             )}
 
             <form onSubmit={handleCreditWallet} className="space-y-4">
               <div>
-                <label className="block text-slate-400 text-xs font-semibold mb-2">Credit Amount (INR)</label>
+                <label className="block text-slate-600 text-xs font-bold uppercase tracking-wider mb-2">Credit Amount (INR)</label>
                 <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500 font-bold">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 font-bold">
                     ₹
                   </span>
                   <input
@@ -316,13 +318,13 @@ const AdminUsers = () => {
                     onChange={(e) => setCreditAmount(e.target.value)}
                     required
                     disabled={walletLoading}
-                    className="w-full pl-7 pr-4 py-2.5 bg-slate-950 border border-indigo-900/50 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 text-xs font-semibold"
+                    className="w-full pl-7 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 text-xs font-semibold shadow-xs"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-slate-400 text-xs font-semibold mb-2">Transaction Description</label>
+                <label className="block text-slate-600 text-xs font-bold uppercase tracking-wider mb-2">Transaction Description</label>
                 <input
                   type="text"
                   placeholder="e.g. Admin Bonus/Loyalty Refund"
@@ -330,23 +332,23 @@ const AdminUsers = () => {
                   onChange={(e) => setCreditDesc(e.target.value)}
                   required
                   disabled={walletLoading}
-                  className="w-full px-3 py-2.5 bg-slate-950 border border-indigo-900/50 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 text-xs font-semibold"
+                  className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 text-xs font-semibold shadow-xs"
                 />
               </div>
 
-              <div className="flex justify-end gap-3 pt-3 border-t border-indigo-950">
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setShowWalletModal(false)}
                   disabled={walletLoading}
-                  className="px-4 py-2 bg-slate-950 text-slate-400 font-semibold rounded-xl border border-slate-900 transition-all text-xs"
+                  className="px-4 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold rounded-xl border border-slate-200 transition-all text-xs cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={walletLoading || !creditAmount}
-                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800 text-white font-bold rounded-xl transition-all text-xs flex items-center gap-1.5"
+                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold rounded-xl transition-all text-xs flex items-center gap-1.5 cursor-pointer shadow-sm"
                 >
                   {walletLoading ? "Crediting..." : "Confirm Payout"}
                 </button>

@@ -22,17 +22,31 @@ const InputField = ({
   disabled,
   required = true,
 }) => (
-  <div>
-    <label className="block text-xs font-semibold text-indigo-200 mb-2">
-      {label} {required && <span className="text-red-400">*</span>}
+  <div className="form-group">
+    <label className="form-label" htmlFor={`reg-${name}`}>
+      {label}{" "}
+      {required && <span className="required">*</span>}
     </label>
     <div className="relative">
       {prefix && (
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-400 font-semibold text-sm pointer-events-none select-none">
+        <span
+          style={{
+            position: "absolute",
+            left: "0.75rem",
+            top: "50%",
+            transform: "translateY(-50%)",
+            color: "var(--qs-muted)",
+            fontWeight: 600,
+            fontSize: "0.875rem",
+            pointerEvents: "none",
+            userSelect: "none",
+          }}
+        >
           {prefix}
         </span>
       )}
       <input
+        id={`reg-${name}`}
         type={type}
         name={name}
         value={value}
@@ -41,55 +55,45 @@ const InputField = ({
         placeholder={placeholder}
         maxLength={maxLength}
         disabled={disabled}
-        className={`w-full ${prefix ? "pl-12 pr-3" : "px-3"} py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed ${
-          error && isTouched
-            ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
-            : !error && isTouched && value
-            ? "border-green-500/50 focus:ring-2 focus:ring-green-500/30 focus:border-green-500"
-            : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
-        }`}
+        className={`form-input${error && isTouched ? " error" : ""}${!error && isTouched && value ? " success" : ""}`}
+        style={prefix ? { paddingLeft: "2.75rem" } : {}}
       />
     </div>
     {error && isTouched && (
-      <p className="mt-1 text-xs text-red-300">⚠ {error}</p>
+      <p className="form-error">⚠ {error}</p>
     )}
   </div>
 );
 
 // ─── Step Indicator ───────────────────────────────────────────────────────────
 const StepIndicator = ({ current, labels }) => (
-  <div className="flex items-center justify-center gap-0 mb-6">
+  <div className="auth-step-indicator">
     {labels.map((label, i) => {
       const step = i + 1;
       const done = current > step;
       const active = current === step;
       return (
         <React.Fragment key={step}>
-          <div className="flex flex-col items-center gap-1">
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
             <div
-              className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
-                done
-                  ? "bg-green-600 text-white"
-                  : active
-                  ? "bg-indigo-600 text-white ring-2 ring-indigo-400/40"
-                  : "bg-indigo-900/60 text-indigo-500 border border-indigo-500/30"
-              }`}
+              className={`auth-step-dot${done ? " auth-step-dot--done" : active ? " auth-step-dot--active" : " auth-step-dot--pending"}`}
             >
               {done ? "✓" : step}
             </div>
             <span
-              className={`text-[10px] font-medium transition-colors ${
-                active ? "text-indigo-200" : done ? "text-green-400" : "text-indigo-600"
-              }`}
+              style={{
+                fontSize: "10px",
+                fontWeight: 500,
+                color: active ? "var(--qs-primary)" : done ? "var(--qs-secondary)" : "var(--qs-muted)",
+                transition: "color 0.3s ease",
+              }}
             >
               {label}
             </span>
           </div>
           {i < labels.length - 1 && (
             <div
-              className={`h-0.5 w-14 mb-4 mx-1 transition-all duration-300 ${
-                current > step ? "bg-green-600/60" : "bg-indigo-800"
-              }`}
+              className={`auth-step-connector${current > step ? " auth-step-connector--done" : " auth-step-connector--pending"}`}
             />
           )}
         </React.Fragment>
@@ -216,8 +220,6 @@ const Register = () => {
   };
 
   // ── Step 1 → Send OTP ─────────────────────────────────────────────────────
-  // POST /api/auth/send-otp  { identifier, type: "register" }
-  // Checks user does NOT exist → sends OTP → returns sessionId
   const handleSendOtp = async (e) => {
     e.preventDefault();
     setServerError("");
@@ -248,7 +250,6 @@ const Register = () => {
   };
 
   // ── Resend OTP ─────────────────────────────────────────────────────────────
-  // Allowed only after the 60-second cooldown expires.
   const handleResendOtp = async () => {
     if (resendCountdown > 0 || isLoading) return;
     setServerError("");
@@ -277,9 +278,6 @@ const Register = () => {
   };
 
   // ── Step 2 → Verify OTP + Create Account ──────────────────────────────────
-  // POST /api/auth/verify-otp  { identifier, otp, sessionId, type: "register",
-  //                              name, email, role }
-  // Verifies OTP → creates user → creates wallet → returns JWT + user
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
     setServerError("");
@@ -334,13 +332,16 @@ const Register = () => {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-900 via-indigo-950 to-black flex items-center justify-center p-3 py-6">
-      <div className="bg-indigo-900/40 backdrop-blur-md rounded-2xl shadow-2xl w-full max-w-md p-5 sm:p-8 border border-indigo-500/30 red-accent-line">
+    <div className="auth-page" style={{ paddingTop: "1.5rem", paddingBottom: "1.5rem" }}>
+      <div className="auth-card animate-scale-in">
 
         {/* Header */}
-        <div className="text-center mb-6">
-          <h1 className="text-3xl font-bold text-white mb-1">Create Account</h1>
-          <p className="text-indigo-300 text-sm">
+        <div className="text-center mb-5">
+          <div className="inline-flex items-center justify-center w-12 h-12 bg-blue-50 rounded-2xl mb-3 mx-auto">
+            <span className="text-xl">👤</span>
+          </div>
+          <h1 className="auth-heading">Create Account</h1>
+          <p className="auth-subheading mt-1">
             {step === 1
               ? "Fill in your details to get started"
               : `OTP sent to +91 ${formData.mobileNumber}`}
@@ -352,19 +353,15 @@ const Register = () => {
 
         {/* Success Banner */}
         {successMessage && (
-          <div className="mb-4 p-3 bg-green-500/20 border border-green-500/50 rounded-lg">
-            <p className="text-green-200 text-xs font-semibold flex items-center gap-2">
-              <span>✓</span> {successMessage}
-            </p>
+          <div className="auth-alert-success mb-4">
+            <span>✓</span> {successMessage}
           </div>
         )}
 
         {/* Server / Network Error */}
         {serverError && (
-          <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg">
-            <p className="text-red-200 text-xs flex items-center gap-2">
-              <span>⚠️</span> {serverError}
-            </p>
+          <div className="auth-alert-error mb-4">
+            <span>⚠️</span> {serverError}
           </div>
         )}
 
@@ -373,7 +370,7 @@ const Register = () => {
           <form onSubmit={handleSendOtp} className="space-y-3" noValidate>
 
             {/* First + Last Name on one row */}
-            <div className="grid grid-cols-2 gap-2">
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
               <InputField
                 label="First Name"
                 name="firstName"
@@ -413,7 +410,7 @@ const Register = () => {
               required={false}
             />
 
-            {/* Mobile — with +91 prefix, uses InputField for consistency */}
+            {/* Mobile — with +91 prefix */}
             <InputField
               label="Mobile Number"
               name="mobileNumber"
@@ -444,36 +441,48 @@ const Register = () => {
             />
 
             {/* Terms & Conditions */}
-            <div>
-              <div className="flex items-start gap-2 text-sm">
+            <div className="form-group">
+              <div style={{ display: "flex", alignItems: "flex-start", gap: "0.5rem" }}>
                 <input
                   type="checkbox"
-                  id="terms"
+                  id="reg-terms"
                   checked={formData.agreeToTerms}
                   onChange={handleTermsChange}
                   disabled={isLoading}
-                  className="w-4 h-4 mt-0.5 text-indigo-600 rounded border-indigo-500/50 bg-indigo-950/40 focus:ring-indigo-500 disabled:opacity-60 cursor-pointer"
+                  style={{
+                    width: 16,
+                    height: 16,
+                    marginTop: 2,
+                    accentColor: "var(--qs-primary)",
+                    cursor: "pointer",
+                    flexShrink: 0,
+                  }}
                 />
-                <label htmlFor="terms" className="text-indigo-200 cursor-pointer select-none">
+                <label
+                  htmlFor="reg-terms"
+                  style={{ fontSize: "0.8125rem", color: "var(--qs-muted)", cursor: "pointer", lineHeight: 1.4 }}
+                >
                   I agree to the{" "}
                   <Link
-                    to="#"
-                    className="text-indigo-400 hover:text-indigo-300 hover:underline font-semibold"
+                    to="/terms-of-service"
+                    style={{ color: "var(--qs-primary)", fontWeight: 600, backgroundImage: "none" }}
                   >
                     Terms & Conditions
                   </Link>
                 </label>
               </div>
               {errors.agreeToTerms && touched.agreeToTerms && (
-                <p className="mt-1 text-xs text-red-300">⚠ {errors.agreeToTerms}</p>
+                <p className="form-error">⚠ {errors.agreeToTerms}</p>
               )}
             </div>
 
             {/* CTA */}
             <button
               type="submit"
+              id="register-submit-btn"
               disabled={isLoading}
-              className="w-full mt-2 px-4 py-2.5 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-700 hover:scale-[1.01] hover:shadow-lg active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+              className="btn btn-primary"
+              style={{ width: "100%", marginTop: "0.5rem", padding: "0.75rem 1.25rem", fontSize: "0.9375rem" }}
             >
               {isLoading ? "Sending OTP…" : "Get OTP →"}
             </button>
@@ -485,27 +494,30 @@ const Register = () => {
           <form onSubmit={handleVerifyOtp} className="space-y-4" noValidate>
 
             {/* Summary card */}
-            <div className="bg-indigo-950/50 border border-indigo-500/20 rounded-xl p-4 space-y-1 text-sm">
-              <p className="text-indigo-300">
-                <span className="text-indigo-500 font-medium">Name: </span>
-                {formData.firstName} {formData.lastName}
+            <div className="auth-summary-box">
+              <p style={{ marginBottom: "0.25rem" }}>
+                <span>Name: </span>
+                <strong style={{ color: "var(--qs-text)" }}>{formData.firstName} {formData.lastName}</strong>
               </p>
-              <p className="text-indigo-300">
-                <span className="text-indigo-500 font-medium">Email: </span>
-                {formData.email}
-              </p>
-              <p className="text-indigo-300">
-                <span className="text-indigo-500 font-medium">Mobile: </span>
-                +91 {formData.mobileNumber}
+              {formData.email && (
+                <p style={{ marginBottom: "0.25rem" }}>
+                  <span>Email: </span>
+                  <strong style={{ color: "var(--qs-text)" }}>{formData.email}</strong>
+                </p>
+              )}
+              <p>
+                <span>Mobile: </span>
+                <strong style={{ color: "var(--qs-text)" }}>+91 {formData.mobileNumber}</strong>
               </p>
             </div>
 
             {/* OTP input */}
-            <div>
-              <label className="block text-xs font-semibold text-indigo-200 mb-2">
-                Enter OTP <span className="text-red-400">*</span>
+            <div className="form-group">
+              <label className="form-label" htmlFor="reg-otp">
+                Enter OTP <span className="required">*</span>
               </label>
               <input
+                id="reg-otp"
                 type="text"
                 inputMode="numeric"
                 value={otp}
@@ -517,32 +529,38 @@ const Register = () => {
                 placeholder="• • • • • •"
                 maxLength={6}
                 disabled={isLoading}
-                className={`w-full px-3 py-2.5 rounded-lg text-lg tracking-[0.4em] font-bold text-center bg-indigo-950/40 border transition-all duration-200 text-white focus:outline-none disabled:opacity-60 ${
-                  otpError
-                    ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
-                    : otp.length === 6
-                    ? "border-green-500/50 focus:ring-2 focus:ring-green-500/30"
-                    : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
-                }`}
+                className={`form-input${otpError ? " error" : otp.length === 6 ? " success" : ""}`}
+                style={{
+                  fontSize: "1.25rem",
+                  letterSpacing: "0.4em",
+                  fontWeight: 700,
+                  textAlign: "center",
+                }}
               />
               {otpError && (
-                <p className="mt-1 text-xs text-red-300">⚠ {otpError}</p>
+                <p className="form-error">⚠ {otpError}</p>
               )}
 
-              {/* Sent-to hint + Resend OTP */}
-              <div className="mt-3 flex items-center justify-between">
-                <p className="text-xs text-indigo-400">
+              {/* Resend OTP */}
+              <div style={{ marginTop: "0.75rem", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <p style={{ fontSize: "0.75rem", color: "var(--qs-muted)" }}>
                   Sent to +91 {formData.mobileNumber}
                 </p>
                 <button
                   type="button"
                   onClick={handleResendOtp}
                   disabled={resendCountdown > 0 || isLoading}
-                  className={`text-xs font-semibold transition-all duration-200 ${
-                    resendCountdown > 0 || isLoading
-                      ? "text-indigo-600 cursor-not-allowed"
-                      : "text-indigo-400 hover:text-indigo-200 hover:underline cursor-pointer"
-                  }`}
+                  style={{
+                    fontSize: "0.75rem",
+                    fontWeight: 600,
+                    color: resendCountdown > 0 || isLoading ? "var(--qs-muted-light)" : "var(--qs-primary)",
+                    background: "none",
+                    border: "none",
+                    cursor: resendCountdown > 0 || isLoading ? "not-allowed" : "pointer",
+                    padding: 0,
+                    transition: "color 0.2s ease",
+                    textDecoration: resendCountdown === 0 && !isLoading ? "underline" : "none",
+                  }}
                 >
                   {resendCountdown > 0
                     ? `Resend in ${resendCountdown}s`
@@ -557,7 +575,8 @@ const Register = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full px-4 py-2.5 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-700 hover:scale-[1.01] hover:shadow-lg active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+              className="btn btn-primary"
+              style={{ width: "100%", padding: "0.75rem 1.25rem", fontSize: "0.9375rem" }}
             >
               {isLoading ? "Creating Account…" : "Create Account ✓"}
             </button>
@@ -567,7 +586,8 @@ const Register = () => {
               type="button"
               onClick={handleBack}
               disabled={isLoading}
-              className="w-full px-4 py-2 rounded-lg font-medium text-indigo-600 bg-transparent border border-indigo-600/30 hover:bg-indigo-600/10 transition-all duration-200 text-sm disabled:opacity-50"
+              className="btn btn-secondary"
+              style={{ width: "100%", fontSize: "0.875rem" }}
             >
               ← Change Details
             </button>
@@ -575,18 +595,16 @@ const Register = () => {
         )}
 
         {/* Divider */}
-        <div className="my-6 flex items-center red-accent-top pt-6">
-          <div className="grow border-t border-indigo-500/30" />
-          <span className="px-4 text-indigo-300 text-sm">or</span>
-          <div className="grow border-t border-indigo-500/30" />
+        <div className="auth-divider" style={{ marginTop: "1.5rem" }}>
+          <span>or</span>
         </div>
 
         {/* Sign-in link */}
-        <p className="text-center text-indigo-200 text-sm">
+        <p className="text-center text-sm" style={{ color: "var(--qs-muted)" }}>
           Already have an account?{" "}
           <Link
             to="/login"
-            className="font-bold text-red-400 hover:text-red-300 hover:underline"
+            style={{ color: "var(--qs-primary)", fontWeight: 700, backgroundImage: "none", textDecoration: "none" }}
           >
             Sign in
           </Link>

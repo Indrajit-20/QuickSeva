@@ -288,9 +288,10 @@ export default function SellerPublicProfile() {
 
   if (sellerLoading) {
     return (
-      <main className="min-h-screen bg-[#0d0d1a] px-4 py-10 text-white">
-        <div className="mx-auto max-w-xl rounded-2xl border border-indigo-500/20 bg-[#1a1a2e] p-6 text-center">
-          <h1 className="text-xl font-black">Loading seller…</h1>
+      <main className="min-h-screen flex flex-col items-center justify-center bg-slate-50 text-slate-800 px-4 py-10">
+        <div className="mx-auto max-w-sm w-full rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-xl flex flex-col items-center gap-4">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-100 border-t-indigo-600" />
+          <h1 className="text-sm font-bold text-slate-600">Loading seller profile…</h1>
         </div>
       </main>
     );
@@ -298,17 +299,18 @@ export default function SellerPublicProfile() {
 
   if (!seller) {
     return (
-      <main className="min-h-screen bg-[#0d0d1a] px-4 py-10 text-white">
-        <div className="mx-auto max-w-xl rounded-2xl border border-indigo-500/20 bg-[#1a1a2e] p-6">
+      <main className="min-h-screen flex flex-col items-center justify-center bg-slate-50 text-slate-800 px-4 py-10">
+        <div className="mx-auto max-w-md w-full rounded-2xl border border-slate-200 bg-white p-8 shadow-xl">
           <button
             type="button"
             onClick={() => navigate(-1)}
-            className="mb-5 inline-flex items-center gap-2 rounded-lg border border-indigo-400/30 px-4 py-2 text-sm font-bold text-indigo-100 hover:bg-indigo-500/10"
+            className="mb-6 inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100 hover:scale-[1.02] active:scale-[0.98] transition shadow-sm"
           >
             <ArrowLeft size={16} />
             Back
           </button>
-          <h1 className="text-xl font-black">Seller not found</h1>
+          <h1 className="text-xl font-black text-slate-800 mb-2">Seller not found</h1>
+          <p className="text-sm text-slate-500">The profile you are looking for might have been removed or is temporarily unavailable.</p>
         </div>
       </main>
     );
@@ -463,7 +465,7 @@ export default function SellerPublicProfile() {
               <button
                 type="button"
                 onClick={handleBook}
-                className="w-full rounded-xl bg-[#0284c7] hover:bg-[#0274ae] px-4 py-3 text-base font-black text-white force-text-white shadow-lg shadow-indigo-100 transition duration-150 active:scale-[0.98]"
+                className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-700 px-4 py-3 text-base font-bold text-white force-text-white shadow-lg shadow-indigo-100/20 transition duration-150 active:scale-[0.98]"
               >
                 Book This Service
               </button>
@@ -544,7 +546,7 @@ export default function SellerPublicProfile() {
                   onClick={() => handleSelectService(service)}
                   className={`rounded-2xl border-2 p-4 text-left transition duration-200 ${active
                     ? "qs-selected-active shadow-md"
-                    : "border-slate-200 bg-white hover:border-[#0284c7]/30 shadow-sm"
+                    : "border-slate-200 bg-white hover:border-[var(--qs-primary)]/30 shadow-sm"
                     }`}
                 >
                   <div className="flex items-start justify-between gap-3">

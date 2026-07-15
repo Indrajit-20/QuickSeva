@@ -407,7 +407,7 @@ export default function LocationPicker({ onChange, initialLocation, hideMap = fa
           value={locationQuery}
           onChange={(e) => setLocationQuery(e.target.value)}
           placeholder="Search your area, street or landmark..."
-          className="w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border border-indigo-500/30 text-white focus:outline-none"
+          className="w-full px-3 py-2 rounded-lg text-sm font-semibold bg-white border border-slate-200 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 shadow-xs"
         />
 
         {(locationResults.length > 0 || locationNotFoundMsg) && (
@@ -476,18 +476,18 @@ export default function LocationPicker({ onChange, initialLocation, hideMap = fa
 
       {/* Location Permission Alert/Banner */}
       {permissionState === "denied" ? (
-        <div className="flex items-start gap-2.5 p-3 rounded-lg border border-amber-500/20 bg-amber-500/5 text-xs text-amber-200">
-          <AlertTriangle className="h-4.5 w-4.5 shrink-0 text-amber-400 mt-0.5" />
+        <div className="flex items-start gap-2.5 p-3 rounded-lg border border-amber-250 bg-amber-50 text-xs text-amber-800">
+          <AlertTriangle className="h-4.5 w-4.5 shrink-0 text-amber-600 mt-0.5" />
           <div>
-            <span className="font-bold text-white block mb-0.5">Location Access Blocked / स्थान अवरुद्ध है</span>
+            <span className="font-bold text-slate-800 block mb-0.5">Location Access Blocked / स्थान अवरुद्ध है</span>
             <span>To auto-detect, click the Lock 🔒 icon in the URL bar, set Location to 'Allow', then retry.</span>
           </div>
         </div>
       ) : permissionState === "prompt" ? (
-        <div className="flex items-start gap-2.5 p-3 rounded-lg border border-indigo-500/20 bg-indigo-500/5 text-xs text-indigo-200">
-          <Info className="h-4.5 w-4.5 shrink-0 text-indigo-400 mt-0.5" />
+        <div className="flex items-start gap-2.5 p-3 rounded-lg border border-blue-200 bg-blue-50 text-xs text-blue-800">
+          <Info className="h-4.5 w-4.5 shrink-0 text-blue-600 mt-0.5" />
           <div>
-            <span className="font-bold text-white block mb-0.5">Allow Location Access / स्थान की अनुमति दें</span>
+            <span className="font-bold text-slate-800 block mb-0.5">Allow Location Access / स्थान की अनुमति दें</span>
             <span>Click the button below to allow location access so customers near you can find your services.</span>
           </div>
         </div>
@@ -497,14 +497,14 @@ export default function LocationPicker({ onChange, initialLocation, hideMap = fa
         type="button"
         onClick={handleUseMyLocation}
         disabled={geoLoading}
-        className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold text-white bg-indigo-600 force-text-white hover:bg-indigo-700 transition disabled:opacity-50"
+        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white bg-blue-600 force-text-white hover:bg-blue-700 transition disabled:opacity-50 cursor-pointer shadow-xs"
       >
         📍 {geoLoading ? "Detecting location..." : "Use My Current Location"}
       </button>
 
       <div className="grid grid-cols-1 gap-3">
         <div>
-          <label className="text-xs font-semibold text-indigo-300 mb-1 block">
+          <label className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-1 block">
             📍 Service Address
           </label>
           <textarea
@@ -513,12 +513,12 @@ export default function LocationPicker({ onChange, initialLocation, hideMap = fa
             onChange={handleAddressChange}
             placeholder={hideMap ? "Enter your service address..." : "Your full address will appear here after pinning location"}
             rows={2}
-            className="w-full px-3 py-2 rounded-lg text-sm bg-indigo-950/40 border border-indigo-500/30 text-white focus:outline-none resize-none"
+            className="w-full px-3 py-2 rounded-xl text-sm bg-white border border-slate-205 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-105 focus:border-blue-500 resize-none font-semibold shadow-xs"
           />
         </div>
 
         <div>
-          <label className="text-xs font-semibold text-indigo-300 mb-1 block">
+          <label className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-1 block">
             📮 Pincode
           </label>
           <input
@@ -528,13 +528,13 @@ export default function LocationPicker({ onChange, initialLocation, hideMap = fa
             onChange={handlePincodeChange}
             placeholder="6-digit pincode"
             maxLength={6}
-            className="w-full px-3 py-2 rounded-lg text-sm bg-indigo-950/40 border border-indigo-500/30 text-white focus:outline-none"
+            className="w-full px-3 py-2 rounded-xl text-sm bg-white border border-slate-205 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-105 focus:border-blue-500 font-semibold shadow-xs"
           />
         </div>
       </div>
 
       {!hideMap && (
-        <p className="text-sm text-indigo-200">
+        <p className="text-xs text-slate-500 font-bold">
           Click the map or drag the marker to set your service location
         </p>
       )}

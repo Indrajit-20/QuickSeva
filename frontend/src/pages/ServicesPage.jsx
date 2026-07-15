@@ -174,7 +174,7 @@ export default function ServicesPage() {
     return (
       <article
         key={service.id}
-        className="rounded-2xl border border-gray-100 bg-white shadow-sm"
+        className="rounded-2xl border border-slate-205 bg-white shadow-xs"
       >
         <div className="h-40 overflow-hidden rounded-t-2xl">
           <img
@@ -185,14 +185,14 @@ export default function ServicesPage() {
           />
         </div>
 
-        <div className="p-3">
+        <div className="p-3 text-left">
           <h3 className="text-sm font-semibold text-slate-800">
             {service.name}
           </h3>
           <button
             type="button"
             onClick={() => setSelectedService(service)}
-            className="mt-3 w-full rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-indigo-700"
+            className="mt-3 w-full rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-blue-700 cursor-pointer"
           >
             View Sellers →
           </button>
@@ -208,7 +208,7 @@ export default function ServicesPage() {
     return (
       <article
         key={seller.id}
-        className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm"
+        className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm text-left"
       >
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -238,7 +238,7 @@ export default function ServicesPage() {
         <button
           type="button"
           onClick={() => navigate(`/seller/${seller.id}`)}
-          className="mt-3 w-full border border-indigo-500 text-indigo-600 text-xs font-bold py-2 rounded-lg hover:bg-indigo-600 hover:text-white transition"
+          className="mt-3 w-full border border-blue-500 text-blue-600 text-xs font-bold py-2 rounded-lg hover:bg-blue-600 hover:text-white transition cursor-pointer"
         >
           View Profile →
         </button>
@@ -247,19 +247,19 @@ export default function ServicesPage() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-50 flex flex-col">
-      <section className="border-b border-indigo-100 bg-white py-10">
+    <main className="min-h-screen bg-slate-50 flex flex-col">
+      <section className="border-b border-slate-200 bg-white py-10">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           {/* minimal header removed (kept filter chips + map section) */}
 
           {/* Filter chips (category titles) */}
-          <div className="mt-5 flex flex-wrap gap-2">
+          <div className="mt-5 flex flex-wrap gap-2 justify-center sm:justify-start">
             <button
               type="button"
               onClick={() => navigate("/services")}
-              className={`rounded-full border px-4 py-2 text-sm font-bold transition ${!category
-                  ? "border-indigo-600 bg-indigo-600 text-white"
-                  : "border-indigo-300 bg-white text-indigo-700 hover:bg-indigo-50"
+              className={`rounded-full border px-4 py-2 text-sm font-bold transition cursor-pointer ${!category
+                  ? "border-blue-600 bg-blue-600 text-white"
+                  : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                 }`}
             >
               All
@@ -279,9 +279,9 @@ export default function ServicesPage() {
                       `/services?category=${encodeURIComponent(cat.title)}${query ? `&q=${encodeURIComponent(query)}` : ""}`,
                     )
                   }
-                  className={`rounded-full border px-4 py-2 text-sm font-bold transition ${active
-                      ? "border-indigo-600 bg-indigo-600 text-white"
-                      : "border-indigo-300 bg-white text-indigo-700 hover:bg-indigo-50"
+                  className={`rounded-full border px-4 py-2 text-sm font-bold transition cursor-pointer ${active
+                      ? "border-blue-600 bg-blue-600 text-white"
+                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                     }`}
                 >
                   {cat.title}
@@ -297,7 +297,7 @@ export default function ServicesPage() {
         style={{ scrollMarginTop: "90px" }}
         className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8"
       >
-        <div className="mb-6">
+        <div className="mb-6 text-left">
           {category ? (
             <>
               <div className="text-sm text-slate-400 mb-2">
@@ -315,7 +315,7 @@ export default function ServicesPage() {
 
         {!selectedService ? (
           category && !filteredCategory ? (
-            <div className="rounded-2xl border border-indigo-100 bg-white p-10 text-center shadow-sm">
+            <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
               <div className="text-4xl">🔍</div>
               <h3 className="mt-3 text-2xl font-black text-slate-900">
                 No services found for "{category}"
@@ -329,7 +329,7 @@ export default function ServicesPage() {
               {groupedResults.map((group) => (
                 <div key={group.heading}>
                   {!category && (
-                    <h3 className="mb-5 text-2xl font-black text-slate-900">
+                    <h3 className="mb-5 text-2xl font-black text-slate-900 text-left">
                       {group.heading}
                     </h3>
                   )}
@@ -342,11 +342,11 @@ export default function ServicesPage() {
             </div>
           )
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-6 text-left">
             <button
               type="button"
               onClick={() => setSelectedService(null)}
-              className="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-white px-4 py-2 text-sm font-bold text-indigo-700 hover:bg-indigo-50"
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 cursor-pointer"
             >
               ← Back to services
             </button>
@@ -357,7 +357,7 @@ export default function ServicesPage() {
               </h4>
 
               {visibleSellers.length === 0 ? (
-                <div className="mt-4 rounded-2xl border border-indigo-100 bg-white p-8 text-center shadow-sm">
+                <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
                   <h3 className="text-2xl font-black text-slate-900">
                     No providers available for {selectedService.name} yet.
                   </h3>
@@ -365,7 +365,7 @@ export default function ServicesPage() {
                   <button
                     type="button"
                     onClick={() => navigate("/services")}
-                    className="mt-6 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-indigo-700"
+                    className="mt-6 rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-blue-700 cursor-pointer"
                   >
                     Browse All
                   </button>
@@ -380,11 +380,11 @@ export default function ServicesPage() {
         )}
       </section>
 
-      <section ref={mapRef} className="bg-indigo-950 py-10 flex-grow">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <section ref={mapRef} className="bg-slate-50 border-t border-slate-200 py-10 flex-grow">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-left">
           <div className="mb-6">
-            <h2 className="text-2xl font-bold text-white">View on Map</h2>
-            <p className="mt-1 text-sm text-indigo-200">
+            <h2 className="text-2xl font-bold text-slate-800">View on Map</h2>
+            <p className="mt-1 text-sm text-slate-500 font-semibold">
               Nearby providers matching your service search.
             </p>
           </div>

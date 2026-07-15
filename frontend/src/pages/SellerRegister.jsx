@@ -426,25 +426,28 @@ const SellerRegister = () => {
     }
   };
 
+  const inputClass =
+    "w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition shadow-xs font-medium";
+
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-900 via-indigo-950 to-black flex items-center justify-center p-4 py-4">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 py-8">
       <div
         ref={formRef}
         style={{ scrollMarginTop: "90px" }}
-        className="bg-indigo-900/40 backdrop-blur-md rounded-2xl shadow-2xl w-full max-w-2xl p-4 sm:p-5.5 border border-indigo-500/30 red-accent-line"
+        className="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6 sm:p-8 border border-slate-200 text-slate-850"
       >
-        <div className="text-center mb-4.5">
-          <h1 className="text-3xl font-bold text-white mb-2">
+        <div className="text-center mb-6">
+          <h1 className="text-3xl font-bold text-slate-800 mb-2">
             Become a Partner
           </h1>
-          <p className="text-indigo-200 text-sm">
+          <p className="text-slate-500 text-sm">
             {step === 1 ? "Seller registration details" : `Verify OTP sent to +91 ${formData.mobileNumber}`}
           </p>
         </div>
 
         {successMessage && (
-          <div className="mb-4 p-3 bg-green-500/20 border border-green-500/50 rounded-lg">
-            <p className="text-green-200 text-xs flex items-center font-semibold">
+          <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
+            <p className="text-emerald-700 text-xs flex items-center font-semibold">
               <span className="mr-2">✓</span>
               {successMessage}
             </p>
@@ -452,8 +455,8 @@ const SellerRegister = () => {
         )}
 
         {apiError && (
-          <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg">
-            <p className="text-red-200 text-xs flex items-center">
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl">
+            <p className="text-red-700 text-xs flex items-center font-semibold">
               <span className="mr-2">⚠</span>
               {apiError}
             </p>
@@ -462,12 +465,12 @@ const SellerRegister = () => {
 
         {/* STEP 1: Details & Credentials Form */}
         {step === 1 && (
-          <form onSubmit={handleSendOtp} className="space-y-3">
+          <form onSubmit={handleSendOtp} className="space-y-4 text-left">
             {/* Row 1: Business Name & Owner Name */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-indigo-200 mb-2">
-                  Business Name <span className="text-red-400">*</span>
+                <label className="block text-xs font-bold text-slate-600 mb-2 uppercase tracking-wider">
+                  Business Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   name="businessName"
@@ -476,19 +479,16 @@ const SellerRegister = () => {
                   onBlur={handleBlur}
                   placeholder="QuickSeva Partner Pvt. Ltd"
                   disabled={isLoading}
-                  className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${errors.businessName && touched.businessName
-                      ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
-                      : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
-                    }`}
+                  className={`${inputClass} ${errors.businessName && touched.businessName ? "border-red-300 focus:ring-red-100" : ""}`}
                 />
                 {errors.businessName && touched.businessName && (
-                  <p className="mt-1 text-xs text-red-300">⚠ {errors.businessName}</p>
+                  <p className="mt-1.5 text-xs font-semibold text-red-600">⚠ {errors.businessName}</p>
                 )}
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-indigo-200 mb-2">
-                  Owner Name <span className="text-red-400">*</span>
+                <label className="block text-xs font-bold text-slate-600 mb-2 uppercase tracking-wider">
+                  Owner Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   name="ownerName"
@@ -497,21 +497,18 @@ const SellerRegister = () => {
                   onBlur={handleBlur}
                   placeholder="John Doe"
                   disabled={isLoading}
-                  className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${errors.ownerName && touched.ownerName
-                      ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
-                      : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
-                    }`}
+                  className={`${inputClass} ${errors.ownerName && touched.ownerName ? "border-red-300 focus:ring-red-100" : ""}`}
                 />
                 {errors.ownerName && touched.ownerName && (
-                  <p className="mt-1 text-xs text-red-300">⚠ {errors.ownerName}</p>
+                  <p className="mt-1.5 text-xs font-semibold text-red-600">⚠ {errors.ownerName}</p>
                 )}
               </div>
             </div>
 
             {/* Row 2: Email & Mobile Number */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-indigo-200 mb-2">
+                <label className="block text-xs font-bold text-slate-600 mb-2 uppercase tracking-wider">
                   Email Address
                 </label>
                 <input
@@ -522,19 +519,16 @@ const SellerRegister = () => {
                   onBlur={handleBlur}
                   placeholder="you@example.com"
                   disabled={isLoading}
-                  className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${errors.email && touched.email
-                      ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
-                      : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
-                    }`}
+                  className={`${inputClass} ${errors.email && touched.email ? "border-red-300 focus:ring-red-100" : ""}`}
                 />
                 {errors.email && touched.email && (
-                  <p className="mt-1 text-xs text-red-300">⚠ {errors.email}</p>
+                  <p className="mt-1.5 text-xs font-semibold text-red-600">⚠ {errors.email}</p>
                 )}
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-indigo-200 mb-2">
-                  Mobile Number <span className="text-red-400">*</span>
+                <label className="block text-xs font-bold text-slate-600 mb-2 uppercase tracking-wider">
+                  Mobile Number <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="tel"
@@ -545,22 +539,19 @@ const SellerRegister = () => {
                   placeholder="98765 43210"
                   maxLength={10}
                   disabled={isLoading}
-                  className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${errors.mobileNumber && touched.mobileNumber
-                      ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
-                      : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
-                    }`}
+                  className={`${inputClass} ${errors.mobileNumber && touched.mobileNumber ? "border-red-300 focus:ring-red-100" : ""}`}
                 />
                 {errors.mobileNumber && touched.mobileNumber && (
-                  <p className="mt-1 text-xs text-red-300">⚠ {errors.mobileNumber}</p>
+                  <p className="mt-1.5 text-xs font-semibold text-red-600">⚠ {errors.mobileNumber}</p>
                 )}
               </div>
             </div>
 
             {/* Row 3: Password & Pincode */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-indigo-200 mb-2">
-                  Password <span className="text-red-400">*</span>
+                <label className="block text-xs font-bold text-slate-600 mb-2 uppercase tracking-wider">
+                  Password <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="password"
@@ -570,24 +561,21 @@ const SellerRegister = () => {
                   onBlur={handleBlur}
                   placeholder="••••••••"
                   disabled={isLoading}
-                  className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${errors.password && touched.password
-                      ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
-                      : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
-                    }`}
+                  className={`${inputClass} ${errors.password && touched.password ? "border-red-300 focus:ring-red-100" : ""}`}
                 />
                 {errors.password && touched.password && (
-                  <p className="mt-1 text-xs text-red-300">⚠ {errors.password}</p>
+                  <p className="mt-1.5 text-xs font-semibold text-red-600">⚠ {errors.password}</p>
                 )}
               </div>
 
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <label className="block text-xs font-semibold text-indigo-200">
-                    Pincode <span className="text-red-400">*</span>
+                  <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider">
+                    Pincode <span className="text-red-500">*</span>
                   </label>
                   {isPincodeLoading && (
-                    <span className="text-[10px] text-indigo-300 flex items-center gap-1">
-                      <span className="inline-block h-2.5 w-2.5 animate-spin rounded-full border border-indigo-400 border-t-transparent" />
+                    <span className="text-[10px] text-blue-600 flex items-center gap-1 font-bold">
+                      <span className="inline-block h-2.5 w-2.5 animate-spin rounded-full border border-blue-600 border-t-transparent" />
                       Searching...
                     </span>
                   )}
@@ -600,21 +588,18 @@ const SellerRegister = () => {
                   placeholder="6-digit pincode"
                   maxLength={6}
                   disabled={isLoading}
-                  className={`w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none ${errors.pincode
-                      ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
-                      : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
-                    }`}
+                  className={`${inputClass} ${errors.pincode ? "border-red-300 focus:ring-red-100" : ""}`}
                 />
                 {errors.pincode && (
-                  <p className="mt-1 text-xs text-red-300">⚠ {errors.pincode}</p>
+                  <p className="mt-1.5 text-xs font-semibold text-red-600">⚠ {errors.pincode}</p>
                 )}
               </div>
             </div>
 
             {/* Row 4: Partner Type Options */}
             <div className="space-y-2">
-              <label className="block text-xs font-semibold text-indigo-200">
-                Partner Type <span className="text-red-400">*</span>
+              <label className="block text-xs font-bold text-slate-600 mb-2 uppercase tracking-wider">
+                Partner Type <span className="text-red-500">*</span>
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {[
@@ -624,9 +609,9 @@ const SellerRegister = () => {
                 ].map((opt) => (
                   <label
                     key={opt.value}
-                    className={`flex items-start gap-2.5 rounded-lg border p-2.5 cursor-pointer transition-all duration-200 ${formData.sellerType === opt.value
-                        ? "border-[#0284c7] bg-[#0284c7]/15 shadow-[0_0_12px_rgba(2,132,199,0.25)]"
-                        : "border-indigo-500/20 bg-indigo-950/20"
+                    className={`flex items-start gap-2.5 rounded-lg border p-3 cursor-pointer transition-all duration-200 ${formData.sellerType === opt.value
+                        ? "border-blue-500 bg-blue-50/50 shadow-xs"
+                        : "border-slate-200 bg-slate-50 hover:bg-slate-100"
                       }`}
                   >
                     <input
@@ -636,11 +621,11 @@ const SellerRegister = () => {
                       checked={formData.sellerType === opt.value}
                       onChange={(e) => setFormData((prev) => ({ ...prev, sellerType: e.target.value }))}
                       disabled={isLoading}
-                      className="mt-0.5 h-3.5 w-3.5 text-indigo-600 border-indigo-500/30 bg-indigo-950/40 focus:ring-indigo-500/50"
+                      className="mt-0.5 h-3.5 w-3.5 text-blue-600 border-slate-305 focus:ring-blue-100"
                     />
                     <div className="min-w-0">
-                      <span className="block text-xs font-bold text-white leading-tight">{opt.label}</span>
-                      <span className="block text-[10px] text-indigo-300/80 mt-0.5">{opt.desc}</span>
+                      <span className="block text-xs font-bold text-slate-800 leading-tight">{opt.label}</span>
+                      <span className="block text-[10px] text-slate-500 mt-0.5 font-semibold">{opt.desc}</span>
                     </div>
                   </label>
                 ))}
@@ -649,8 +634,8 @@ const SellerRegister = () => {
 
             {/* Row 5: Search Address */}
             <div ref={locationSearchRef}>
-              <label className="block text-xs font-semibold text-indigo-200 mb-2">
-                Search Service Location / पता खोजें <span className="text-red-400">*</span>
+              <label className="block text-xs font-bold text-slate-600 mb-2 uppercase tracking-wider">
+                Search Service Location / पता खोजें <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <input
@@ -659,26 +644,23 @@ const SellerRegister = () => {
                   onChange={(e) => setLocationQuery(e.target.value)}
                   placeholder="Search your area, street, city or landmark..."
                   disabled={isLoading}
-                  className={`w-full px-3 py-2 rounded-lg text-sm bg-indigo-950/40 border transition-all duration-200 text-white focus:outline-none ${errors.location
-                      ? "border-red-500/50 focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
-                      : "border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
-                    }`}
+                  className={`${inputClass} ${errors.location ? "border-red-300 focus:ring-red-100" : ""}`}
                 />
 
                 {(locationResults.length > 0 || locationNotFoundMsg) && (
-                  <div className="absolute left-0 right-0 top-full z-[1100] mt-2 max-h-56 overflow-y-auto rounded-lg shadow-2xl border border-indigo-500/30 bg-[#0c0a1b]">
+                  <div className="absolute left-0 right-0 top-full z-[1100] mt-2 max-h-56 overflow-y-auto rounded-lg shadow-2xl border border-slate-200 bg-white">
                     {locationResults.map((result) => (
                       <button
                         key={`${result.place_id}-${result.lat}-${result.lon}`}
                         type="button"
                         onClick={() => handleLocationResultClick(result)}
-                        className="block w-full text-left text-[11px] text-indigo-200 px-3 py-2.5 hover:bg-indigo-950/80 transition-colors border-b border-indigo-900/10 cursor-pointer"
+                        className="block w-full text-left text-[11px] text-slate-600 px-3 py-2.5 hover:bg-slate-50 transition-colors border-b border-slate-100 cursor-pointer"
                       >
                         {result.display_name}
                       </button>
                     ))}
                     {locationNotFoundMsg && (
-                      <div className="text-xs text-indigo-400 px-3 py-2">
+                      <div className="text-xs text-slate-400 px-3 py-2 font-semibold">
                         {locationNotFoundMsg}
                       </div>
                     )}
@@ -686,7 +668,7 @@ const SellerRegister = () => {
                 )}
               </div>
               {errors.location && (
-                <p className="mt-1 text-xs text-red-300">⚠ {errors.location}</p>
+                <p className="mt-1.5 text-xs font-semibold text-red-600">⚠ {errors.location}</p>
               )}
             </div>
 
@@ -695,9 +677,9 @@ const SellerRegister = () => {
                 type="checkbox"
                 id="sellerTerms"
                 required
-                className="w-4 h-4 text-indigo-600 rounded mt-0.5 border-indigo-500/50 bg-indigo-950/40"
+                className="w-4 h-4 text-blue-600 rounded mt-0.5 border-slate-300"
               />
-              <label htmlFor="sellerTerms" className="ml-2 text-indigo-200 cursor-pointer select-none">
+              <label htmlFor="sellerTerms" className="ml-2 text-slate-600 cursor-pointer select-none font-semibold">
                 I agree to be contacted about partner onboarding
               </label>
             </div>
@@ -705,7 +687,7 @@ const SellerRegister = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full mt-2 px-4 py-2.5 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-700 hover:scale-[1.01] hover:shadow-lg active:scale-[0.99] transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full mt-2 px-4 py-3 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {isLoading ? "Validating details..." : "Get OTP →"}
             </button>
@@ -714,10 +696,10 @@ const SellerRegister = () => {
 
         {/* STEP 2: SMS Verification Form */}
         {step === 2 && (
-          <form onSubmit={handleVerifyOtpAndRegister} className="space-y-5">
-            <div className="text-center bg-indigo-950/30 border border-indigo-500/20 rounded-lg p-3">
-              <p className="text-sm text-indigo-200">
-                OTP sent to <span className="font-semibold text-white">{formData.mobileNumber}</span>
+          <form onSubmit={handleVerifyOtpAndRegister} className="space-y-5 text-left">
+            <div className="text-center bg-slate-50 border border-slate-200 rounded-xl p-4">
+              <p className="text-sm text-slate-600 font-semibold">
+                OTP sent to <span className="font-bold text-slate-800">{formData.mobileNumber}</span>
               </p>
               <button
                 type="button"
@@ -726,15 +708,15 @@ const SellerRegister = () => {
                   setOtp("");
                   setApiError("");
                 }}
-                className="mt-1 text-xs text-red-400 hover:text-red-300 font-medium underline focus:outline-none"
+                className="mt-2 text-xs text-red-650 hover:text-red-700 font-bold underline focus:outline-none cursor-pointer"
               >
                 Change Phone / Details
               </button>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-indigo-200 mb-2">
-                Enter OTP <span className="text-red-400">*</span>
+              <label className="block text-xs font-bold text-slate-600 mb-2 uppercase tracking-wider">
+                Enter OTP <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -744,25 +726,25 @@ const SellerRegister = () => {
                 placeholder="123456"
                 maxLength={6}
                 disabled={isLoading}
-                className="w-full px-3 py-2 rounded-lg text-sm font-medium bg-indigo-950/40 border border-indigo-500/30 transition-all duration-200 placeholder-indigo-400 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition"
               />
             </div>
 
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full px-4 py-2.5 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-700 hover:scale-[1.01] hover:shadow-lg active:scale-[0.99] transition-all duration-200 shadow-lg disabled:opacity-50"
+              className="w-full px-4 py-3 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700 transition shadow-sm disabled:opacity-50 cursor-pointer"
             >
               {isLoading ? "Verifying & Registering..." : "Verify & Complete Registration"}
             </button>
 
-            <div className="border-t border-indigo-500/20 pt-4 text-center">
-              <p className="text-xs text-indigo-300 mb-2">Didn't receive the OTP?</p>
+            <div className="border-t border-slate-200 pt-4 text-center">
+              <p className="text-xs text-slate-500 mb-2 font-semibold">Didn't receive the OTP?</p>
               <button
                 type="button"
                 onClick={handleResendOtp}
                 disabled={isLoading || resendCountdown > 0}
-                className={`w-full px-4 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-700 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 shadow-md ${isLoading || resendCountdown > 0
+                className={`w-full px-4 py-2 rounded-lg font-bold text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition shadow-xs cursor-pointer ${isLoading || resendCountdown > 0
                     ? "opacity-50 cursor-not-allowed"
                     : "opacity-100"
                   }`}
@@ -773,12 +755,12 @@ const SellerRegister = () => {
           </form>
         )}
 
-        <div className="my-6 border-t border-indigo-500/30 pt-6 text-center">
-          <p className="text-indigo-200 text-sm">
+        <div className="my-6 border-t border-slate-200 pt-6 text-center">
+          <p className="text-slate-500 text-sm font-semibold">
             Already registered?{" "}
             <Link
               to="/login"
-              className="font-bold text-red-400 hover:text-red-300 hover:underline"
+              className="font-bold text-blue-600 hover:text-blue-700 hover:underline"
             >
               Sign in
             </Link>
