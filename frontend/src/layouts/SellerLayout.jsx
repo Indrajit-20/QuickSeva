@@ -47,7 +47,7 @@ function SellerNavLink({ item, onClick, badgeCount }) {
       onClick={onClick}
       className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm font-semibold transition-all ${active
         ? "bg-[#0284c7]/10 text-[#0284c7] shadow-[inset_3px_0_0_#0284c7]"
-        : "text-[#6b7280] hover:bg-[#f8f9fb] hover:text-[#0284c7]"
+        : "text-[#6b7280] hover:bg-[#f8f9fb] hover:text-[#4f46e5]"
         }`}
     >
       <div className="flex items-center gap-3">
