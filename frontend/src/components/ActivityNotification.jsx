@@ -119,32 +119,32 @@ const ActivityNotification = () => {
 
   return (
     <div
-      className={`fixed top-24 left-6 z-50 bg-white/95 backdrop-blur-md border border-slate-100 rounded-2xl p-3 pr-7 shadow-xl flex items-center gap-3 max-w-[280px] sm:max-w-xs transition-all duration-500 ease-out transform ${
-        isVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-10 pointer-events-none"
+      className={`fixed bottom-20 left-4 sm:bottom-auto sm:top-24 sm:left-6 z-50 bg-white/95 backdrop-blur-md border border-slate-100 rounded-2xl p-2.5 pr-6 sm:p-3 sm:pr-7 shadow-xl flex items-center gap-2.5 sm:gap-3 max-w-[280px] sm:max-w-xs transition-all duration-500 ease-out transform ${
+        isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 sm:-translate-y-4 pointer-events-none"
       }`}
       style={{
         boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"
       }}
     >
       {/* Avatar Circle with initials */}
-      <div className={`w-10 h-10 rounded-full border-2 font-extrabold flex items-center justify-center text-xs flex-shrink-0 ${avatarStyles}`}>
+      <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 font-extrabold flex items-center justify-center text-[10px] sm:text-xs flex-shrink-0 ${avatarStyles}`}>
         {initials}
       </div>
 
       {/* Info Body */}
       <div className="flex flex-col min-w-0">
-        <div className="font-bold text-slate-800 text-xs leading-tight flex items-center flex-wrap gap-1">
+        <div className="font-bold text-slate-800 text-[11px] sm:text-xs leading-tight flex items-center flex-wrap gap-1">
           <span>{current.name}</span>
           {current.role === "seller" && (
-            <span className="text-[9px] text-indigo-600 font-semibold bg-indigo-50 px-1.5 py-0.5 rounded-full border border-indigo-100">
+            <span className="text-[8px] sm:text-[9px] text-indigo-600 font-semibold bg-indigo-50 px-1 sm:px-1.5 py-0.5 rounded-full border border-indigo-100">
               {current.category_name || "Partner"}
             </span>
           )}
         </div>
-        <div className="text-[11px] text-slate-500 mt-0.5 leading-snug">
+        <div className="text-[10px] sm:text-[11px] text-slate-500 mt-0.5 leading-snug">
           Registered from <span className="font-semibold text-slate-700">{current.city || "India"}</span>
         </div>
-        <div className="text-[9px] text-slate-400 mt-1 font-medium">
+        <div className="text-[8px] sm:text-[9px] text-slate-400 mt-0.5 sm:mt-1 font-medium">
           {timeAgo(current.created_at)}
         </div>
       </div>
@@ -152,7 +152,7 @@ const ActivityNotification = () => {
       {/* Manual close x button */}
       <button
         onClick={() => setIsClosed(true)}
-        className="absolute top-1.5 right-1.5 text-slate-400 hover:text-slate-600 p-0.5 rounded-full hover:bg-slate-50 transition-colors"
+        className="absolute top-1 right-1 sm:top-1.5 sm:right-1.5 text-slate-400 hover:text-slate-600 p-0.5 rounded-full hover:bg-slate-50 transition-colors"
         aria-label="Dismiss notification"
       >
         <X className="w-3 h-3" />

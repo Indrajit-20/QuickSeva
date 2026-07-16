@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
-   LayoutDashboard,
-   Megaphone,
-   BriefcaseBusiness,
-   ClipboardList,
-   Wallet,
+  LayoutDashboard,
+  Megaphone,
+  BriefcaseBusiness,
+  ClipboardList,
+  Wallet,
 } from "lucide-react";
 
 const sellerBottomItems = [
@@ -45,7 +45,7 @@ export default function BottomNavSeller({ pendingOrdersCount = 0, unreadLeadsCou
 
   return (
     <nav
-      className={`bottom-nav-bar bottom-nav-bar--seller lg:hidden ${isKeyboardVisible ? "bottom-nav-bar--hidden" : ""}`}
+      className={`bottom-nav-bar bottom-nav-bar--seller ${isKeyboardVisible ? "bottom-nav-bar--hidden" : ""}`}
       aria-label="Seller quick navigation"
     >
       {sellerBottomItems.map((item) => {

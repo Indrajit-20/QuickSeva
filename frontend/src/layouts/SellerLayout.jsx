@@ -67,7 +67,7 @@ function SellerNavLink({ item, onClick, badgeCount }) {
 
 function SellerSidebar({ user, onLogout, onNavigate, pendingOrdersCount, onToggleAvailability, onClose }) {
   return (
-    <div className={`flex h-full flex-col border-r border-[#e5e7eb] bg-white px-4 py-4 text-[#1a1a1a] ${onClose ? "pb-24 lg:pb-4" : ""}`}>
+    <div className="flex h-full flex-col border-r border-[#e5e7eb] bg-white px-4 py-4 pb-24 text-[#1a1a1a]">
       <div className="mb-4 flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <div>

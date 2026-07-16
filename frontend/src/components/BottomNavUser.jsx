@@ -49,7 +49,7 @@ export default function BottomNavUser() {
 
   return (
     <nav
-      className={`bottom-nav-bar bottom-nav-bar--user lg:hidden ${
+      className={`bottom-nav-bar bottom-nav-bar--user ${
         isKeyboardVisible ? "bottom-nav-bar--hidden" : ""
       }`}
       aria-label="Quick navigation"

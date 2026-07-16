@@ -395,7 +395,7 @@ export default function SellerServices() {
       </div>
 
       {/* 2. WEEKLY AVAILABILITY & BLACKOUT DATES - SECONDARY COMPONENT (BELOW SERVICES) */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 space-y-6 shadow-sm">
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 space-y-6 shadow-sm mb-28">
         <div className="border-b border-slate-200 pb-4">
           <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
             📅 Weekly Availability & Leave Calendar / साप्ताहिक उपलब्धता और छुट्टियां
@@ -628,6 +628,8 @@ export default function SellerServices() {
           </div>
         </div>
       )}
+      {/* Spacer to allow scrolling above the fixed bottom navigation bar on desktop/laptop */}
+      <div className="h-20 sm:h-28" />
     </div>
   );
 }
