@@ -5,9 +5,9 @@ import apiClient from "../../api/axiosConfig";
 import LocationPicker from "../../components/LocationPicker";
 
 const inputClass =
-  "w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 shadow-sm";
+  "seller-input";
 
-const labelClass = "mb-2 block text-sm font-semibold text-slate-600";
+const labelClass = "seller-label";
 
 export default function SellerProfile() {
   const { user, updateUser } = useAuth();
@@ -261,41 +261,44 @@ export default function SellerProfile() {
   };
 
   return (
-    <div className="animate-fade-in space-y-6 max-w-4xl mx-auto pb-12">
+    <div className="seller-page animate-fade-in space-y-5 max-w-4xl mx-auto">
       {saved && (
-        <div className="fixed right-4 top-4 z-50 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800 shadow-xl">
-          Profile updated successfully!
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm font-bold text-emerald-800 shadow-xl animate-fade-in" style={{ maxWidth: 'calc(100% - 32px)' }}>
+          ✓ Profile updated successfully!
         </div>
       )}
 
       {Number(user?.profile_completed ?? 0) === 0 && (
-        <div className="p-4 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-sm font-semibold flex items-center gap-3 animate-pulse">
-          <span className="text-xl">⚠️</span>
-          <div>
-            <p className="font-bold text-amber-900">Complete Your Profile</p>
-            <p className="text-xs font-normal text-amber-800/80 mt-0.5">
-              Please fill in your details and click "Save Profile" below to unlock the Seller Dashboard, Services, and Orders pages.
+        <div className="seller-offline-banner" style={{ borderColor: '#fde68a', background: 'linear-gradient(135deg, #fffbeb, #fef3c7)' }}>
+          <div className="seller-offline-icon" style={{ background: '#fef3c7', color: '#d97706' }}>
+            <span style={{ fontSize: 22 }}>⚠️</span>
+          </div>
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 14, fontWeight: 700, color: '#92400e' }}>Complete Your Profile</p>
+            <p style={{ fontSize: 12, color: '#b45309', marginTop: 2, fontWeight: 500 }}>
+              Fill in your details and save to unlock Dashboard, Services & Orders.
             </p>
           </div>
         </div>
       )}
 
-      {/* Redesigned Centered Header Card */}
-      <section className="relative rounded-xl border border-slate-200 bg-white p-8 text-center flex flex-col items-center shadow-sm">
+      {/* Profile Hero Card */}
+      <section className="seller-profile-hero relative flex flex-col items-center">
         {/* Elegant Edit Profile Toggle Button */}
         <button
           onClick={() => setIsEditing(!isEditing)}
-          className="absolute right-4 top-4 flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 hover:text-slate-900 active:scale-95 transition"
+          className="seller-action-btn seller-action-btn--outline absolute right-4 top-4"
+          style={{ padding: '8px 14px', minHeight: 36, fontSize: 12 }}
         >
           {isEditing ? (
             <>
               <Eye size={14} />
-              <span>View Profile</span>
+              <span>View</span>
             </>
           ) : (
             <>
               <Pencil size={14} />
-              <span>Edit Profile</span>
+              <span>Edit</span>
             </>
           )}
         </button>
@@ -321,10 +324,10 @@ export default function SellerProfile() {
             <img
               src={getImageUrl(profile.profilePictureUrl || user?.profile_pic)}
               alt="Profile"
-              className={`h-28 w-28 rounded-full border-4 border-indigo-500/10 object-cover shadow-xl transition duration-200 ${isEditing ? "group-hover:brightness-75" : ""}`}
+              className={`seller-profile-avatar ${isEditing ? "group-hover:brightness-75" : ""}`}
             />
           ) : (
-            <div className={`flex h-28 w-28 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 text-4xl font-black text-white force-text-white shadow-xl transition duration-200 ${isEditing ? "group-hover:brightness-75" : ""}`}>
+            <div className={`seller-profile-avatar-placeholder ${isEditing ? "group-hover:brightness-75" : ""}`}>
               {(profile.fullName?.[0] || user?.name?.[0] || "S").toUpperCase()}
             </div>
           )}
@@ -344,21 +347,22 @@ export default function SellerProfile() {
         </div>
 
         {/* User Centered Details */}
-        <h1 className="mt-4 text-3xl font-extrabold text-slate-800 flex items-center gap-2">
+        <h1 style={{ marginTop: 14, fontSize: 22, fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
           {profile.fullName || "Seller"}
           {Number(user?.profile_completed ?? 0) === 1 && (
-            <ShieldCheck className="text-[#0284c7] fill-[#0284c7]/10" size={24} />
+            <ShieldCheck className="text-[#0284c7] fill-[#0284c7]/10" size={20} />
           )}
         </h1>
-        <p className="mt-1.5 text-sm font-medium text-slate-500 flex flex-wrap items-center justify-center gap-1.5">
+        <p style={{ marginTop: 6, fontSize: 13, fontWeight: 500, color: '#64748b', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
           <span>{profile.serviceType || "Service Provider"}</span>
           <span>•</span>
           <span>{profile.phoneNumber || user?.phone || ""}</span>
-          <span>•</span>
-          <span className="capitalize font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2.5 py-0.5 rounded-full text-[11px] shadow-sm">
+        </p>
+        <div style={{ marginTop: 8, display: 'flex', justifyContent: 'center' }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#4338ca', background: '#eef2ff', border: '1px solid #c7d2fe', padding: '4px 12px', borderRadius: 20, textTransform: 'capitalize' }}>
             {profile.sellerType === "agency" ? "Contractor / Agency" : profile.sellerType}
           </span>
-        </p>
+        </div>
 
         {/* Badges */}
         <div className="mt-4 flex flex-wrap justify-center gap-2">
@@ -800,12 +804,12 @@ export default function SellerProfile() {
             )}
           </div>
 
-          {/* Form Action Buttons */}
-          <div className="flex gap-3 pt-4 border-t border-slate-100">
+          {/* Form Action Buttons — Sticky on mobile */}
+          <div className="seller-sticky-save flex gap-3">
             <button
               type="submit"
               disabled={isSaving}
-              className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white force-text-white shadow-lg transition duration-150 hover:bg-indigo-700 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="seller-action-btn seller-action-btn--primary seller-action-btn--full"
             >
               {isSaving ? (
                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
@@ -818,7 +822,7 @@ export default function SellerProfile() {
             <button
               type="button"
               onClick={() => setIsEditing(false)}
-              className="rounded-lg border border-slate-200 bg-slate-50 px-5 py-2.5 text-sm font-bold text-slate-700 transition duration-150 hover:bg-slate-100 hover:text-slate-900 active:scale-[0.98]"
+              className="seller-action-btn seller-action-btn--outline seller-action-btn--full"
             >
               Cancel
             </button>

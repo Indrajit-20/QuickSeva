@@ -412,38 +412,33 @@ export default function SellerPackages() {
         <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
       </div>
     );
-  }
-
-  return (
-    <div className="animate-fade-in space-y-6">
+  }  return (
+    <div className="seller-page space-y-5 animate-fade-in">
+      {/* ── Page Header ── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-sm font-semibold text-blue-600">
-            Premium Packages
-          </p>
-          <h1 className="mt-1 text-2xl font-bold text-slate-800">
-            Grow your QuickSeva business
-          </h1>
-          <p className="mt-1 max-w-2xl text-sm text-slate-500">
-            Buy a package from your wallet. The plan starts immediately after a
-            successful wallet debit.
+          <h1 className="seller-page-title">Premium Packages</h1>
+          <p className="seller-page-subtitle">
+            Buy a package from your wallet to grow your QuickSeva business / अपना व्यवसाय बढ़ाएं
           </p>
         </div>
 
-        <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
-          <Wallet size={20} className="text-emerald-700" />
+        <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 shadow-sm shrink-0">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600">
+            <Wallet size={20} />
+          </div>
           <div>
-            <p className="text-xs font-semibold text-emerald-600">
+            <p style={{ fontSize: 11, fontWeight: 700, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Wallet Balance
             </p>
-            <p className="text-2xl font-black text-slate-800">Rs {walletBalance}</p>
+            <p style={{ fontSize: 18, fontWeight: 800, color: '#1e293b' }}>₹{walletBalance}</p>
           </div>
         </div>
       </div>
 
       {toast && (
         <div
-          className={`rounded-xl border p-4 text-sm font-semibold ${
+          className={`rounded-2xl border p-4 text-sm font-semibold ${
             toast.startsWith("Insufficient") || toast.startsWith("Failed") || toast.startsWith("Error")
               ? "border-red-200 bg-red-50 text-red-700"
               : "border-emerald-200 bg-emerald-50 text-emerald-700"
@@ -454,322 +449,310 @@ export default function SellerPackages() {
       )}
 
       {activePremium && remainingDays <= 2 && (
-        <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-700">
+        <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-700">
           <AlertTriangle size={18} className="mt-0.5 flex-shrink-0" />
           <span>Your plan expires soon. Renew to keep your visibility.</span>
         </div>
       )}
 
       {expiredPremium && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
           Your {getPlanLabel(expiredPremium.plan)} plan expired on{" "}
-          {formatDate(expiredPremium.expiresAt)}. Choose a package below to
-          renew.
+          {formatDate(expiredPremium.expiresAt)}. Choose a package below to renew.
         </div>
       )}
 
-      <section className={cardBase}>
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <div className="mb-2 flex items-center gap-2">
-              <Crown
-                size={20}
-                className={activePremium ? "text-amber-500" : "text-slate-400"}
-              />
-              <h2 className="text-lg font-bold text-slate-850">Current Status</h2>
+      {/* ── Current Premium Status ── */}
+      <div className="seller-card">
+        <div className="seller-card-body">
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Crown
+                  size={20}
+                  className={activePremium ? "text-amber-500 fill-amber-500/20" : "text-slate-400"}
+                />
+                <h2 style={{ fontSize: 16, fontWeight: 700, color: '#1e293b' }}>Current Status</h2>
+              </div>
               <span
-                className={`rounded-full border px-3 py-1 text-xs font-bold ${
+                className={`seller-status-pill ${
                   activePremium
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                    : "border-slate-200 bg-slate-50 text-slate-600"
+                    ? "seller-status-pill--completed"
+                    : "seller-status-pill--pending"
                 }`}
               >
-                {activePremium ? "Active" : "Free Plan"}
+                <span className="seller-status-dot" />
+                {activePremium ? "Premium Active" : "Free Plan"}
               </span>
             </div>
 
-            <p className="text-sm text-slate-600">
-              {activePremium
-                ? `${activePlan?.name || "Premium"} plan active until ${expiryLabel}`
-                : "No active package. You still appear to customers, but below active package sellers."}
-            </p>
-
-            {activePremium && (
-              <p className="mt-2 text-sm font-bold text-emerald-600">
-                {remainingDays} {remainingDays === 1 ? "day" : "days"} remaining
+            <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/60">
+              <p style={{ fontSize: 13, color: '#475569', lineHeight: 1.5 }}>
+                {activePremium
+                  ? `${activePlan?.name || "Premium"} plan active until ${expiryLabel}`
+                  : "No active package. You still appear to customers, but below active package sellers."}
               </p>
-            )}
-          </div>
+              {activePremium && (
+                <p style={{ fontSize: 13, fontWeight: 800, color: '#059669', marginTop: 6 }}>
+                  {remainingDays} {remainingDays === 1 ? "day" : "days"} remaining / {remainingDays} दिन बचे हैं
+                </p>
+              )}
+            </div>
 
-          <div className="rounded-lg bg-slate-50 border border-slate-200 p-4">
-            {activePlan ? (
-              <FeatureList features={activePlan.features} />
-            ) : (
-              <ul className="space-y-2 text-sm text-slate-500">
-                <li>Top placement locked</li>
-                <li>Contact hidden until booking</li>
-                <li>Badge and highlighted pin unavailable</li>
-              </ul>
-            )}
+            <div>
+              <p style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>
+                Plan Benefits / योजना के लाभ
+              </p>
+              {activePlan ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {activePlan.features.map(f => (
+                    <div key={f} className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                      <CheckCircle2 size={16} className="text-emerald-600" />
+                      <span>{f}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {["Top placement locked", "Contact hidden until booking", "Badge and highlighted pin unavailable"].map(f => (
+                    <div key={f} className="flex items-center gap-2 text-sm font-semibold text-slate-400">
+                      <div className="w-4 h-4 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-400">✕</div>
+                      <span>{f}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </section>
+      </div>
 
-      <section className="grid gap-4 lg:grid-cols-3">
+      {/* ── Subscriptions Plans Grid ── */}
+      <div className="grid gap-4 lg:grid-cols-3">
         {plans.map((plan) => {
           const isCurrent = activePlan?.id === plan.id;
+          const isRecommended = plan.id === "pro";
           return (
             <div
               key={plan.id}
-              className={`${cardBase} ${
-                isCurrent
-                  ? "border-emerald-350 shadow-sm"
-                  : plan.id === "pro"
-                    ? "border-amber-250"
-                    : ""
-              }`}
+              className={`seller-plan-card ${isCurrent ? "seller-plan-card--active" : ""} ${isRecommended ? "seller-plan-card--recommended" : ""}`}
             >
+              {isRecommended && (
+                <div className="seller-plan-badge bg-violet-650 text-white" style={{ background: '#7c3aed' }}>
+                  Best Value
+                </div>
+              )}
+              {isCurrent && !isRecommended && (
+                <div className="seller-plan-badge bg-emerald-650 text-white" style={{ background: '#059669' }}>
+                  Active
+                </div>
+              )}
+
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h3 className="text-xl font-bold text-slate-800">{plan.name}</h3>
-                  <p className="mt-1 text-sm text-blue-600 font-semibold">
+                  <h3 style={{ fontSize: 18, fontWeight: 850, color: '#0f172a' }}>{plan.name} Plan</h3>
+                  <p style={{ fontSize: 13, color: '#2563eb', fontWeight: 705, marginTop: 4 }}>
                     {plan.highlight}
                   </p>
                 </div>
-                {isCurrent && (
-                  <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800 border border-emerald-250">
-                    Active
-                  </span>
-                )}
               </div>
 
               <div className="mt-5 flex items-end gap-2">
-                <span className="text-4xl font-black text-slate-800">
-                  Rs {plan.price}
+                <span style={{ fontSize: 32, fontWeight: 900, color: '#0f172a' }}>
+                  ₹{plan.price}
                 </span>
-                <span className="pb-1 text-sm text-slate-400">
+                <span style={{ fontSize: 13, color: '#94a3b8', fontWeight: 600, paddingBottom: 4 }}>
                   / {plan.days} days
                 </span>
               </div>
 
-              <div className="mt-5">
-                <FeatureList features={plan.features} />
+              <div className="mt-5 space-y-2.5">
+                {plan.features.map((feature) => (
+                  <div key={feature} className="seller-plan-feature">
+                    <div className="seller-plan-feature-check bg-emerald-50 text-emerald-600 border border-emerald-250">
+                      <CheckCircle2 size={13} />
+                    </div>
+                    <span>{feature}</span>
+                  </div>
+                ))}
               </div>
 
               <button
                 type="button"
                 onClick={() => openConfirmation(plan)}
-                className="mt-6 w-full rounded-lg bg-blue-600 hover:bg-blue-700 px-4 py-2.5 text-sm font-bold text-white transition shadow-sm cursor-pointer"
+                className={`seller-action-btn seller-action-btn--full mt-6 ${isCurrent ? "seller-action-btn--success" : "seller-action-btn--primary"}`}
               >
-                {isCurrent ? "Renew / Extend" : "Buy Now"}
+                {isCurrent ? "✓ Renew / Extend" : "Buy Now / अभी खरीदें"}
               </button>
             </div>
           );
         })}
-      </section>
+      </div>
 
-      <section className={cardBase}>
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-lg font-bold text-slate-800">Package History</h2>
-          <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
-            {history.length} purchases
-          </span>
+      {/* ── Purchase History ── */}
+      <div className="seller-card">
+        <div className="seller-card-body">
+          <div className="flex items-center justify-between gap-3" style={{ marginBottom: 16 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 700, color: '#0f172a' }}>Purchase History</h2>
+            <span style={{
+              fontSize: 11, fontWeight: 750, color: '#2563eb',
+              background: '#eff6ff', border: '1px solid #bfdbfe',
+              padding: '4px 10px', borderRadius: 20,
+            }}>
+              {history.length} purchases
+            </span>
+          </div>
+
+          {history.length === 0 ? (
+            <div className="seller-empty-state" style={{ padding: '32px 20px', border: 'none' }}>
+              <div className="seller-empty-icon">
+                <Crown size={24} />
+              </div>
+              <div className="seller-empty-title">No purchases yet</div>
+              <div className="seller-empty-text">Your plan purchase history will appear here</div>
+            </div>
+          ) : (
+            <div className="space-y-3.5">
+              {history.slice(0, 10).map((entry) => (
+                <div key={entry.receiptId} className="flex items-center justify-between gap-3 pb-3.5 border-b border-slate-100 last:border-none last:pb-0">
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="flex items-center gap-2">
+                      <span style={{ fontSize: 14, fontWeight: 800, color: '#1e293b' }}>
+                        {getPlanLabel(entry.plan)} Plan
+                      </span>
+                      <span className="seller-status-pill seller-status-pill--completed" style={{ fontSize: 9, padding: '2px 8px' }}>
+                        {entry.type || "active"}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 4, fontWeight: 500 }}>
+                      Expires: {formatDate(entry.expiresAt)}
+                    </p>
+                    <p style={{ fontSize: 11, color: '#94a3b8', fontWeight: 500 }}>
+                      Date: {formatDateTime(entry.purchasedAt)}
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-end gap-2 shrink-0">
+                    <span style={{ fontSize: 15, fontWeight: 900, color: '#ef4444' }}>
+                      -₹{entry.price}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => openInvoice(entry)}
+                      className="seller-action-btn seller-action-btn--outline"
+                      style={{ padding: '6px 12px', minHeight: 32, fontSize: 11 }}
+                    >
+                      Invoice
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
+      </div>
 
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-[640px] text-left text-sm">
-            <thead className="border-b border-slate-200 text-xs uppercase text-slate-400 tracking-wide">
-              <tr>
-                <th className="py-3 pr-4 font-semibold">Date</th>
-                <th className="py-3 pr-4 font-semibold">Plan</th>
-                <th className="py-3 pr-4 font-semibold">Type</th>
-                <th className="py-3 pr-4 font-semibold">Amount</th>
-                <th className="py-3 font-semibold">Expires</th>
-                <th className="py-3 pl-4 font-semibold">Invoice</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {history.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-8 text-center text-slate-400">
-                    No package purchases yet
-                  </td>
-                </tr>
-              ) : (
-                history.slice(0, 10).map((entry) => (
-                  <tr key={entry.receiptId} className="text-slate-600 hover:bg-slate-50 transition-colors">
-                    <td className="py-4 pr-4 text-slate-400">
-                      {formatDateTime(entry.purchasedAt)}
-                    </td>
-                    <td className="py-4 pr-4 font-bold text-slate-800">
-                      {getPlanLabel(entry.plan)}
-                    </td>
-                    <td className="py-4 pr-4 capitalize">{entry.type}</td>
-                    <td className="py-4 pr-4 font-bold text-red-600">-Rs {entry.price}</td>
-                    <td className="py-4">{formatDate(entry.expiresAt)}</td>
-                    <td className="py-4 pl-4">
-                      <button
-                        type="button"
-                        onClick={() => openInvoice(entry)}
-                        className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 transition hover:bg-slate-100 cursor-pointer"
-                      >
-                        Invoice
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
+      {/* ── Invoice Detail Bottom Sheet ── */}
       {invoiceOpen && invoice && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm px-4"
+          className="seller-bottom-sheet-overlay"
           role="dialog"
           aria-modal="true"
+          onClick={(e) => { if (e.target === e.currentTarget) closeInvoice(); }}
         >
-          <button
-            type="button"
-            aria-label="Close invoice"
-            className="fixed inset-0"
-            onClick={closeInvoice}
-          />
-
-          <div className="relative w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
-            <button
-              type="button"
-              onClick={closeInvoice}
-              disabled={invoicePrinting}
-              className="absolute right-4 top-4 rounded-lg bg-slate-100 p-2 text-slate-500 hover:text-slate-700 disabled:opacity-50 cursor-pointer"
-              aria-label="Close invoice modal"
-            >
-              <X size={18} />
-            </button>
-
-            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm font-semibold text-blue-600">Invoice</p>
-                <p className="mt-1 text-2xl font-black text-slate-805">
-                  {invoice.id}
-                </p>
-                <p className="mt-1 text-sm text-slate-400">
-                  Invoice date:{" "}
-                  {formatDate(invoice.meta?.purchasedAt || invoice.meta?.date)}
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setInvoicePrinting(true);
-                    window.print();
-                    window.setTimeout(() => setInvoicePrinting(false), 1000);
-                  }}
-                  className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-700 shadow-sm cursor-pointer"
-                >
-                  Download / Print
-                </button>
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-6 text-slate-800">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <div className="text-xl font-bold">QuickSeva</div>
-                  <div className="text-sm text-slate-500">
-                    Premium Seller Invoice
-                  </div>
-                </div>
-                <div className="text-sm">
-                  <div className="font-semibold text-slate-500">Invoice No:</div>
-                  <div>{invoice.id}</div>
-                </div>
-              </div>
-
-              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <div className="text-sm font-semibold text-slate-500">
-                    Seller
-                  </div>
-                  <div className="text-sm text-slate-700 font-bold">
-                    {invoice.seller?.name || "User"} —{" "}
-                    {invoice.seller?.phone || "8160977394"}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-sm font-semibold text-slate-500">
-                    Date
-                  </div>
-                  <div className="text-sm text-slate-700">
-                    {formatDate(
-                      invoice.meta?.purchasedAt || invoice.meta?.date,
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-6">
-                <div className="mb-2 text-sm font-semibold text-slate-500 border-b border-slate-200 pb-1">
-                  Plan Details
-                </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-500">Plan</span>
-                    <span className="font-semibold text-slate-800">{invoice.plan?.name}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-500">Type</span>
-                    <span className="font-semibold capitalize text-slate-800">
-                      {(
-                        invoice.plan?.type ||
-                        invoice.payment?.status ||
-                        "new"
-                      ).toString()}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-500">Amount</span>
-                    <span className="font-semibold text-slate-800 font-mono">
-                      Rs {invoice.pricing?.subtotal}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-500">Expiry date</span>
-                    <span className="font-semibold text-slate-800">
-                      {formatDate(invoice.plan?.expiresAt)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-6 border-t border-slate-200 pt-4 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500">GST (18%)</span>
-                  <span className="font-semibold text-slate-700 font-mono">
-                    Rs {invoice.pricing?.gstAmount}
-                  </span>
-                </div>
-                <div className="mt-2 flex items-center justify-between">
-                  <span className="font-semibold text-slate-800">Total</span>
-                  <span className="font-bold text-slate-800 text-lg font-mono">
-                    Rs {invoice.pricing?.grandTotal}
-                  </span>
-                </div>
-              </div>
-
-              <div className="mt-8 text-xs text-slate-400">
-                Payment method: {invoice.payment?.method || "UPI (Fake)"}
-              </div>
-            </div>
-
-            <div className="mt-4 flex justify-end">
+          <div className="seller-bottom-sheet" style={{ maxWidth: 500 }}>
+            <div className="seller-bottom-sheet-handle" />
+            <div className="flex items-center justify-between" style={{ marginBottom: 14 }}>
+              <h3 style={{ fontSize: 18, fontWeight: 800, color: '#0f172a' }}>Invoice Details</h3>
               <button
                 type="button"
                 onClick={closeInvoice}
-                className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-100 cursor-pointer"
+                disabled={invoicePrinting}
+                className="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-50 border border-slate-200 text-slate-500 active:scale-90 transition"
+                aria-label="Close invoice"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-slate-800 space-y-4">
+              <div className="flex justify-between items-start">
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 800 }}>QuickSeva Invoice</div>
+                  <div style={{ fontSize: 12, color: '#64748b', fontWeight: 500 }}>Premium Seller Subscription</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Receipt</span>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: '#1e293b', fontFamily: 'monospace' }}>{invoice.id?.slice(0, 12)}...</p>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, borderTop: '1px solid #e2e8f0', paddingTop: 12 }}>
+                <div>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Seller</span>
+                  <p style={{ fontSize: 13, fontWeight: 750, color: '#334155', marginTop: 2 }}>
+                    {invoice.seller?.name || "User"}
+                  </p>
+                  <p style={{ fontSize: 12, color: '#64748b', fontWeight: 500 }}>
+                    {invoice.seller?.phone || ""}
+                  </p>
+                </div>
+                <div>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Billing Date</span>
+                  <p style={{ fontSize: 13, fontWeight: 750, color: '#334155', marginTop: 2 }}>
+                    {formatDate(invoice.meta?.purchasedAt || invoice.meta?.date)}
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 12 }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>
+                  Plan details
+                </span>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span style={{ color: '#64748b' }}>Plan Type</span>
+                    <span style={{ fontWeight: 755, color: '#1e293b' }}>{invoice.plan?.name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span style={{ color: '#64748b' }}>Duration</span>
+                    <span style={{ fontWeight: 755, color: '#1e293b' }}>{plans.find(p => p.id === invoice.plan?.planId)?.days || 30} days</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span style={{ color: '#64748b' }}>Plan Expiry</span>
+                    <span style={{ fontWeight: 755, color: '#1e293b' }}>{formatDate(invoice.plan?.expiresAt)}</span>
+                  </div>
+                  <div className="flex justify-between" style={{ borderTop: '1.5px dashed #cbd5e1', paddingTop: 8, marginTop: 4 }}>
+                    <span style={{ color: '#64748b' }}>Subtotal</span>
+                    <span style={{ fontWeight: 700 }}>₹{invoice.pricing?.subtotal}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span style={{ color: '#64748b' }}>GST (18%)</span>
+                    <span style={{ fontWeight: 700 }}>₹{invoice.pricing?.gstAmount}</span>
+                  </div>
+                  <div className="flex justify-between" style={{ borderTop: '1.5px solid #cbd5e1', paddingTop: 8, fontSize: 15, fontWeight: 800, color: '#1e293b' }}>
+                    <span>Total Amount</span>
+                    <span>₹{invoice.pricing?.grandTotal}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3" style={{ marginTop: 16 }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setInvoicePrinting(true);
+                  window.print();
+                  window.setTimeout(() => setInvoicePrinting(false), 1000);
+                }}
+                className="seller-action-btn seller-action-btn--primary seller-action-btn--full"
+              >
+                Download / Print
+              </button>
+              <button
+                type="button"
+                onClick={closeInvoice}
+                className="seller-action-btn seller-action-btn--outline seller-action-btn--full"
               >
                 Close
               </button>
@@ -778,37 +761,55 @@ export default function SellerPackages() {
         </div>
       )}
 
+      {/* ── Purchase Confirm Bottom Sheet ── */}
       {selectedPlan && purchasePreview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm px-4">
-          <div className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+        <div
+          className="seller-bottom-sheet-overlay"
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => { if (e.target === e.currentTarget && !processing) closeConfirmation(); }}
+        >
+          <div className="seller-bottom-sheet" style={{ maxWidth: 450 }}>
+            <div className="seller-bottom-sheet-handle" />
+
+            <div className="flex items-center justify-between" style={{ marginBottom: 14 }}>
+              <div className="flex items-center gap-2 text-amber-600">
+                <Crown size={20} className="fill-amber-500/10" />
+                <span style={{ fontSize: 16, fontWeight: 800 }}>Confirm Package</span>
+              </div>
+              <button
+                type="button"
+                onClick={closeConfirmation}
+                disabled={processing}
+                className="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-50 border border-slate-200 text-slate-500 active:scale-90 transition"
+                aria-label="Close confirmation"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
             {insufficient ? (
-              <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
-                Insufficient wallet balance. Please recharge your wallet.
+              <div className="seller-offline-banner" style={{ borderColor: '#fecaca', background: '#fef2f2', marginBottom: 16 }}>
+                <div className="seller-offline-icon" style={{ background: '#fee2e2', color: '#dc2626' }}>
+                  <AlertTriangle size={20} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: '#991b1b' }}>Insufficient Balance</p>
+                  <p style={{ fontSize: 11, color: '#dc2626', marginTop: 1 }}>
+                    Please add funds to your wallet to complete purchase.
+                  </p>
+                </div>
               </div>
             ) : null}
 
-            <button
-              type="button"
-              onClick={closeConfirmation}
-              disabled={processing}
-              className="absolute right-4 top-4 rounded-lg bg-slate-100 p-2 text-slate-500 hover:text-slate-700 disabled:opacity-50 cursor-pointer"
-              aria-label="Close confirmation"
-            >
-              <X size={18} />
-            </button>
-
-            <div className="flex items-center gap-2 text-amber-600">
-              <Crown size={18} />
-              <span className="text-sm font-bold">
-                Confirm package purchase
-              </span>
-            </div>
-
-            <h2 className="mt-2 text-2xl font-bold text-slate-800">
+            <h2 style={{ fontSize: 20, fontWeight: 900, color: '#0f172a' }}>
               {selectedPlan.name} Plan
             </h2>
 
-            <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <div style={{
+              borderRadius: 16, border: '1px solid #fde68a', background: '#fffbeb',
+              padding: 14, marginTop: 12, fontSize: 13, fontWeight: 600, color: '#b45309'
+            }}>
               <PlanActionCopy
                 type={purchasePreview.type}
                 activePremium={activePremium}
@@ -816,43 +817,38 @@ export default function SellerPackages() {
               />
             </div>
 
-            <div className="mt-4 space-y-3 rounded-xl bg-slate-50 border border-slate-200 p-4 text-sm text-slate-650">
+            <div className="space-y-3 rounded-2xl bg-slate-50 border border-slate-200 p-4 text-sm text-slate-650" style={{ marginTop: 14 }}>
               <div className="flex items-center justify-between gap-4">
-                <span>Plan amount</span>
-                <span className="font-bold text-slate-800 font-mono">
-                  Rs {selectedPlan.price}
-                </span>
+                <span>Plan cost</span>
+                <span style={{ fontWeight: 800, color: '#1e293b' }}>₹{selectedPlan.price}</span>
               </div>
               <div className="flex items-center justify-between gap-4">
                 <span>Current wallet balance</span>
-                <span className="font-bold text-slate-800 font-mono">Rs {walletBalance}</span>
+                <span style={{ fontWeight: 700, color: '#1e293b' }}>₹{walletBalance}</span>
               </div>
-              <div className="flex items-center justify-between gap-4">
-                <span>Balance after deduction</span>
+              <div className="flex items-center justify-between gap-4" style={{ borderTop: '1px dashed #cbd5e1', paddingTop: 10 }}>
+                <span>Balance after debit</span>
                 <span
-                  className={`font-bold font-mono ${
-                    purchasePreview.balanceAfter < 0
-                      ? "text-red-700"
-                      : "text-emerald-700"
-                  }`}
+                  style={{ fontWeight: 800 }}
+                  className={purchasePreview.balanceAfter < 0 ? "text-red-700" : "text-emerald-700"}
                 >
-                  Rs {purchasePreview.balanceAfter}
+                  ₹{purchasePreview.balanceAfter}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span>New expiry</span>
-                <span className="font-bold text-slate-800">
+                <span>New Expiry</span>
+                <span style={{ fontWeight: 700, color: '#1e293b' }}>
                   {purchasePreview.expiryLabel}
                 </span>
               </div>
             </div>
 
-            <div className="mt-5 grid grid-cols-2 gap-3">
+            <div className="flex gap-3" style={{ marginTop: 20 }}>
               <button
                 type="button"
                 onClick={closeConfirmation}
                 disabled={processing}
-                className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-100 cursor-pointer"
+                className="seller-action-btn seller-action-btn--outline seller-action-btn--full"
               >
                 Cancel
               </button>
@@ -862,20 +858,20 @@ export default function SellerPackages() {
                   type="button"
                   onClick={openAddFundsFromConfirmation}
                   disabled={processing}
-                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-purple-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-purple-700 disabled:opacity-50 cursor-pointer shadow-sm"
+                  className="seller-action-btn seller-action-btn--primary seller-action-btn--full"
                 >
                   {processing && <Loader2 size={16} className="animate-spin" />}
-                  + Add Money to Wallet
+                  + Add Money
                 </button>
               ) : (
                 <button
                   type="button"
                   onClick={handleConfirmPurchase}
                   disabled={processing || purchasePreview.balanceAfter < 0}
-                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 hover:bg-blue-700 px-4 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer shadow-sm"
+                  className="seller-action-btn seller-action-btn--success seller-action-btn--full"
                 >
                   {processing && <Loader2 size={16} className="animate-spin" />}
-                  Confirm
+                  Confirm ✓
                 </button>
               )}
             </div>

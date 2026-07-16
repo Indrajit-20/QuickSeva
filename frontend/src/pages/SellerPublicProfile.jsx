@@ -402,27 +402,27 @@ export default function SellerPublicProfile() {
                 onClick={() => setLightboxImage(seller.profile_picture_url || seller.profile_pic)}
               />
             ) : (
-              <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 text-3xl font-black text-white force-text-white shadow-xl">
+              <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 text-3xl font-semibold text-white force-text-white shadow-xl">
                 {avatarLetter}
               </div>
             )}
 
             {/* Center-aligned Name and Category */}
-            <h1 className="mt-4 text-3xl font-black text-slate-800 flex items-center gap-2 justify-center">
+            <h1 className="mt-4 text-2xl font-bold tracking-tight text-slate-800 flex items-center gap-2 justify-center">
               {seller.name}
             </h1>
 
             <div className="mt-2 flex flex-wrap gap-2 justify-center items-center">
-              <span className="rounded-full border border-purple-200 bg-purple-50 px-3 py-1 text-xs font-black text-purple-700">
+              <span className="rounded-full border border-purple-200 bg-purple-50 px-3 py-1 text-xs font-semibold text-purple-700">
                 {seller.service || "Service Provider"}
               </span>
               {seller.experience_yrs !== undefined && (
-                <span className="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">
+                <span className="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
                   {seller.experience_yrs} Years Experience
                 </span>
               )}
               {seller.seller_type && (
-                <span className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-black text-indigo-700 capitalize">
+                <span className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700 capitalize">
                   {seller.seller_type === "agency" ? "Contractor / Agency" : seller.seller_type}
                 </span>
               )}
@@ -460,12 +460,12 @@ export default function SellerPublicProfile() {
           </div>
 
           <aside className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm h-fit">
-            <h2 className="text-xl font-black text-slate-800">Contact / Action</h2>
+            <h2 className="text-lg font-bold text-slate-800">Contact / Action</h2>
             <div className="mt-4 space-y-3">
               <button
                 type="button"
                 onClick={handleBook}
-                className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-700 px-4 py-3 text-base font-bold text-white force-text-white shadow-lg shadow-indigo-100/20 transition duration-150 active:scale-[0.98]"
+                className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-700 px-4 py-3 text-base font-bold text-white force-text-white shadow-lg shadow-indigo-100/20 transition duration-150 active:scale-[0.98] cursor-pointer"
               >
                 Book This Service
               </button>
@@ -480,7 +480,7 @@ export default function SellerPublicProfile() {
                   <>
                     <a
                       href={`tel:${seller.phone || ""}`}
-                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 font-black text-emerald-700 hover:bg-emerald-100/50 transition"
+                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 font-semibold text-emerald-700 hover:bg-emerald-100/50 transition cursor-pointer shadow-sm hover:shadow active:scale-[0.98]"
                     >
                       <Phone size={17} />
                       Call Now
@@ -489,7 +489,7 @@ export default function SellerPublicProfile() {
                       href={whatsappHref}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-3 font-black text-green-700 hover:bg-green-100/50 transition"
+                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-3 font-semibold text-green-700 hover:bg-green-100/50 transition cursor-pointer shadow-sm hover:shadow active:scale-[0.98]"
                     >
                       <MessageCircle size={17} />
                       WhatsApp
@@ -510,7 +510,7 @@ export default function SellerPublicProfile() {
                       chargeAndRevealContact();
                     }}
                     disabled={contactLoading}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-black text-slate-700 hover:bg-slate-100 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-200 bg-blue-50/50 px-4 py-3 font-semibold text-blue-600 hover:bg-blue-600 hover:text-white transition disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer shadow-sm hover:shadow-md active:scale-[0.98]"
                   >
                     {contactLoading ? "Connecting…" : "View Contact"}
                   </button>
@@ -528,9 +528,9 @@ export default function SellerPublicProfile() {
 
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="mb-4 flex items-center justify-between gap-3">
-            <h2 className="text-2xl font-black text-slate-800">Services Offered</h2>
+            <h2 className="text-xl font-bold text-slate-800">Services Offered</h2>
             {selectedService && (
-              <span className="rounded-full border border-purple-200 bg-purple-50 px-3 py-1 text-xs font-black text-purple-700">
+              <span className="rounded-full border border-purple-200 bg-purple-50 px-3 py-1 text-xs font-semibold text-purple-700">
                 Selected: {selectedService.name}
               </span>
             )}
@@ -551,7 +551,7 @@ export default function SellerPublicProfile() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <h3 className="text-lg font-black text-slate-800">
+                      <h3 className="text-base font-bold text-slate-800">
                         {service.name}
                       </h3>
                       <div className="flex flex-wrap gap-1.5 mt-1">
@@ -605,7 +605,7 @@ export default function SellerPublicProfile() {
 
         {seller.work_images && seller.work_images.length > 0 && (
           <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-            <h2 className="text-2xl font-black text-slate-800">Work Portfolio / Portfolio / काम की तस्वीरें</h2>
+            <h2 className="text-xl font-bold text-slate-800">Work Portfolio / Portfolio / काम की तस्वीरें</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
               {seller.work_images.map((img) => (
                 <div

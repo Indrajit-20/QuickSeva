@@ -9,7 +9,9 @@ import {
   LogOut,
   Menu,
   User,
+  Wallet,
   X,
+  ChevronRight,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import WorkspaceSwitcher from "../components/WorkspaceSwitcher";
@@ -30,7 +32,7 @@ const navItems = [
   { label: "Profile", path: "/seller/profile", icon: User },
   { label: "My Services", path: "/seller/services", icon: BriefcaseBusiness },
   { label: "Orders", path: "/seller/orders", icon: ClipboardList },
-  { label: "Wallet", path: "/seller/wallet", icon: BriefcaseBusiness },
+  { label: "Wallet", path: "/seller/wallet", icon: Wallet },
   { label: "Packages", path: "/seller/packages", icon: Crown },
 ];
 
@@ -63,9 +65,9 @@ function SellerNavLink({ item, onClick, badgeCount }) {
   );
 }
 
-function SellerSidebar({ user, onLogout, onNavigate, pendingOrdersCount, onToggleAvailability }) {
+function SellerSidebar({ user, onLogout, onNavigate, pendingOrdersCount, onToggleAvailability, onClose }) {
   return (
-    <div className="flex h-full flex-col border-r border-[#e5e7eb] bg-white px-4 py-4 text-[#1a1a1a]">
+    <div className={`flex h-full flex-col border-r border-[#e5e7eb] bg-white px-4 py-4 text-[#1a1a1a] ${onClose ? "pb-24 lg:pb-4" : ""}`}>
       <div className="mb-4 flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <div>
@@ -74,24 +76,37 @@ function SellerSidebar({ user, onLogout, onNavigate, pendingOrdersCount, onToggl
             </div>
             <p className="mt-0.5 text-xs font-semibold text-[#6b7280]">Seller Panel</p>
           </div>
-          {/* Small Availability Toggle */}
-          <button
-            onClick={onToggleAvailability}
-            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${user?.is_available ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-slate-300 hover:bg-slate-400'}`}
-            title={user?.is_available ? "Active: Customers can see and book your services / चालू: ग्राहक आपकी सेवाएं देख सकते हैं" : "Inactive: Customers cannot see or book your services / बंद: ग्राहक आपकी सेवाएं नहीं देख सकते"}
-            aria-label="Toggle availability"
-          >
-            <span
-              className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${user?.is_available ? 'translate-x-4' : 'translate-x-0'}`}
-            />
-          </button>
+          {onClose ? (
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex items-center justify-center w-10 h-10 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 active:scale-90 transition shrink-0"
+              aria-label="Close menu"
+            >
+              <X size={20} />
+            </button>
+          ) : (
+            /* Small Availability Toggle */
+            <button
+              onClick={onToggleAvailability}
+              className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${user?.is_available ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-slate-300 hover:bg-slate-400'}`}
+              title={user?.is_available ? "Active: Customers can see and book your services / चालू: ग्राहक आपकी सेवाएं देख सकते हैं" : "Inactive: Customers cannot see or book your services / बंद: ग्राहक आपकी सेवाएं नहीं देख सकते"}
+              aria-label="Toggle availability"
+            >
+              <span
+                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${user?.is_available ? 'translate-x-4' : 'translate-x-0'}`}
+              />
+            </button>
+          )}
         </div>
-        <div className="flex items-center gap-1.5 text-[10px] font-bold">
-          <span className={`h-1.5 w-1.5 rounded-full ${user?.is_available ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
-          <span className={user?.is_available ? 'text-emerald-600' : 'text-rose-600'}>
-            {user?.is_available ? 'Active / चालू' : 'Inactive / बंद'}
-          </span>
-        </div>
+        {!onClose && (
+          <div className="flex items-center gap-1.5 text-[10px] font-bold">
+            <span className={`h-1.5 w-1.5 rounded-full ${user?.is_available ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+            <span className={user?.is_available ? 'text-emerald-600' : 'text-rose-600'}>
+              {user?.is_available ? 'Active / चालू' : 'Inactive / बंद'}
+            </span>
+          </div>
+        )}
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto no-scrollbar">
@@ -191,81 +206,92 @@ export default function SellerLayout() {
         />
       </aside>
 
-      <header className="sticky top-0 z-20 border-b border-[#e5e7eb] bg-white px-4 py-3 lg:hidden">
-        <div className="flex items-center justify-between">
-          <button
-            type="button"
-            onClick={() => setDrawerOpen(true)}
-            className="rounded-lg border border-[#e5e7eb] bg-white p-2 text-[#0284c7]"
-            aria-label="Open seller navigation"
-          >
-            <Menu size={20} />
-          </button>
-
-          <div className="text-center">
-            <div className="text-sm font-bold text-[#1a1a1a]">
-              {user?.name || "Seller"}
+      {/* ── Mobile Header — App-like ── */}
+      <header className="sticky top-0 z-20 bg-white lg:hidden" style={{ boxShadow: '0 1px 8px rgba(0,0,0,0.06)' }}>
+        <div className="flex items-center justify-between px-4 py-3">
+          {/* Left: Menu + Brand */}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setDrawerOpen(true)}
+              className="flex items-center justify-center w-10 h-10 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 active:scale-90 transition"
+              aria-label="Open seller navigation"
+            >
+              <Menu size={20} />
+            </button>
+            <div>
+              <div className="text-lg font-black text-slate-900 leading-tight">
+                Quick<span className="text-blue-600">Seva</span>
+              </div>
+              <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Seller Panel</div>
             </div>
-            <div className="text-xs text-[#6b7280]">QuickSeva Seller</div>
           </div>
 
+          {/* Right: Status + Avatar */}
           <div className="flex items-center gap-3">
-            {/* Mobile Availability Toggle */}
+            {/* Availability indicator */}
             <button
               onClick={handleToggleAvailability}
-              className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${user?.is_available ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-slate-300 hover:bg-slate-400'}`}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all active:scale-95 ${
+                user?.is_available
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                  : 'bg-rose-50 text-rose-600 border border-rose-200'
+              }`}
               title={user?.is_available ? "Active / Click to deactivate" : "Inactive / Click to activate"}
-              aria-label="Toggle availability"
             >
-              <span
-                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${user?.is_available ? 'translate-x-4' : 'translate-x-0'}`}
-              />
+              <span className={`w-2 h-2 rounded-full ${user?.is_available ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+              {user?.is_available ? 'Online' : 'Offline'}
             </button>
 
-            {user?.profile_pic ? (
-              <img
-                src={getImageUrl(user.profile_pic)}
-                alt="Profile"
-                className="h-9 w-9 rounded-full object-cover border border-[#e5e7eb]"
-              />
-            ) : (
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#0284c7] text-xs font-bold text-white">
-                {getInitial(user?.name)}
-              </div>
-            )}
+            {/* Profile avatar — tap to go to profile */}
+            <button
+              onClick={() => navigate('/seller/profile')}
+              className="relative active:scale-90 transition"
+              aria-label="Go to profile"
+            >
+              {user?.profile_pic ? (
+                <img
+                  src={getImageUrl(user.profile_pic)}
+                  alt="Profile"
+                  className="h-10 w-10 rounded-xl object-cover border-2 border-slate-100"
+                />
+              ) : (
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-sm font-bold text-white border-2 border-blue-100">
+                  {getInitial(user?.name)}
+                </div>
+              )}
+              {pendingOrdersCount > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white">
+                  {pendingOrdersCount > 9 ? "9+" : pendingOrdersCount}
+                </span>
+              )}
+            </button>
           </div>
         </div>
       </header>
 
       {drawerOpen && (
-        <div className="fixed inset-0 z-40 lg:hidden">
+        <div className="fixed inset-0 z-[1200] lg:hidden">
           <button
             type="button"
             aria-label="Close seller navigation"
-            className="absolute inset-0 bg-[#1a1a1a]/35"
+            className="absolute inset-0 bg-[#1a1a1a]/40 backdrop-blur-sm"
             onClick={() => setDrawerOpen(false)}
           />
-          <div className="relative h-full w-80 max-w-[85vw] animate-slide-in-right">
-            <button
-              type="button"
-              onClick={() => setDrawerOpen(false)}
-              className="absolute right-3 top-3 z-10 rounded-lg border border-[#e5e7eb] bg-white p-2 text-[#1a1a1a]"
-              aria-label="Close menu"
-            >
-              <X size={18} />
-            </button>
+          <div className="relative h-full w-80 max-w-[80vw] animate-slide-in-right">
             <SellerSidebar
               user={user}
               onLogout={handleLogout}
               onNavigate={() => setDrawerOpen(false)}
               pendingOrdersCount={pendingOrdersCount}
               onToggleAvailability={handleToggleAvailability}
+              onClose={() => setDrawerOpen(false)}
             />
           </div>
         </div>
       )}
 
-      <main className="min-h-screen px-4 py-6 sm:px-6 lg:ml-72 lg:px-8 bottom-nav-spacer">
+      <main className="min-h-screen px-4 py-5 sm:px-6 lg:ml-72 lg:px-8 lg:py-6 bottom-nav-spacer">
         <Outlet />
       </main>
 

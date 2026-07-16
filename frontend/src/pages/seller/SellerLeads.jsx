@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Clock3, Crown, MapPin, Phone, RefreshCw, User, Rocket } from "lucide-react";
+import { AlertTriangle, Clock3, Crown, MapPin, Phone, RefreshCw, User, Rocket, Activity } from "lucide-react";
 import apiClient from "../../api/axiosConfig";
 import { useAuth } from "../../context/AuthContext";
 import { Link } from "react-router-dom";
@@ -13,6 +13,17 @@ const formatTime = (value) => {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
+};
+
+const formatTimeAgo = (value) => {
+  if (!value) return "Just now";
+  const diff = Date.now() - new Date(value).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
 };
 
 export default function SellerLeads() {
@@ -69,188 +80,283 @@ export default function SellerLeads() {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="seller-page space-y-5 animate-fade-in">
+
+      {/* ── Header ── */}
+      <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Lead Alerts / ग्राहक संदेश</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Customer leads routed directly to your dashboard. / ग्राहकों के संदेश सीधे आपके डैशबोर्ड पर।
+          <h1 className="seller-page-title">Lead Alerts</h1>
+          <p className="seller-page-subtitle">
+            Customer requests in your area / ग्राहक संदेश
           </p>
         </div>
         <button
           type="button"
           onClick={() => fetchLeads()}
-          className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100 transition duration-200 cursor-pointer"
+          className="seller-action-btn seller-action-btn--outline"
+          style={{ padding: '10px 14px', minHeight: 40, fontSize: 12 }}
         >
-          <RefreshCw className="h-4 w-4" />
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           Refresh
         </button>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">Open Leads / नए संदेश</div>
-          <div className="mt-2 text-3xl font-black text-slate-800">{openLeads.length}</div>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">Polling</div>
-          <div className="mt-2 text-lg font-bold text-slate-800">Every 30 sec</div>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">Last Updated</div>
-          <div className="mt-2 text-sm font-semibold text-slate-800">
-            {lastUpdated ? formatTime(lastUpdated) : "Waiting..."}
+      {/* ── Live Stats Row ── */}
+      <div className="seller-scroll-row">
+        {/* Open Leads */}
+        <div className="seller-stat-chip seller-stat-chip--blue" style={{ minWidth: 130 }}>
+          <div className="flex items-center gap-2" style={{ marginBottom: 8 }}>
+            <div className="seller-live-dot" />
+            <span style={{ fontSize: 10, fontWeight: 700, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Live
+            </span>
           </div>
+          <div className="seller-stat-value">{openLeads.length}</div>
+          <div className="seller-stat-label">Open Leads</div>
+        </div>
+
+        {/* Polling */}
+        <div className="seller-stat-chip seller-stat-chip--violet" style={{ minWidth: 130 }}>
+          <div style={{ marginBottom: 8 }}>
+            <Activity size={16} style={{ color: '#8b5cf6' }} />
+          </div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: '#1e293b' }}>Every 30s</div>
+          <div className="seller-stat-label">Auto-refresh</div>
+        </div>
+
+        {/* Last Updated */}
+        <div className="seller-stat-chip seller-stat-chip--emerald" style={{ minWidth: 130 }}>
+          <div style={{ marginBottom: 8 }}>
+            <Clock3 size={16} style={{ color: '#10b981' }} />
+          </div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#1e293b' }}>
+            {lastUpdated ? formatTimeAgo(lastUpdated) : "Waiting…"}
+          </div>
+          <div className="seller-stat-label">Last Updated</div>
         </div>
       </div>
 
-      {/* Informational Banner */}
-      <div className="rounded-2xl border border-blue-200 bg-blue-50/50 p-4 flex gap-3 text-left">
-        <span className="text-xl">💡</span>
-        <div className="text-xs space-y-1">
-          <p className="font-bold text-blue-900">How to use Lead Alerts? / ग्राहक संदेश का उपयोग कैसे करें:</p>
-          <p className="text-slate-650 leading-relaxed font-semibold">
-            <strong>EN:</strong> These are real-time requests from customers in your area. Tap <strong>"Call Client Now"</strong> to talk directly, discuss the work, and confirm your booking.
-          </p>
-          <p className="text-slate-500 leading-relaxed border-t border-blue-100/50 pt-1 font-semibold">
-            <strong>HI:</strong> ये आपके क्षेत्र के ग्राहकों के सीधे संदेश हैं। ग्राहक से बात करने, काम समझने और बुकिंग पक्की करने के लिए <strong>"Call Client Now"</strong> पर क्लिक करें।
-          </p>
-        </div>
-      </div>
-
-      {!hasPremium && (
-        <div className="rounded-xl border border-purple-200 bg-purple-50 p-6 text-center space-y-4 shadow-sm">
-          <div className="flex justify-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-purple-100 text-purple-600">
-              <Rocket className="rotate-45" size={24} />
-            </div>
+      {/* ── How To Use Tip ── */}
+      <div className="seller-card">
+        <div className="seller-card-body" style={{ display: 'flex', gap: 12 }}>
+          <div style={{
+            width: 40, height: 40, borderRadius: 12,
+            background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0,
+          }}>
+            <Rocket size={18} style={{ color: '#3b82f6' }} />
           </div>
-          <div className="space-y-1">
-            <h3 className="text-lg font-bold text-slate-800">Unlock Lead Alerts with Premium Membership</h3>
-            <p className="text-sm text-slate-500 max-w-md mx-auto">
-              Get customer leads routed directly to your dashboard in real-time when clients search for your categories and pincodes.
+          <div style={{ fontSize: 12 }}>
+            <p style={{ fontWeight: 700, color: '#1e293b', marginBottom: 4 }}>
+              How to use / कैसे उपयोग करें
+            </p>
+            <p style={{ color: '#64748b', lineHeight: 1.5 }}>
+              Tap <strong>"Call Client Now"</strong> to speak directly and confirm booking.
+            </p>
+            <p style={{ color: '#94a3b8', lineHeight: 1.5, marginTop: 2, fontSize: 11 }}>
+              बुकिंग पक्की करने के लिए <strong>"Call Client Now"</strong> दबाएं।
             </p>
           </div>
-          <div>
+        </div>
+      </div>
+
+      {/* ── Premium Gate ── */}
+      {!hasPremium && (
+        <div className="seller-card" style={{ overflow: 'hidden' }}>
+          <div style={{
+            background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+            padding: 24, color: 'white', textAlign: 'center',
+          }}>
+            <div style={{
+              width: 56, height: 56, borderRadius: 18,
+              background: 'rgba(255,255,255,0.15)',
+              margin: '0 auto 14px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Crown size={28} />
+            </div>
+            <h3 style={{ fontSize: 16, fontWeight: 800, marginBottom: 6 }}>
+              Unlock Lead Alerts with Premium
+            </h3>
+            <p style={{ fontSize: 12, opacity: 0.8, maxWidth: 280, margin: '0 auto 16px' }}>
+              Get customer leads routed directly to your dashboard in real-time.
+            </p>
             <Link
               to="/seller/packages"
-              className="inline-flex items-center justify-center px-6 py-2.5 rounded-lg text-sm font-bold text-white bg-purple-600 hover:bg-purple-700 transition-all duration-200 shadow-sm"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '12px 24px', borderRadius: 14,
+                background: 'rgba(255,255,255,0.2)',
+                border: '1px solid rgba(255,255,255,0.3)',
+                color: 'white', fontSize: 13, fontWeight: 700,
+                textDecoration: 'none',
+              }}
             >
-              👑 UPGRADE TO PREMIUM
+              👑 Upgrade to Premium
             </Link>
           </div>
         </div>
       )}
 
+      {/* ── Error ── */}
       {error && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
+        <div style={{
+          borderRadius: 14, border: '1px solid #fecaca', background: '#fef2f2',
+          padding: '12px 16px', fontSize: 13, fontWeight: 600, color: '#b91c1c',
+        }}>
           {error}
         </div>
       )}
 
-      {loading && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-400 shadow-sm">
-          Loading lead alerts...
+      {/* ── Loading ── */}
+      {loading && leads.length === 0 && (
+        <div className="seller-empty-state" style={{ padding: '32px 24px' }}>
+          <div style={{
+            width: 32, height: 32,
+            border: '3px solid #eff6ff', borderTopColor: '#3b82f6',
+            borderRadius: '50%', margin: '0 auto 12px',
+            animation: 'spin 1s linear infinite',
+          }} />
+          <p className="seller-empty-text">Loading lead alerts…</p>
         </div>
       )}
 
+      {/* ── Empty State ── */}
       {!loading && leads.length === 0 && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
-          <p className="text-sm font-bold text-slate-700">No lead alerts yet / कोई ग्राहक संदेश नहीं है</p>
-          <p className="mt-1 text-xs text-slate-400">
-            New matching requests will appear here. / नए काम के संदेश यहाँ दिखाई देंगे।
-          </p>
+        <div className="seller-empty-state">
+          <div className="seller-empty-icon">
+            <Megaphone size={28} />
+          </div>
+          <div className="seller-empty-title">No lead alerts yet</div>
+          <div className="seller-empty-text">
+            New matching customer requests will appear here automatically.
+          </div>
         </div>
       )}
 
-      <div className="grid gap-4">
+      {/* ── Lead Cards ── */}
+      <div className="space-y-3">
         {leads.map((lead) => (
           <article
             key={`${lead.notificationId}-${lead.leadId}`}
-            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition duration-200 text-left space-y-4"
+            className="seller-lead-card seller-lead-card--priority"
           >
-            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-3">
-              <div className="space-y-1">
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-250 bg-amber-50 px-2.5 py-0.5 text-[10px] font-bold text-amber-700">
-                  <AlertTriangle className="h-3 w-3" />
-                  HIGH PRIORITY / उच्च प्राथमिकता
+            {/* Top Tags */}
+            <div className="seller-lead-header">
+              <div className="seller-lead-meta">
+                <span className="seller-lead-tag" style={{ background: '#fffbeb', color: '#b45309', border: '1px solid #fde68a' }}>
+                  <AlertTriangle size={12} /> Priority
                 </span>
-                <h2 className="text-lg font-black text-slate-800 leading-snug">
-                  {lead.category} Request / {lead.category} काम की मांग
-                </h2>
+                <span className="seller-lead-tag" style={{ background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', textTransform: 'capitalize' }}>
+                  {lead.category}
+                </span>
               </div>
-              <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">
+              <span style={{
+                fontSize: 10, fontWeight: 700, color: '#64748b',
+                background: '#f1f5f9', padding: '3px 8px', borderRadius: 12,
+                textTransform: 'uppercase',
+              }}>
                 {lead.status}
               </span>
             </div>
 
-            {/* Explanation box for the seller */}
-            <div className="bg-slate-50 border border-slate-150 p-3.5 rounded-xl text-xs text-slate-600 leading-relaxed space-y-0.5 font-semibold">
-              <p>
-                👉 <strong>EN:</strong> Customer <strong>{lead.customerName}</strong> needs an <strong>{lead.category}</strong> service near <strong>{lead.pincode}</strong>.
-              </p>
-              <p className="border-t border-slate-200/50 pt-1 mt-1">
-                👉 <strong>HI:</strong> ग्राहक <strong>{lead.customerName}</strong> को <strong>{lead.pincode}</strong> के पास <strong>{lead.category}</strong> काम की जरूरत है।
-              </p>
+            <div className="seller-lead-body space-y-3">
+              {/* Request Description */}
+              <div style={{
+                background: '#f8fafc', borderRadius: 14, padding: 14,
+                border: '1px solid #e2e8f0', fontSize: 13,
+              }}>
+                <p style={{ color: '#1e293b', fontWeight: 600 }}>
+                  Customer looking for <span style={{ color: '#2563eb', fontWeight: 700 }}>{lead.category}</span> near pincode <span style={{ fontWeight: 700 }}>{lead.pincode}</span>
+                </p>
+                <p style={{ color: '#94a3b8', fontSize: 11, marginTop: 4, fontWeight: 500 }}>
+                  पिनकोड <strong>{lead.pincode}</strong> में <strong style={{ color: '#2563eb' }}>{lead.category}</strong> सेवा के लिए अनुरोध
+                </p>
+              </div>
+
+              {/* Address */}
+              {lead.address && (
+                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 12 }}>
+                  <MapPin size={16} style={{ color: '#3b82f6', flexShrink: 0, marginTop: 1 }} />
+                  <div>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Service Address
+                    </span>
+                    <p style={{ color: '#1e293b', fontWeight: 600, marginTop: 2 }}>{lead.address}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Info Grid */}
+              <div style={{
+                display: 'grid', gridTemplateColumns: '1fr 1fr',
+                gap: 8, background: '#f8fafc', borderRadius: 14, padding: 12,
+                border: '1px solid #f1f5f9',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{
+                    width: 32, height: 32, borderRadius: 10,
+                    background: 'white', border: '1px solid #e2e8f0',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <User size={14} style={{ color: '#94a3b8' }} />
+                  </div>
+                  <div>
+                    <span style={{ fontSize: 9, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
+                      Client
+                    </span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: '#1e293b' }}>{lead.customerName}</span>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{
+                    width: 32, height: 32, borderRadius: 10,
+                    background: 'white', border: '1px solid #e2e8f0',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <Clock3 size={14} style={{ color: '#94a3b8' }} />
+                  </div>
+                  <div>
+                    <span style={{ fontSize: 9, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
+                      Time
+                    </span>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: '#475569' }}>{formatTimeAgo(lead.createdAt)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Customer Notes */}
+              {lead.description && (
+                <div style={{
+                  background: 'white', borderRadius: 14, padding: '12px 14px',
+                  border: '1px solid #e2e8f0', fontSize: 12,
+                }}>
+                  <span style={{ fontWeight: 700, color: '#1e293b', display: 'block', marginBottom: 4, fontSize: 11 }}>
+                    Customer Notes / ग्राहक विवरण
+                  </span>
+                  <p style={{ color: '#64748b', fontStyle: 'italic', fontWeight: 500 }}>
+                    "{lead.description}"
+                  </p>
+                </div>
+              )}
+
+              {/* Phone */}
+              {lead.contactNumber && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+                  <Phone size={14} style={{ color: '#059669' }} />
+                  <span style={{ fontWeight: 700, color: '#059669' }}>{lead.contactNumber}</span>
+                </div>
+              )}
             </div>
 
-            {/* User Details Grid */}
-            <div className="grid gap-3 text-xs text-slate-600 sm:grid-cols-3 bg-white p-1 rounded-xl">
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
-                  <User className="h-4 w-4" />
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-400 block font-semibold uppercase">Client Name / ग्राहक</span>
-                  <span className="font-bold text-slate-800 text-sm">{lead.customerName}</span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
-                  <MapPin className="h-4 w-4" />
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-400 block font-semibold uppercase">Location / दूरी</span>
-                  <span className="font-bold text-slate-800 text-sm">{lead.pincode} ({lead.radiusKm || 5} km away)</span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
-                  <Clock3 className="h-4 w-4" />
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-400 block font-semibold uppercase">Requested On / समय</span>
-                  <span className="font-bold text-slate-800 text-sm">{formatTime(lead.createdAt)}</span>
-                </div>
-              </div>
-            </div>
-
-            {lead.description && (
-              <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3 text-xs leading-relaxed text-slate-600">
-                <span className="font-bold text-slate-700 block mb-1">Customer Notes / ग्राहक का विवरण:</span>
-                <p className="italic font-medium">"{lead.description}"</p>
-              </div>
-            )}
-
-            {/* Direct Contact Phone info if available */}
-            {lead.contactNumber && (
-              <div className="flex items-center gap-2 border-t border-slate-150 pt-3 text-xs">
-                <Phone className="h-3.5 w-3.5 text-emerald-650" />
-                <span className="font-bold text-emerald-700">
-                  Phone Number / फोन नंबर: {lead.contactNumber}
-                </span>
-              </div>
-            )}
-
-            <div className="flex pt-1">
+            {/* Call Action */}
+            <div className="seller-lead-action">
               <a
                 href={`tel:${lead.contactNumber}`}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-6 py-3 text-sm font-bold text-white transition-all duration-150 hover:scale-[1.01] active:scale-95 cursor-pointer shadow-sm"
+                className="seller-action-btn seller-action-btn--success seller-action-btn--full"
               >
-                <Phone className="h-4 w-4" />
-                Call Client Now / ग्राहक को अभी फोन करें
+                <Phone size={18} />
+                Call Client Now / ग्राहक को फोन करें
               </a>
             </div>
           </article>

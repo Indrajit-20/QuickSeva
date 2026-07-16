@@ -1,5 +1,17 @@
 import { useEffect, useState } from "react";
-import { CheckCircle2, ClipboardList, Clock3, IndianRupee, Rocket } from "lucide-react";
+import {
+  CheckCircle2,
+  ClipboardList,
+  Clock3,
+  IndianRupee,
+  Rocket,
+  BriefcaseBusiness,
+  Megaphone,
+  Wallet,
+  ChevronRight,
+  AlertTriangle,
+  TrendingUp,
+} from "lucide-react";
 import { formatCurrency, statusClasses } from "./sellerData";
 import { useAuth } from "../../context/AuthContext";
 import { sellerOrdersApi } from "../../api/orderApi";
@@ -42,10 +54,9 @@ export default function SellerDashboard() {
   );
 
   const today = new Intl.DateTimeFormat("en-IN", {
-    weekday: "long",
+    weekday: "short",
     day: "numeric",
-    month: "long",
-    year: "numeric",
+    month: "short",
   }).format(new Date());
 
   const stats = [
@@ -53,29 +64,33 @@ export default function SellerDashboard() {
       label: "Total Orders",
       value: orders.length,
       icon: ClipboardList,
-      iconBg: "bg-blue-50",
-      iconColor: "text-blue-600",
+      color: "blue",
+      iconBg: "#eff6ff",
+      iconColor: "#3b82f6",
     },
     {
-      label: "Pending Orders",
+      label: "Pending",
       value: pending.length,
       icon: Clock3,
-      iconBg: "bg-amber-50",
-      iconColor: "text-amber-600",
+      color: "amber",
+      iconBg: "#fffbeb",
+      iconColor: "#f59e0b",
     },
     {
-      label: "Completed Orders",
+      label: "Completed",
       value: completed.length,
       icon: CheckCircle2,
-      iconBg: "bg-emerald-50",
-      iconColor: "text-emerald-600",
+      color: "emerald",
+      iconBg: "#ecfdf5",
+      iconColor: "#10b981",
     },
     {
-      label: "Total Earnings",
+      label: "Earnings",
       value: formatCurrency(earnings),
       icon: IndianRupee,
-      iconBg: "bg-violet-50",
-      iconColor: "text-violet-600",
+      color: "violet",
+      iconBg: "#f5f3ff",
+      iconColor: "#8b5cf6",
     },
   ];
 
@@ -85,192 +100,312 @@ export default function SellerDashboard() {
     setHasPremium(isPremiumActive(user) || isPremiumActive());
   }, [user]);
 
-  return (
-    <div className="animate-fade-in space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <p className="text-sm font-semibold text-blue-600">{today}</p>
-          <h1 className="mt-1 text-2xl font-bold text-slate-800">
-            Welcome back, {user?.name || "Seller"}!
-          </h1>
-        </div>
+  const quickActions = [
+    {
+      label: "My Services",
+      sublabel: "Add & manage",
+      path: "/seller/services",
+      icon: BriefcaseBusiness,
+      iconBg: "#eff6ff",
+      iconColor: "#3b82f6",
+    },
+    {
+      label: "Orders",
+      sublabel: `${pending.length} pending`,
+      path: "/seller/orders",
+      icon: ClipboardList,
+      iconBg: "#fef3c7",
+      iconColor: "#d97706",
+    },
+    {
+      label: "Wallet",
+      sublabel: "Credits & billing",
+      path: "/seller/wallet",
+      icon: Wallet,
+      iconBg: "#ecfdf5",
+      iconColor: "#059669",
+    },
+    {
+      label: "Lead Alerts",
+      sublabel: "New customers",
+      path: "/seller/dashboard/leads",
+      icon: Megaphone,
+      iconBg: "#faf5ff",
+      iconColor: "#7c3aed",
+    },
+  ];
 
-        <div className="flex flex-wrap items-center gap-3 self-start sm:self-center">
-          {/* Availability Status Badge & Toggle */}
-          <div className="inline-flex items-center gap-3 rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-xs shadow-sm">
-            <span className={`h-2 w-2 rounded-full ${user?.is_available ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
-            <span className={`font-bold ${user?.is_available ? 'text-emerald-600' : 'text-rose-500'}`}>
-              {user?.is_available ? 'Active / चालू' : 'Inactive / बंद'}
-            </span>
-            <button
-              onClick={async () => {
-                try {
-                  const res = await apiClient.patch("/sellers/me/toggle-availability");
-                  if (res?.data?.success) {
-                    updateUser({ is_available: user?.is_available ? 0 : 1 });
-                  }
-                } catch (err) {
-                  console.error(err);
-                  alert("Failed to toggle availability");
-                }
-              }}
-              className={`relative inline-flex h-5 w-8 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${user?.is_available ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-slate-300 hover:bg-slate-400'}`}
-              title={user?.is_available ? "Active: Customers can see and book your services" : "Inactive: Customers cannot see or book your services"}
-              aria-label="Toggle availability"
-            >
-              <span
-                className={`pointer-events-none inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${user?.is_available ? 'translate-x-3' : 'translate-x-0'}`}
-              />
-            </button>
+  return (
+    <div className="seller-page space-y-5 animate-fade-in">
+
+      {/* ── Welcome Hero Card ── */}
+      <div className="seller-welcome-hero">
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p style={{ fontSize: 12, fontWeight: 600, opacity: 0.8, color: '#ffffff' }}>{today}</p>
+              <h1 style={{ fontSize: 22, fontWeight: 800, marginTop: 4, letterSpacing: '-0.02em', color: '#ffffff' }}>
+                Welcome, {user?.name?.split(' ')[0] || "Seller"} 👋
+              </h1>
+              <p style={{ fontSize: 13, opacity: 0.85, marginTop: 4, color: '#ffffff' }}>
+                {user?.is_available ? "You're online and accepting orders" : "You're currently offline"}
+              </p>
+            </div>
+            {hasPremium && (
+              <span style={{
+                background: 'rgba(255,255,255,0.18)',
+                borderRadius: 12,
+                padding: '6px 12px',
+                fontSize: 11,
+                fontWeight: 800,
+                backdropFilter: 'blur(8px)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                color: '#ffffff',
+              }}>
+                👑 Premium
+              </span>
+            )}
           </div>
 
-          {hasPremium && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 shadow-sm">
-              👑 Premium Member
-            </span>
-          )}
+          {/* Inline stats summary */}
+          <div className="flex items-center gap-4 mt-4" style={{ fontSize: 13, color: '#ffffff' }}>
+            <div className="flex items-center gap-1.5" style={{ opacity: 0.9 }}>
+              <TrendingUp size={14} />
+              <span style={{ fontWeight: 700 }}>{formatCurrency(earnings)}</span>
+              <span style={{ opacity: 0.8 }}>earned</span>
+            </div>
+            <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.25)' }} />
+            <div style={{ opacity: 0.9 }}>
+              <span style={{ fontWeight: 700 }}>{orders.length}</span> orders
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Offline Status Alert Banner */}
+      {/* ── Offline Banner ── */}
       {!user?.is_available && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 p-5 flex items-start gap-3.5">
-          <span className="text-2xl mt-0.5 select-none">⚠️</span>
-          <div>
-            <h3 className="text-base font-bold text-rose-700">
-              You are currently Offline / आप अभी ऑफ़लाइन हैं
-            </h3>
-            <p className="text-sm text-rose-600 mt-1 font-medium leading-relaxed">
-              Your services are hidden from customers. Switch your status to <strong className="text-rose-800 bg-rose-100 px-1.5 py-0.5 rounded font-bold">Active / चालू</strong> in the top header or sidebar to start showing up in searches and receiving new bookings.
-            </p>
-            <p className="text-xs text-rose-500 mt-1 font-medium">
-              आपकी सेवाएं ग्राहकों को दिखाई नहीं दे रही हैं। ग्राहकों की खोज में दिखने और नई बुकिंग प्राप्त करने के लिए ऊपर या साइडबार में अपनी स्थिति को <strong className="text-rose-800 bg-rose-100 px-1.5 py-0.5 rounded font-bold">Active / चालू</strong> पर बदलें।
-            </p>
+        <div className="seller-offline-banner">
+          <div className="seller-offline-icon">
+            <AlertTriangle size={22} />
           </div>
-        </div>
-      )}
-
-      {/* Premium Boost Banner */}
-      {!hasPremium && (
-        <div className="rounded-xl border border-purple-200 bg-purple-50 p-6 text-center space-y-4">
-          <div className="flex justify-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-purple-100 text-purple-600">
-              <Rocket className="rotate-45" size={24} />
-            </div>
-          </div>
-          <div className="space-y-1">
-            <h3 className="text-lg font-bold text-slate-800">Boost your profile with Premium Membership</h3>
-            <p className="text-sm text-slate-500 max-w-md mx-auto">
-              Get top results in searches, highlight your map pin, and display a gold badge to attract more customers.
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 14, fontWeight: 700, color: '#991b1b' }}>
+              You're Offline / आप ऑफ़लाइन हैं
+            </p>
+            <p style={{ fontSize: 12, color: '#b91c1c', marginTop: 2, fontWeight: 500 }}>
+              Tap "Online" in header to start receiving bookings
             </p>
           </div>
-          <div>
-            <Link
-              to="/seller/packages"
-              className="inline-flex items-center justify-center px-6 py-2.5 rounded-lg text-sm font-bold text-white bg-purple-600 hover:bg-purple-700 transition-all duration-200 shadow-sm"
-            >
-              GET PREMIUM MEMBERSHIP
-            </Link>
-          </div>
+          <button
+            onClick={async () => {
+              try {
+                const res = await apiClient.patch("/sellers/me/toggle-availability");
+                if (res?.data?.success) {
+                  updateUser({ is_available: 1 });
+                }
+              } catch (err) {
+                alert("Failed to go online");
+              }
+            }}
+            className="seller-action-btn seller-action-btn--success"
+            style={{ padding: '10px 18px', minHeight: 40, fontSize: 13 }}
+          >
+            Go Online
+          </button>
         </div>
       )}
 
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
+        <div style={{
+          borderRadius: 14,
+          border: '1px solid #fecaca',
+          background: '#fef2f2',
+          padding: '12px 16px',
+          fontSize: 13,
+          fontWeight: 600,
+          color: '#b91c1c',
+        }}>
           ⚠ {error}
         </div>
       )}
 
-      {/* Stats Grid */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {/* ── Stat Chips — Horizontal Scroll ── */}
+      <div className="seller-scroll-row">
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (
-            <div key={stat.label} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow">
-              <div
-                className={`mb-4 flex h-11 w-11 items-center justify-center rounded-xl ${stat.iconBg} ${stat.iconColor}`}
-              >
-                <Icon size={22} />
+            <div key={stat.label} className={`seller-stat-chip seller-stat-chip--${stat.color}`}>
+              <div className="seller-stat-icon" style={{ background: stat.iconBg }}>
+                <Icon size={20} style={{ color: stat.iconColor }} />
               </div>
-              <div className="text-3xl font-bold text-slate-800">
+              <div className="seller-stat-value">
                 {loading ? "…" : stat.value}
               </div>
-              <div className="mt-1 text-sm font-medium text-slate-500">
-                {stat.label}
-              </div>
+              <div className="seller-stat-label">{stat.label}</div>
             </div>
           );
         })}
       </div>
 
-      {/* Recent Orders */}
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-slate-800">Recent Orders</h2>
-          <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
-            {orders.length} total
-          </span>
+      {/* ── Quick Actions Grid ── */}
+      <div>
+        <h2 style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', marginBottom: 12 }}>
+          Quick Actions
+        </h2>
+        <div className="seller-quick-grid">
+          {quickActions.map((action) => {
+            const Icon = action.icon;
+            return (
+              <Link key={action.path} to={action.path} className="seller-quick-item">
+                <div className="seller-quick-icon" style={{ background: action.iconBg }}>
+                  <Icon size={24} style={{ color: action.iconColor }} />
+                </div>
+                <div className="seller-quick-label">{action.label}</div>
+                <div className="seller-quick-sublabel">{action.sublabel}</div>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── Premium Boost Banner ── */}
+      {!hasPremium && (
+        <div className="seller-card" style={{ overflow: 'hidden' }}>
+          <div style={{
+            background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+            padding: '20px',
+            color: 'white',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 16,
+          }}>
+            <div style={{
+              width: 48,
+              height: 48,
+              borderRadius: 14,
+              background: 'rgba(255,255,255,0.15)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              <Rocket size={24} style={{ transform: 'rotate(45deg)' }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <h3 style={{ fontSize: 15, fontWeight: 800 }}>Boost with Premium</h3>
+              <p style={{ fontSize: 12, opacity: 0.8, marginTop: 2 }}>
+                Get top placement, highlighted pin & gold badge
+              </p>
+            </div>
+            <Link
+              to="/seller/packages"
+              style={{
+                background: 'rgba(255,255,255,0.2)',
+                borderRadius: 12,
+                padding: '10px 16px',
+                fontSize: 12,
+                fontWeight: 700,
+                border: '1px solid rgba(255,255,255,0.3)',
+                color: 'white',
+                textDecoration: 'none',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Upgrade →
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* ── Recent Orders — Mobile Card Feed ── */}
+      <div>
+        <div className="flex items-center justify-between" style={{ marginBottom: 14 }}>
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: '#0f172a' }}>Recent Orders</h2>
+          <Link
+            to="/seller/orders"
+            className="flex items-center gap-1 text-blue-600"
+            style={{ fontSize: 13, fontWeight: 600 }}
+          >
+            View All <ChevronRight size={14} />
+          </Link>
         </div>
 
         {loading ? (
-          <div className="rounded-lg border border-dashed border-slate-200 p-8 text-center text-slate-400">
-            Loading orders…
+          <div className="seller-empty-state" style={{ padding: '32px 24px' }}>
+            <div style={{
+              width: 32, height: 32,
+              border: '3px solid #eff6ff',
+              borderTopColor: '#3b82f6',
+              borderRadius: '50%',
+              margin: '0 auto 12px',
+              animation: 'spin 1s linear infinite',
+            }} />
+            <p style={{ fontSize: 13, color: '#94a3b8' }}>Loading orders…</p>
           </div>
         ) : orders.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-slate-200 p-8 text-center text-slate-400">
-            No orders yet — your bookings will appear here
+          <div className="seller-empty-state">
+            <div className="seller-empty-icon">
+              <ClipboardList size={28} />
+            </div>
+            <div className="seller-empty-title">No orders yet</div>
+            <div className="seller-empty-text">
+              Your bookings will appear here once customers start booking your services.
+            </div>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-left text-sm">
-              <thead className="border-b border-slate-200 text-xs uppercase text-slate-400 tracking-wide">
-                <tr>
-                  <th className="py-3 pr-4 font-semibold">Order #</th>
-                  <th className="py-3 pr-4 font-semibold">Customer</th>
-                  <th className="py-3 pr-4 font-semibold">Service</th>
-                  <th className="py-3 pr-4 font-semibold">Amount</th>
-                  <th className="py-3 pr-4 font-semibold">Status</th>
-                  <th className="py-3 font-semibold">Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {orders.slice(0, 6).map((order) => (
-                  <tr key={order.id} className="text-slate-600 hover:bg-slate-50 transition-colors">
-                    <td className="py-4 pr-4 font-bold text-slate-800">
-                      {order.order_number || order.id}
-                    </td>
-                    <td className="py-4 pr-4">
-                      {order.buyer_name || order.customer_name || "—"}
-                    </td>
-                    <td className="py-4 pr-4 text-blue-600 font-medium">
-                      {order.service_title || order.service_name || "—"}
-                    </td>
-                    <td className="py-4 pr-4 font-semibold text-emerald-600">
-                      {formatCurrency(order.total_amount)}
-                    </td>
-                    <td className="py-4 pr-4">
-                      <span
-                        className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold capitalize ${
-                          statusClasses[order.status] ||
-                          "border-slate-200 bg-slate-50 text-slate-600"
-                        }`}
-                      >
-                        {order.status}
-                      </span>
-                    </td>
-                    <td className="py-4 text-slate-400">
-                      {order.created_at
-                        ? new Date(order.created_at).toLocaleDateString("en-IN")
-                        : "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="space-y-3">
+            {orders.slice(0, 5).map((order) => (
+              <div key={order.id} className="seller-order-card">
+                <div className="seller-order-header">
+                  <div className="flex items-center gap-2">
+                    <span style={{ fontSize: 14, fontWeight: 800, color: '#0f172a' }}>
+                      {order.order_number || `#${order.id}`}
+                    </span>
+                    <span className={`seller-status-pill seller-status-pill--${order.status}`}>
+                      <span className="seller-status-dot" />
+                      {order.status?.replace("_", " ")}
+                    </span>
+                  </div>
+                  <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 500 }}>
+                    {order.created_at
+                      ? new Date(order.created_at).toLocaleDateString("en-IN", {
+                          day: "numeric", month: "short"
+                        })
+                      : "—"}
+                  </span>
+                </div>
+
+                <div className="seller-order-body">
+                  <div className="seller-order-info-row">
+                    <div
+                      className="seller-order-avatar"
+                      style={{ background: '#eff6ff', color: '#3b82f6' }}
+                    >
+                      {(order.buyer_name || order.customer_name || "G")[0].toUpperCase()}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: '#1e293b' }}>
+                        {order.buyer_name || order.customer_name || "Guest"}
+                      </div>
+                      <div style={{ fontSize: 13, color: '#3b82f6', fontWeight: 600 }}>
+                        {order.service_title || order.service_name || "—"}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: 17, fontWeight: 800, color: '#059669' }}>
+                        {formatCurrency(order.total_amount)}
+                      </div>
+                      <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 500, textTransform: 'capitalize' }}>
+                        {order.payment_method || "—"}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
-      </section>
+      </div>
     </div>
   );
 }

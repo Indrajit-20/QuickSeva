@@ -5,15 +5,15 @@ import {
    Megaphone,
    BriefcaseBusiness,
    ClipboardList,
-   User,
+   Wallet,
 } from "lucide-react";
 
 const sellerBottomItems = [
-  { label: "Dashboard", path: "/seller/dashboard", icon: LayoutDashboard },
+  { label: "Home", path: "/seller/dashboard", icon: LayoutDashboard },
   { label: "Leads", path: "/seller/dashboard/leads", icon: Megaphone },
   { label: "Services", path: "/seller/services", icon: BriefcaseBusiness },
   { label: "Orders", path: "/seller/orders", icon: ClipboardList },
-  { label: "Profile", path: "/seller/profile", icon: User },
+  { label: "Wallet", path: "/seller/wallet", icon: Wallet },
 ];
 
 export default function BottomNavSeller({ pendingOrdersCount = 0, unreadLeadsCount = 0 }) {
@@ -45,7 +45,7 @@ export default function BottomNavSeller({ pendingOrdersCount = 0, unreadLeadsCou
 
   return (
     <nav
-      className={`bottom-nav-bar lg:hidden ${isKeyboardVisible ? "bottom-nav-bar--hidden" : ""}`}
+      className={`bottom-nav-bar bottom-nav-bar--seller lg:hidden ${isKeyboardVisible ? "bottom-nav-bar--hidden" : ""}`}
       aria-label="Seller quick navigation"
     >
       {sellerBottomItems.map((item) => {
@@ -61,7 +61,7 @@ export default function BottomNavSeller({ pendingOrdersCount = 0, unreadLeadsCou
             className={`bottom-nav-item ${isActive ? "bottom-nav-item--active" : ""}`}
           >
             <span className="bottom-nav-icon-wrap">
-              <Icon size={20} strokeWidth={isActive ? 2.4 : 1.8} />
+              <Icon size={22} strokeWidth={isActive ? 2.5 : 1.8} />
               {hasBadge && (
                 <span className="bottom-nav-badge">
                   {badgeCount > 9 ? "9+" : badgeCount}
@@ -76,4 +76,3 @@ export default function BottomNavSeller({ pendingOrdersCount = 0, unreadLeadsCou
     </nav>
   );
 }
-

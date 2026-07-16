@@ -477,10 +477,10 @@ export default function BookingPage() {
               {avatarLetter}
             </div>
             <div className="flex-1 space-y-1.5 text-left">
-              <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-[10px] font-bold text-blue-600">
+              <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-[10px] font-semibold text-blue-600">
                 ⚡ Professional partner
               </span>
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-snug">
+              <h1 className="text-xl font-bold text-slate-800 tracking-tight leading-snug">
                 {seller.business_name || seller.name}
               </h1>
               <div className="text-xs text-slate-500 flex flex-wrap items-center gap-1.5 font-medium mt-1">
@@ -504,10 +504,10 @@ export default function BookingPage() {
         {selectedServiceState && (
           <section className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
+              <h2 className="text-base font-bold text-slate-800 tracking-tight">
                 {selectedServiceState.name || selectedServiceState.title}
               </h2>
-              <span className="px-2.5 py-0.5 text-[10.5px] font-bold text-emerald-700 bg-emerald-50 rounded-full border border-emerald-100">
+              <span className="px-2.5 py-0.5 text-[10.5px] font-semibold text-emerald-700 bg-emerald-50 rounded-full border border-emerald-100">
                 Selected
               </span>
             </div>
@@ -543,13 +543,13 @@ export default function BookingPage() {
           {/* Card: Configure Schedule */}
           <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-5">
             <div className="text-left">
-              <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">Configure your schedule</h2>
-              <p className="text-xs font-semibold text-slate-400 mt-1">Choose a convenient date and time slot.</p>
+              <h2 className="text-base font-bold text-slate-800 tracking-tight">Configure your schedule</h2>
+              <p className="text-xs font-medium text-slate-500 mt-1">Choose a convenient date and time slot.</p>
             </div>
 
             {/* Date Picker (Added back as requested) */}
             <div className="space-y-1.5 text-left">
-              <label className="block text-xs font-bold text-slate-655 uppercase tracking-wider">
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Select Date / तारीख चुनें
               </label>
               <DatePickerComponent
@@ -578,7 +578,7 @@ export default function BookingPage() {
 
             {/* Time Slot Picker */}
             <div className="space-y-2 text-left">
-              <label className="block text-xs font-bold text-slate-655 uppercase tracking-wider">
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Select Time Slot / समय चुनें
               </label>
               <div className="flex flex-wrap gap-1.5">
@@ -615,13 +615,13 @@ export default function BookingPage() {
           {/* Card: Arrival Details & Contact */}
           <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
             <div className="text-left">
-              <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">Where should we deliver?</h2>
-              <p className="text-xs font-semibold text-slate-400 mt-1">Address & contact details for the booking.</p>
+              <h2 className="text-base font-bold text-slate-800 tracking-tight">Where should we deliver?</h2>
+              <p className="text-xs font-medium text-slate-500 mt-1">Address & contact details for the booking.</p>
             </div>
 
             {/* Address field */}
             <div className="space-y-1.5 text-left">
-              <label className="block text-xs font-bold text-slate-655 uppercase tracking-wider">
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Delivery Address / आपका पता
               </label>
               <textarea
@@ -640,7 +640,7 @@ export default function BookingPage() {
 
             {/* Mobile Number */}
             <div className="space-y-1.5 text-left">
-              <label className="block text-xs font-bold text-slate-655 uppercase tracking-wider">
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Mobile Number / मोबाइल नंबर
               </label>
               <input
@@ -663,7 +663,7 @@ export default function BookingPage() {
 
             {/* Instructions */}
             <div className="space-y-1.5 text-left">
-              <label className="block text-xs font-bold text-slate-655 uppercase tracking-wider">
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Special Instructions (Optional)
               </label>
               <textarea
@@ -678,40 +678,40 @@ export default function BookingPage() {
 
           {/* ── 4. How this booking works ── */}
           <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
-            <h2 className="text-xl font-extrabold text-slate-900 tracking-tight text-left">How this booking works</h2>
+            <h2 className="text-base font-bold text-slate-800 tracking-tight text-left">How this booking works</h2>
             
             <div className="space-y-4 text-left">
               <div className="flex gap-3">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[10px] font-black text-white mt-0.5">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white mt-0.5">
                   1
                 </span>
                 <div className="space-y-0.5">
-                  <h3 className="text-xs font-bold text-slate-800">Pay the visiting fee now</h3>
-                  <p className="text-xs text-slate-500 leading-relaxed font-semibold">
+                  <h3 className="text-sm font-semibold text-slate-800">Pay the visiting fee now</h3>
+                  <p className="text-xs text-slate-500 leading-relaxed font-medium">
                     Confirms your slot and covers the partner's travel and inspection.
                   </p>
                 </div>
               </div>
 
               <div className="flex gap-3">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[10px] font-black text-white mt-0.5">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white mt-0.5">
                   2
                 </span>
                 <div className="space-y-0.5">
-                  <h3 className="text-xs font-bold text-slate-800">Partner inspects and quotes the final price</h3>
-                  <p className="text-xs text-slate-500 leading-relaxed font-semibold">
+                  <h3 className="text-sm font-semibold text-slate-800">Partner inspects and quotes the final price</h3>
+                  <p className="text-xs text-slate-500 leading-relaxed font-medium">
                     Visiting charge is settled once the inspection is done.
                   </p>
                 </div>
               </div>
 
               <div className="flex gap-3">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[10px] font-black text-white mt-0.5">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white mt-0.5">
                   3
                 </span>
                 <div className="space-y-0.5">
-                  <h3 className="text-xs font-bold text-slate-800">You approve and pay for the work</h3>
-                  <p className="text-xs text-slate-500 leading-relaxed font-semibold">
+                  <h3 className="text-sm font-semibold text-slate-800">You approve and pay for the work</h3>
+                  <p className="text-xs text-slate-500 leading-relaxed font-medium">
                     Work only starts after your approval of the final quote.
                   </p>
                 </div>
@@ -720,11 +720,11 @@ export default function BookingPage() {
           </div>
 
           {/* ── 5. Note / Warning banner (Notice) ── */}
-          <div className="rounded-2xl border border-amber-250 bg-amber-50 p-5 text-xs leading-relaxed text-amber-800 space-y-1.5 shadow-2xs text-left">
-            <p className="font-bold flex items-center gap-1.5 text-amber-950 text-sm">
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-xs leading-relaxed text-amber-800 space-y-1.5 shadow-2xs text-left">
+            <p className="font-semibold flex items-center gap-1.5 text-amber-900 text-sm">
               <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" /> Note / महत्वपूर्ण निर्देश:
             </p>
-            <p className="pl-5 text-[11px] leading-relaxed text-amber-800 font-semibold">
+            <p className="pl-5 text-[11px] leading-relaxed text-amber-800 font-medium">
               <strong>English:</strong> The Visiting Charge covers the seller's travel & inspection, and must be paid online to confirm this booking. The final service price will be provided after onsite inspection and requires your approval.
             </p>
             <p className="pl-5 text-[11px] leading-relaxed text-amber-800 font-semibold border-t border-amber-200/30 pt-1.5 mt-1.5">

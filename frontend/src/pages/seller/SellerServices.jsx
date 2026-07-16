@@ -15,9 +15,9 @@ import apiClient from "../../api/axiosConfig";
 import { getSystemSettings } from "../../api/policyService";
 
 const inputClass =
-  "w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 shadow-sm";
+  "seller-input";
 
-const labelClass = "mb-2 block text-sm font-semibold text-slate-600";
+const labelClass = "seller-label";
 
 // Helper to extract YYYY-MM-DD from Date or react-multi-date-picker DateObject
 const extractYMD = (dt) => {
@@ -163,42 +163,46 @@ export default function SellerServices() {
 
   if (loading) {
     return (
-      <div className="animate-fade-in space-y-6">
+      <div className="seller-page animate-fade-in space-y-5">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800">My Services</h1>
-          <p className="mt-1 text-slate-500">
-            Configure availability and manage services.
-          </p>
+          <h1 className="seller-page-title">My Services</h1>
+          <p className="seller-page-subtitle">Configure availability and manage services.</p>
         </div>
-        <div className="text-center py-20 text-blue-600 font-bold text-lg animate-pulse">
-          🔄 Loading services / सेवाएं लोड हो रही हैं...
+        <div className="seller-empty-state" style={{ padding: '32px 24px' }}>
+          <div style={{
+            width: 32, height: 32,
+            border: '3px solid #eff6ff', borderTopColor: '#3b82f6',
+            borderRadius: '50%', margin: '0 auto 12px',
+            animation: 'spin 1s linear infinite',
+          }} />
+          <p className="seller-empty-text">Loading services / सेवाएं लोड हो रही हैं…</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="animate-fade-in space-y-10 bottom-nav-spacer pb-6 lg:pb-0">
+    <div className="seller-page space-y-6">
       {Number(user?.profile_completed ?? 0) === 1 && Number(user?.services_count ?? 0) === 0 && (
-        <div className="p-4 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-sm font-semibold flex items-center gap-3 animate-pulse">
-          <span className="text-xl">⚠️</span>
-          <div>
-            <p className="font-bold text-amber-900">Add Your First Service / अपनी पहली सेवा जोड़ें</p>
-            <p className="text-xs font-normal text-amber-800/80 mt-0.5">
-              Please add at least one service below to unlock the Seller Dashboard, Orders, and Wallet pages.
+        <div className="seller-offline-banner" style={{ borderColor: '#fde68a', background: 'linear-gradient(135deg, #fffbeb, #fef3c7)' }}>
+          <div className="seller-offline-icon" style={{ background: '#fef3c7', color: '#d97706' }}>
+            <span style={{ fontSize: 22 }}>⚠️</span>
+          </div>
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 14, fontWeight: 700, color: '#92400e' }}>Add Your First Service / अपनी पहली सेवा जोड़ें</p>
+            <p style={{ fontSize: 12, color: '#b45309', marginTop: 2, fontWeight: 500 }}>
+              Add at least one service to unlock Dashboard, Orders & Wallet.
             </p>
           </div>
         </div>
       )}
 
       {/* HEADER SECTION */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-6">
+      <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">
-            My Services / मेरी सेवाएं
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Manage your service list first, and configure availability days below.
+          <h1 className="seller-page-title">My Services / मेरी सेवाएं</h1>
+          <p className="seller-page-subtitle">
+            Manage your service list and configure availability days below.
           </p>
         </div>
         <button
@@ -207,12 +211,25 @@ export default function SellerServices() {
             setEditingService(null);
             setActiveOverlay('wizard');
           }}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-6 py-3 text-sm font-bold text-white transition hover:scale-[1.02] active:scale-95 shadow-sm cursor-pointer"
+          className="seller-action-btn seller-action-btn--primary seller-desktop-only"
         >
           <Plus size={18} />
           Add New Service / नया काम जोड़ें
         </button>
       </div>
+
+      {/* FAB - Add New Service (mobile) */}
+      <button
+        type="button"
+        onClick={() => {
+          setEditingService(null);
+          setActiveOverlay('wizard');
+        }}
+        className="seller-fab lg:hidden"
+        aria-label="Add new service"
+      >
+        <Plus size={26} />
+      </button>
 
       {/* 1. MY SERVICES LIST - PRIMARY COMPONENT */}
       <div className="space-y-6">
@@ -223,19 +240,13 @@ export default function SellerServices() {
         )}
 
         {services.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-12 text-center text-slate-400 shadow-sm">
-            <div className="max-w-md mx-auto space-y-5 py-4">
-              <div className="flex justify-center">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-50 border border-slate-200 text-slate-500">
-                  <Plus size={32} />
-                </div>
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-slate-800">No services added yet / कोई सेवा नहीं जोड़ी गई</h3>
-                <p className="text-sm text-slate-500 mt-2">
-                  You haven't listed any services. Click the button above to add your very first service.
-                </p>
-              </div>
+          <div className="seller-empty-state">
+            <div className="seller-empty-icon">
+              <Plus size={28} />
+            </div>
+            <div className="seller-empty-title">No services added yet / कोई सेवा नहीं जोड़ी गई</div>
+            <div className="seller-empty-text">
+              Tap the + button to add your first service and start receiving bookings.
             </div>
           </div>
         ) : (
@@ -341,16 +352,16 @@ export default function SellerServices() {
 
                   {/* Bottom pricing and action block */}
                   <div className="space-y-4">
-                    <div className="flex items-end justify-between">
+                    <div className="grid grid-cols-2 gap-2">
                       <div>
                         <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Starting Price / रेट</span>
-                        <span className="text-lg font-extrabold text-slate-800 mt-0.5 flex items-center">
+                        <span className="text-lg font-extrabold text-slate-800 mt-0.5 block">
                           ₹{Number(service.price || 0).toLocaleString("en-IN")}
                         </span>
                       </div>
                       <div className="text-right">
                         <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Visiting Charge / फीस</span>
-                        <span className="text-sm font-bold text-slate-700 mt-0.5 block">
+                        <span className="text-lg font-extrabold text-slate-850 mt-0.5 block">
                           ₹{Number(service.visiting_charge) || 100}
                         </span>
                       </div>
@@ -411,13 +422,10 @@ export default function SellerServices() {
                   key={day}
                   type="button"
                   onClick={() => toggleWeeklyDay(day)}
-                  className={`cursor-pointer rounded-xl border px-4 py-3 text-xs font-bold transition-all duration-200 active:scale-95 flex flex-col items-center min-w-[90px] ${checked
-                      ? "border-blue-500 bg-blue-50 text-blue-700 shadow-sm"
-                      : "border-slate-200 bg-white text-slate-500 hover:border-slate-300"
-                    }`}
+                  className={`seller-day-toggle ${checked ? "seller-day-toggle--active" : ""}`}
                 >
                   <span className="text-sm font-bold">{day}</span>
-                  <span className="text-[10px] font-semibold opacity-70 mt-0.5">{hindiDays[day]}</span>
+                  <span className={`text-[10px] font-semibold mt-0.5 ${checked ? "text-blue-100" : "text-slate-400"}`}>{hindiDays[day]}</span>
                 </button>
               );
             })}

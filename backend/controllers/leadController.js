@@ -12,6 +12,7 @@ exports.ensureLeadTables = async (conn = pool) => {
       contact_number VARCHAR(20) NOT NULL,
       category VARCHAR(120) NOT NULL,
       pincode VARCHAR(10) NOT NULL,
+      address TEXT NULL,
       description TEXT,
       latitude DECIMAL(10, 8) NULL,
       longitude DECIMAL(11, 8) NULL,
@@ -23,6 +24,13 @@ exports.ensureLeadTables = async (conn = pool) => {
       INDEX idx_fallback_leads_status (status)
     )
   `);
+
+  // Dynamically add column for existing installations
+  try {
+    await conn.query("ALTER TABLE fallback_leads ADD COLUMN address TEXT NULL");
+  } catch (err) {
+    // Ignore error if column already exists
+  }
 
   await conn.query(`
     CREATE TABLE IF NOT EXISTS seller_lead_notifications (
@@ -52,6 +60,7 @@ exports.submitLead = async (req, res) => {
       contactNumber: cleanText(req.body.contactNumber).replace(/[^\d+]/g, ""),
       category: cleanText(req.body.category),
       pincode: cleanText(req.body.pincode).replace(/\D/g, "").slice(0, 6),
+      address: cleanText(req.body.address || ""),
       description: cleanText(req.body.description),
       latitude: req.body.latitude === undefined ? null : Number(req.body.latitude),
       longitude: req.body.longitude === undefined ? null : Number(req.body.longitude),
@@ -66,13 +75,14 @@ exports.submitLead = async (req, res) => {
 
     const [leadResult] = await conn.query(
       `INSERT INTO fallback_leads
-       (customer_name, contact_number, category, pincode, description, latitude, longitude, radius_km, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'OPEN')`,
+       (customer_name, contact_number, category, pincode, address, description, latitude, longitude, radius_km, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'OPEN')`,
       [
         payload.customerName,
         payload.contactNumber,
         payload.category,
         payload.pincode,
+        payload.address || null,
         payload.description,
         Number.isFinite(payload.latitude) ? payload.latitude : null,
         Number.isFinite(payload.longitude) ? payload.longitude : null,
@@ -177,6 +187,7 @@ exports.getSellerLeads = async (req, res) => {
          fl.contact_number AS contactNumber,
          fl.category,
          fl.pincode,
+         fl.address,
          fl.description,
          fl.latitude,
          fl.longitude,

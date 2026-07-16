@@ -88,32 +88,26 @@ body {
 
 /* Typography */
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-weight: 700;
   color: var(--qs-text);
-  line-height: 1.2;
-  letter-spacing: -0.02em;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
   margin: 0;
 }
 
-h1 { font-size: clamp(1.5rem, 3.5vw, 2.125rem); }
-h2 { font-size: clamp(1.25rem, 2.75vw, 1.625rem); }
-h3 { font-size: clamp(1.1rem, 2.25vw, 1.35rem); }
-h4 { font-size: 1.05rem; }
-h5 { font-size: 0.95rem; }
-h6 { font-size: 0.85rem; }
+h1 { font-size: 1.625rem; }
+h2 { font-size: 1.375rem; }
+h3 { font-size: 1.125rem; }
+h4 { font-size: 1rem; }
+h5 { font-size: 0.9rem; }
+h6 { font-size: 0.8rem; }
 
 p {
   color: var(--qs-muted);
-  line-height: 1.55;
+  line-height: 1.5;
   margin: 0;
 }
-
-/* Soft-limit oversized utility classes for standard professional look */
-.text-4xl { font-size: clamp(1.75rem, 4vw, 2.25rem) !important; letter-spacing: -0.03em !important; font-weight: 800 !important; }
-.text-3xl { font-size: clamp(1.4rem, 3.2vw, 1.75rem) !important; letter-spacing: -0.025em !important; }
-.text-2xl { font-size: clamp(1.2rem, 2.6vw, 1.45rem) !important; letter-spacing: -0.02em !important; }
-.text-xl { font-size: 1.15rem !important; letter-spacing: -0.015em !important; }
 
 /* Links — underline reveal on hover, NOT global background-image animation */
 a {
@@ -844,25 +838,27 @@ input[type="range"] {
    18. QS SELLER CARD BUTTON
    ────────────────────────────────────────────────────────────────────────── */
 .qs-seller-card-btn {
-  background: var(--qs-surface);
-  border: 1.5px solid var(--qs-primary);
+  background: rgba(59, 130, 246, 0.04);
+  border: 1px solid rgba(59, 130, 246, 0.25);
   color: var(--qs-primary);
-  border-radius: var(--qs-radius-sm);
+  border-radius: var(--qs-radius-md);
   text-decoration: none;
   transition: var(--qs-transition);
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.375rem;
-  padding: 0.375rem 0.875rem;
+  padding: 0.5rem 1rem;
   font-size: 0.8125rem;
   font-weight: 600;
 }
 
 .qs-seller-card-btn:hover {
   background: var(--qs-primary);
+  border-color: var(--qs-primary);
   color: #ffffff;
-  box-shadow: 0 6px 18px rgba(59, 130, 246, 0.25);
-  transform: translateY(-1.5px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+  transform: translateY(-1px);
 }
 
 .qs-seller-card-btn:active {
@@ -2076,3 +2072,1158 @@ span.qs-distance-badge {
 .badge-success { background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.2); color: #047857; }
 .badge-warning  { background: rgba(245, 158, 11, 0.1);  border-color: rgba(245, 158, 11, 0.2);  color: #92400e; }
 .badge-primary  { background: rgba(59, 130, 246, 0.1);  border-color: rgba(59, 130, 246, 0.2);  color: #1d4ed8; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SELLER MOBILE APP DESIGN SYSTEM
+   Premium mobile-first styles for the seller panel
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Seller Page Container ──────────────────────────────────────────────── */
+.seller-page {
+  min-height: 100vh;
+  padding-bottom: 100px;
+}
+
+/* ── Seller Page Header ─────────────────────────────────────────────────── */
+.seller-page-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.seller-page-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+/* ── Horizontal Scroll Row (stat chips, filter pills) ───────────────────── */
+.seller-scroll-row {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 2px 0;
+  scroll-snap-type: x mandatory;
+}
+
+.seller-scroll-row::-webkit-scrollbar {
+  display: none;
+}
+
+.seller-scroll-row > * {
+  scroll-snap-align: start;
+  flex-shrink: 0;
+}
+
+/* ── Stat Chip Card ─────────────────────────────────────────────────────── */
+.seller-stat-chip {
+  min-width: 140px;
+  padding: 16px;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.seller-stat-chip::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  border-radius: 16px 16px 0 0;
+  opacity: 0.8;
+}
+
+.seller-stat-chip--blue::before { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+.seller-stat-chip--amber::before { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+.seller-stat-chip--emerald::before { background: linear-gradient(90deg, #10b981, #34d399); }
+.seller-stat-chip--violet::before { background: linear-gradient(90deg, #8b5cf6, #a78bfa); }
+.seller-stat-chip--rose::before { background: linear-gradient(90deg, #f43f5e, #fb7185); }
+
+.seller-stat-chip:active {
+  transform: scale(0.97);
+}
+
+.seller-stat-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.seller-stat-value {
+  font-size: 26px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.seller-stat-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+/* ── Mobile Card ────────────────────────────────────────────────────────── */
+.seller-card {
+  background: #ffffff;
+  border-radius: 18px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.seller-card:active {
+  transform: scale(0.985);
+}
+
+.seller-card-body {
+  padding: 16px;
+}
+
+.seller-card-header {
+  padding: 16px 16px 0;
+}
+
+.seller-card-footer {
+  padding: 12px 16px 16px;
+  border-top: 1px solid #f1f5f9;
+}
+
+/* ── Quick Action Grid ──────────────────────────────────────────────────── */
+.seller-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.seller-quick-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px 12px;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  text-align: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.seller-quick-item:active {
+  transform: scale(0.95);
+  box-shadow: none;
+}
+
+.seller-quick-item:hover {
+  border-color: #bfdbfe;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.08);
+}
+
+.seller-quick-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+}
+
+.seller-quick-item:hover .seller-quick-icon {
+  transform: translateY(-2px);
+}
+
+.seller-quick-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.seller-quick-sublabel {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 500;
+  margin-top: -4px;
+}
+
+/* ── Action Buttons (large touch targets) ───────────────────────────────── */
+.seller-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+  min-height: 48px;
+  white-space: nowrap;
+}
+
+.seller-action-btn:active {
+  transform: scale(0.96);
+}
+
+.seller-action-btn--primary {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
+}
+
+.seller-action-btn--primary:hover {
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.35);
+}
+
+.seller-action-btn--success {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  box-shadow: 0 4px 14px rgba(5, 150, 105, 0.25);
+}
+
+.seller-action-btn--danger {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.25);
+}
+
+.seller-action-btn--outline {
+  background: white;
+  color: #475569;
+  border: 1.5px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.seller-action-btn--outline:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.seller-action-btn--ghost {
+  background: transparent;
+  color: #64748b;
+  padding: 8px 12px;
+  min-height: 36px;
+}
+
+.seller-action-btn--full {
+  width: 100%;
+}
+
+.seller-action-btn:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* ── Status Pill ────────────────────────────────────────────────────────── */
+.seller-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: capitalize;
+  letter-spacing: 0.01em;
+}
+
+.seller-status-pill--pending {
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.seller-status-pill--accepted {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.seller-status-pill--in_progress {
+  background: #eef2ff;
+  color: #4338ca;
+  border: 1px solid #c7d2fe;
+}
+
+.seller-status-pill--quoted {
+  background: #faf5ff;
+  color: #7c3aed;
+  border: 1px solid #ddd6fe;
+}
+
+.seller-status-pill--completed {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.seller-status-pill--cancelled {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.seller-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.seller-status-pill--pending .seller-status-dot { background: #f59e0b; }
+.seller-status-pill--accepted .seller-status-dot { background: #3b82f6; }
+.seller-status-pill--in_progress .seller-status-dot { background: #6366f1; animation: pulse 2s infinite; }
+.seller-status-pill--quoted .seller-status-dot { background: #8b5cf6; }
+.seller-status-pill--completed .seller-status-dot { background: #10b981; }
+.seller-status-pill--cancelled .seller-status-dot { background: #ef4444; }
+
+/* ── Filter Pills (horizontal scroll) ───────────────────────────────────── */
+.seller-filter-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 4px 0;
+}
+
+.seller-filter-row::-webkit-scrollbar { display: none; }
+
+.seller-filter-pill {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 24px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1.5px solid #e2e8f0;
+  background: #ffffff;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
+}
+
+.seller-filter-pill:active {
+  transform: scale(0.95);
+}
+
+.seller-filter-pill--active {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 2px 10px rgba(37, 99, 235, 0.2);
+}
+
+.seller-filter-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.seller-filter-pill--active .seller-filter-count {
+  background: rgba(255,255,255,0.25);
+  color: white;
+}
+
+.seller-filter-pill:not(.seller-filter-pill--active) .seller-filter-count {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+/* ── Bottom Sheet ───────────────────────────────────────────────────────── */
+.seller-bottom-sheet-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  background: rgba(0,0,0,0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: fadeIn 0.2s ease;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.seller-bottom-sheet {
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  background: #ffffff;
+  border-radius: 24px 24px 0 0;
+  padding: 20px;
+  padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+  animation: slideUp 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.seller-bottom-sheet-handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: #d1d5db;
+  margin: 0 auto 16px;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Floating Action Button ─────────────────────────────────────────────── */
+.seller-fab {
+  position: fixed;
+  bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  right: 20px;
+  z-index: 40;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 6px 24px rgba(37, 99, 235, 0.35), 0 2px 8px rgba(0,0,0,0.1);
+  transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.seller-fab:active {
+  transform: scale(0.9);
+}
+
+.seller-fab:hover {
+  box-shadow: 0 8px 30px rgba(37, 99, 235, 0.45), 0 3px 12px rgba(0,0,0,0.12);
+  transform: translateY(-2px);
+}
+
+@media (min-width: 1024px) {
+  .seller-fab {
+    bottom: 32px;
+    right: 32px;
+  }
+}
+
+/* ── Order Card Mobile ──────────────────────────────────────────────────── */
+.seller-order-card {
+  background: #ffffff;
+  border-radius: 18px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+
+.seller-order-card:active {
+  transform: scale(0.985);
+}
+
+.seller-order-header {
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.seller-order-body {
+  padding: 0 16px 16px;
+}
+
+.seller-order-info-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+}
+
+.seller-order-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.seller-order-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 12px;
+  background: #f8fafc;
+  border-radius: 14px;
+  margin-top: 8px;
+}
+
+.seller-order-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.seller-order-detail-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #94a3b8;
+}
+
+.seller-order-detail-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.seller-order-actions {
+  padding: 12px 16px 16px;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  gap: 8px;
+}
+
+.seller-order-actions > * {
+  flex: 1;
+}
+
+/* ── Expandable Section ─────────────────────────────────────────────────── */
+.seller-expandable {
+  overflow: hidden;
+  transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease;
+}
+
+.seller-expandable--collapsed {
+  max-height: 0;
+  opacity: 0;
+}
+
+.seller-expandable--open {
+  max-height: 2000px;
+  opacity: 1;
+}
+
+/* ── Hero Wallet Card ───────────────────────────────────────────────────── */
+.seller-wallet-hero {
+  border-radius: 20px;
+  padding: 24px 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.seller-wallet-hero::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.08);
+}
+
+.seller-wallet-hero::after {
+  content: '';
+  position: absolute;
+  bottom: -40%;
+  left: -10%;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.06);
+}
+
+.seller-wallet-hero--green {
+  background: linear-gradient(135deg, #059669, #10b981);
+  color: white;
+}
+
+.seller-wallet-hero--amber {
+  background: linear-gradient(135deg, #d97706, #f59e0b);
+  color: white;
+}
+
+.seller-wallet-hero--red {
+  background: linear-gradient(135deg, #dc2626, #ef4444);
+  color: white;
+}
+
+/* ── Transaction List Item ──────────────────────────────────────────────── */
+.seller-tx-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.seller-tx-item:last-child {
+  border-bottom: none;
+}
+
+.seller-tx-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.seller-tx-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.seller-tx-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.seller-tx-date {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.seller-tx-amount {
+  font-size: 15px;
+  font-weight: 800;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.seller-tx-amount--credit { color: #059669; }
+.seller-tx-amount--debit { color: #dc2626; }
+
+/* ── Lead Card Mobile ───────────────────────────────────────────────────── */
+.seller-lead-card {
+  background: #ffffff;
+  border-radius: 18px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  transition: all 0.2s ease;
+}
+
+.seller-lead-card--priority {
+  border-left: 4px solid #f59e0b;
+}
+
+.seller-lead-header {
+  padding: 14px 16px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.seller-lead-body {
+  padding: 12px 16px;
+}
+
+.seller-lead-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.seller-lead-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.seller-lead-action {
+  padding: 12px 16px 16px;
+}
+
+/* ── Profile Hero Card ──────────────────────────────────────────────────── */
+.seller-profile-hero {
+  text-align: center;
+  padding: 28px 20px;
+  background: linear-gradient(135deg, #f8fafc, #eef2ff);
+  border-radius: 20px;
+  border: 1px solid #e2e8f0;
+  position: relative;
+}
+
+.seller-profile-avatar {
+  width: 88px;
+  height: 88px;
+  border-radius: 24px;
+  margin: 0 auto 14px;
+  object-fit: cover;
+  border: 3px solid #ffffff;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  position: relative;
+}
+
+.seller-profile-avatar-placeholder {
+  width: 88px;
+  height: 88px;
+  border-radius: 24px;
+  margin: 0 auto 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+  border: 3px solid #ffffff;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+}
+
+.seller-profile-camera {
+  position: absolute;
+  bottom: -4px;
+  right: calc(50% - 58px);
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: #3b82f6;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid white;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  cursor: pointer;
+}
+
+/* ── Section Group (collapsible profile sections) ───────────────────────── */
+.seller-section-group {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+}
+
+.seller-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.seller-section-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.seller-section-body {
+  padding: 0 16px 16px;
+}
+
+/* ── Mobile Input Style ─────────────────────────────────────────────────── */
+.seller-input {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1.5px solid #e2e8f0;
+  background: #ffffff;
+  font-size: 15px;
+  font-weight: 500;
+  color: #1e293b;
+  outline: none;
+  transition: all 0.2s ease;
+  -webkit-appearance: none;
+}
+
+.seller-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.seller-input::placeholder {
+  color: #94a3b8;
+}
+
+.seller-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: #475569;
+  margin-bottom: 8px;
+}
+
+/* ── Package Plan Cards ─────────────────────────────────────────────────── */
+.seller-plan-card {
+  border-radius: 20px;
+  padding: 24px 20px;
+  border: 2px solid #e2e8f0;
+  background: #ffffff;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.seller-plan-card--active {
+  border-color: #3b82f6;
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.15);
+}
+
+.seller-plan-card--recommended {
+  border-color: #8b5cf6;
+}
+
+.seller-plan-badge {
+  position: absolute;
+  top: 0;
+  right: 20px;
+  padding: 4px 14px;
+  border-radius: 0 0 10px 10px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.seller-plan-feature {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: #475569;
+}
+
+.seller-plan-feature-check {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ── Welcome Hero Card ──────────────────────────────────────────────────── */
+.seller-welcome-hero {
+  border-radius: 20px;
+  padding: 22px 20px;
+  background: linear-gradient(135deg, #1e40af, #3b82f6);
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+.seller-welcome-hero::before {
+  content: '';
+  position: absolute;
+  top: -60%;
+  right: -20%;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.06);
+}
+
+.seller-welcome-hero::after {
+  content: '';
+  position: absolute;
+  bottom: -50%;
+  left: -15%;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.04);
+}
+
+/* ── Empty State ────────────────────────────────────────────────────────── */
+.seller-empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  background: #ffffff;
+  border-radius: 20px;
+  border: 2px dashed #e2e8f0;
+}
+
+.seller-empty-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+  background: #f1f5f9;
+  color: #94a3b8;
+}
+
+.seller-empty-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 6px;
+}
+
+.seller-empty-text {
+  font-size: 13px;
+  color: #94a3b8;
+  max-width: 260px;
+  margin: 0 auto;
+  line-height: 1.5;
+}
+
+/* ── Sticky Save Bar ───────────────────────────────────────────────────── */
+.seller-sticky-save {
+  position: fixed;
+  bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  left: 0;
+  right: 0;
+  z-index: 45;
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid #e2e8f0;
+  box-shadow: 0 -4px 16px rgba(0,0,0,0.06);
+  animation: slideUp 0.3s ease;
+}
+
+@media (min-width: 1024px) {
+  .seller-sticky-save {
+    left: 288px;
+    bottom: 0;
+  }
+}
+
+/* ── Pulse animation for live indicators ────────────────────────────────── */
+@keyframes sellerPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.seller-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  animation: sellerPulse 2s infinite;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+}
+
+/* ── Offline Banner ─────────────────────────────────────────────────────── */
+.seller-offline-banner {
+  background: linear-gradient(135deg, #fef2f2, #fff1f2);
+  border: 1px solid #fecaca;
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.seller-offline-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: #fee2e2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #dc2626;
+}
+
+/* ── Service Card (for SellerServices) ──────────────────────────────────── */
+.seller-service-card {
+  background: #ffffff;
+  border-radius: 18px;
+  border: 1px solid #e2e8f0;
+  padding: 16px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  transition: all 0.2s ease;
+}
+
+.seller-service-card:active {
+  transform: scale(0.985);
+}
+
+.seller-service-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.seller-service-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+/* ── Enhanced Bottom Nav for Seller ─────────────────────────────────────── */
+.bottom-nav-bar.bottom-nav-bar--seller {
+  height: 68px;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 -6px 30px rgba(0,0,0,0.08), 0 -1px 4px rgba(0,0,0,0.04);
+  border-top: 1px solid rgba(226, 232, 240, 0.6);
+}
+
+.bottom-nav-bar--seller .bottom-nav-item--active .bottom-nav-icon-wrap {
+  background: rgba(59, 130, 246, 0.12);
+  border-radius: 12px;
+  transform: translateY(-3px);
+}
+
+.bottom-nav-bar--seller .bottom-nav-item--active .bottom-nav-label {
+  font-weight: 800;
+  font-size: 10px;
+}
+
+/* ── Quotation Summary Card ─────────────────────────────────────────────── */
+.seller-quote-summary {
+  border-radius: 16px;
+  padding: 16px;
+  background: linear-gradient(135deg, #eff6ff, #eef2ff);
+  border: 1px solid #bfdbfe;
+}
+
+.seller-quote-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 13px;
+}
+
+.seller-quote-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0 0;
+  margin-top: 8px;
+  border-top: 2px solid #bfdbfe;
+  font-size: 15px;
+  font-weight: 800;
+  color: #1e293b;
+}
+
+/* ── OTP Input Styling ──────────────────────────────────────────────────── */
+.seller-otp-input {
+  width: 56px;
+  height: 64px;
+  border-radius: 14px;
+  border: 2px solid #e2e8f0;
+  background: #ffffff;
+  text-align: center;
+  font-size: 24px;
+  font-weight: 800;
+  color: #1e293b;
+  outline: none;
+  transition: all 0.2s ease;
+  -webkit-appearance: none;
+}
+
+.seller-otp-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+}
+
+/* ── Availability Day Toggles ───────────────────────────────────────────── */
+.seller-day-toggle {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 8px;
+  border-radius: 14px;
+  border: 2px solid #e2e8f0;
+  background: #ffffff;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+  flex: 1;
+  min-width: 90px;
+}
+
+.seller-day-toggle--active {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+}
+
+.seller-day-toggle:active {
+  transform: scale(0.9);
+}
+
+@media (max-width: 1023px) {
+  .seller-desktop-only {
+    display: none !important;
+  }
+}

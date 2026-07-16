@@ -2497,7 +2497,7 @@ export default function NearbyServices({
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
-                      <h4 className="text-[15px] font-extrabold text-slate-850 tracking-tight leading-snug">
+                      <h4 className="text-[15px] font-semibold text-slate-800 tracking-tight leading-snug">
                         {seller.name}
                       </h4>
                     </div>
@@ -2581,7 +2581,7 @@ export default function NearbyServices({
                 <a
                   href={`/seller/${sId}`}
                   onClick={(e) => handleViewDetailsClick(seller, e)}
-                  className="btn qs-seller-card-btn mt-5 block w-full rounded-xl py-2.5 text-center text-xs font-bold"
+                  className="btn qs-seller-card-btn mt-5 block w-full text-center text-xs"
                 >
                   View Profile / प्रोफ़ाइल देखें →
                 </a>

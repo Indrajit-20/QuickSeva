@@ -6,6 +6,7 @@ import { useAuth } from "../context/AuthContext";
 const initialState = {
   customerName: "",
   contactNumber: "",
+  address: "",
   description: "",
 };
 
@@ -79,6 +80,7 @@ export default function NoProvidersLeadForm({
         ...prev,
         customerName: prev.customerName || user.name || "",
         contactNumber: prev.contactNumber || user.phone || "",
+        address: prev.address || user.address || "",
       }));
       if (!targetPincode && user.pincode) {
         setTargetPincode(user.pincode);
@@ -117,6 +119,7 @@ export default function NoProvidersLeadForm({
       setForm((prev) => ({
         customerName: user?.name || "",
         contactNumber: user?.phone || "",
+        address: user?.address || "",
         description: "",
       }));
       setSearchQuery(targetCategory);
@@ -270,13 +273,27 @@ export default function NoProvidersLeadForm({
         </div>
 
         <div>
+          <label className="block text-xs font-semibold text-slate-600 mb-1.5 flex items-center gap-1.5">
+            <MapPin className="h-3.5 w-3.5 text-indigo-500" />
+            Service Address / सेवा का पता
+          </label>
+          <textarea
+            value={form.address}
+            onChange={(e) => update("address", e.target.value)}
+            rows={2}
+            className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm font-medium text-slate-800 placeholder-slate-400 outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-100"
+            placeholder="Enter full address where service is required..."
+          />
+        </div>
+
+        <div>
           <label className="block text-xs font-semibold text-slate-600 mb-1.5">
-            Requirement Details
+            Requirement Details / काम का विवरण
           </label>
           <textarea
             value={form.description}
             onChange={(e) => update("description", e.target.value)}
-            rows={4}
+            rows={3}
             className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm font-medium text-slate-800 placeholder-slate-400 outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-100"
             placeholder="Describe what help you need, timing, landmark, etc..."
           />

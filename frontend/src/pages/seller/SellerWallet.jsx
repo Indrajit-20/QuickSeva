@@ -1,14 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { History, Wallet, Plus, RefreshCw, Rocket } from "lucide-react";
+import { History, Wallet, Plus, RefreshCw, Rocket, ArrowUpRight, ArrowDownLeft, Crown } from "lucide-react";
 import { useAuth } from "../../../src/context/AuthContext";
 import { isWalletSufficient } from "../../utils/wallet";
 import AddFundsModal from "../../components/AddFundsModal";
 import { useWallet } from "../../context/WalletContext";
 import { Link } from "react-router-dom";
 import { isPremiumActive } from "../../utils/premium";
-
-const cardBase =
-  "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
 
 function formatDateShort(iso) {
   try {
@@ -24,11 +21,10 @@ function formatDateShort(iso) {
   }
 }
 
-function balanceColorClasses(balance) {
-  if (balance <= 0) return "bg-red-50 text-red-700 border-red-200";
-  if (balance < 20)
-    return "bg-amber-50 text-amber-700 border-amber-200";
-  return "bg-emerald-50 text-emerald-700 border-emerald-200";
+function getWalletTier(balance) {
+  if (balance <= 0) return "red";
+  if (balance < 20) return "amber";
+  return "green";
 }
 
 function formatDescription(desc) {
@@ -50,51 +46,26 @@ function formatDescription(desc) {
         new: { eng: "Purchased", hin: "खरीदा गया" },
         upgrade: { eng: "Upgraded to", hin: "अपग्रेड किया गया" },
         downgrade: { eng: "Downgraded to", hin: "डाउनग्रेड किया गया" },
-        extend: { eng: "Extended", hin: "समय बढ़ाया गया" }
+        extend: { eng: "Extended", hin: "समय बढ़ाया गया" }
       };
 
       const typeInfo = types[data.purchaseType] || { eng: "Activated", hin: "चालू किया गया" };
 
-      let expiryStr = "";
-      if (data.expiresAt) {
-        const dateObj = new Date(data.expiresAt);
-        if (!isNaN(dateObj.getTime())) {
-          const formattedDate = new Intl.DateTimeFormat("en-IN", {
-            day: "numeric",
-            month: "short",
-            year: "numeric"
-          }).format(dateObj);
-          expiryStr = ` (Expiry: ${formattedDate})`;
-        }
-      }
-
-      return (
-        <div className="flex flex-col">
-          <span className="font-bold text-slate-800">
-            {typeInfo.eng} {planInfo.eng}
-          </span>
-          <span className="text-xs text-slate-500">
-            {typeInfo.hin} {planInfo.hin}
-            {expiryStr}
-          </span>
-        </div>
-      );
+      return {
+        title: `${typeInfo.eng} ${planInfo.eng}`,
+        subtitle: `${typeInfo.hin} ${planInfo.hin}`,
+        isPremium: true,
+      };
     } catch (e) {
-      console.error("Failed to parse transaction description JSON:", e);
-      return desc;
+      return { title: desc, subtitle: "", isPremium: false };
     }
   }
   
   if (trimmed.toLowerCase() === "wallet top-up") {
-    return (
-      <div className="flex flex-col">
-        <span className="font-bold text-slate-800">Wallet Top-up</span>
-        <span className="text-xs text-slate-500">वॉलेट में पैसे जोड़े</span>
-      </div>
-    );
+    return { title: "Wallet Top-up", subtitle: "वॉलेट में पैसे जोड़े", isPremium: false };
   }
 
-  return <span className="text-slate-700">{desc}</span>;
+  return { title: desc, subtitle: "", isPremium: false };
 }
 
 export default function SellerWallet() {
@@ -112,133 +83,163 @@ export default function SellerWallet() {
   }, [user]);
 
   const balance = Number(walletBalance || 0);
-
-  const activeBanner = null;
+  const tier = getWalletTier(balance);
 
   return (
-    <div className="animate-fade-in space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-sm font-semibold text-blue-600">Seller Wallet</p>
-          <h1 className="mt-1 text-2xl font-bold text-slate-800">
-            Manage search credits
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Logged in as: {user?.name || "Seller"}
-          </p>
-        </div>
+    <div className="seller-page space-y-5 animate-fade-in">
 
-        <div className="flex flex-col items-end gap-3">
-          {activeBanner && (
-            <div className={activeBanner.tone}>{activeBanner.text}</div>
-          )}
-        </div>
+      {/* ── Page Header ── */}
+      <div>
+        <h1 className="seller-page-title">Wallet</h1>
+        <p className="seller-page-subtitle">Manage your search credits / सर्च क्रेडिट प्रबंधित करें</p>
       </div>
 
-      <section className={cardBase}>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-slate-100">
-              <Wallet size={22} className="text-slate-600" />
+      {/* ── Balance Hero Card ── */}
+      <div className={`seller-wallet-hero seller-wallet-hero--${tier}`}>
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <div className="flex items-center gap-3" style={{ marginBottom: 16 }}>
+            <div style={{
+              width: 48, height: 48, borderRadius: 14,
+              background: 'rgba(255,255,255,0.18)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Wallet size={24} />
             </div>
             <div>
-              <div className="text-sm font-semibold text-slate-500">
-                Balance
-              </div>
-              <div className="text-4xl font-black text-slate-800">₹{balance}</div>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <div
-              className="rounded-xl border px-4 py-2 text-sm font-bold bg-emerald-50 text-emerald-700 border-emerald-200"
-            >
-              Free Listing Active
-            </div>
-            <button
-              onClick={() => setRechargeOpen(true)}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700 shadow-sm cursor-pointer"
-            >
-              <Plus size={16} />
-              Add Funds
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* Premium Boost Banner */}
-      {!hasPremium && (
-        <div className="rounded-xl border border-purple-200 bg-purple-50 p-5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-purple-100 text-purple-600">
-              <Rocket className="rotate-45" size={20} />
-            </div>
-            <div className="text-left">
-              <h3 className="text-sm font-bold text-slate-800">Boost your profile with Premium Membership</h3>
-              <p className="text-xs text-slate-500">
-                Get top results in searches, highlight your map pin, and display a gold badge to attract more customers.
+              <p style={{ fontSize: 12, fontWeight: 600, opacity: 0.75 }}>Available Balance</p>
+              <p style={{ fontSize: 36, fontWeight: 900, letterSpacing: '-0.02em', lineHeight: 1 }}>
+                ₹{balance}
               </p>
             </div>
           </div>
-          <Link
-            to="/seller/packages"
-            className="shrink-0 inline-flex items-center justify-center px-4 py-2 rounded-lg text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 transition-all duration-200 shadow-sm"
-          >
-            GET PREMIUM MEMBERSHIP
-          </Link>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setRechargeOpen(true)}
+              style={{
+                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                padding: '14px 20px', borderRadius: 14,
+                background: 'rgba(255,255,255,0.2)',
+                border: '1px solid rgba(255,255,255,0.3)',
+                color: 'white', fontSize: 14, fontWeight: 700,
+                cursor: 'pointer', transition: 'all 0.2s ease',
+                backdropFilter: 'blur(8px)',
+              }}
+              className="active:scale-95"
+            >
+              <Plus size={18} /> Add Funds
+            </button>
+            <div style={{
+              padding: '14px 16px', borderRadius: 14,
+              background: 'rgba(255,255,255,0.15)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap',
+            }}>
+              Free Listing ✓
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Premium Banner ── */}
+      {!hasPremium && (
+        <div className="seller-card" style={{ overflow: 'hidden' }}>
+          <div style={{
+            background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+            padding: 18, color: 'white',
+            display: 'flex', alignItems: 'center', gap: 14,
+          }}>
+            <div style={{
+              width: 44, height: 44, borderRadius: 12,
+              background: 'rgba(255,255,255,0.15)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}>
+              <Rocket size={22} style={{ transform: 'rotate(45deg)' }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <h3 style={{ fontSize: 14, fontWeight: 800 }}>Boost with Premium</h3>
+              <p style={{ fontSize: 11, opacity: 0.8, marginTop: 2 }}>
+                Top search results, highlighted pin & gold badge
+              </p>
+            </div>
+            <Link
+              to="/seller/packages"
+              style={{
+                background: 'rgba(255,255,255,0.2)', borderRadius: 10,
+                padding: '8px 14px', fontSize: 11, fontWeight: 700,
+                border: '1px solid rgba(255,255,255,0.3)', color: 'white',
+                textDecoration: 'none', whiteSpace: 'nowrap',
+              }}
+            >
+              Upgrade →
+            </Link>
+          </div>
         </div>
       )}
 
-      <section className={cardBase}>
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="flex items-center gap-2 text-lg font-bold text-slate-800">
-            <History size={18} /> Transaction History
-          </h2>
-          <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
-            {transactions.length} transactions
-          </span>
-        </div>
+      {/* ── Transaction History ── */}
+      <div className="seller-card">
+        <div className="seller-card-body">
+          <div className="flex items-center justify-between" style={{ marginBottom: 16 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <History size={18} style={{ color: '#64748b' }} />
+              Transactions
+            </h2>
+            <span style={{
+              fontSize: 11, fontWeight: 700, color: '#3b82f6',
+              background: '#eff6ff', padding: '4px 10px', borderRadius: 20,
+              border: '1px solid #bfdbfe',
+            }}>
+              {transactions.length} total
+            </span>
+          </div>
 
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-[560px] text-left text-sm">
-            <thead className="border-b border-slate-200 text-xs uppercase text-slate-400 tracking-wide">
-              <tr>
-                <th className="py-3 pr-4 font-semibold">Date</th>
-                <th className="py-3 pr-4 font-semibold">Description</th>
-                <th className="py-3 pr-4 font-semibold">Amount</th>
-                <th className="py-3 font-semibold">Balance After</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {transactions.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="py-8 text-center text-slate-400">
-                    No transactions yet
-                  </td>
-                </tr>
-              ) : (
-                transactions.slice(0, 20).map((tx) => (
-                  <tr key={tx.id} className="text-slate-600 hover:bg-slate-50 transition-colors">
-                    <td className="py-4 pr-4 text-slate-400">
-                      {formatDateShort(tx.created_at || tx.timestamp)}
-                    </td>
-                    <td className="py-4 pr-4">{formatDescription(tx.description)}</td>
-                    <td className={`py-4 pr-4 font-bold ${
-                      tx.type === "debit" ? "text-red-600" : "text-emerald-600"
-                    }`}>
-                      {tx.type === "debit" ? "-₹" : "+₹"}
-                      {Number(tx.amount || 0)}
-                    </td>
-                    <td className="py-4 font-bold text-slate-800">
-                      ₹{Number(tx.balance_after || tx.balanceAfter || 0)}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+          {transactions.length === 0 ? (
+            <div className="seller-empty-state" style={{ padding: '32px 20px', border: 'none' }}>
+              <div className="seller-empty-icon">
+                <History size={24} />
+              </div>
+              <div className="seller-empty-title">No transactions yet</div>
+              <div className="seller-empty-text">Your transaction history will appear here</div>
+            </div>
+          ) : (
+            <div>
+              {transactions.slice(0, 20).map((tx) => {
+                const desc = formatDescription(tx.description);
+                const isCredit = tx.type !== "debit";
+                return (
+                  <div key={tx.id} className="seller-tx-item">
+                    <div className="seller-tx-icon" style={{
+                      background: isCredit ? '#ecfdf5' : '#fef2f2',
+                      color: isCredit ? '#059669' : '#dc2626',
+                    }}>
+                      {desc.isPremium ? (
+                        <Crown size={18} />
+                      ) : isCredit ? (
+                        <ArrowDownLeft size={18} />
+                      ) : (
+                        <ArrowUpRight size={18} />
+                      )}
+                    </div>
+                    <div className="seller-tx-info">
+                      <div className="seller-tx-title">{desc.title}</div>
+                      {desc.subtitle && (
+                        <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 500 }}>{desc.subtitle}</div>
+                      )}
+                      <div className="seller-tx-date">
+                        {formatDateShort(tx.created_at || tx.timestamp)}
+                      </div>
+                    </div>
+                    <div className={`seller-tx-amount ${isCredit ? 'seller-tx-amount--credit' : 'seller-tx-amount--debit'}`}>
+                      {isCredit ? "+" : "-"}₹{Number(tx.amount || 0)}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
-      </section>
+      </div>
 
       <AddFundsModal
         open={rechargeOpen}

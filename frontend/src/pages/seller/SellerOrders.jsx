@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, PlayCircle, XCircle, Download, FileText, Clock, ChevronRight } from "lucide-react";
+import { CheckCircle2, PlayCircle, XCircle, Download, FileText, Clock, ChevronDown, ChevronUp, Phone, MapPin } from "lucide-react";
 import { formatCurrency, statusClasses } from "./sellerData";
 import { sellerOrdersApi } from "../../api/orderApi";
 import { useAuth } from "../../context/AuthContext";
@@ -13,17 +13,6 @@ const tabs = ["all", "pending", "accepted", "in_progress", "quoted", "completed"
 const maskPhone = (phone) =>
   phone ? `${String(phone).slice(0, 2)}XXXXXX${String(phone).slice(-2)}` : "";
 
-/* ── Reusable section label ─────────────────────────────── */
-const FieldLabel = ({ children }) => (
-  <span className="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-0.5">
-    {children}
-  </span>
-);
-
-const FieldValue = ({ children, className = "" }) => (
-  <span className={`text-sm font-semibold text-slate-800 ${className}`}>{children}</span>
-);
-
 export default function SellerOrders() {
   const { user, updateUser } = useAuth();
   const [activeTab, setActiveTab] = useState("all");
@@ -31,6 +20,7 @@ export default function SellerOrders() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [busyId, setBusyId] = useState(null);
+  const [expandedId, setExpandedId] = useState(null);
 
   const [quotingOrderId, setQuotingOrderId] = useState(null);
   const [quoteForm, setQuoteForm] = useState({
@@ -222,27 +212,22 @@ export default function SellerOrders() {
     }
   };
 
-  /* ── Tab label helper ─────────────────────────────────── */
   const tabLabel = (t) => t.replace("_", " ");
 
   return (
     <PageTransition>
-      <div className="animate-fade-in space-y-6" style={{ backgroundColor: "#f8fafc", minHeight: "100vh" }}>
+      <div className="seller-page space-y-5 animate-fade-in">
 
-        {/* ── Page Header ─────────────────────────────────── */}
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-800">Orders</h1>
-            <p className="mt-0.5 text-sm text-slate-500">Review bookings and update order status.</p>
-          </div>
-          <div className="hidden sm:flex items-center gap-2 text-xs text-slate-400 bg-white border border-slate-200 rounded-lg px-3 py-1.5 shadow-sm">
-            <Clock size={13} />
-            <span>{orders.length} total orders</span>
-          </div>
+        {/* ── Page Header ── */}
+        <div>
+          <h1 className="seller-page-title">Orders</h1>
+          <p className="seller-page-subtitle">
+            Review bookings & update status / बुकिंग देखें और स्टेटस अपडेट करें
+          </p>
         </div>
 
-        {/* ── Filter Tabs ─────────────────────────────────── */}
-        <div className="flex flex-wrap gap-2">
+        {/* ── Filter Pills — Horizontal Scroll ── */}
+        <div className="seller-filter-row">
           {tabs.map((tab) => {
             const count = tabCounts[tab] || 0;
             const isActive = activeTab === tab;
@@ -251,46 +236,50 @@ export default function SellerOrders() {
                 key={tab}
                 type="button"
                 onClick={() => setActiveTab(tab)}
-                className={`rounded-lg px-3.5 py-2 text-sm font-semibold capitalize transition-all flex items-center gap-1.5 border ${
-                  isActive
-                    ? "bg-blue-600 text-white border-blue-600 shadow-sm shadow-blue-200"
-                    : "bg-white text-slate-600 border-slate-200 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50"
-                }`}
+                className={`seller-filter-pill ${isActive ? "seller-filter-pill--active" : ""}`}
               >
                 {tabLabel(tab)}
                 {count > 0 && (
-                  <span className={`inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none ${
-                    isActive ? "bg-white/25 text-white" : "bg-slate-100 text-slate-600"
-                  }`}>
-                    {count}
-                  </span>
+                  <span className="seller-filter-count">{count}</span>
                 )}
               </button>
             );
           })}
         </div>
 
-        {/* ── Error ───────────────────────────────────────── */}
+        {/* ── Error ── */}
         {error && (
-          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
+          <div style={{
+            borderRadius: 14, border: '1px solid #fecaca', background: '#fef2f2',
+            padding: '12px 16px', fontSize: 13, fontWeight: 600, color: '#b91c1c',
+          }}>
             ⚠ {error}
           </div>
         )}
 
-        {/* ── Orders List ─────────────────────────────────── */}
+        {/* ── Orders List ── */}
         {loading ? (
-          <div className="rounded-xl border border-dashed border-slate-200 bg-white p-12 text-center">
-            <div className="inline-block w-8 h-8 border-4 border-blue-100 border-t-blue-500 rounded-full animate-spin mb-3" />
-            <p className="text-sm text-slate-500">Loading orders…</p>
+          <div className="seller-empty-state" style={{ padding: '40px 24px' }}>
+            <div style={{
+              width: 36, height: 36,
+              border: '3px solid #eff6ff', borderTopColor: '#3b82f6',
+              borderRadius: '50%', margin: '0 auto 14px',
+              animation: 'spin 1s linear infinite',
+            }} />
+            <p className="seller-empty-text">Loading orders…</p>
           </div>
         ) : filteredOrders.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-slate-200 bg-white p-12 text-center">
-            <FileText size={40} className="mx-auto mb-3 text-slate-300" />
-            <p className="text-base font-semibold text-slate-700">No {tabLabel(activeTab)} orders</p>
-            <p className="text-sm text-slate-400 mt-1">Orders will appear here once customers book your services.</p>
+          <div className="seller-empty-state">
+            <div className="seller-empty-icon">
+              <FileText size={28} />
+            </div>
+            <div className="seller-empty-title">No {tabLabel(activeTab)} orders</div>
+            <div className="seller-empty-text">
+              Orders will appear here once customers book your services.
+            </div>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {filteredOrders.map((order) => {
               const id = order.id;
               const number = order.order_number || `#${id}`;
@@ -299,352 +288,288 @@ export default function SellerOrders() {
               const amount = order.total_amount;
               const phone = order.buyer_phone || order.customer_phone;
               const busy = busyId === id;
+              const isExpanded = expandedId === id;
 
               return (
-                <article
-                  key={id}
-                  className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow"
-                >
+                <article key={id} className="seller-order-card">
                   {/* ── Card Header ── */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-                    <div className="flex flex-wrap items-center gap-2.5">
-                      <h2 className="text-base font-bold text-slate-800 tracking-tight">{number}</h2>
-                      <span className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold capitalize ${
-                        statusClasses[order.status] || "border-slate-200 bg-slate-50 text-slate-600"
-                      }`}>
+                  <div className="seller-order-header">
+                    <div className="flex items-center gap-2">
+                      <span style={{ fontSize: 14, fontWeight: 800, color: '#0f172a' }}>{number}</span>
+                      <span className={`seller-status-pill seller-status-pill--${order.status}`}>
+                        <span className="seller-status-dot" />
                         {order.status?.replace("_", " ")}
                       </span>
                     </div>
-                    {order.scheduled_at || order.created_at ? (
-                      <span className="text-xs text-slate-400 flex items-center gap-1">
-                        <Clock size={11} />
-                        {new Date(order.scheduled_at || order.created_at).toLocaleDateString("en-IN", {
-                          day: "numeric", month: "short", year: "numeric",
-                        })}
-                      </span>
-                    ) : null}
-                  </div>
-
-                  {/* ── Order Info Grid ── */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-3 pb-4 border-b border-slate-100">
-                    <div>
-                      <FieldLabel>Customer</FieldLabel>
-                      <FieldValue>{customer}</FieldValue>
-                    </div>
-                    <div>
-                      <FieldLabel>Service</FieldLabel>
-                      <FieldValue className="text-blue-600">{service}</FieldValue>
-                    </div>
-                    <div>
-                      <FieldLabel>Visit Amount</FieldLabel>
-                      <FieldValue className="text-emerald-600">
-                        {order.visiting_charge_amount
-                          ? formatCurrency(order.visiting_charge_amount)
-                          : formatCurrency(amount || 0)}
-                      </FieldValue>
-                      {order.service_charge_amount > 0 && (
-                        <span className="block text-xs text-indigo-600 font-medium mt-0.5">
-                          +{formatCurrency(
-                            parseFloat(order.service_charge_amount) +
-                            parseFloat(order.parts_cost_amount || 0) -
-                            parseFloat(order.discount_amount || 0)
-                          )} work
+                    <div className="flex items-center gap-2">
+                      {(order.scheduled_at || order.created_at) && (
+                        <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 500 }}>
+                          {new Date(order.scheduled_at || order.created_at).toLocaleDateString("en-IN", {
+                            day: "numeric", month: "short",
+                          })}
                         </span>
                       )}
-                    </div>
-                    <div>
-                      <FieldLabel>Payment</FieldLabel>
-                      <FieldValue className="capitalize">{order.payment_method || "—"}</FieldValue>
+                      <button
+                        onClick={() => setExpandedId(isExpanded ? null : id)}
+                        className="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-50 border border-slate-200 text-slate-500 active:scale-90 transition"
+                      >
+                        {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                      </button>
                     </div>
                   </div>
 
-                  {/* ── Accepted+ Details ── */}
-                  {["accepted", "in_progress", "quoted", "completed"].includes(order.status) && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-                      {phone && (
-                        <div>
-                          <FieldLabel>Contact Phone</FieldLabel>
-                          <FieldValue>
-                            {order.status === "completed" ? maskPhone(phone) : phone}
-                          </FieldValue>
+                  {/* ── Customer + Amount Row ── */}
+                  <div className="seller-order-body">
+                    <div className="seller-order-info-row">
+                      <div
+                        className="seller-order-avatar"
+                        style={{ background: '#eff6ff', color: '#3b82f6' }}
+                      >
+                        {customer[0].toUpperCase()}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: '#1e293b' }}>{customer}</div>
+                        <div style={{ fontSize: 13, color: '#3b82f6', fontWeight: 600 }}>{service}</div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: 18, fontWeight: 800, color: '#059669' }}>
+                          {order.visiting_charge_amount
+                            ? formatCurrency(order.visiting_charge_amount)
+                            : formatCurrency(amount || 0)}
                         </div>
-                      )}
-                      {order.address && (
-                        <div>
-                          <FieldLabel>Service Address</FieldLabel>
-                          <FieldValue>{order.address}</FieldValue>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* ── Quotation Breakdown ── */}
-                  {order.service_charge_amount > 0 && (
-                    <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50 p-4">
-                      <p className="text-xs font-bold text-blue-700 mb-2.5 uppercase tracking-wide">
-                        Quotation Summary / पक्का बिल विवरण
-                      </p>
-                      <div className="space-y-1.5 text-sm">
-                        <div className="flex justify-between text-slate-700">
-                          <span>Service Fee</span>
-                          <span className="font-semibold">{formatCurrency(order.service_charge_amount)}</span>
-                        </div>
-
-                        {(() => {
-                          let parsedNotes = { notes: order.quotation_notes || "", parts: [] };
-                          try {
-                            if (order.quotation_notes?.startsWith("{")) {
-                              parsedNotes = JSON.parse(order.quotation_notes);
-                            }
-                          } catch (e) {}
-
-                          return (
-                            <>
-                              {parsedNotes.parts?.length > 0 && (
-                                <div className="pl-3 border-l-2 border-blue-200 my-1.5 space-y-1">
-                                  <span className="text-xs text-slate-500 font-semibold block">Parts / Materials:</span>
-                                  {parsedNotes.parts.map((p, idx) => (
-                                    <div key={idx} className="flex justify-between text-slate-600 text-xs">
-                                      <span>• {p.name}</span>
-                                      <span>{formatCurrency(p.price)}</span>
-                                    </div>
-                                  ))}
-                                  <div className="flex justify-between text-slate-700 font-semibold text-xs border-t border-blue-100 pt-1">
-                                    <span>Total Parts</span>
-                                    <span>{formatCurrency(order.parts_cost_amount)}</span>
-                                  </div>
-                                </div>
-                              )}
-                              {!parsedNotes.parts?.length && order.parts_cost_amount > 0 && (
-                                <div className="flex justify-between text-slate-700">
-                                  <span>Parts / Materials</span>
-                                  <span className="font-semibold">{formatCurrency(order.parts_cost_amount)}</span>
-                                </div>
-                              )}
-                              {parsedNotes.notes && (
-                                <div className="text-xs text-slate-500 italic pt-1 border-t border-blue-100">
-                                  <span className="font-semibold not-italic text-slate-600">Note: </span>
-                                  {parsedNotes.notes}
-                                </div>
-                              )}
-                            </>
-                          );
-                        })()}
-
-                        {order.discount_amount > 0 && (
-                          <div className="flex justify-between text-red-600 font-medium">
-                            <span>Discount</span>
-                            <span>-{formatCurrency(order.discount_amount)}</span>
+                        {order.service_charge_amount > 0 && (
+                          <div style={{ fontSize: 11, color: '#6366f1', fontWeight: 600 }}>
+                            +{formatCurrency(
+                              parseFloat(order.service_charge_amount) +
+                              parseFloat(order.parts_cost_amount || 0) -
+                              parseFloat(order.discount_amount || 0)
+                            )} work
                           </div>
                         )}
-                        <div className="flex justify-between text-slate-800 font-bold border-t border-blue-200 pt-2 mt-1">
-                          <span>Stage 2 Total</span>
-                          <span>{formatCurrency(
-                            parseFloat(order.service_charge_amount) +
-                            parseFloat(order.parts_cost_amount || 0) -
-                            parseFloat(order.discount_amount || 0)
-                          )}</span>
-                        </div>
                       </div>
                     </div>
-                  )}
 
-                  {/* ── Quotation Form ── */}
-                  {quotingOrderId === id && (
-                    <form onSubmit={handleQuoteSubmit} className="mt-4 p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-4">
-                      <h3 className="text-sm font-bold text-slate-800">Create Quotation / नया पक्का बिल बनाएं</h3>
+                    {/* ── Expandable Details ── */}
+                    <div className={`seller-expandable ${isExpanded ? 'seller-expandable--open' : 'seller-expandable--collapsed'}`}>
 
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <div>
-                          <label className="block text-xs font-semibold text-slate-600 mb-1">
-                            Service Fee / काम का दाम (₹)
-                          </label>
-                          <input
-                            type="number"
-                            required
-                            min="0"
-                            value={quoteForm.service_charge}
-                            onChange={(e) => setQuoteForm({ ...quoteForm, service_charge: e.target.value })}
-                            placeholder="e.g. 500"
-                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                          />
+                      {/* Detail Grid */}
+                      <div className="seller-order-detail-grid" style={{ marginTop: 8 }}>
+                        <div className="seller-order-detail-item">
+                          <span className="seller-order-detail-label">Payment</span>
+                          <span className="seller-order-detail-value" style={{ textTransform: 'capitalize' }}>
+                            {order.payment_method || "—"}
+                          </span>
                         </div>
-                        <div>
-                          <label className="block text-xs font-semibold text-slate-600 mb-1">
-                            Discount / छूट (₹, Optional)
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            value={quoteForm.discount}
-                            onChange={(e) => setQuoteForm({ ...quoteForm, discount: e.target.value })}
-                            placeholder="e.g. 50"
-                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Parts & Materials */}
-                      <div className="border-t border-slate-200 pt-3 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <label className="block text-xs font-semibold text-slate-600">
-                            Parts & Materials (Optional)
-                          </label>
-                          {partsList.length === 0 && (
-                            <button
-                              type="button"
-                              onClick={handleAddPart}
-                              className="text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-md border border-blue-200 transition"
-                            >
-                              ➕ Add Part
-                            </button>
-                          )}
+                        <div className="seller-order-detail-item">
+                          <span className="seller-order-detail-label">Date</span>
+                          <span className="seller-order-detail-value">
+                            {order.created_at
+                              ? new Date(order.created_at).toLocaleDateString("en-IN")
+                              : "—"}
+                          </span>
                         </div>
 
-                        {partsList.length === 0 ? (
-                          <div className="text-center py-3 border border-dashed border-slate-200 rounded-lg bg-white">
-                            <span className="text-xs text-slate-400">No parts added</span>
+                        {/* Contact (for accepted+) */}
+                        {["accepted", "in_progress", "quoted", "completed"].includes(order.status) && phone && (
+                          <div className="seller-order-detail-item">
+                            <span className="seller-order-detail-label">Contact</span>
+                            <div className="flex items-center gap-1">
+                              <Phone size={12} style={{ color: '#059669' }} />
+                              <span className="seller-order-detail-value" style={{ fontSize: 13, color: '#059669' }}>
+                                {order.status === "completed" ? maskPhone(phone) : phone}
+                              </span>
+                            </div>
                           </div>
-                        ) : (
-                          <div className="space-y-2 p-3 rounded-lg border border-slate-200 bg-white">
-                            {partsList.map((part, index) => (
-                              <div key={index} className="flex gap-2 items-center">
-                                <div className="flex-1">
-                                  <input
-                                    type="text"
-                                    value={part.name}
-                                    onChange={(e) => handlePartChange(index, "name", e.target.value)}
-                                    placeholder="Part name (e.g. Capacitor)"
-                                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-800 outline-none focus:border-blue-500 focus:bg-white"
-                                  />
-                                </div>
-                                <div className="w-28 flex items-center bg-slate-50 rounded-lg border border-slate-200 px-3 py-2 focus-within:border-blue-500 focus-within:bg-white">
-                                  <span className="text-xs text-slate-400 mr-1">₹</span>
-                                  <input
-                                    type="number"
-                                    required
-                                    min="1"
-                                    value={part.price}
-                                    onChange={(e) => handlePartChange(index, "price", e.target.value)}
-                                    placeholder="Price"
-                                    className="w-full bg-transparent text-xs text-slate-800 outline-none"
-                                  />
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemovePart(index)}
-                                  className="p-2 rounded-lg bg-red-50 hover:bg-red-100 border border-red-200 text-red-500 hover:text-red-600 transition"
-                                  title="Remove part"
-                                >
-                                  <span className="text-xs font-bold">✕</span>
-                                </button>
-                              </div>
-                            ))}
+                        )}
 
-                            <div className="flex items-center justify-between border-t border-slate-100 pt-2 mt-1">
-                              <button
-                                type="button"
-                                onClick={handleAddPart}
-                                className="text-xs font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200 transition"
-                              >
-                                ➕ Add Another Part
-                              </button>
-                              <span className="text-xs font-bold text-emerald-600">
-                                Total: ₹{quoteForm.parts_cost || 0}
+                        {/* Address */}
+                        {["accepted", "in_progress", "quoted", "completed"].includes(order.status) && order.address && (
+                          <div className="seller-order-detail-item" style={{ gridColumn: phone ? 'auto' : '1 / -1' }}>
+                            <span className="seller-order-detail-label">Address</span>
+                            <div className="flex items-start gap-1">
+                              <MapPin size={12} style={{ color: '#3b82f6', marginTop: 2, flexShrink: 0 }} />
+                              <span className="seller-order-detail-value" style={{ fontSize: 12, fontWeight: 600 }}>
+                                {order.address}
                               </span>
                             </div>
                           </div>
                         )}
                       </div>
 
-                      {/* Notes */}
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-600 mb-1">
-                          Quotation Notes / विवरण
-                        </label>
-                        <textarea
-                          value={quoteForm.notes}
-                          onChange={(e) => setQuoteForm({ ...quoteForm, notes: e.target.value })}
-                          placeholder="Describe parts replaced or additional tasks done..."
-                          rows="2"
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 resize-none"
-                        />
-                      </div>
+                      {/* ── Quotation Breakdown ── */}
+                      {order.service_charge_amount > 0 && (
+                        <div className="seller-quote-summary" style={{ marginTop: 12 }}>
+                          <p style={{ fontSize: 11, fontWeight: 800, color: '#1d4ed8', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                            Quotation Summary / पक्का बिल विवरण
+                          </p>
+                          <div className="seller-quote-row">
+                            <span style={{ color: '#475569' }}>Service Fee</span>
+                            <span style={{ fontWeight: 700, color: '#1e293b' }}>{formatCurrency(order.service_charge_amount)}</span>
+                          </div>
 
-                      <div className="flex gap-2 justify-end">
-                        <button
-                          type="button"
-                          onClick={() => { setQuotingOrderId(null); setPartsList([]); }}
-                          className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="submit"
-                          disabled={submittingQuote}
-                          className="rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 px-5 py-2 text-sm font-bold text-white shadow-sm transition"
-                        >
-                          {submittingQuote ? "Submitting…" : "Send Estimate"}
-                        </button>
-                      </div>
-                    </form>
-                  )}
+                          {(() => {
+                            let parsedNotes = { notes: order.quotation_notes || "", parts: [] };
+                            try {
+                              if (order.quotation_notes?.startsWith("{")) {
+                                parsedNotes = JSON.parse(order.quotation_notes);
+                              }
+                            } catch (e) {}
 
-                  {/* ── OTP Verify Form ── */}
-                  {verifyingOrderId === id && (
-                    <form onSubmit={handleOtpVerify} className="mt-4 p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-3">
-                      <div>
-                        <h3 className="text-sm font-bold text-slate-800">Verify Start Code / काम शुरू करने का कोड</h3>
-                        <p className="text-xs text-slate-500 mt-0.5">Ask the customer for the 4-digit code shown on their booking screen.</p>
-                      </div>
-                      <div className="flex gap-3 flex-wrap items-center">
-                        <input
-                          type="text"
-                          required
-                          maxLength="4"
-                          pattern="\d{4}"
-                          value={otpCode}
-                          onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
-                          placeholder="• • • •"
-                          className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-center text-xl font-bold tracking-widest text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 w-32"
-                        />
-                        <button
-                          type="submit"
-                          disabled={verifyingOtp || otpCode.length !== 4}
-                          className="rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 px-5 py-2 text-sm font-bold text-white shadow-sm transition"
-                        >
-                          {verifyingOtp ? "Verifying…" : "✓ Verify & Start"}
-                        </button>
+                            return (
+                              <>
+                                {parsedNotes.parts?.length > 0 && (
+                                  <div style={{ paddingLeft: 12, borderLeft: '2px solid #bfdbfe', margin: '6px 0', }}>
+                                    <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600, display: 'block', marginBottom: 4 }}>Parts / Materials:</span>
+                                    {parsedNotes.parts.map((p, idx) => (
+                                      <div key={idx} className="seller-quote-row" style={{ fontSize: 12 }}>
+                                        <span style={{ color: '#64748b' }}>• {p.name}</span>
+                                        <span style={{ fontWeight: 600 }}>{formatCurrency(p.price)}</span>
+                                      </div>
+                                    ))}
+                                    <div className="seller-quote-row" style={{ borderTop: '1px solid #bfdbfe', paddingTop: 4, marginTop: 4 }}>
+                                      <span style={{ fontWeight: 700, fontSize: 12, color: '#475569' }}>Total Parts</span>
+                                      <span style={{ fontWeight: 700, fontSize: 12 }}>{formatCurrency(order.parts_cost_amount)}</span>
+                                    </div>
+                                  </div>
+                                )}
+                                {!parsedNotes.parts?.length && order.parts_cost_amount > 0 && (
+                                  <div className="seller-quote-row">
+                                    <span style={{ color: '#475569' }}>Parts / Materials</span>
+                                    <span style={{ fontWeight: 700 }}>{formatCurrency(order.parts_cost_amount)}</span>
+                                  </div>
+                                )}
+                                {parsedNotes.notes && (
+                                  <div style={{ fontSize: 12, color: '#64748b', fontStyle: 'italic', padding: '6px 0', borderTop: '1px solid #bfdbfe', marginTop: 4 }}>
+                                    <strong style={{ fontStyle: 'normal', color: '#475569' }}>Note: </strong>
+                                    {parsedNotes.notes}
+                                  </div>
+                                )}
+                              </>
+                            );
+                          })()}
+
+                          {order.discount_amount > 0 && (
+                            <div className="seller-quote-row" style={{ color: '#dc2626' }}>
+                              <span>Discount</span>
+                              <span style={{ fontWeight: 700 }}>-{formatCurrency(order.discount_amount)}</span>
+                            </div>
+                          )}
+                          <div className="seller-quote-total">
+                            <span>Stage 2 Total</span>
+                            <span>{formatCurrency(
+                              parseFloat(order.service_charge_amount) +
+                              parseFloat(order.parts_cost_amount || 0) -
+                              parseFloat(order.discount_amount || 0)
+                            )}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* ── Inline OTP Verify ── */}
+                    {verifyingOrderId === id && (
+                      <form onSubmit={handleOtpVerify} style={{ marginTop: 12, background: '#f8fafc', borderRadius: 14, padding: 16, border: '1px solid #e2e8f0' }}>
+                        <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1e293b', marginBottom: 4 }}>
+                          Verify Start Code / काम शुरू करने का कोड
+                        </h3>
+                        <p style={{ fontSize: 12, color: '#64748b', marginBottom: 12 }}>
+                          Ask customer for their 4-digit code
+                        </p>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="text"
+                            required
+                            maxLength="4"
+                            pattern="\d{4}"
+                            value={otpCode}
+                            onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
+                            placeholder="• • • •"
+                            className="seller-otp-input"
+                            style={{ width: 120, height: 52, fontSize: 20 }}
+                            autoFocus
+                          />
+                          <button
+                            type="submit"
+                            disabled={verifyingOtp || otpCode.length !== 4}
+                            className="seller-action-btn seller-action-btn--success"
+                            style={{ flex: 1, fontSize: 13 }}
+                          >
+                            {verifyingOtp ? "Verifying…" : "✓ Verify & Start"}
+                          </button>
+                        </div>
                         <button
                           type="button"
                           onClick={() => setVerifyingOrderId(null)}
-                          className="text-sm font-semibold text-slate-500 hover:text-slate-700 transition"
+                          style={{ fontSize: 12, color: '#64748b', fontWeight: 600, marginTop: 8, background: 'none', border: 'none', cursor: 'pointer' }}
                         >
                           Cancel
                         </button>
-                      </div>
-                    </form>
-                  )}
+                      </form>
+                    )}
+
+                    {/* ── Inline Completion PIN ── */}
+                    {completingOrderId === id && (
+                      <form onSubmit={handleCompletionPinVerify} style={{ marginTop: 12, background: '#f8fafc', borderRadius: 14, padding: 16, border: '1px solid #e2e8f0' }}>
+                        <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1e293b', marginBottom: 4 }}>
+                          Enter Completion PIN
+                        </h3>
+                        <p style={{ fontSize: 12, color: '#64748b', marginBottom: 12 }}>
+                          Customer's cash payment completion PIN
+                        </p>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="text"
+                            required
+                            maxLength="4"
+                            pattern="\d{4}"
+                            value={completionPin}
+                            onChange={(e) => setCompletionPin(e.target.value.replace(/\D/g, ""))}
+                            placeholder="• • • •"
+                            className="seller-otp-input"
+                            style={{ width: 120, height: 52, fontSize: 20 }}
+                            autoFocus
+                          />
+                          <button
+                            type="submit"
+                            disabled={verifyingCompletionPin || !completionPin}
+                            className="seller-action-btn seller-action-btn--success"
+                            style={{ flex: 1, fontSize: 13 }}
+                          >
+                            {verifyingCompletionPin ? "Verifying…" : "✓ Complete"}
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setCompletingOrderId(null)}
+                          style={{ fontSize: 12, color: '#64748b', fontWeight: 600, marginTop: 8, background: 'none', border: 'none', cursor: 'pointer' }}
+                        >
+                          Cancel
+                        </button>
+                      </form>
+                    )}
+                  </div>
 
                   {/* ── Action Buttons ── */}
-                  <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-slate-100">
+                  <div className="seller-order-actions">
                     {order.status === "pending" && (
                       <>
                         <button
                           type="button"
                           disabled={busy}
                           onClick={() => runAction("accept", id)}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3.5 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100 disabled:opacity-50 transition"
+                          className="seller-action-btn seller-action-btn--primary seller-action-btn--full"
+                          style={{ fontSize: 13 }}
                         >
-                          <CheckCircle2 size={15} /> Accept
+                          <CheckCircle2 size={16} /> Accept
                         </button>
                         <button
                           type="button"
                           disabled={busy}
                           onClick={() => runAction("cancel", id)}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50 transition"
+                          className="seller-action-btn seller-action-btn--outline seller-action-btn--full"
+                          style={{ fontSize: 13, color: '#dc2626' }}
                         >
-                          <XCircle size={15} /> Decline
+                          <XCircle size={16} /> Decline
                         </button>
                       </>
                     )}
@@ -654,17 +579,19 @@ export default function SellerOrders() {
                           type="button"
                           disabled={busy}
                           onClick={() => runAction("start", id)}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3.5 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-100 disabled:opacity-50 transition"
+                          className="seller-action-btn seller-action-btn--primary seller-action-btn--full"
+                          style={{ fontSize: 13 }}
                         >
-                          <PlayCircle size={15} /> Start Job
+                          <PlayCircle size={16} /> Start Job
                         </button>
                         <button
                           type="button"
                           disabled={busy}
                           onClick={() => runAction("cancel", id)}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50 transition"
+                          className="seller-action-btn seller-action-btn--outline seller-action-btn--full"
+                          style={{ fontSize: 13, color: '#dc2626' }}
                         >
-                          <XCircle size={15} /> Cancel
+                          <XCircle size={16} /> Cancel
                         </button>
                       </>
                     )}
@@ -674,17 +601,19 @@ export default function SellerOrders() {
                           type="button"
                           disabled={busy || quotingOrderId === id}
                           onClick={() => setQuotingOrderId(id)}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-purple-200 bg-purple-50 px-3.5 py-2 text-sm font-semibold text-purple-700 hover:bg-purple-100 disabled:opacity-50 transition"
+                          className="seller-action-btn seller-action-btn--primary seller-action-btn--full"
+                          style={{ fontSize: 13 }}
                         >
-                          ➕ Create Quotation
+                          ➕ Create Quote
                         </button>
                         <button
                           type="button"
                           disabled={busy}
                           onClick={() => runAction("cancel", id)}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50 transition"
+                          className="seller-action-btn seller-action-btn--outline seller-action-btn--full"
+                          style={{ fontSize: 13, color: '#dc2626' }}
                         >
-                          <XCircle size={15} /> Cancel
+                          <XCircle size={16} /> Cancel
                         </button>
                       </>
                     )}
@@ -694,17 +623,19 @@ export default function SellerOrders() {
                           type="button"
                           disabled={busy}
                           onClick={() => runAction("complete", id)}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-50 transition"
+                          className="seller-action-btn seller-action-btn--success seller-action-btn--full"
+                          style={{ fontSize: 13 }}
                         >
-                          <CheckCircle2 size={15} /> Mark Complete
+                          <CheckCircle2 size={16} /> Mark Complete
                         </button>
                         <button
                           type="button"
                           disabled={busy}
                           onClick={() => runAction("cancel", id)}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50 transition"
+                          className="seller-action-btn seller-action-btn--outline seller-action-btn--full"
+                          style={{ fontSize: 13, color: '#dc2626' }}
                         >
-                          <XCircle size={15} /> Cancel
+                          <XCircle size={16} /> Cancel
                         </button>
                       </>
                     )}
@@ -715,12 +646,17 @@ export default function SellerOrders() {
                             type="button"
                             disabled={busy || verifyingOrderId === id}
                             onClick={() => { setVerifyingOrderId(id); setOtpCode(""); }}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-teal-200 bg-teal-50 px-3.5 py-2 text-sm font-semibold text-teal-700 hover:bg-teal-100 transition"
+                            className="seller-action-btn seller-action-btn--primary seller-action-btn--full"
+                            style={{ fontSize: 13 }}
                           >
                             🔑 Enter Start Code
                           </button>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-3 py-2 rounded-lg">
+                          <span style={{
+                            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                            fontSize: 12, fontWeight: 700, color: '#b45309', background: '#fffbeb',
+                            border: '1px solid #fde68a', borderRadius: 14, padding: '10px 16px',
+                          }}>
                             ⏳ Awaiting Customer Approval
                           </span>
                         )}
@@ -728,9 +664,10 @@ export default function SellerOrders() {
                           type="button"
                           disabled={busy}
                           onClick={() => runAction("cancel", id)}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50 transition"
+                          className="seller-action-btn seller-action-btn--outline"
+                          style={{ fontSize: 13, color: '#dc2626', flex: 'none', padding: '12px 14px' }}
                         >
-                          <XCircle size={15} /> Cancel
+                          <XCircle size={16} />
                         </button>
                       </>
                     )}
@@ -748,9 +685,10 @@ export default function SellerOrders() {
                           };
                           import("../../utils/invoiceGenerator").then((m) => m.generateInvoicePDF(payload));
                         }}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition"
+                        className="seller-action-btn seller-action-btn--outline seller-action-btn--full"
+                        style={{ fontSize: 13 }}
                       >
-                        <Download size={14} /> Download Invoice
+                        <Download size={16} /> Download Invoice
                       </button>
                     )}
                   </div>
@@ -761,35 +699,184 @@ export default function SellerOrders() {
         )}
       </div>
 
-      {/* ── Cancel Modal ─────────────────────────────────── */}
-      {cancellingOrderId && (
-        <div className="fixed inset-0 z-[1200] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl space-y-4 animate-scale-in">
-            <div>
-              <h3 className="text-lg font-bold text-slate-800">Cancel Booking</h3>
-              <p className="text-sm text-slate-500 mt-1">
-                Please provide a reason. This will be logged and shown to the customer.
+      {/* ── Quotation Bottom Sheet ── */}
+      {quotingOrderId && (
+        <div className="seller-bottom-sheet-overlay" onClick={(e) => { if (e.target === e.currentTarget) { setQuotingOrderId(null); setPartsList([]); } }}>
+          <div className="seller-bottom-sheet">
+            <div className="seller-bottom-sheet-handle" />
+            <form onSubmit={handleQuoteSubmit} className="space-y-4">
+              <h3 style={{ fontSize: 18, fontWeight: 800, color: '#0f172a' }}>
+                Create Quotation
+              </h3>
+              <p style={{ fontSize: 13, color: '#64748b', marginTop: -8 }}>
+                नया पक्का बिल बनाएं
               </p>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-600">
-                Cancellation Reason <span className="text-red-500">*</span>
+
+              <div>
+                <label className="seller-label">Service Fee / काम का दाम (₹)</label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  value={quoteForm.service_charge}
+                  onChange={(e) => setQuoteForm({ ...quoteForm, service_charge: e.target.value })}
+                  placeholder="e.g. 500"
+                  className="seller-input"
+                />
+              </div>
+              <div>
+                <label className="seller-label">Discount / छूट (₹, Optional)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={quoteForm.discount}
+                  onChange={(e) => setQuoteForm({ ...quoteForm, discount: e.target.value })}
+                  placeholder="e.g. 50"
+                  className="seller-input"
+                />
+              </div>
+
+              {/* Parts */}
+              <div>
+                <div className="flex items-center justify-between" style={{ marginBottom: 8 }}>
+                  <label className="seller-label" style={{ margin: 0 }}>Parts & Materials</label>
+                  <button
+                    type="button"
+                    onClick={handleAddPart}
+                    style={{
+                      fontSize: 12, fontWeight: 700, color: '#2563eb',
+                      background: '#eff6ff', border: '1px solid #bfdbfe',
+                      borderRadius: 10, padding: '6px 12px', cursor: 'pointer',
+                    }}
+                  >
+                    ➕ Add Part
+                  </button>
+                </div>
+
+                {partsList.length === 0 ? (
+                  <div style={{
+                    textAlign: 'center', padding: '16px',
+                    border: '2px dashed #e2e8f0', borderRadius: 14,
+                    fontSize: 12, color: '#94a3b8',
+                  }}>
+                    No parts added (optional)
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {partsList.map((part, index) => (
+                      <div key={index} className="flex gap-2 items-center">
+                        <input
+                          type="text"
+                          value={part.name}
+                          onChange={(e) => handlePartChange(index, "name", e.target.value)}
+                          placeholder="Part name"
+                          className="seller-input"
+                          style={{ flex: 1, padding: '10px 14px', fontSize: 13 }}
+                        />
+                        <div style={{
+                          display: 'flex', alignItems: 'center', gap: 4,
+                          background: '#f8fafc', borderRadius: 14,
+                          border: '1.5px solid #e2e8f0', padding: '10px 12px',
+                          width: 100,
+                        }}>
+                          <span style={{ fontSize: 13, color: '#94a3b8' }}>₹</span>
+                          <input
+                            type="number"
+                            required
+                            min="1"
+                            value={part.price}
+                            onChange={(e) => handlePartChange(index, "price", e.target.value)}
+                            placeholder="Price"
+                            style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', fontSize: 13, fontWeight: 600 }}
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePart(index)}
+                          style={{
+                            width: 40, height: 40, borderRadius: 12,
+                            background: '#fef2f2', border: '1px solid #fecaca',
+                            color: '#ef4444', display: 'flex', alignItems: 'center',
+                            justifyContent: 'center', cursor: 'pointer', flexShrink: 0,
+                          }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                    {partsList.length > 0 && (
+                      <div style={{ textAlign: 'right', fontSize: 13, fontWeight: 700, color: '#059669' }}>
+                        Total: ₹{quoteForm.parts_cost || 0}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="seller-label">Notes / विवरण</label>
+                <textarea
+                  value={quoteForm.notes}
+                  onChange={(e) => setQuoteForm({ ...quoteForm, notes: e.target.value })}
+                  placeholder="Describe parts replaced or additional tasks…"
+                  rows="2"
+                  className="seller-input"
+                  style={{ resize: 'none' }}
+                />
+              </div>
+
+              <div className="flex gap-3" style={{ paddingTop: 4 }}>
+                <button
+                  type="button"
+                  onClick={() => { setQuotingOrderId(null); setPartsList([]); }}
+                  className="seller-action-btn seller-action-btn--outline seller-action-btn--full"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingQuote}
+                  className="seller-action-btn seller-action-btn--primary seller-action-btn--full"
+                >
+                  {submittingQuote ? "Sending…" : "Send Estimate"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Cancel Bottom Sheet ── */}
+      {cancellingOrderId && (
+        <div className="seller-bottom-sheet-overlay" onClick={(e) => { if (e.target === e.currentTarget) setCancellingOrderId(null); }}>
+          <div className="seller-bottom-sheet">
+            <div className="seller-bottom-sheet-handle" />
+            <h3 style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', marginBottom: 4 }}>
+              Cancel Booking
+            </h3>
+            <p style={{ fontSize: 13, color: '#64748b', marginBottom: 16 }}>
+              Please provide a reason. This will be shown to the customer.
+            </p>
+            <div>
+              <label className="seller-label">
+                Cancellation Reason <span style={{ color: '#ef4444' }}>*</span>
               </label>
               <textarea
                 required
                 rows="3"
                 value={cancelReasonInput}
                 onChange={(e) => setCancelReasonInput(e.target.value)}
-                placeholder="e.g. Cannot make it today / Out of stock / Customer requested cancellation…"
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 resize-none placeholder-slate-400"
+                placeholder="e.g. Cannot make it today / Out of stock…"
+                className="seller-input"
+                style={{ resize: 'none' }}
               />
             </div>
-            <div className="flex gap-2 justify-end pt-1">
+            <div className="flex gap-3" style={{ marginTop: 16 }}>
               <button
                 type="button"
                 disabled={submittingCancel}
                 onClick={() => setCancellingOrderId(null)}
-                className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition"
+                className="seller-action-btn seller-action-btn--outline seller-action-btn--full"
               >
                 Go Back
               </button>
@@ -797,7 +884,7 @@ export default function SellerOrders() {
                 type="button"
                 disabled={submittingCancel || !cancelReasonInput.trim()}
                 onClick={handleCancelConfirm}
-                className="rounded-lg bg-red-600 hover:bg-red-700 disabled:opacity-50 px-5 py-2 text-sm font-bold text-white shadow-sm transition"
+                className="seller-action-btn seller-action-btn--danger seller-action-btn--full"
               >
                 {submittingCancel ? "Cancelling…" : "Confirm Cancel"}
               </button>
