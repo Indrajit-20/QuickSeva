@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { MapContainer, Marker, TileLayer } from "react-leaflet";
@@ -12,8 +13,10 @@ import {
   MessageCircle,
   Navigation,
   Phone,
-  Eye,
   X,
+  Eye,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import apiClient from "../api/axiosConfig";
 import axios from "axios";
@@ -124,7 +127,34 @@ export default function SellerPublicProfile() {
   const [savedServices, setSavedServices] = useState([]);
 
   // Lightbox & image helper
-  const [lightboxImage, setLightboxImage] = useState(null);
+  const [lightboxIndex, setLightboxIndex] = useState(null);
+  const [lightboxImages, setLightboxImages] = useState([]);
+
+  const handlePrevImage = (e) => {
+    e.stopPropagation();
+    setLightboxIndex((prev) => (prev > 0 ? prev - 1 : lightboxImages.length - 1));
+  };
+
+  const handleNextImage = (e) => {
+    e.stopPropagation();
+    setLightboxIndex((prev) => (prev < lightboxImages.length - 1 ? prev + 1 : 0));
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (lightboxIndex === null) return;
+      if (e.key === "ArrowLeft") {
+        setLightboxIndex((prev) => (prev > 0 ? prev - 1 : lightboxImages.length - 1));
+      } else if (e.key === "ArrowRight") {
+        setLightboxIndex((prev) => (prev < lightboxImages.length - 1 ? prev + 1 : 0));
+      } else if (e.key === "Escape") {
+        setLightboxIndex(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [lightboxIndex, lightboxImages]);
+
   const getImageUrl = (url) => {
     if (!url) return "";
     if (url.startsWith("http")) return url;
@@ -399,7 +429,13 @@ export default function SellerPublicProfile() {
                 src={getImageUrl(seller.profile_picture_url || seller.profile_pic)}
                 alt="Profile"
                 className="h-24 w-24 rounded-full border-4 border-indigo-500/10 object-cover shadow-xl cursor-pointer hover:scale-105 transition duration-200"
-                onClick={() => setLightboxImage(seller.profile_picture_url || seller.profile_pic)}
+                onClick={() => {
+                  const pic = seller.profile_picture_url || seller.profile_pic;
+                  if (pic) {
+                    setLightboxImages([pic]);
+                    setLightboxIndex(0);
+                  }
+                }}
               />
             ) : (
               <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 text-3xl font-semibold text-white force-text-white shadow-xl">
@@ -607,11 +643,14 @@ export default function SellerPublicProfile() {
           <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
             <h2 className="text-xl font-bold text-slate-800">Work Portfolio / Portfolio / काम की तस्वीरें</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {seller.work_images.map((img) => (
+              {seller.work_images.map((img, idx) => (
                 <div
                   key={img.id}
                   className="relative aspect-square rounded-xl overflow-hidden border border-slate-200 cursor-pointer group shadow-sm hover:shadow-md transition duration-200"
-                  onClick={() => setLightboxImage(img.image_url)}
+                  onClick={() => {
+                    setLightboxImages(seller.work_images.map((w) => w.image_url));
+                    setLightboxIndex(idx);
+                  }}
                 >
                   <img
                     src={getImageUrl(img.image_url)}
@@ -632,23 +671,87 @@ export default function SellerPublicProfile() {
       </div>
 
       {/* Lightbox Modal */}
-      {lightboxImage && (
+      {lightboxIndex !== null && lightboxImages.length > 0 && createPortal(
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
-          onClick={() => setLightboxImage(null)}
+          className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-slate-100/90 backdrop-blur-xl p-4 animate-fade-in select-none"
+          onClick={() => setLightboxIndex(null)}
         >
+          {/* Close button */}
           <button
-            className="absolute top-4 right-4 text-white hover:text-slate-300"
-            onClick={() => setLightboxImage(null)}
+            type="button"
+            className="absolute top-4 right-4 z-50 p-2.5 rounded-full bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 hover:text-slate-900 shadow-sm backdrop-blur-sm transition-all focus:outline-none hover:scale-105 active:scale-95"
+            onClick={() => setLightboxIndex(null)}
+            title="Close / बंद करें"
           >
-            <X size={28} />
+            <X size={24} />
           </button>
-          <img
-            src={getImageUrl(lightboxImage)}
-            alt="Portfolio Lightbox"
-            className="max-w-full max-h-[90vh] object-contain rounded shadow-2xl"
-          />
-        </div>
+
+          {/* Prev button (only show if multiple images) */}
+          {lightboxImages.length > 1 && (
+            <button
+              type="button"
+              className="absolute left-4 top-1/2 -translate-y-1/2 z-50 p-3 rounded-full bg-white/80 hover:bg-white border border-slate-200 text-slate-700 hover:text-blue-600 shadow-md backdrop-blur-sm transition-all focus:outline-none hover:scale-105 active:scale-95"
+              onClick={handlePrevImage}
+              title="Previous / पिछला"
+            >
+              <ChevronLeft size={28} />
+            </button>
+          )}
+
+          {/* Next button (only show if multiple images) */}
+          {lightboxImages.length > 1 && (
+            <button
+              type="button"
+              className="absolute right-4 top-1/2 -translate-y-1/2 z-50 p-3 rounded-full bg-white/80 hover:bg-white border border-slate-200 text-slate-700 hover:text-blue-600 shadow-md backdrop-blur-sm transition-all focus:outline-none hover:scale-105 active:scale-95"
+              onClick={handleNextImage}
+              title="Next / अगला"
+            >
+              <ChevronRight size={28} />
+            </button>
+          )}
+
+          {/* Counter (only show if multiple images) */}
+          {lightboxImages.length > 1 && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-1.5 rounded-full bg-white/90 border border-slate-200 text-slate-800 text-xs font-bold shadow-sm">
+              {lightboxIndex + 1} / {lightboxImages.length}
+            </div>
+          )}
+
+          {/* Image container with clean white frame and beautiful shadow */}
+          <div 
+            className="relative max-w-full max-h-[75vh] flex items-center justify-center bg-white p-2.5 sm:p-3.5 rounded-2xl border border-slate-200/80 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.15)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={getImageUrl(lightboxImages[lightboxIndex])}
+              alt={`Portfolio Image ${lightboxIndex + 1}`}
+              className="max-w-full max-h-[70vh] object-contain rounded-xl transition-all duration-300 ease-out animate-scale-in"
+            />
+          </div>
+
+          {/* Thumbnail list (only show if multiple images) */}
+          {lightboxImages.length > 1 && (
+            <div 
+              className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 overflow-x-auto max-w-[90vw] p-2 bg-white/95 rounded-2xl border border-slate-200 shadow-xl backdrop-blur-sm scrollbar-none"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {lightboxImages.map((imgUrl, idx) => (
+                <img
+                  key={idx}
+                  src={getImageUrl(imgUrl)}
+                  alt={`Thumbnail ${idx + 1}`}
+                  className={`w-12 h-12 rounded-lg object-cover cursor-pointer border-2 transition-all duration-200 ${
+                    idx === lightboxIndex 
+                      ? "border-blue-500 scale-110 shadow-md opacity-100" 
+                      : "border-slate-200 opacity-60 hover:opacity-100"
+                  }`}
+                  onClick={() => setLightboxIndex(idx)}
+                />
+              ))}
+            </div>
+          )}
+        </div>,
+        document.body
       )}
     </main>
   );

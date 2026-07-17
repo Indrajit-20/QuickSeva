@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-
 import { categoriesData, categoryToKeywords } from "../data/servicesData";
 import NearbyServices from "../components/NearbyServices";
 
@@ -49,6 +48,7 @@ export default function ServicesPage() {
   const [sellers, setSellers] = useState([]);
 
   const mapRef = useRef(null);
+  const contentRef = useRef(null);
 
   useEffect(() => {
     setQuery(searchParams.get("q") || "");
@@ -71,31 +71,7 @@ export default function ServicesPage() {
     return matchedCat || null;
   }, [category]);
 
-  const groupedResults = useMemo(() => {
-    // If category matches: show only that category's services.
-    if (filteredCategory) {
-      return [
-        {
-          heading: filteredCategory.title,
-          services: filteredCategory.services,
-        },
-      ];
-    }
 
-    // If category doesn't match (typed/unknown): show all categories.
-    return categoriesData.map((cat) => ({
-      heading: cat.title,
-      services: cat.services,
-    }));
-  }, [filteredCategory]);
-
-  const resultsCount = useMemo(() => {
-    const total = groupedResults.reduce(
-      (acc, g) => acc + (g.services?.length || 0),
-      0,
-    );
-    return total;
-  }, [groupedResults]);
 
   const scrollToMap = () => {
     mapRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -135,25 +111,11 @@ export default function ServicesPage() {
     return [];
   };
 
-  const [selectedService, setSelectedService] = useState(null);
-
-  const contentRef = useRef(null);
-  const isInitialServiceMount = useRef(true);
-
-  useEffect(() => {
-    if (isInitialServiceMount.current) {
-      isInitialServiceMount.current = false;
-      return;
-    }
-    contentRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, [selectedService]);
-
-  const visibleSellers = useMemo(() => {
+  const categorySellers = useMemo(() => {
     const allSellers = sellers || [];
-    if (!selectedService || !category) return [];
+    if (!category) return allSellers; // If no category, show all loaded sellers
 
     const selectedCategoryKeywords = mapKeywordsForCategory(category);
-
     const sellerService = (s) => String(s?.service || "").toLowerCase();
 
     return allSellers.filter((s) => {
@@ -168,38 +130,7 @@ export default function ServicesPage() {
       // fallback: includes category text
       return sService.includes(categoryParamLower);
     });
-  }, [sellers, selectedService, category, categoryParamLower]);
-
-  const servicesCard = (service) => {
-    return (
-      <article
-        key={service.id}
-        className="rounded-2xl border border-slate-205 bg-white shadow-xs"
-      >
-        <div className="h-40 overflow-hidden rounded-t-2xl">
-          <img
-            src={service.image}
-            alt={service.name}
-            className="h-full w-full object-cover"
-            loading="lazy"
-          />
-        </div>
-
-        <div className="p-3 text-left">
-          <h3 className="text-sm font-semibold text-slate-800">
-            {service.name}
-          </h3>
-          <button
-            type="button"
-            onClick={() => setSelectedService(service)}
-            className="mt-3 w-full rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-blue-700 cursor-pointer"
-          >
-            View Sellers →
-          </button>
-        </div>
-      </article>
-    );
-  };
+  }, [sellers, category, categoryParamLower]);
 
   const sellerCard = (seller) => {
     const serviceType = seller?.service || "";
@@ -313,68 +244,26 @@ export default function ServicesPage() {
           )}
         </div>
 
-        {!selectedService ? (
-          category && !filteredCategory ? (
-            <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
-              <div className="text-4xl">🔍</div>
-              <h3 className="mt-3 text-2xl font-black text-slate-900">
-                No services found for "{category}"
-              </h3>
-              <p className="mt-2 text-slate-600">
-                Try selecting a different category.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-10">
-              {groupedResults.map((group) => (
-                <div key={group.heading}>
-                  {!category && (
-                    <h3 className="mb-5 text-2xl font-black text-slate-900 text-left">
-                      {group.heading}
-                    </h3>
-                  )}
-
-                  <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-                    {group.services.map((service) => servicesCard(service))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )
+        {categorySellers.length === 0 ? (
+          <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
+            <div className="text-4xl">🔍</div>
+            <h3 className="mt-3 text-xl font-bold text-slate-900">
+              No active providers available for "{category || "your search"}" yet
+            </h3>
+            <p className="mt-2 text-sm text-slate-500 font-semibold">
+              Try selecting a different category or checking back later.
+            </p>
+          </div>
         ) : (
-          <div className="space-y-6 text-left">
-            <button
-              type="button"
-              onClick={() => setSelectedService(null)}
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 cursor-pointer"
-            >
-              ← Back to services
-            </button>
-
-            <div>
-              <h4 className="text-xl font-bold text-slate-900 mb-4">
-                Providers for: {selectedService.name}
-              </h4>
-
-              {visibleSellers.length === 0 ? (
-                <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-                  <h3 className="text-2xl font-black text-slate-900">
-                    No providers available for {selectedService.name} yet.
-                  </h3>
-
-                  <button
-                    type="button"
-                    onClick={() => navigate("/services")}
-                    className="mt-6 rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-blue-700 cursor-pointer"
-                  >
-                    Browse All
-                  </button>
-                </div>
-              ) : (
-                <div className="mt-5 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-                  {visibleSellers.map((seller) => sellerCard(seller))}
-                </div>
-              )}
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-black text-slate-900 text-left">
+                {category ? `Active Providers in ${category}` : "All Active Providers"} ({categorySellers.length})
+              </h3>
+            </div>
+            
+            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+              {categorySellers.map((seller) => sellerCard(seller))}
             </div>
           </div>
         )}
