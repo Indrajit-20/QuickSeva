@@ -103,12 +103,12 @@ export default function SellerProfile() {
     };
   }, [user]);
 
-  const memberSince = user?.loginTime
+  const memberSince = (user?.created_at || user?.createdAt)
     ? new Intl.DateTimeFormat("en-IN", {
       day: "numeric",
       month: "long",
       year: "numeric",
-    }).format(new Date(user.loginTime))
+    }).format(new Date(user.created_at || user.createdAt))
     : "Today";
 
   const getImageUrl = (url) => {

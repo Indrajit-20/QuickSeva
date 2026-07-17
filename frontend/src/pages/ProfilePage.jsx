@@ -20,7 +20,7 @@ const labelClass = "mb-2 block text-sm font-semibold text-slate-600";
 const cardBase = "rounded-xl border border-slate-200 bg-white p-5 flex flex-col justify-between shadow-sm";
 
 export default function ProfilePage() {
-  const { user, updateUser, refreshAuth } = useAuth();
+  const { user, updateUser, refreshAuth, activeRole } = useAuth();
   const fileInputRef = useRef(null);
 
   // Profile Form State
@@ -325,10 +325,14 @@ export default function ProfilePage() {
             <span>Customer</span>
             <span>•</span>
             <span>{profile.phoneNumber || "No phone linked"}</span>
-            <span>•</span>
-            <span className="capitalize font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2.5 py-0.5 rounded-full text-[11px] shadow-sm">
-              {user?.role || "buyer"}
-            </span>
+            {activeRole && activeRole !== "user" && (
+              <>
+                <span>•</span>
+                <span className="capitalize font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2.5 py-0.5 rounded-full text-[11px] shadow-sm">
+                  {activeRole}
+                </span>
+              </>
+            )}
           </p>
 
           {/* Detail Badges */}

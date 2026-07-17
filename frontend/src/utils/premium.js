@@ -10,6 +10,7 @@ export function getPlanLabel(planId) {
     case "standard":
       return "Standard";
     case "pro":
+    case "premium":
       return "Pro";
     default:
       return "";
@@ -23,6 +24,7 @@ export function getPlanRank(planId) {
     case "standard":
       return 2;
     case "pro":
+    case "premium":
       return 3;
     default:
       return 0;
@@ -75,6 +77,13 @@ export function getUpgradedFeatures(currentPlanId, newPlanId) {
     basic: ["Top results", "Contact visible"],
     standard: ["Top results", "Contact visible", "Highlighted pin"],
     pro: [
+      "Top results",
+      "Contact visible",
+      "Highlighted pin",
+      "Gold badge",
+      "Priority support",
+    ],
+    premium: [
       "Top results",
       "Contact visible",
       "Highlighted pin",

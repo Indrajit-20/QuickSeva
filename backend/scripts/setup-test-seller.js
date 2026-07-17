@@ -24,14 +24,14 @@ async function setup() {
         ctSellerId = ctSellers[0].id;
         console.log(`Updating existing seller profile for CT (Seller ID: ${ctSellerId})...`);
         await pool.query(
-          "UPDATE sellers SET category_id = 7, is_premium = 1, plan = 'premium', premium_expires_at = '2030-01-01 00:00:00', is_available = 1, is_verified = 1 WHERE id = ?",
+          "UPDATE sellers SET category_id = 7, is_premium = 1, plan = 'pro', premium_expires_at = '2030-01-01 00:00:00', is_available = 1, is_verified = 1 WHERE id = ?",
           [ctSellerId]
         );
       } else {
         console.log("Creating new seller profile for CT...");
         const [res] = await pool.query(
           `INSERT INTO sellers (user_id, business_name, category_id, is_premium, plan, premium_expires_at, is_available, is_verified)
-           VALUES (?, 'CT Home Services', 7, 1, 'premium', '2030-01-01 00:00:00', 1, 1)`,
+           VALUES (?, 'CT Home Services', 7, 1, 'pro', '2030-01-01 00:00:00', 1, 1)`,
           [ctUserId]
         );
         ctSellerId = res.insertId;
@@ -76,13 +76,13 @@ async function setup() {
     if (testSellers.length > 0) {
       testSellerId = testSellers[0].id;
       await pool.query(
-        "UPDATE sellers SET category_id = 7, is_premium = 1, plan = 'premium', premium_expires_at = '2030-01-01 00:00:00', is_available = 1, is_verified = 1 WHERE id = ?",
+        "UPDATE sellers SET category_id = 7, is_premium = 1, plan = 'pro', premium_expires_at = '2030-01-01 00:00:00', is_available = 1, is_verified = 1 WHERE id = ?",
         [testSellerId]
       );
     } else {
       const [res] = await pool.query(
         `INSERT INTO sellers (user_id, business_name, category_id, is_premium, plan, premium_expires_at, is_available, is_verified)
-         VALUES (?, 'Halol Premium Painters', 7, 1, 'premium', '2030-01-01 00:00:00', 1, 1)`,
+         VALUES (?, 'Halol Premium Painters', 7, 1, 'pro', '2030-01-01 00:00:00', 1, 1)`,
         [testUserId]
       );
       testSellerId = res.insertId;

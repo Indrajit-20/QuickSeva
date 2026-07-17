@@ -154,7 +154,7 @@ export const AuthProvider = ({ children }) => {
           localStorage.setItem(
             "sellerPremium",
             JSON.stringify({
-              plan: data.user.plan,
+              plan: data.user.plan === "premium" ? "pro" : data.user.plan,
               expiresAt: data.user.premium_expires_at,
               isPremium: data.user.is_premium === 1 || data.user.is_premium === true,
             })
@@ -317,7 +317,7 @@ export const AuthProvider = ({ children }) => {
           localStorage.setItem(
             "sellerPremium",
             JSON.stringify({
-              plan: data.user.plan,
+              plan: data.user.plan === "premium" ? "pro" : data.user.plan,
               expiresAt: data.user.premium_expires_at,
               isPremium: data.user.is_premium === 1 || data.user.is_premium === true,
             })

@@ -10,7 +10,6 @@ import {
   Wallet,
   ChevronRight,
   AlertTriangle,
-  TrendingUp,
 } from "lucide-react";
 import { formatCurrency, statusClasses } from "./sellerData";
 import { useAuth } from "../../context/AuthContext";
@@ -138,48 +137,22 @@ export default function SellerDashboard() {
   return (
     <div className="seller-page space-y-5 animate-fade-in">
 
-      {/* ── Welcome Hero Card ── */}
-      <div className="seller-welcome-hero">
-        <div style={{ position: 'relative', zIndex: 1 }}>
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p style={{ fontSize: 12, fontWeight: 600, opacity: 0.8, color: '#ffffff' }}>{today}</p>
-              <h1 style={{ fontSize: 22, fontWeight: 800, marginTop: 4, letterSpacing: '-0.02em', color: '#ffffff' }}>
-                Welcome, {user?.name?.split(' ')[0] || "Seller"} 👋
-              </h1>
-              <p style={{ fontSize: 13, opacity: 0.85, marginTop: 4, color: '#ffffff' }}>
-                {user?.is_available ? "You're online and accepting orders" : "You're currently offline"}
-              </p>
-            </div>
-            {hasPremium && (
-              <span style={{
-                background: 'rgba(255,255,255,0.18)',
-                borderRadius: 12,
-                padding: '6px 12px',
-                fontSize: 11,
-                fontWeight: 800,
-                backdropFilter: 'blur(8px)',
-                border: '1px solid rgba(255,255,255,0.2)',
-                color: '#ffffff',
-              }}>
-                👑 Premium
-              </span>
-            )}
-          </div>
-
-          {/* Inline stats summary */}
-          <div className="flex items-center gap-4 mt-4" style={{ fontSize: 13, color: '#ffffff' }}>
-            <div className="flex items-center gap-1.5" style={{ opacity: 0.9 }}>
-              <TrendingUp size={14} />
-              <span style={{ fontWeight: 700 }}>{formatCurrency(earnings)}</span>
-              <span style={{ opacity: 0.8 }}>earned</span>
-            </div>
-            <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.25)' }} />
-            <div style={{ opacity: 0.9 }}>
-              <span style={{ fontWeight: 700 }}>{orders.length}</span> orders
-            </div>
-          </div>
+      {/* ── Welcome Header ── */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between py-3 border-b border-slate-200/60">
+        <div>
+          <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">{today}</span>
+          <h1 className="text-2xl font-black text-slate-800 tracking-tight mt-0.5">
+            Welcome back, {user?.name?.split(' ')[0] || "Seller"} 👋
+          </h1>
+          <p className="text-sm font-semibold text-slate-500 mt-1">
+            {user?.is_available ? "You're online and accepting bookings" : "You're currently offline"}
+          </p>
         </div>
+        {hasPremium && (
+          <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 shadow-xs shrink-0">
+            👑 Premium Partner
+          </span>
+        )}
       </div>
 
       {/* ── Offline Banner ── */}

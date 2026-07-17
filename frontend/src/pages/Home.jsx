@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Users, Briefcase, CheckCircle } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 import apiClient from "../api/axiosConfig";
 import NearbyServices from "../components/NearbyServices";
 import ActivityNotification from "../components/ActivityNotification";
@@ -39,6 +40,9 @@ const CountUp = ({ end, duration = 1500, suffix = "+" }) => {
 };
 
 const Home = () => {
+  const { user, isAuthenticated } = useAuth();
+  const isSeller = user?.role === "seller";
+  
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isVisible, setIsVisible] = useState(false);
@@ -188,30 +192,43 @@ const Home = () => {
       </section>
 
       {/* ── Call to Action (light theme) ── */}
-      <section
-        className="py-20 flex-grow flex items-center justify-center relative overflow-hidden bg-slate-50 border-t border-slate-100"
-      >
-        {/* subtle dot pattern */}
-        <div
-          className="absolute inset-0 opacity-5 pointer-events-none"
-          style={{
-            backgroundImage: "radial-gradient(circle, #3b82f6 1px, transparent 1px)",
-            backgroundSize: "24px 24px",
-          }}
-        />
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-          <h2 className="text-4xl font-bold text-slate-850 mb-4">
-            Ready to Get Started?
-          </h2>
-          <p className="text-xl text-slate-500 font-semibold mb-8">
-            Join thousands of partners who trust QuickSeva for their onboarding.
-          </p>
-          <Link
-            to="/seller-register"
-            className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-xl transition-all duration-200 hover:shadow-md cursor-pointer"
-          >
-            Become a Partner
-          </Link>
+      <section className="py-16 bg-slate-50/50 border-t border-slate-100 flex-grow flex items-center justify-center relative overflow-hidden">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+          <div className="relative overflow-hidden rounded-3xl bg-white border border-slate-200/80 px-8 py-12 shadow-sm sm:px-16 sm:py-16 text-center">
+            <div className="relative z-10 max-w-2xl mx-auto">
+              {isSeller ? (
+                <>
+                  <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-800 tracking-tight mb-4">
+                    Manage Your Business
+                  </h2>
+                  <p className="text-base sm:text-lg text-slate-500 font-semibold mb-8 leading-relaxed">
+                    You are already a registered partner on QuickSeva! Go to your seller dashboard to view leads, manage services, and track bookings.
+                  </p>
+                  <Link
+                    to="/seller/dashboard"
+                    className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white force-text-white font-bold px-8 py-3.5 rounded-2xl transition duration-150 shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                  >
+                    Go to Dashboard
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-800 tracking-tight mb-4">
+                    Ready to Grow Your Business?
+                  </h2>
+                  <p className="text-base sm:text-lg text-slate-500 font-semibold mb-8 leading-relaxed">
+                    Join thousands of local service experts who trust QuickSeva. Setup your professional seller profile, list your services, and start receiving job requests instantly.
+                  </p>
+                  <Link
+                    to={isAuthenticated ? "/become-seller" : "/seller-register"}
+                    className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white force-text-white font-bold px-8 py-3.5 rounded-2xl transition duration-150 shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                  >
+                    Become a Partner
+                  </Link>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       </section>
 

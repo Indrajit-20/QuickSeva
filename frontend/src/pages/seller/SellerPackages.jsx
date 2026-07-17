@@ -214,7 +214,7 @@ export default function SellerPackages() {
         const seller = profileResp.data?.data?.seller || profileResp.data?.seller;
         if (seller) {
           setPremium({
-            plan: seller.plan,
+            plan: seller.plan === "premium" ? "pro" : seller.plan,
             expiresAt: seller.premium_expires_at,
             isPremium: seller.is_premium === 1 || seller.is_premium === true
           });
@@ -350,7 +350,7 @@ export default function SellerPackages() {
         
         const isPremiumActiveFlag = updatedPremium.is_premium === 1 || updatedPremium.is_premium === true;
         setPremium({
-          plan: updatedPremium.plan,
+          plan: updatedPremium.plan === "premium" ? "pro" : updatedPremium.plan,
           expiresAt: updatedPremium.premium_expires_at,
           isPremium: isPremiumActiveFlag
         });
@@ -359,7 +359,7 @@ export default function SellerPackages() {
         localStorage.setItem(
           "sellerPremium",
           JSON.stringify({
-            plan: updatedPremium.plan,
+            plan: updatedPremium.plan === "premium" ? "pro" : updatedPremium.plan,
             expiresAt: updatedPremium.premium_expires_at,
             isPremium: isPremiumActiveFlag,
           })
@@ -514,7 +514,7 @@ export default function SellerPackages() {
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {["Top placement locked", "Contact hidden until booking", "Badge and highlighted pin unavailable"].map(f => (
+                  {["Top search placement locked", "Direct contact visibility locked", "Highlighted map pin & badge unavailable"].map(f => (
                     <div key={f} className="flex items-center gap-2 text-sm font-semibold text-slate-400">
                       <div className="w-4 h-4 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-400">✕</div>
                       <span>{f}</span>

@@ -3410,10 +3410,11 @@ span.qs-distance-badge {
 .seller-welcome-hero {
   border-radius: 20px;
   padding: 22px 20px;
-  background: linear-gradient(135deg, #1e40af, #3b82f6);
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
   color: white;
   position: relative;
   overflow: hidden;
+  box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.15);
 }
 
 .seller-welcome-hero::before {
