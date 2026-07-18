@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const OrderModel = require("../models/orderModel");
 const SellerModel = require("../models/sellerModel");
 const { pool } = require("../config/db");
@@ -32,6 +33,9 @@ exports.placeOrder = async (req, res) => {
       lng,
       scheduled_at,
       notes,
+      razorpay_payment_id,
+      razorpay_order_id,
+      razorpay_signature,
     } = req.body;
 
     if (payment_method === "wallet") {
@@ -87,7 +91,7 @@ exports.placeOrder = async (req, res) => {
     }
 
     // Fetch platform fee settings
-    const feeModel = await getSystemSetting("platform_fee_model", "seller");
+    const feeModel = "seller"; // Force seller model so buyers are never charged a platform fee
     const feePercentage = parseFloat(await getSystemSetting("platform_fee_percentage", "5.00"));
 
     // Calculate Stage 1 Platform Fee (based on visiting charge) and cap at max ₹100.00
@@ -98,9 +102,26 @@ exports.placeOrder = async (req, res) => {
     const visiting_platform_fee = parseFloat(calculated_fee.toFixed(2));
 
     // Calculate how much the customer pays in Stage 1
-    // Option A (buyer pays fee): pays visiting charge + fee
-    // Option B (seller pays fee): pays only visiting charge
     const total_stage_1 = feeModel === "buyer" ? (visiting_charge + visiting_platform_fee) : visiting_charge;
+
+    // Verify online payment if required
+    if (payment_method === "online" && total_stage_1 > 0) {
+      if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature) {
+        return errorRes(res, "Missing payment details for online booking", 400);
+      }
+      
+      if (process.env.RAZORPAY_KEY_SECRET) {
+        const body = razorpay_order_id + "|" + razorpay_payment_id;
+        const expectedSignature = crypto
+          .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+          .update(body)
+          .digest("hex");
+        
+        if (expectedSignature !== razorpay_signature) {
+          return errorRes(res, "Payment signature verification failed", 400);
+        }
+      }
+    }
 
     const order_number = generateOrderNumber();
 

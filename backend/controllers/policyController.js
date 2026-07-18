@@ -78,6 +78,9 @@ const getSystemSettingsPublic = async (req, res) => {
       settings[row.key] = row.value;
     });
 
+    // Force platform fee model to be 'seller' so buyers are never charged a platform fee
+    settings.platform_fee_model = "seller";
+
     return successRes(res, settings, "Public settings retrieved successfully");
   } catch (error) {
     console.error("Error retrieving public settings:", error);

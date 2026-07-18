@@ -8,6 +8,8 @@ import DatePicker from "react-multi-date-picker";
 const DatePickerComponent = DatePicker.default || DatePicker;
 import { scrollToFirstError } from "../utils/scrollUtils";
 import { MapPin, Star, AlertTriangle } from "lucide-react";
+import { loadRazorpayScript } from "../utils/razorpayLoader";
+import { createPaymentOrderApi } from "../api/walletApi";
 
 const TIME_SLOTS = [
   "8:00 AM",
@@ -179,12 +181,8 @@ export default function BookingPage() {
   const [submitError, setSubmitError] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("online");
   
-  // Custom Invoice & Fake Payment Gateway Modal states
+  // Custom Invoice Modal state
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
-  const [showPaymentGateway, setShowPaymentGateway] = useState(false);
-  const [paymentGatewayStatus, setPaymentGatewayStatus] = useState("idle"); // "idle", "processing", "success", "failed"
-  const [gatewayError, setGatewayError] = useState("");
-  const [gatewaySubView, setGatewaySubView] = useState("select"); // "select", "upi_qr", "card_info"
 
   const [formData, setFormData] = useState({
     service: selectedService?.name || selectedService?.title || "",
@@ -334,25 +332,14 @@ export default function BookingPage() {
     setShowInvoiceModal(true);
   };
 
-  const handleSimulatedPayment = async (isSuccess) => {
-    if (!isSuccess) {
-      setPaymentGatewayStatus("processing");
-      setTimeout(() => {
-        setPaymentGatewayStatus("failed");
-        setGatewayError("Simulated payment failure: Transaction was cancelled or rejected by user bank.");
-      }, 1500);
-      return;
-    }
-
-    setPaymentGatewayStatus("processing");
+  const handleCreateBookingDirectly = async () => {
+    setBookingLoading(true);
+    setSubmitError("");
     try {
-      // Simulate API latency
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
       const payload = {
         seller_id: seller.id,
         service_id: selectedServiceState?.id || null,
-        total_amount: visitingCharge, // Frontend estimates Stage 1 visiting charge
+        total_amount: visitingCharge,
         payment_method: paymentMethod,
         address: formData.address,
         lat: seller.latitude || seller.lat || null,
@@ -371,14 +358,95 @@ export default function BookingPage() {
         timeSlot: formData.timeSlot,
         sellerName: seller.business_name || seller.name,
       });
-
-      setShowPaymentGateway(false);
     } catch (err) {
       console.error(err);
-      setPaymentGatewayStatus("failed");
-      setGatewayError(
-        err?.response?.data?.message || "Failed to confirm booking. Wallet might have insufficient funds."
-      );
+      setSubmitError(err?.response?.data?.message || "Failed to confirm booking.");
+    } finally {
+      setBookingLoading(false);
+    }
+  };
+
+  const handleRazorpayBookingPayment = async () => {
+    setBookingLoading(true);
+    setSubmitError("");
+    try {
+      const isLoaded = await loadRazorpayScript();
+      if (!isLoaded) {
+        setSubmitError("Razorpay SDK failed to load. Please check your internet connection.");
+        setBookingLoading(false);
+        return;
+      }
+
+      const orderRes = await createPaymentOrderApi(totalPayable, "booking_payment");
+      if (!orderRes || !orderRes.success) {
+        setSubmitError(orderRes?.message || "Failed to initiate payment.");
+        setBookingLoading(false);
+        return;
+      }
+
+      const orderData = orderRes.data;
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: "QuickSeva",
+        description: `Visiting Fee for ${formData.service}`,
+        order_id: orderData.id,
+        handler: async function (response) {
+          try {
+            setBookingLoading(true);
+            const payload = {
+              seller_id: seller.id,
+              service_id: selectedServiceState?.id || null,
+              payment_method: paymentMethod,
+              address: formData.address,
+              lat: seller.latitude || seller.lat || null,
+              lng: seller.longitude || seller.lng || null,
+              scheduled_at: buildScheduledAt(formData.date, formData.timeSlot),
+              notes: formData.instructions || "",
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_signature: response.razorpay_signature,
+            };
+
+            const res = await apiClient.post("/orders", payload);
+            const order = res?.data?.data?.order || res?.data?.order || null;
+
+            setConfirmedBooking({
+              id: order?.order_number || order?.id || `BK${Date.now()}`,
+              service: formData.service,
+              date: formData.date,
+              timeSlot: formData.timeSlot,
+              sellerName: seller.business_name || seller.name,
+            });
+          } catch (err) {
+            console.error("Order placement error:", err);
+            setSubmitError(err?.response?.data?.message || "Failed to confirm booking after payment.");
+          } finally {
+            setBookingLoading(false);
+          }
+        },
+        prefill: {
+          name: user?.name || "",
+          email: user?.email || "",
+          contact: formData.mobile || "",
+        },
+        theme: {
+          color: "#2563EB",
+        },
+        modal: {
+          ondismiss: function () {
+            setBookingLoading(false);
+          }
+        }
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+    } catch (err) {
+      console.error("Razorpay loading error:", err);
+      setSubmitError("Failed to open payment gateway.");
+      setBookingLoading(false);
     }
   };
 
@@ -925,221 +993,23 @@ export default function BookingPage() {
               </button>
               <button
                 type="button"
+                disabled={bookingLoading}
                 onClick={() => {
                   setShowInvoiceModal(false);
                   if (visitingCharge === 0 || paymentMethod === "cash") {
-                    setShowPaymentGateway(true);
-                    setPaymentGatewayStatus("processing");
-                    handleSimulatedPayment(true);
+                    handleCreateBookingDirectly();
                   } else {
-                    setShowPaymentGateway(true);
-                    setPaymentGatewayStatus("idle");
-                    setGatewaySubView("select");
-                    setGatewayError("");
+                    handleRazorpayBookingPayment();
                   }
                 }}
-                className="flex-1 rounded-xl bg-blue-600 hover:bg-blue-700 py-3 text-xs font-bold text-white shadow-sm transition active:scale-[0.99] cursor-pointer"
+                className="flex-1 rounded-xl bg-blue-600 hover:bg-blue-700 py-3 text-xs font-bold text-white shadow-sm transition active:scale-[0.99] cursor-pointer disabled:opacity-50"
               >
+                {bookingLoading && (
+                  <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent mr-2 align-middle" />
+                )}
                 {(visitingCharge === 0 || paymentMethod === "cash") ? "Confirm Booking / बुकिंग पक्की करें" : "Proceed to Pay / भुगतान करें"}
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Fake Razorpay/PhonePe Payment Gateway Modal */}
-      {showPaymentGateway && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-fade-in text-slate-800">
-          <div className="w-full max-w-sm rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden relative flex flex-col">
-            {/* Gateway Header */}
-            <div className="bg-slate-50 p-4 border-b border-slate-200 flex justify-between items-center">
-              <div className="flex items-center gap-2 text-left">
-                <span className="text-xl">💳</span>
-                <div>
-                  <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">QuickSeva Secure Pay</h2>
-                  <p className="text-[10px] text-slate-500">Razorpay / PhonePe Emulator</p>
-                </div>
-              </div>
-              <button 
-                onClick={() => {
-                  setShowPaymentGateway(false);
-                  setGatewaySubView("select");
-                }}
-                className="text-slate-400 hover:text-slate-600 text-sm cursor-pointer p-1"
-              >
-                ✕
-              </button>
-            </div>
-
-            {paymentGatewayStatus === "idle" && (
-              <div className="p-6 space-y-5 flex-1 text-left">
-                {/* Total box */}
-                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-center">
-                  <span className="block text-[10px] text-slate-500 uppercase font-semibold">Payable Amount / भुगतान राशि</span>
-                  <span className="text-3xl font-black text-emerald-600 mt-1 block font-mono">
-                    ₹{totalPayable}
-                  </span>
-                </div>
-
-                {gatewaySubView === "select" && (
-                  <>
-                    {/* Simulated payment options */}
-                    <div className="space-y-2.5">
-                      <span className="block text-[10px] text-slate-500 uppercase font-bold tracking-wider">Select Payment Mode</span>
-                      
-                      {[
-                        { id: "upi_qr", icon: "📱", name: "UPI QR (GPay / PhonePe / Paytm)", method: "online" },
-                        { id: "card_info", icon: "💳", name: "Debit / Credit Card", method: "online" }
-                      ].map((opt) => (
-                        <button
-                          key={opt.id}
-                          type="button"
-                          onClick={() => {
-                            setGatewaySubView(opt.id);
-                            setPaymentMethod(opt.method);
-                          }}
-                          className="w-full text-left p-3.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition flex items-center gap-3 cursor-pointer group active:scale-[0.99]"
-                        >
-                          <span className="text-lg bg-slate-100 p-1.5 rounded-lg group-hover:bg-slate-200">{opt.icon}</span>
-                          <span className="text-xs font-bold text-slate-700 group-hover:text-slate-800 flex-1">{opt.name}</span>
-                          <span className="text-slate-400 text-xs">➔</span>
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="flex gap-2.5 pt-1">
-                      <button
-                        type="button"
-                        onClick={() => handleSimulatedPayment(false)}
-                        className="w-full py-2.5 text-xs font-bold text-red-700 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 active:scale-95 transition cursor-pointer text-center"
-                      >
-                        Simulate Failure ❌
-                      </button>
-                    </div>
-                  </>
-                )}
-
-                {gatewaySubView === "upi_qr" && (
-                  <div className="space-y-4 text-center">
-                    <span className="block text-[10px] text-slate-500 uppercase font-bold tracking-wider text-left">Scan UPI QR Code</span>
-                    <div className="flex flex-col items-center justify-center p-4 bg-white rounded-xl border border-slate-200 shadow-inner">
-                      {/* Dynamic Simulated QR Code */}
-                      <svg className="h-32 w-32 text-slate-800 animate-pulse" viewBox="0 0 100 100" fill="currentColor">
-                        <path d="M0 0h30v30H0V0zm10 10v10h10V10H10zm60-10h30v30H70V0zm10 10v10h10V10H10zM0 70h30v30H0V70zm10 10v10h10V10H10zm45-45h10v10H55zm10 10h10v10H65zm-20 20h10v10H45zm25 0h10v10H70zm-15 15h10v10H55zm15 0h10v10H70zm-35-15h10v10H35zm0-20h10v10H35zm30-25h5v5h-5z" />
-                      </svg>
-                      <span className="text-[10px] text-slate-400 font-medium mt-2">Scan with GPay, PhonePe, or Paytm</span>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setGatewaySubView("select")}
-                        className="flex-1 py-2.5 text-xs font-bold bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl active:scale-95 transition cursor-pointer"
-                      >
-                        Back / पीछे
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleSimulatedPayment(true)}
-                        className="flex-1 py-2.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl active:scale-95 transition cursor-pointer"
-                      >
-                        I have Scanned &amp; Paid
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {gatewaySubView === "card_info" && (
-                  <div className="space-y-4">
-                    <span className="block text-[10px] text-slate-500 uppercase font-bold tracking-wider text-left">Card Details</span>
-                    <div className="space-y-3">
-                      <div>
-                        <label className="text-[10px] text-slate-400 block mb-1">Card Number</label>
-                        <input
-                          type="text"
-                          placeholder="4111 2222 3333 4444"
-                          maxLength="19"
-                          className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-3 text-left">
-                        <div>
-                          <label className="text-[10px] text-slate-450 block mb-1">Expiry Date</label>
-                          <input
-                            type="text"
-                            placeholder="MM/YY"
-                            maxLength="5"
-                            className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[10px] text-slate-455 block mb-1">CVV</label>
-                          <input
-                            type="password"
-                            placeholder="•••"
-                            maxLength="3"
-                            className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-2 pt-2">
-                      <button
-                        type="button"
-                        onClick={() => setGatewaySubView("select")}
-                        className="flex-1 py-2.5 text-xs font-bold bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl active:scale-95 transition cursor-pointer text-center"
-                      >
-                        Back / पीछे
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleSimulatedPayment(true)}
-                        className="flex-1 py-2.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl active:scale-95 transition cursor-pointer text-center"
-                      >
-                        Pay &amp; Confirm
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-
-              </div>
-            )}
-
-            {paymentGatewayStatus === "processing" && (
-              <div className="p-8 text-center space-y-4 flex flex-col items-center justify-center flex-1 min-h-[300px]">
-                <div className="h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600" />
-                <h3 className="text-sm font-bold text-slate-800 text-left">Processing Transaction...</h3>
-                <p className="text-xs text-slate-500 text-left font-semibold">Verifying secure wallet signatures and banking gateway protocols. Do not refresh or press back.</p>
-              </div>
-            )}
-
-            {paymentGatewayStatus === "failed" && (
-              <div className="p-6 text-center space-y-5 flex flex-col items-center justify-center flex-1">
-                <span className="text-5xl text-red-500">❌</span>
-                <h3 className="text-base font-bold text-red-750">Payment Failed / भुगतान असफल</h3>
-                <p className="text-xs text-slate-500 font-semibold">
-                  {gatewayError || "Insufficient wallet balance or transaction rejected by server."}
-                </p>
-                <div className="flex gap-2 w-full pt-3">
-                  <button
-                    type="button"
-                    onClick={() => setPaymentGatewayStatus("idle")}
-                    className="flex-1 py-2.5 text-xs font-bold bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-lg active:scale-95 transition cursor-pointer"
-                  >
-                    Try Again / पुनः प्रयास
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowPaymentGateway(false)}
-                    className="flex-1 py-2.5 text-xs font-bold bg-transparent text-slate-500 border border-slate-200 hover:bg-slate-50 rounded-lg active:scale-95 transition cursor-pointer"
-                  >
-                    Cancel / रद्द करें
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}
