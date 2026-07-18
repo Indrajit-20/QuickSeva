@@ -504,6 +504,19 @@ export default function MyBookings() {
                                 </p>
                               </div>
                             )}
+
+                            {/* Online Paid Confirmation Information */}
+                            {booking.status === "in_progress" && booking.payment_method === "online" && booking.final_payment_status === "paid" && (
+                              <div className="mt-3.5 p-3.5 rounded-2xl border border-emerald-250 bg-emerald-55 text-center shadow-sm">
+                                <span className="block text-[10px] font-bold text-emerald-700 uppercase tracking-widest">✓ Payout Completed Online / ऑनलाइन भुगतान पूर्ण</span>
+                                <p className="text-xs text-emerald-800 font-bold mt-1.5">
+                                  Final bill payment of ₹{Number(parseFloat(booking.service_charge_amount || 0) + parseFloat(booking.parts_cost_amount || 0) - parseFloat(booking.discount_amount || 0)).toLocaleString("en-IN")} was successfully paid via Razorpay.
+                                </p>
+                                <p className="text-[10px] text-emerald-600 mt-1 font-semibold leading-normal">
+                                  No further payment is required. The technician is currently working on your request. / कोई अतिरिक्त भुगतान आवश्यक नहीं है।
+                                </p>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -567,7 +580,7 @@ export default function MyBookings() {
                         </>
                       )}
 
-                      {booking.status === "in_progress" && booking.payment_method === "online" && (
+                      {booking.status === "in_progress" && booking.payment_method === "online" && booking.final_payment_status !== "paid" && (
                         <button
                           type="button"
                           disabled={busyId === booking.id}
@@ -671,7 +684,7 @@ export default function MyBookings() {
                           )}
                         </button>
                       )}
-                      {booking.status === "completed" && (
+                      {(booking.status === "completed" || (booking.payment_method === "online" && booking.final_payment_status === "paid")) && (
                         <button
                           type="button"
                           onClick={() => {

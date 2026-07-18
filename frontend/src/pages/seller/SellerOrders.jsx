@@ -107,6 +107,9 @@ export default function SellerOrders() {
 
     setSubmittingQuote(true);
     try {
+      // Calculate parts_cost dynamically from the partsList (quoteForm.parts_cost is not auto-updated)
+      const computedPartsCost = partsList.reduce((sum, p) => sum + (parseFloat(p.price) || 0), 0);
+
       const notesPayload = JSON.stringify({
         notes: quoteForm.notes || "",
         parts: partsList.filter(p => p.name || p.price).map(p => ({
@@ -115,19 +118,20 @@ export default function SellerOrders() {
         })),
       });
 
-      await sellerOrdersApi.quote(quotingOrderId, {
+      await sellerOrdersApi.submitQuotation(quotingOrderId, {
         service_charge: parseFloat(quoteForm.service_charge) || 0,
-        parts_cost: parseFloat(quoteForm.parts_cost) || 0,
+        parts_cost: computedPartsCost,
         discount: parseFloat(quoteForm.discount) || 0,
         notes: notesPayload,
       });
 
+      // Reset everything on success
       setQuotingOrderId(null);
       setPartsList([]);
       setQuoteForm({ service_charge: "", parts_cost: "", discount: "", notes: "" });
       await fetchOrders();
     } catch (err) {
-      alert(err?.response?.data?.message || "Failed to submit quote");
+      alert(err?.response?.data?.message || "Failed to submit quotation. Please try again.");
     } finally {
       setSubmittingQuote(false);
     }
@@ -625,87 +629,79 @@ export default function SellerOrders() {
         )}
       </div>
 
-      {/* ── Quotation Bottom Sheet ── */}
+      {/* ── Quotation Modal ── */}
       {quotingOrderId && (
         <div className="seller-bottom-sheet-overlay" onClick={(e) => { if (e.target === e.currentTarget) { setQuotingOrderId(null); setPartsList([]); } }}>
-          <div className="seller-bottom-sheet">
-            <div className="seller-bottom-sheet-handle" />
-            <form onSubmit={handleQuoteSubmit} className="space-y-4">
-              <h3 style={{ fontSize: 18, fontWeight: 800, color: '#0f172a' }}>
-                Create Quotation
-              </h3>
-              <p style={{ fontSize: 13, color: '#64748b', marginTop: -8 }}>
-                नया पक्का बिल बनाएं
-              </p>
-
+          <div className="seller-bottom-sheet" style={{ maxWidth: 520, borderRadius: 24, padding: '24px' }}>
+            <form onSubmit={handleQuoteSubmit} className="space-y-5 text-left">
               <div>
-                <label className="seller-label">Service Fee / काम का दाम (₹)</label>
-                <input
-                  type="number"
-                  required
-                  min="0"
-                  value={quoteForm.service_charge}
-                  onChange={(e) => setQuoteForm({ ...quoteForm, service_charge: e.target.value })}
-                  placeholder="e.g. 500"
-                  className="seller-input"
-                />
-              </div>
-              <div>
-                <label className="seller-label">Discount / छूट (₹, Optional)</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={quoteForm.discount}
-                  onChange={(e) => setQuoteForm({ ...quoteForm, discount: e.target.value })}
-                  placeholder="e.g. 50"
-                  className="seller-input"
-                />
+                <h3 className="text-lg font-black text-slate-900">Create Quotation</h3>
+                <p className="text-xs text-slate-500 font-semibold mt-0.5">Create detailed estimate bill / नया पक्का बिल बनाएं</p>
               </div>
 
-              {/* Parts */}
-              <div>
-                <div className="flex items-center justify-between" style={{ marginBottom: 8 }}>
-                  <label className="seller-label" style={{ margin: 0 }}>Parts & Materials</label>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="seller-label">Service Fee / काम का दाम (₹)</label>
+                  <input
+                    type="number"
+                    required
+                    min="0"
+                    value={quoteForm.service_charge}
+                    onChange={(e) => setQuoteForm({ ...quoteForm, service_charge: e.target.value })}
+                    placeholder="e.g. 500"
+                    className="seller-input"
+                  />
+                </div>
+                <div>
+                  <label className="seller-label">Discount / छूट (₹, Optional)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={quoteForm.discount}
+                    onChange={(e) => setQuoteForm({ ...quoteForm, discount: e.target.value })}
+                    placeholder="e.g. 50"
+                    className="seller-input"
+                  />
+                </div>
+              </div>
+
+              {/* Parts / Materials Section */}
+              <div className="border-t border-slate-100 pt-3">
+                <div className="flex items-center justify-between mb-3">
+                  <label className="seller-label" style={{ margin: 0 }}>Parts & Materials / सामान चार्ज</label>
                   <button
                     type="button"
                     onClick={handleAddPart}
-                    style={{
-                      fontSize: 12, fontWeight: 700, color: '#2563eb',
-                      background: '#eff6ff', border: '1px solid #bfdbfe',
-                      borderRadius: 10, padding: '6px 12px', cursor: 'pointer',
-                    }}
+                    className="flex items-center gap-1 text-[11px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-100 rounded-xl px-3 py-2 transition active:scale-95"
                   >
-                    ➕ Add Part
+                    ➕ Add Part / सामान जोड़ें
                   </button>
                 </div>
 
                 {partsList.length === 0 ? (
-                  <div style={{
-                    textAlign: 'center', padding: '16px',
-                    border: '2px dashed #e2e8f0', borderRadius: 14,
-                    fontSize: 12, color: '#94a3b8',
-                  }}>
-                    No parts added (optional)
+                  <div className="text-center py-6 border-2 border-dashed border-slate-200 rounded-2xl text-xs text-slate-400 font-medium">
+                    No parts added / कोई अतिरिक्त सामान नहीं जोड़ा गया (वैकल्पिक)
                   </div>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-2.5 max-h-[180px] overflow-y-auto pr-1 no-scrollbar">
                     {partsList.map((part, index) => (
-                      <div key={index} className="flex gap-2 items-center">
+                      <div key={index} className="flex gap-2.5 items-center bg-slate-50 p-2.5 rounded-xl border border-slate-200/60">
                         <input
                           type="text"
+                          required
                           value={part.name}
                           onChange={(e) => handlePartChange(index, "name", e.target.value)}
-                          placeholder="Part name"
+                          placeholder="Part name (e.g. Air Filter)"
                           className="seller-input"
-                          style={{ flex: 1, padding: '10px 14px', fontSize: 13 }}
+                          style={{ flex: 1, padding: '10px 12px', fontSize: 13 }}
                         />
                         <div style={{
                           display: 'flex', alignItems: 'center', gap: 4,
-                          background: '#f8fafc', borderRadius: 14,
-                          border: '1.5px solid #e2e8f0', padding: '10px 12px',
+                          background: '#ffffff', borderRadius: 12,
+                          border: '1.5px solid #e2e8f0', padding: '8px 10px',
                           width: 100,
                         }}>
-                          <span style={{ fontSize: 13, color: '#94a3b8' }}>₹</span>
+                          <span style={{ fontSize: 13, color: '#94a3b8', fontWeight: 'bold' }}>₹</span>
                           <input
                             type="number"
                             required
@@ -713,56 +709,83 @@ export default function SellerOrders() {
                             value={part.price}
                             onChange={(e) => handlePartChange(index, "price", e.target.value)}
                             placeholder="Price"
-                            style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', fontSize: 13, fontWeight: 600 }}
+                            style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', fontSize: 13, fontWeight: 700 }}
                           />
                         </div>
                         <button
                           type="button"
                           onClick={() => handleRemovePart(index)}
-                          style={{
-                            width: 40, height: 40, borderRadius: 12,
-                            background: '#fef2f2', border: '1px solid #fecaca',
-                            color: '#ef4444', display: 'flex', alignItems: 'center',
-                            justifyContent: 'center', cursor: 'pointer', flexShrink: 0,
-                          }}
+                          className="w-9 h-9 rounded-xl bg-rose-50 border border-rose-200 text-rose-500 flex items-center justify-center cursor-pointer hover:bg-rose-100 transition active:scale-90"
                         >
                           ✕
                         </button>
                       </div>
                     ))}
-                    {partsList.length > 0 && (
-                      <div style={{ textAlign: 'right', fontSize: 13, fontWeight: 700, color: '#059669' }}>
-                        Total: ₹{quoteForm.parts_cost || 0}
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
 
+              {/* Notes / description */}
               <div>
-                <label className="seller-label">Notes / विवरण</label>
+                <label className="seller-label">Description / विवरण</label>
                 <textarea
                   value={quoteForm.notes}
                   onChange={(e) => setQuoteForm({ ...quoteForm, notes: e.target.value })}
                   placeholder="Describe parts replaced or additional tasks…"
                   rows="2"
                   className="seller-input"
-                  style={{ resize: 'none' }}
+                  style={{ resize: 'none', padding: '12px 14px' }}
                 />
               </div>
 
-              <div className="flex gap-3" style={{ paddingTop: 4 }}>
+              {/* Dynamic Live Estimation Invoice Summary Card */}
+              {(() => {
+                const sCharge = parseFloat(quoteForm.service_charge) || 0;
+                const pCost = partsList.reduce((acc, curr) => acc + (parseFloat(curr.price) || 0), 0);
+                const disc = parseFloat(quoteForm.discount) || 0;
+                const finalTotal = Math.max(0, sCharge + pCost - disc);
+
+                return (
+                  <div className="bg-blue-50/85 border border-blue-100 rounded-2xl p-4 space-y-2.5">
+                    <span className="block text-[10px] font-bold text-blue-700 uppercase tracking-widest">Live Bill Preview / बिल का पूर्वावलोकन</span>
+                    <div className="space-y-1.5 text-xs font-semibold text-slate-650">
+                      <div className="flex justify-between">
+                        <span>Service Charge / सेवा चार्ज:</span>
+                        <span className="text-slate-800 font-mono">₹{sCharge.toLocaleString("en-IN")}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Materials Cost / सामान चार्ज:</span>
+                        <span className="text-slate-800 font-mono">₹{pCost.toLocaleString("en-IN")}</span>
+                      </div>
+                      {disc > 0 && (
+                        <div className="flex justify-between text-rose-650">
+                          <span>Discount / छूट:</span>
+                          <span className="font-mono">-₹{disc.toLocaleString("en-IN")}</span>
+                        </div>
+                      )}
+                      <div className="h-px bg-slate-200 my-1" />
+                      <div className="flex justify-between text-sm font-black text-blue-750">
+                        <span>Final Customer Bill / कुल भुगतान राशि:</span>
+                        <span className="font-mono text-base">₹{finalTotal.toLocaleString("en-IN")}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-1">
                 <button
                   type="button"
                   onClick={() => { setQuotingOrderId(null); setPartsList([]); }}
-                  className="seller-action-btn seller-action-btn--outline seller-action-btn--full"
+                  className="seller-action-btn seller-action-btn--outline seller-action-btn--full py-3"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submittingQuote}
-                  className="seller-action-btn seller-action-btn--primary seller-action-btn--full"
+                  className="seller-action-btn seller-action-btn--primary seller-action-btn--full py-3"
                 >
                   {submittingQuote ? "Sending…" : "Send Estimate"}
                 </button>

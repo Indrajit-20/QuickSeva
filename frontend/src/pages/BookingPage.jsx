@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+﻿import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import apiClient from "../api/axiosConfig";
@@ -102,10 +102,10 @@ function buildScheduledAt(date, slot) {
 
 function isSlotInPast(date, slot) {
   if (!date || !slot) return false;
-  
+
   const parts = date.split("-");
   if (parts.length !== 3) return false;
-  
+
   let day, month, year;
   if (parts[0].length === 2) {
     day = parseInt(parts[0], 10);
@@ -129,7 +129,7 @@ function isSlotInPast(date, slot) {
 
   const slotDate = new Date(year, month, day, hours, minutes, 0, 0);
   const now = new Date();
-  
+
   return slotDate < now;
 }
 
@@ -180,7 +180,7 @@ export default function BookingPage() {
   const [bookingLoading, setBookingLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("online");
-  
+
   // Custom Invoice Modal state
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
 
@@ -491,7 +491,7 @@ export default function BookingPage() {
             Booking Confirmed!
           </h1>
           <p className="mt-2 text-slate-500 text-sm">Your service request has been sent to the partner.</p>
-          
+
           <div className="mt-6 space-y-3.5 rounded-2xl border border-slate-100 bg-slate-50 p-5 text-left text-sm text-slate-700">
             <p className="flex justify-between border-b border-slate-200/60 pb-2">
               <span className="font-semibold text-slate-500">Booking ID:</span>
@@ -537,7 +537,7 @@ export default function BookingPage() {
   return (
     <main className="min-h-screen bg-slate-50 py-10 px-4 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-xl space-y-6">
-        
+
         {/* ── 1. Provider Profile Card (Mehta home painters...) ── */}
         <section className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm relative overflow-hidden transition hover:shadow-md">
           <div className="flex items-start gap-4">
@@ -579,7 +579,7 @@ export default function BookingPage() {
                 Selected
               </span>
             </div>
-            
+
             <div className="border-t border-slate-100 pt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-left">
               <div className="text-xs text-slate-500">
                 {selectedServiceState?.price_type === "negotiable" ? (
@@ -659,13 +659,12 @@ export default function BookingPage() {
                       type="button"
                       disabled={disabled}
                       onClick={() => updateField("timeSlot", slot)}
-                      className={`rounded-lg border px-2.5 py-1.5 text-xs font-bold transition-all duration-200 text-center ${
-                        disabled
+                      className={`rounded-lg border px-2.5 py-1.5 text-xs font-bold transition-all duration-200 text-center ${disabled
                           ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed line-through opacity-50"
                           : active
-                          ? "bg-blue-600 border-blue-600 text-white shadow-sm cursor-pointer active:scale-95"
-                          : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 cursor-pointer active:scale-95"
-                      }`}
+                            ? "bg-blue-600 border-blue-600 text-white shadow-sm cursor-pointer active:scale-95"
+                            : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 cursor-pointer active:scale-95"
+                        }`}
                     >
                       {slot}
                     </button>
@@ -747,7 +746,7 @@ export default function BookingPage() {
           {/* ── 4. How this booking works ── */}
           <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
             <h2 className="text-base font-bold text-slate-800 tracking-tight text-left">How this booking works</h2>
-            
+
             <div className="space-y-4 text-left">
               <div className="flex gap-3">
                 <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white mt-0.5">
@@ -830,11 +829,10 @@ export default function BookingPage() {
                     key={pm.value}
                     type="button"
                     onClick={() => setPaymentMethod(pm.value)}
-                    className={`rounded-xl border p-3 text-left transition duration-200 active:scale-98 flex items-start gap-2.5 cursor-pointer hover:shadow-xs ${
-                      active
+                    className={`rounded-xl border p-3 text-left transition duration-200 active:scale-98 flex items-start gap-2.5 cursor-pointer hover:shadow-xs ${active
                         ? "bg-blue-50 border-blue-400 shadow-xs text-blue-700"
                         : "border-slate-200 bg-white hover:border-slate-300"
-                    }`}
+                      }`}
                   >
                     <span className="text-lg">{pm.icon}</span>
                     <div className="flex-1 space-y-0.5">
@@ -917,7 +915,7 @@ export default function BookingPage() {
               <h2 className="text-lg font-bold text-slate-800">
                 Invoice Preview / पक्का बिल (रसीद)
               </h2>
-              <button 
+              <button
                 onClick={() => setShowInvoiceModal(false)}
                 className="text-slate-400 hover:text-slate-600 text-lg font-bold cursor-pointer"
               >

@@ -506,6 +506,8 @@ exports.submitQuotation = async (req, res) => {
       return errorRes(res, "Discount cannot exceed the sum of service charge and parts cost", 400);
     }
 
+    const subtotal = sCharge + pCost - disc;
+
     const feeModel = await getSystemSetting("platform_fee_model", "seller");
     const feePercentage = parseFloat(await getSystemSetting("platform_fee_percentage", "5.00"));
 
