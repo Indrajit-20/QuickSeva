@@ -90,7 +90,7 @@ export default function SellerWallet() {
 
       {/* ── Page Header ── */}
       <div>
-        <h1 className="seller-page-title">Wallet</h1>
+        <h1 className="seller-page-title">Lead Credits</h1>
         <p className="seller-page-subtitle">Manage your search credits / सर्च क्रेडिट प्रबंधित करें</p>
       </div>
 
@@ -106,9 +106,9 @@ export default function SellerWallet() {
               <Wallet size={24} />
             </div>
             <div>
-              <p style={{ fontSize: 12, fontWeight: 600, opacity: 0.75 }}>Available Balance</p>
+              <p style={{ fontSize: 12, fontWeight: 600, opacity: 0.75 }}>Available Credits</p>
               <p style={{ fontSize: 36, fontWeight: 900, letterSpacing: '-0.02em', lineHeight: 1 }}>
-                ₹{balance}
+                {balance} Credits
               </p>
             </div>
           </div>
@@ -127,7 +127,7 @@ export default function SellerWallet() {
               }}
               className="active:scale-95"
             >
-              <Plus size={18} /> Add Funds
+              <Plus size={18} /> Buy Credits
             </button>
             <div style={{
               padding: '14px 16px', borderRadius: 14,
@@ -231,7 +231,7 @@ export default function SellerWallet() {
                       </div>
                     </div>
                     <div className={`seller-tx-amount ${isCredit ? 'seller-tx-amount--credit' : 'seller-tx-amount--debit'}`}>
-                      {isCredit ? "+" : "-"}₹{Number(tx.amount || 0)}
+                      {isCredit ? "+" : "-"}{Number(tx.amount || 0)} Credits
                     </div>
                   </div>
                 );
@@ -245,7 +245,7 @@ export default function SellerWallet() {
         open={rechargeOpen}
         onClose={() => setRechargeOpen(false)}
         prefillAmount={100}
-        successMessage={"₹X added! You can now search again."}
+        successMessage={"Credits added successfully!"}
         continueButtonLabel={"Done"}
         onSuccess={() => {
           refreshWallet();

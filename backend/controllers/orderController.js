@@ -1,6 +1,5 @@
 const OrderModel = require("../models/orderModel");
 const SellerModel = require("../models/sellerModel");
-const WalletModel = require("../models/walletModel");
 const { pool } = require("../config/db");
 const {
   successRes,
@@ -34,6 +33,10 @@ exports.placeOrder = async (req, res) => {
       scheduled_at,
       notes,
     } = req.body;
+
+    if (payment_method === "wallet") {
+      return errorRes(res, "Wallet payments are not supported for bookings", 400);
+    }
 
     const seller = await SellerModel.findById(seller_id);
     if (!seller) return errorRes(res, "Seller not found", 404);
@@ -101,17 +104,6 @@ exports.placeOrder = async (req, res) => {
 
     const order_number = generateOrderNumber();
 
-    // If wallet payment, debit Stage 1 amount immediately
-    if (payment_method === "wallet") {
-      await WalletModel.debit(
-        req.user.id,
-        total_stage_1.toFixed(2),
-        "order",
-        order_number,
-        `Visiting charge for order ${order_number}`,
-      );
-    }
-
     const orderId = await OrderModel.create({
       order_number,
       buyer_id: req.user.id,
@@ -127,10 +119,10 @@ exports.placeOrder = async (req, res) => {
       notes,
       visiting_charge_amount: visiting_charge.toFixed(2),
       visiting_platform_fee: visiting_platform_fee.toFixed(2),
-      visiting_payment_status: (payment_method === "wallet" || payment_method === "online") ? "paid" : "pending",
+      visiting_payment_status: (payment_method === "online") ? "paid" : "pending",
     });
 
-    if (payment_method === "wallet" || payment_method === "online") {
+    if (payment_method === "online") {
       await OrderModel.updatePaymentStatus(orderId, "paid");
       // For immediate verification, if paid, also auto-accept or transition status to accepted
       await OrderModel.updateStatus(orderId, "accepted");
@@ -156,9 +148,6 @@ exports.placeOrder = async (req, res) => {
     return successRes(res, { order }, "Order placed successfully", 201);
   } catch (err) {
     console.error("Place order error:", err.message);
-    if (err.message === "Insufficient wallet balance") {
-      return errorRes(res, "Insufficient wallet balance", 400);
-    }
     return errorRes(res, "Failed to place order");
   }
 };
@@ -292,32 +281,6 @@ exports.completeOrder = async (req, res) => {
       completed_at: new Date(),
     });
 
-    // Credit seller wallet (amount minus platform fee) if not cash
-    if (order.payment_method !== "cash") {
-      const feeModel = await getSystemSetting("platform_fee_model", "seller");
-      
-      const visiting_charge = parseFloat(order.visiting_charge_amount || 0);
-      const service_charge = parseFloat(order.service_charge_amount || 0);
-      const parts_cost = parseFloat(order.parts_cost_amount || 0);
-      const discount = parseFloat(order.discount_amount || 0);
-
-      const sellerEarnings = visiting_charge + service_charge + parts_cost - discount;
-      let sellerAmount = sellerEarnings;
-
-      if (feeModel === "seller") {
-        const visiting_fee = parseFloat(order.visiting_platform_fee || 0);
-        const final_fee = parseFloat(order.final_platform_fee || 0);
-        sellerAmount = sellerEarnings - (visiting_fee + final_fee);
-      }
-
-      await WalletModel.credit(
-        seller.user_id,
-        sellerAmount.toFixed(2),
-        "order",
-        order.order_number,
-        `Payment for order #${order.order_number}`,
-      );
-    }
 
     // Update seller order count
     await pool.query(
@@ -379,73 +342,34 @@ exports.cancelOrder = async (req, res) => {
     let refundAmount = 0;
     let isLateCancellation = false;
 
-    // Refund wallet if paid via wallet
-    if (order.payment_method === "wallet") {
-      const feeModel = await getSystemSetting("platform_fee_model", "seller");
+    // Check if buyer cancelled within 2 hours of scheduled time
+    if (isBuyer && order.scheduled_at) {
+      const scheduledTime = new Date(order.scheduled_at).getTime();
+      const currentTime = Date.now();
+      isLateCancellation = (scheduledTime - currentTime) < 2 * 60 * 60 * 1000;
+    }
 
-      // Check if buyer cancelled within 2 hours of scheduled time
-      if (isBuyer) {
-        const scheduledTime = new Date(order.scheduled_at).getTime();
-        const currentTime = Date.now();
-        isLateCancellation = (scheduledTime - currentTime) < 2 * 60 * 60 * 1000;
-      }
+    if (order.payment_method === "online") {
+      const feeModel = await getSystemSetting("platform_fee_model", "seller");
 
       // Only refund visiting charge if cancelled before provider visited (i.e. status is pending or accepted)
       if (order.visiting_payment_status === "paid" && ["pending", "accepted"].includes(order.status)) {
-        if (isLateCancellation) {
-          // Late cancellation by buyer: no refund to buyer.
-          // Instead, credit the visiting charge to the seller as compensation.
-          const [sellerUserRows] = await pool.query("SELECT user_id FROM sellers WHERE id = ?", [order.seller_id]);
-          const sellerUserId = sellerUserRows[0]?.user_id;
-          if (sellerUserId) {
-            const visiting_charge = parseFloat(order.visiting_charge_amount || 0);
-            const visiting_fee = parseFloat(order.visiting_platform_fee || 0);
-            const sellerPayout = feeModel === "buyer" ? visiting_charge : (visiting_charge - visiting_fee);
-
-            if (sellerPayout > 0) {
-              await WalletModel.credit(
-                sellerUserId,
-                sellerPayout.toFixed(2),
-                "cancellation_compensation",
-                order.order_number,
-                `Compensation for late cancellation of order #${order.order_number}`,
-              );
-            }
-          }
-        } else {
-          // Normal cancellation (early buyer cancellation or any seller cancellation): full refund
+        if (!isLateCancellation) {
           const visiting_charge = parseFloat(order.visiting_charge_amount || 0);
           const visiting_fee = parseFloat(order.visiting_platform_fee || 0);
           refundAmount += visiting_charge + (feeModel === "buyer" ? visiting_fee : 0);
+          await OrderModel.updatePaymentStatus(req.params.id, "refunded");
         }
       }
 
       // If cancelled after provider visited (i.e. status is in_progress or quoted)
       if (order.visiting_payment_status === "paid" && ["in_progress", "quoted"].includes(order.status)) {
-        if (isBuyer) {
-          // Buyer cancelled/rejected after visit: credit visiting charge to seller as payout for completed inspection
-          const [sellerUserRows] = await pool.query("SELECT user_id FROM sellers WHERE id = ?", [order.seller_id]);
-          const sellerUserId = sellerUserRows[0]?.user_id;
-          if (sellerUserId) {
-            const visiting_charge = parseFloat(order.visiting_charge_amount || 0);
-            const visiting_fee = parseFloat(order.visiting_platform_fee || 0);
-            const sellerPayout = feeModel === "buyer" ? visiting_charge : (visiting_charge - visiting_fee);
-
-            if (sellerPayout > 0) {
-              await WalletModel.credit(
-                sellerUserId,
-                sellerPayout.toFixed(2),
-                "visiting_charge_payout",
-                order.order_number,
-                `Visiting charge payout for completed inspection of order #${order.order_number}`,
-              );
-            }
-          }
-        } else {
-          // Seller cancelled after visit: since seller backed out, refund visiting charge to buyer
+        if (!isBuyer) {
+          // Seller cancelled after visit: refund visiting charge to buyer
           const visiting_charge = parseFloat(order.visiting_charge_amount || 0);
           const visiting_fee = parseFloat(order.visiting_platform_fee || 0);
           refundAmount += visiting_charge + (feeModel === "buyer" ? visiting_fee : 0);
+          await OrderModel.updatePaymentStatus(req.params.id, "refunded");
         }
       }
 
@@ -455,17 +379,7 @@ exports.cancelOrder = async (req, res) => {
         const discount = parseFloat(order.discount_amount || 0);
         const final_fee = parseFloat(order.final_platform_fee || 0);
         refundAmount += (service_charge + parts_cost - discount) + (feeModel === "buyer" ? final_fee : 0);
-      }
-
-      if (refundAmount > 0) {
-        await WalletModel.credit(
-          order.buyer_id,
-          refundAmount.toFixed(2),
-          "refund",
-          order.order_number,
-          `Refund for cancelled order #${order.order_number}`,
-        );
-        await OrderModel.updatePaymentStatus(req.params.id, "refunded");
+        await pool.query("UPDATE orders SET final_payment_status = 'refunded' WHERE id = ?", [order.id]);
       }
     }
 
@@ -484,8 +398,8 @@ exports.cancelOrder = async (req, res) => {
     if (isBuyer) {
       // 1. Notify Seller
       let sellerMessage = `Order #${order.order_number} has been cancelled by the customer. Reason: "${displayReason}".`;
-      if (isLateCancellation) {
-        sellerMessage += ` You have been credited compensation due to late cancellation.`;
+      if (isLateCancellation && order.payment_method === "online") {
+        sellerMessage += ` Customer cancelled late, payment has been retained and will be settled to you directly.`;
       }
       if (sellerUserId) {
         await pool.query(
@@ -497,8 +411,8 @@ exports.cancelOrder = async (req, res) => {
       // 2. Notify Buyer (Confirming cancellation + refund status)
       let buyerMessage = `Your booking #${order.order_number} has been cancelled successfully.`;
       if (refundAmount > 0) {
-        buyerMessage += ` Refund of ₹${refundAmount.toFixed(2)} has been credited to your wallet.`;
-      } else if (order.payment_method === "wallet" && isLateCancellation) {
+        buyerMessage += ` Refund of ₹${refundAmount.toFixed(2)} has been initiated directly to your bank account/UPI via Razorpay. It will reflect in 5-7 business days.`;
+      } else if (order.payment_method === "online" && isLateCancellation) {
         buyerMessage += ` Since the booking was cancelled less than 2 hours before the schedule, the visiting charge of ₹${parseFloat(order.visiting_charge_amount || 0).toFixed(2)} was not refunded.`;
       }
       await pool.query(
@@ -510,7 +424,7 @@ exports.cancelOrder = async (req, res) => {
       // 1. Notify Buyer
       let buyerMessage = `Order #${order.order_number} has been cancelled by the service provider. Reason: "${displayReason}".`;
       if (refundAmount > 0) {
-        buyerMessage += ` A full refund of ₹${refundAmount.toFixed(2)} has been credited to your wallet.`;
+        buyerMessage += ` A full refund of ₹${refundAmount.toFixed(2)} has been initiated directly to your bank account/UPI via Razorpay. It will reflect in 5-7 business days.`;
       }
       await pool.query(
         `INSERT INTO notifications (user_id, title, message, type, ref_id) VALUES (?, ?, ?, 'order', ?)`,
@@ -625,18 +539,7 @@ exports.approveQuotation = async (req, res) => {
     const subtotal = parseFloat(order.service_charge_amount || 0) + parseFloat(order.parts_cost_amount || 0) - parseFloat(order.discount_amount || 0);
     const remaining = subtotal; // No platform fee on final bill (Stage 2)
 
-    const final_pay_status = (order.payment_method === "wallet" || order.payment_method === "online") ? "paid" : "pending";
-
-    // If wallet payment, debit remaining amount immediately
-    if (order.payment_method === "wallet") {
-      await WalletModel.debit(
-        req.user.id,
-        remaining.toFixed(2),
-        "order",
-        order.order_number,
-        `Final payment for order ${order.order_number}`,
-      );
-    }
+    const final_pay_status = (order.payment_method === "online") ? "paid" : "pending";
 
     const completion_otp_code = order.payment_method === "cash"
       ? Math.floor(1000 + Math.random() * 9000).toString()
@@ -678,9 +581,6 @@ exports.approveQuotation = async (req, res) => {
     return successRes(res, null, "Quotation approved and paid");
   } catch (err) {
     console.error("Approve quotation error:", err);
-    if (err.message === "Insufficient wallet balance") {
-      return errorRes(res, "Insufficient wallet balance", 400);
-    }
     return errorRes(res, "Failed to approve quotation");
   }
 };

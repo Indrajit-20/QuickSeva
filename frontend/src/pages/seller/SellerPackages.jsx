@@ -18,7 +18,8 @@ import {
   getUpgradedFeatures,
   isPremiumActive,
 } from "../../utils/premium";
-import { deductPackagePurchase } from "../../utils/wallet";
+import { loadRazorpayScript } from "../../utils/razorpayLoader";
+import { createPaymentOrderApi, verifyPaymentApi } from "../../api/walletApi";
 import AddFundsModal from "../../components/AddFundsModal";
 import { useWallet } from "../../context/WalletContext";
 import apiClient from "../../api/axiosConfig";
@@ -274,11 +275,10 @@ export default function SellerPackages() {
       type,
       expiresAt,
       expiryLabel: formatDate(expiresAt),
-      balanceAfter: walletBalance - selectedPlan.price,
       forfeitedDays:
         type === "upgrade" || type === "downgrade" ? remainingDays : 0,
     };
-  }, [activePremium, remainingDays, selectedPlan, walletBalance]);
+  }, [activePremium, remainingDays, selectedPlan]);
 
   const openConfirmation = (plan) => {
     setToast("");
@@ -335,76 +335,131 @@ export default function SellerPackages() {
   const handleConfirmPurchase = useCallback(async () => {
     if (!selectedPlan || !purchasePreview || processing) return;
 
-    // If wallet is insufficient, do not allow deduction flow here.
-    if (purchasePreview.balanceAfter < 0) return;
-
     setProcessing(true);
 
     try {
-      const resp = await apiClient.post("/sellers/packages/purchase", {
-        planId: selectedPlan.id,
-      });
-
-      if (resp.data?.success) {
-        const { premium: updatedPremium, walletBalance: newWalletBalance, transaction } = resp.data.data;
-        
-        const isPremiumActiveFlag = updatedPremium.is_premium === 1 || updatedPremium.is_premium === true;
-        setPremium({
-          plan: updatedPremium.plan === "premium" ? "pro" : updatedPremium.plan,
-          expiresAt: updatedPremium.premium_expires_at,
-          isPremium: isPremiumActiveFlag
-        });
-
-        // Write to localStorage for immediate availability in other dashboard pages
-        localStorage.setItem(
-          "sellerPremium",
-          JSON.stringify({
-            plan: updatedPremium.plan === "premium" ? "pro" : updatedPremium.plan,
-            expiresAt: updatedPremium.premium_expires_at,
-            isPremium: isPremiumActiveFlag,
-          })
-        );
-
-        // Update the global auth user context
-        if (typeof updateUser === "function") {
-          updateUser({
-            is_premium: isPremiumActiveFlag ? 1 : 0,
-            plan: updatedPremium.plan,
-            premium_expires_at: updatedPremium.premium_expires_at,
-          });
-        }
-
-        // Add history entry
-        const historyEntry = {
-          receiptId: transaction.id || `QS-PKG-${Date.now()}`,
-          plan: updatedPremium.plan,
-          price: selectedPlan.price,
-          purchasedAt: transaction.created_at || new Date().toISOString(),
-          expiresAt: updatedPremium.premium_expires_at,
-          type: purchasePreview.type,
-          walletTransactionId: transaction.id,
-          balanceAfter: newWalletBalance,
-        };
-        setHistory(prev => [historyEntry, ...prev]);
-        
-        await refreshWallet();
-        setSelectedPlan(null);
-        setToast(
-          `✅ ${selectedPlan.name} plan active until ${formatDate(updatedPremium.premium_expires_at)}. Wallet: Rs ${newWalletBalance}`,
-        );
-      } else {
-        setToast(resp.data?.message || "Failed to purchase plan");
+      // 1. Load Razorpay script
+      const isLoaded = await loadRazorpayScript();
+      if (!isLoaded) {
+        setToast("❌ Razorpay SDK failed to load. Please check your internet connection.");
+        setProcessing(false);
+        return;
       }
+
+      // 2. Create payment order on backend
+      const orderRes = await createPaymentOrderApi(selectedPlan.price, "premium_package", selectedPlan.id);
+      if (!orderRes || !orderRes.success) {
+        setToast(orderRes?.message || "❌ Failed to create payment order");
+        setProcessing(false);
+        return;
+      }
+
+      const orderData = orderRes.data;
+
+      // 3. Launch Razorpay modal
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: "QuickSeva",
+        description: `Premium Package: ${selectedPlan.name} Plan`,
+        order_id: orderData.id,
+        handler: async function (response) {
+          try {
+            setProcessing(true);
+            // 4. Verify payment on backend
+            const verifyRes = await verifyPaymentApi({
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_signature: response.razorpay_signature,
+              purpose: "premium_package",
+              planId: selectedPlan.id,
+              amount: selectedPlan.price,
+            });
+
+            if (verifyRes && verifyRes.success) {
+              const { premium: updatedPremium, walletBalance: newWalletBalance, transaction } = verifyRes.data;
+              
+              const isPremiumActiveFlag = updatedPremium.is_premium === 1 || updatedPremium.is_premium === true;
+              setPremium({
+                plan: updatedPremium.plan === "premium" ? "pro" : updatedPremium.plan,
+                expiresAt: updatedPremium.premium_expires_at,
+                isPremium: isPremiumActiveFlag
+              });
+
+              // Write to localStorage for immediate availability in other dashboard pages
+              localStorage.setItem(
+                "sellerPremium",
+                JSON.stringify({
+                  plan: updatedPremium.plan === "premium" ? "pro" : updatedPremium.plan,
+                  expiresAt: updatedPremium.premium_expires_at,
+                  isPremium: isPremiumActiveFlag,
+                })
+              );
+
+              // Update global auth user context
+              if (typeof updateUser === "function") {
+                updateUser({
+                  is_premium: isPremiumActiveFlag ? 1 : 0,
+                  plan: updatedPremium.plan,
+                  premium_expires_at: updatedPremium.premium_expires_at,
+                });
+              }
+
+              // Add history entry
+              const historyEntry = {
+                receiptId: transaction.id || `QS-PKG-${Date.now()}`,
+                plan: updatedPremium.plan,
+                price: selectedPlan.price,
+                purchasedAt: transaction.created_at || new Date().toISOString(),
+                expiresAt: updatedPremium.premium_expires_at,
+                type: purchasePreview.type,
+                walletTransactionId: transaction.id,
+                balanceAfter: newWalletBalance,
+              };
+              setHistory(prev => [historyEntry, ...prev]);
+              
+              await refreshWallet();
+              setSelectedPlan(null);
+              setToast(
+                `✅ ${selectedPlan.name} plan active until ${formatDate(updatedPremium.premium_expires_at)}.`,
+              );
+            } else {
+              setToast(verifyRes?.message || "❌ Payment verification failed");
+            }
+          } catch (err) {
+            console.error("Verification error:", err);
+            setToast("❌ Error verifying payment");
+          } finally {
+            setProcessing(false);
+          }
+        },
+        prefill: {
+          name: user?.name || "",
+          email: user?.email || "",
+          contact: user?.phone || "",
+        },
+        theme: {
+          color: "#7C3AED", // Pro/Premium Violet brand color
+        },
+        modal: {
+          ondismiss: function () {
+            setProcessing(false);
+          },
+        },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
     } catch (err) {
-      console.error("Error purchasing plan:", err);
-      setToast(err.response?.data?.message || "Error processing package purchase");
-    } finally {
+      console.error("Razorpay purchase error:", err);
+      setToast(err.response?.data?.message || "❌ Error initiating package purchase");
       setProcessing(false);
     }
   }, [selectedPlan, purchasePreview, processing, refreshWallet, updateUser]);
 
-  // Flag for UI: whether current wallet balance can cover selected plan price
-  const insufficient = purchasePreview?.balanceAfter < 0;
+  // Flag for UI: no longer using wallet balance check for packages
+  const insufficient = false;
 
   if (loadingProfile) {
     return (
@@ -419,7 +474,7 @@ export default function SellerPackages() {
         <div>
           <h1 className="seller-page-title">Premium Packages</h1>
           <p className="seller-page-subtitle">
-            Buy a package from your wallet to grow your QuickSeva business / अपना व्यवसाय बढ़ाएं
+            Buy a package to grow your QuickSeva business / अपना व्यवसाय बढ़ाएं
           </p>
         </div>
 
@@ -429,9 +484,9 @@ export default function SellerPackages() {
           </div>
           <div>
             <p style={{ fontSize: 11, fontWeight: 700, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Wallet Balance
+              Lead Credits
             </p>
-            <p style={{ fontSize: 18, fontWeight: 800, color: '#1e293b' }}>₹{walletBalance}</p>
+            <p style={{ fontSize: 18, fontWeight: 800, color: '#1e293b' }}>{walletBalance} Credits</p>
           </div>
         </div>
       </div>
@@ -655,12 +710,12 @@ export default function SellerPackages() {
       {invoiceOpen && invoice && (
         <div
           className="seller-bottom-sheet-overlay"
+          style={{ alignItems: "center", padding: "16px" }}
           role="dialog"
           aria-modal="true"
           onClick={(e) => { if (e.target === e.currentTarget) closeInvoice(); }}
         >
-          <div className="seller-bottom-sheet" style={{ maxWidth: 500 }}>
-            <div className="seller-bottom-sheet-handle" />
+          <div className="seller-bottom-sheet" style={{ maxWidth: 500, borderRadius: "24px", paddingBottom: "24px" }}>
             <div className="flex items-center justify-between" style={{ marginBottom: 14 }}>
               <h3 style={{ fontSize: 18, fontWeight: 800, color: '#0f172a' }}>Invoice Details</h3>
               <button
@@ -765,12 +820,12 @@ export default function SellerPackages() {
       {selectedPlan && purchasePreview && (
         <div
           className="seller-bottom-sheet-overlay"
+          style={{ alignItems: "center", padding: "16px" }}
           role="dialog"
           aria-modal="true"
           onClick={(e) => { if (e.target === e.currentTarget && !processing) closeConfirmation(); }}
         >
-          <div className="seller-bottom-sheet" style={{ maxWidth: 450 }}>
-            <div className="seller-bottom-sheet-handle" />
+          <div className="seller-bottom-sheet" style={{ maxWidth: 450, borderRadius: "24px", paddingBottom: "24px" }}>
 
             <div className="flex items-center justify-between" style={{ marginBottom: 14 }}>
               <div className="flex items-center gap-2 text-amber-600">
@@ -823,19 +878,10 @@ export default function SellerPackages() {
                 <span style={{ fontWeight: 800, color: '#1e293b' }}>₹{selectedPlan.price}</span>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span>Current wallet balance</span>
-                <span style={{ fontWeight: 700, color: '#1e293b' }}>₹{walletBalance}</span>
+                <span>Payment method</span>
+                <span style={{ fontWeight: 700, color: '#2563eb' }}>Razorpay Online</span>
               </div>
               <div className="flex items-center justify-between gap-4" style={{ borderTop: '1px dashed #cbd5e1', paddingTop: 10 }}>
-                <span>Balance after debit</span>
-                <span
-                  style={{ fontWeight: 800 }}
-                  className={purchasePreview.balanceAfter < 0 ? "text-red-700" : "text-emerald-700"}
-                >
-                  ₹{purchasePreview.balanceAfter}
-                </span>
-              </div>
-              <div className="flex items-center justify-between gap-4">
                 <span>New Expiry</span>
                 <span style={{ fontWeight: 700, color: '#1e293b' }}>
                   {purchasePreview.expiryLabel}
@@ -853,27 +899,15 @@ export default function SellerPackages() {
                 Cancel
               </button>
 
-              {insufficient ? (
-                <button
-                  type="button"
-                  onClick={openAddFundsFromConfirmation}
-                  disabled={processing}
-                  className="seller-action-btn seller-action-btn--primary seller-action-btn--full"
-                >
-                  {processing && <Loader2 size={16} className="animate-spin" />}
-                  + Add Money
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleConfirmPurchase}
-                  disabled={processing || purchasePreview.balanceAfter < 0}
-                  className="seller-action-btn seller-action-btn--success seller-action-btn--full"
-                >
-                  {processing && <Loader2 size={16} className="animate-spin" />}
-                  Confirm ✓
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={handleConfirmPurchase}
+                disabled={processing}
+                className="seller-action-btn seller-action-btn--success seller-action-btn--full"
+              >
+                {processing && <Loader2 size={16} className="animate-spin" />}
+                Pay & Activate ✓
+              </button>
             </div>
           </div>
         </div>

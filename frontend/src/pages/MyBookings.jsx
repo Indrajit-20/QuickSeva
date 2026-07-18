@@ -662,8 +662,7 @@ export default function MyBookings() {
                       <span className="block text-[10px] text-slate-500 uppercase font-bold tracking-wider">Select Payment Mode</span>
                       {[
                         { id: "upi_qr", icon: "📱", name: "UPI QR (GPay / PhonePe / Paytm)" },
-                        { id: "card_info", icon: "💳", name: "Debit / Credit Card" },
-                        { id: "wallet_pay", icon: "💼", name: "Wallet Balance (Auto-Debit)" }
+                        { id: "card_info", icon: "💳", name: "Debit / Credit Card" }
                       ].map((opt) => (
                         <button
                           key={opt.id}
@@ -770,34 +769,7 @@ export default function MyBookings() {
                   </div>
                 )}
 
-                {gatewaySubView === "wallet_pay" && (
-                  <div className="space-y-4">
-                    <span className="block text-[10px] text-slate-500 uppercase font-bold tracking-wider">Wallet Balance Payment</span>
-                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex justify-between items-center">
-                      <div>
-                        <span className="block text-[10px] text-slate-500">Your Current Balance</span>
-                        <span className="text-sm font-bold text-slate-800 font-mono">₹{Number(user?.wallet_balance || 0).toLocaleString("en-IN")}</span>
-                      </div>
-                      <span className="text-lg">💼</span>
-                    </div>
-                    <div className="flex gap-2 pt-2">
-                      <button
-                        type="button"
-                        onClick={() => setGatewaySubView("select")}
-                        className="flex-1 py-2.5 text-xs font-bold bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl active:scale-95 transition cursor-pointer"
-                      >
-                        Back / पीछे
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => executeApproveQuotation(activeBookingForPayment.id)}
-                        className="flex-1 py-2.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl active:scale-95 transition cursor-pointer"
-                      >
-                        Pay via Wallet
-                      </button>
-                    </div>
-                  </div>
-                )}
+
               </div>
             )}
 

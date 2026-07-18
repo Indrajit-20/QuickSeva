@@ -27,7 +27,7 @@ exports.getTransactions = async (req, res) => {
 // Top-up wallet (admin grants or via payment gateway callback)
 exports.topUpWallet = async (req, res) => {
   try {
-    const { amount, description = "Wallet top-up" } = req.body;
+    const { amount, description = "Credits top-up" } = req.body;
 
     if (!amount || parseFloat(amount) <= 0) {
       return errorRes(res, "Invalid amount", 400);
@@ -37,24 +37,24 @@ exports.topUpWallet = async (req, res) => {
       req.user.id, amount, "topup", null, description
     );
 
-    return successRes(res, { balance }, "Wallet topped up successfully");
+    return successRes(res, { balance }, "Credits topped up successfully");
   } catch (err) {
-    return errorRes(res, "Failed to top up wallet");
+    return errorRes(res, "Failed to top up credits");
   }
 };
 
 // Admin: Credit any user's wallet
 exports.adminCreditWallet = async (req, res) => {
   try {
-    const { user_id, amount, description = "Admin credit" } = req.body;
+    const { user_id, amount, description = "Admin credits grant" } = req.body;
 
     if (!amount || parseFloat(amount) <= 0) {
       return errorRes(res, "Invalid amount", 400);
     }
 
     const balance = await WalletModel.credit(user_id, amount, "bonus", null, description);
-    return successRes(res, { balance }, "Wallet credited");
+    return successRes(res, { balance }, "Credits granted successfully");
   } catch (err) {
-    return errorRes(res, "Failed to credit wallet");
+    return errorRes(res, "Failed to credit user balance");
   }
 };

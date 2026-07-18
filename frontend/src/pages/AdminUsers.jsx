@@ -167,7 +167,7 @@ const AdminUsers = () => {
                 <th className="px-6 py-4">Name / Info</th>
                 <th className="px-6 py-4">Contact</th>
                 <th className="px-6 py-4">Role</th>
-                <th className="px-6 py-4 text-right">Wallet Balance</th>
+                <th className="px-6 py-4 text-right">Lead Credits</th>
                 <th className="px-6 py-4 text-center">Status</th>
                 <th className="px-6 py-4 text-center">Actions</th>
               </tr>
@@ -222,11 +222,11 @@ const AdminUsers = () => {
                     {/* Wallet */}
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-1.5 font-bold text-slate-850 font-mono">
-                        <span>₹{parseFloat(user.wallet_balance).toFixed(2)}</span>
+                        <span>{parseFloat(user.wallet_balance).toFixed(0)} Credits</span>
                         <button
                           onClick={() => handleOpenWalletModal(user)}
                           className="p-1 hover:text-blue-600 text-slate-400 transition-colors cursor-pointer"
-                          title="Credit Wallet"
+                          title="Credit Lead Credits"
                         >
                           <PlusCircle size={14} />
                         </button>
@@ -273,10 +273,9 @@ const AdminUsers = () => {
       {showWalletModal && selectedUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
           <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl animate-fade-in text-slate-800">
-            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-              <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
-                <Wallet size={16} className="text-blue-600" />
-                <span>Credit Wallet Payout</span>
+            <div className="flex justify-between items-center pb-3 border-b border-slate-100 mb-4">
+              <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">
+                Credit Lead Credits
               </h3>
               <button
                 onClick={() => setShowWalletModal(false)}
@@ -288,7 +287,7 @@ const AdminUsers = () => {
 
             <div className="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-200 leading-normal">
               Account Name: <span className="text-slate-900 font-bold">{selectedUser.name}</span> <br />
-              Current Balance: <span className="text-blue-600 font-bold">₹{parseFloat(selectedUser.wallet_balance).toFixed(2)}</span>
+              Current Balance: <span className="text-blue-600 font-bold">{parseFloat(selectedUser.wallet_balance).toFixed(0)} Credits</span>
             </div>
 
             {walletError && (
@@ -305,20 +304,17 @@ const AdminUsers = () => {
 
             <form onSubmit={handleCreditWallet} className="space-y-4">
               <div>
-                <label className="block text-slate-600 text-xs font-bold uppercase tracking-wider mb-2">Credit Amount (INR)</label>
+                <label className="block text-slate-600 text-xs font-bold uppercase tracking-wider mb-2">Number of Credits</label>
                 <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 font-bold">
-                    ₹
-                  </span>
                   <input
                     type="number"
-                    step="0.01"
-                    placeholder="Enter amount, e.g. 500"
+                    step="1"
+                    placeholder="Enter credits count, e.g. 100"
                     value={creditAmount}
                     onChange={(e) => setCreditAmount(e.target.value)}
                     required
                     disabled={walletLoading}
-                    className="w-full pl-7 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 text-xs font-semibold shadow-xs"
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 text-xs font-semibold shadow-xs"
                   />
                 </div>
               </div>

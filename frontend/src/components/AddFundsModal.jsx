@@ -2,6 +2,9 @@ import React, { useMemo, useState } from "react";
 import { Loader2, Plus, X } from "lucide-react";
 
 import { useWallet } from "../context/WalletContext";
+import { useAuth } from "../context/AuthContext";
+import { loadRazorpayScript } from "../utils/razorpayLoader";
+import { createPaymentOrderApi, verifyPaymentApi } from "../api/walletApi";
 
 export default function AddFundsModal({
   open,
@@ -12,9 +15,9 @@ export default function AddFundsModal({
   continueButtonLabel = "Continue to Purchase",
   closeOnSuccess = false,
 }) {
-  const { walletBalance, addFundsToWallet } = useWallet();
+  const { walletBalance } = useWallet();
+  const { user } = useAuth();
 
-  const [activeTab, setActiveTab] = useState("upi");
   const [amountStr, setAmountStr] = useState(
     prefillAmount ? String(prefillAmount) : "",
   );
@@ -25,7 +28,6 @@ export default function AddFundsModal({
   React.useEffect(() => {
     if (!open) return;
     // reset derived state when (re)opening
-    setActiveTab("upi");
     setAmountStr(prefillAmount ? String(prefillAmount) : "");
     setProcessing(false);
     setPaidAmount(null);
@@ -38,31 +40,93 @@ export default function AddFundsModal({
 
   const isSuccess = paidAmount !== null;
 
-  const handleFakePay = () => {
+  const handleRealPay = async () => {
     if (processing) return;
     if (!amount || amount <= 0) return;
 
     setProcessing(true);
 
-    // Fake payment delay
-    window.setTimeout(async () => {
-      try {
-        const nextWallet = await addFundsToWallet(amount);
-        setPaidAmount(amount);
+    try {
+      // 1. Load Razorpay script
+      const isLoaded = await loadRazorpayScript();
+      if (!isLoaded) {
+        alert("Razorpay SDK failed to load. Please check your internet connection.");
         setProcessing(false);
-
-        if (typeof onSuccess === "function") {
-          onSuccess({ amount, walletBalance: nextWallet?.balance || 0 });
-        }
-
-        if (closeOnSuccess) {
-          // keep for completeness; default false so user clicks continue
-          onClose?.();
-        }
-      } catch (err) {
-        setProcessing(false);
+        return;
       }
-    }, 900);
+
+      // 2. Create order on backend
+      const orderRes = await createPaymentOrderApi(amount, "wallet_recharge");
+      if (!orderRes || !orderRes.success) {
+        alert(orderRes?.message || "Failed to create payment order");
+        setProcessing(false);
+        return;
+      }
+
+      const orderData = orderRes.data;
+
+      // 3. Open Razorpay Checkout Modal
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: "QuickSeva",
+        description: `Purchase of ${amount} Lead Credits`,
+        order_id: orderData.id,
+        handler: async function (response) {
+          try {
+            setProcessing(true);
+            // 4. Verify payment on backend
+            const verifyRes = await verifyPaymentApi({
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_signature: response.razorpay_signature,
+              purpose: "wallet_recharge",
+              amount: amount,
+            });
+
+            if (verifyRes && verifyRes.success) {
+              setPaidAmount(amount);
+              setProcessing(false);
+              // Trigger parent updates
+              if (typeof onSuccess === "function") {
+                onSuccess({ amount, walletBalance: verifyRes.data?.balance || 0 });
+              }
+              if (closeOnSuccess) {
+                onClose?.();
+              }
+            } else {
+              alert(verifyRes?.message || "Payment verification failed");
+              setProcessing(false);
+            }
+          } catch (err) {
+            console.error("Verification error:", err);
+            alert("Error verifying payment");
+            setProcessing(false);
+          }
+        },
+        prefill: {
+          name: user?.name || "",
+          email: user?.email || "",
+          contact: user?.phone || "",
+        },
+        theme: {
+          color: "#2563EB",
+        },
+        modal: {
+          ondismiss: function () {
+            setProcessing(false);
+          },
+        },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+    } catch (err) {
+      console.error("Razorpay error:", err);
+      alert(err.response?.data?.message || "Error initiating payment");
+      setProcessing(false);
+    }
   };
 
   if (!open) return null;
@@ -94,72 +158,40 @@ export default function AddFundsModal({
           <div className="text-left">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
               <div>
-                <h2 className="text-2xl font-bold text-slate-800">Add Funds</h2>
+                <h2 className="text-2xl font-bold text-slate-800">Buy Credits</h2>
                 <p className="mt-1 text-sm text-slate-500 font-semibold">
-                  Choose a payment method and add money to your wallet.
+                  Choose an amount of lead credits to buy (1 credit = ₹1).
                 </p>
               </div>
               <div className="flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3.5 py-2 self-start">
                 <Plus size={16} className="text-blue-600" />
                 <span className="text-sm font-bold text-blue-700">
-                  Wallet: ₹{walletBalance}
+                  Credits: {walletBalance}
                 </span>
               </div>
             </div>
 
-            <div className="mt-5 flex gap-2 rounded-xl border border-slate-200 bg-slate-50 p-1">
-              {[
-                { key: "upi", label: "UPI" },
-                { key: "card", label: "Card" },
-                { key: "net", label: "Net Banking" },
-              ].map((t) => (
-                <button
-                  key={t.key}
-                  type="button"
-                  onClick={() => setActiveTab(t.key)}
-                  className={`flex-1 rounded-lg px-3 py-2 text-sm font-bold transition cursor-pointer ${
-                    activeTab === t.key
-                      ? "bg-white text-blue-600 shadow-xs border border-slate-200/50"
-                      : "text-slate-500 hover:text-slate-800"
-                  }`}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-
             <div className="mt-4">
               <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider">
-                Amount (₹)
+                Number of Credits
               </label>
               <input
                 value={amountStr}
                 onChange={(e) => setAmountStr(e.target.value)}
                 inputMode="numeric"
-                placeholder="Enter amount"
+                placeholder="Enter credit amount"
                 className={inputClass}
               />
-
-              <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-500 font-semibold">
-                Selected method:{" "}
-                <span className="font-bold text-slate-700 uppercase">
-                  {activeTab === "upi"
-                    ? "UPI"
-                    : activeTab === "card"
-                      ? "Card"
-                      : "Net Banking"}
-                </span>
-              </div>
             </div>
 
             <button
               type="button"
-              onClick={handleFakePay}
+              onClick={handleRealPay}
               disabled={processing || amount <= 0}
               className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-4 py-3 text-sm font-bold text-white transition disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer shadow-sm"
             >
               {processing && <Loader2 size={16} className="animate-spin" />}
-              {processing ? "Processing..." : `Pay ₹${amount || 0}`}
+              {processing ? "Processing..." : `Pay ₹${amount || 0} for Credits`}
             </button>
           </div>
         ) : (
@@ -170,11 +202,11 @@ export default function AddFundsModal({
 
             <h3 className="mt-4 text-xl font-bold text-slate-800">
               {successMessage ||
-                `₹${paidAmount} added! You can now purchase the plan.`}
+                `${paidAmount} Lead Credits added successfully!`}
             </h3>
 
             <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-500 font-semibold">
-              Wallet top-up completed successfully.
+              Lead credits purchased successfully.
             </div>
 
             <button

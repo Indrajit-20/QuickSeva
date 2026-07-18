@@ -2899,7 +2899,7 @@ span.qs-distance-badge {
 .seller-bottom-sheet-overlay {
   position: fixed;
   inset: 0;
-  z-index: 1100;
+  z-index: 10050;
   background: rgba(0, 0, 0, 0.45);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);

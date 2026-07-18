@@ -97,12 +97,17 @@ const WalletModel = {
       `SELECT wt.* FROM wallet_transactions wt
        JOIN wallets w ON wt.wallet_id = w.id
        WHERE w.user_id = ?
+         AND wt.source != 'package_purchase'
+         AND wt.description NOT LIKE '%Package%'
        ORDER BY wt.created_at DESC LIMIT ? OFFSET ?`,
       [user_id, limit, offset]
     );
     const [[{ total }]] = await pool.query(
       `SELECT COUNT(*) as total FROM wallet_transactions wt
-       JOIN wallets w ON wt.wallet_id = w.id WHERE w.user_id = ?`,
+       JOIN wallets w ON wt.wallet_id = w.id 
+       WHERE w.user_id = ?
+         AND wt.source != 'package_purchase'
+         AND wt.description NOT LIKE '%Package%'`,
       [user_id]
     );
     return { transactions: rows, total };

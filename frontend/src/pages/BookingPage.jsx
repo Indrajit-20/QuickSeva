@@ -177,14 +177,14 @@ export default function BookingPage() {
   };
   const [bookingLoading, setBookingLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("wallet");
+  const [paymentMethod, setPaymentMethod] = useState("online");
   
   // Custom Invoice & Fake Payment Gateway Modal states
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [showPaymentGateway, setShowPaymentGateway] = useState(false);
   const [paymentGatewayStatus, setPaymentGatewayStatus] = useState("idle"); // "idle", "processing", "success", "failed"
   const [gatewayError, setGatewayError] = useState("");
-  const [gatewaySubView, setGatewaySubView] = useState("select"); // "select", "upi_qr", "card_info", "wallet_pay"
+  const [gatewaySubView, setGatewaySubView] = useState("select"); // "select", "upi_qr", "card_info"
 
   const [formData, setFormData] = useState({
     service: selectedService?.name || selectedService?.title || "",
@@ -742,11 +742,11 @@ export default function BookingPage() {
             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
               {[
                 {
-                  value: "wallet",
-                  icon: "💼",
-                  title: "Pay Online (Wallet)",
-                  titleHi: "ऑनलाइन वॉलेट",
-                  desc: "Deduct from wallet later after work approval."
+                  value: "online",
+                  icon: "📱",
+                  title: "Pay Online (UPI / Card)",
+                  titleHi: "ऑनलाइन भुगतान",
+                  desc: "Pay directly online via secure gateway after service."
                 },
                 {
                   value: "cash",
@@ -989,8 +989,7 @@ export default function BookingPage() {
                       
                       {[
                         { id: "upi_qr", icon: "📱", name: "UPI QR (GPay / PhonePe / Paytm)", method: "online" },
-                        { id: "card_info", icon: "💳", name: "Debit / Credit Card", method: "online" },
-                        { id: "wallet_pay", icon: "💼", name: "Wallet Balance (Auto-Debit)", method: "wallet" }
+                        { id: "card_info", icon: "💳", name: "Debit / Credit Card", method: "online" }
                       ].map((opt) => (
                         <button
                           key={opt.id}
@@ -1104,42 +1103,7 @@ export default function BookingPage() {
                   </div>
                 )}
 
-                {gatewaySubView === "wallet_pay" && (
-                  <div className="space-y-4">
-                    <span className="block text-[10px] text-slate-500 uppercase font-bold tracking-wider text-left">Wallet Balance Payment</span>
-                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex justify-between items-center">
-                      <div>
-                        <span className="block text-[10px] text-slate-500">Your Current Balance</span>
-                        <span className="text-sm font-bold text-slate-800 font-mono">₹{Number(user?.wallet_balance || 0).toLocaleString("en-IN")}</span>
-                      </div>
-                      <span className="text-lg">💼</span>
-                    </div>
 
-                    {Number(user?.wallet_balance || 0) < totalPayable ? (
-                      <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-[10px] text-red-700 leading-normal font-semibold">
-                        ⚠️ Insufficient balance. Please use UPI QR or Card to pay directly, or add funds to your wallet first.
-                      </div>
-                    ) : null}
-
-                    <div className="flex gap-2 pt-2">
-                      <button
-                        type="button"
-                        onClick={() => setGatewaySubView("select")}
-                        className="flex-1 py-2.5 text-xs font-bold bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl active:scale-95 transition cursor-pointer text-center"
-                      >
-                        Back / पीछे
-                      </button>
-                      <button
-                        type="button"
-                        disabled={Number(user?.wallet_balance || 0) < totalPayable}
-                        onClick={() => handleSimulatedPayment(true)}
-                        className="flex-1 py-2.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl active:scale-95 transition cursor-pointer text-center disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Pay via Wallet
-                      </button>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
 
