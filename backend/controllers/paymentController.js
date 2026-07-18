@@ -4,14 +4,26 @@ const { pool } = require("../config/db");
 const WalletModel = require("../models/walletModel");
 const { successRes, errorRes } = require("../utils/helpers");
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
+let razorpay = null;
+if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
+  try {
+    razorpay = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET,
+    });
+  } catch (err) {
+    console.error("Razorpay SDK initialization failed:", err.message);
+  }
+} else {
+  console.warn("⚠️ Warning: RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET environment variable is missing. Razorpay payment functionality is disabled.");
+}
 
 // Create a Razorpay Order
 exports.createOrder = async (req, res) => {
   try {
+    if (!razorpay) {
+      return errorRes(res, "Razorpay payment gateway is not configured on this server.", 503);
+    }
     const { amount, purpose, planId } = req.body;
     if (!amount || parseFloat(amount) <= 0) {
       return errorRes(res, "Invalid amount", 400);
@@ -38,6 +50,9 @@ exports.createOrder = async (req, res) => {
 
 // Verify Payment Signature
 exports.verifyPayment = async (req, res) => {
+  if (!process.env.RAZORPAY_KEY_SECRET) {
+    return errorRes(res, "Razorpay payment gateway is not configured on this server.", 503);
+  }
   const conn = await pool.getConnection();
   try {
     const {
