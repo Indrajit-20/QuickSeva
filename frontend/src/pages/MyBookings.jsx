@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { buyerOrdersApi } from "../api/orderApi";
 import apiClient from "../api/axiosConfig";
 import { useAuth } from "../context/AuthContext";
+import { loadRazorpayScript } from "../utils/razorpayLoader";
+import { createPaymentOrderApi } from "../api/walletApi";
 
 const getImageUrl = (url) => {
   if (!url) return "";
@@ -36,11 +38,6 @@ export default function MyBookings() {
   const [error, setError] = useState(null);
   const [busyId, setBusyId] = useState(null);
 
-  // Simulated payment gateway states
-  const [showPaymentGateway, setShowPaymentGateway] = useState(false);
-  const [paymentGatewayStatus, setPaymentGatewayStatus] = useState("idle"); // "idle", "processing", "success", "failed"
-  const [gatewayError, setGatewayError] = useState("");
-  const [gatewaySubView, setGatewaySubView] = useState("select");
   const [activeBookingForPayment, setActiveBookingForPayment] = useState(null);
 
   const [showDisputeModal, setShowDisputeModal] = useState(false);
@@ -133,33 +130,101 @@ export default function MyBookings() {
     }
   };
 
-  const triggerApproveQuotation = (booking) => {
+  const triggerApproveQuotation = async (booking) => {
     setActiveBookingForPayment(booking);
+    const finalTotal = parseFloat(booking.service_charge_amount || 0) + parseFloat(booking.parts_cost_amount || 0) - parseFloat(booking.discount_amount || 0);
+
     if (booking.payment_method === "cash") {
       if (!window.confirm("Are you sure you want to approve this quotation? / क्या आप कोटेशन मंजूर करना चाहते हैं?")) return;
       executeApproveQuotation(booking.id);
     } else {
-      setGatewaySubView("select");
-      setGatewayError("");
-      setShowPaymentGateway(true);
+      setBusyId(booking.id);
+      try {
+        const isLoaded = await loadRazorpayScript();
+        if (!isLoaded) {
+          alert("Razorpay SDK failed to load. Please check your internet connection.");
+          setBusyId(null);
+          return;
+        }
+
+        const orderRes = await createPaymentOrderApi(finalTotal, "quotation_payment");
+        if (!orderRes || !orderRes.success) {
+          alert(orderRes?.message || "Failed to initiate quotation payment.");
+          setBusyId(null);
+          return;
+        }
+
+        const orderData = orderRes.data;
+        const options = {
+          key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+          amount: orderData.amount,
+          currency: orderData.currency,
+          name: "QuickSeva",
+          description: `Stage 2 Final payment for ${booking.service_title || booking.service_name}`,
+          order_id: orderData.id,
+          handler: async function (response) {
+            try {
+              setBusyId(booking.id);
+              await apiClient.patch(`/orders/${booking.id}/approve-quotation`, {
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature,
+              });
+              alert("Payment successful! Work will resume shortly.");
+              await refresh();
+            } catch (err) {
+              console.error("Quotation approval verification error:", err);
+              alert(err?.response?.data?.message || "Payment verified but quotation approval failed.");
+            } finally {
+              setBusyId(null);
+            }
+          },
+          prefill: {
+            name: user?.name || "",
+            email: user?.email || "",
+            contact: user?.phone || "",
+          },
+          theme: {
+            color: "#2563EB",
+          },
+          modal: {
+            ondismiss: function () {
+              setBusyId(null);
+            }
+          }
+        };
+
+        const rzp = new window.Razorpay(options);
+        rzp.open();
+      } catch (err) {
+        console.error("Quotation Razorpay initiation error:", err);
+        alert("Failed to open Razorpay payment gateway.");
+        setBusyId(null);
+      }
     }
   };
 
   const executeApproveQuotation = async (id) => {
     setBusyId(id);
-    setPaymentGatewayStatus("processing");
     try {
-      // Simulate gateway payment processing latency
-      await new Promise((r) => setTimeout(r, 1500));
       await buyerOrdersApi.approveQuotation(id);
       await refresh();
-      setShowPaymentGateway(false);
     } catch (e) {
-      setGatewayError(e?.response?.data?.message || "Failed to approve quotation");
-      setPaymentGatewayStatus("failed");
-      if (activeBookingForPayment?.payment_method === "cash") {
-        alert(e?.response?.data?.message || "Failed to approve quotation");
-      }
+      alert(e?.response?.data?.message || "Failed to approve quotation");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleSwitchToCash = async (orderId) => {
+    if (!window.confirm("Are you sure you want to change the payment method to Cash? / क्या आप वाकई भुगतान का माध्यम नकद करना चाहते हैं?")) return;
+    setBusyId(orderId);
+    try {
+      await apiClient.patch(`/orders/${orderId}/switch-to-cash`);
+      alert("Switched to Cash payment successfully! A Completion PIN has been generated for you.");
+      await refresh();
+    } catch (e) {
+      alert(e?.response?.data?.message || "Failed to switch to Cash payment");
     } finally {
       setBusyId(null);
     }
@@ -421,25 +486,21 @@ export default function MyBookings() {
                                 {booking.payment_method}
                               </span>
                             </p>
-                            
-                            {/* OTP Start Code display */}
-                            {booking.status === "quoted" && (booking.payment_method === "cash" ? booking.completion_otp_code : booking.final_payment_status === "paid") && booking.start_otp_code && (
-                              <div className="mt-3.5 p-3.5 rounded-2xl border border-blue-200 bg-blue-50 text-center shadow-sm">
-                                <span className="block text-[10px] font-bold text-blue-700 uppercase tracking-widest">Share this Start Code with Technician / काम शुरू करने का कोड</span>
-                                <span className="block text-2xl font-black text-blue-700 mt-1.5 tracking-widest">{booking.start_otp_code}</span>
-                                <span className="block text-[10px] text-blue-500 mt-1 font-semibold">Technician will enter this code in their app to verify and start service.</span>
+                            {/* Completion PIN Display for Cash Orders in Progress */}
+                            {booking.status === "in_progress" && booking.payment_method === "cash" && booking.completion_otp_code && (
+                              <div className="mt-3.5 p-3.5 rounded-2xl border border-emerald-250 bg-emerald-50 text-center shadow-sm">
+                                <span className="block text-[10px] font-bold text-emerald-700 uppercase tracking-widest">Share this Completion PIN with Technician / काम पूरा होने का कोड</span>
+                                <span className="block text-2xl font-black text-emerald-755 mt-1.5 tracking-widest">{booking.completion_otp_code}</span>
+                                <span className="block text-[10px] text-emerald-600 mt-1.5 font-semibold leading-normal">Share this ONLY after the service is done and you have paid the technician ₹{Number(parseFloat(booking.service_charge_amount || 0) + parseFloat(booking.parts_cost_amount || 0) - parseFloat(booking.discount_amount || 0) + parseFloat(booking.visiting_charge_amount || 0)).toLocaleString("en-IN")} in cash.</span>
                               </div>
                             )}
 
                             {/* Cash Payment Information */}
-                            {booking.status === "in_progress" && booking.payment_method === "cash" && (
-                              <div className="mt-3.5 p-3.5 rounded-2xl border border-amber-200 bg-amber-50 text-center shadow-sm">
+                            {booking.status === "in_progress" && booking.payment_method === "cash" && !booking.completion_otp_code && (
+                              <div className="mt-3.5 p-3.5 rounded-2xl border border-amber-250 bg-amber-50 text-center shadow-sm">
                                 <span className="block text-[10px] font-bold text-amber-700 uppercase tracking-widest">Cash Payment / नकद भुगतान</span>
                                 <p className="text-xs text-amber-800 font-bold mt-1.5">
                                   Please pay ₹{Number(parseFloat(booking.service_charge_amount || 0) + parseFloat(booking.parts_cost_amount || 0) - parseFloat(booking.discount_amount || 0) + parseFloat(booking.visiting_charge_amount || 0)).toLocaleString("en-IN")} in cash to the technician.
-                                </p>
-                                <p className="text-[10px] text-amber-600 mt-1.5 leading-normal font-semibold">
-                                  तकनीशियन को ₹{Number(parseFloat(booking.service_charge_amount || 0) + parseFloat(booking.parts_cost_amount || 0) - parseFloat(booking.discount_amount || 0) + parseFloat(booking.visiting_charge_amount || 0)).toLocaleString("en-IN")} का नकद भुगतान करें।
                                 </p>
                               </div>
                             )}
@@ -460,6 +521,7 @@ export default function MyBookings() {
                           View Provider
                         </Link>
                       )}
+                      
                       {booking.status === "quoted" && (booking.payment_method === "cash" ? !booking.completion_otp_code : booking.final_payment_status !== "paid") && (
                         <>
                           <button
@@ -482,6 +544,18 @@ export default function MyBookings() {
                               </>
                             )}
                           </button>
+                          
+                          {booking.payment_method === "online" && (
+                            <button
+                              type="button"
+                              disabled={busyId === booking.id}
+                              onClick={() => handleSwitchToCash(booking.id)}
+                              className="flex items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 px-4 py-2.5 text-xs font-bold text-amber-700 transition duration-300 w-full text-center cursor-pointer shadow-sm animate-pulse"
+                            >
+                              💵 Pay in Cash instead
+                            </button>
+                          )}
+
                           <button
                              type="button"
                              disabled={busyId === booking.id}
@@ -492,6 +566,18 @@ export default function MyBookings() {
                           </button>
                         </>
                       )}
+
+                      {booking.status === "in_progress" && booking.payment_method === "online" && (
+                        <button
+                          type="button"
+                          disabled={busyId === booking.id}
+                          onClick={() => handleSwitchToCash(booking.id)}
+                          className="flex items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 px-4 py-2.5 text-xs font-bold text-amber-700 transition duration-300 w-full text-center cursor-pointer shadow-sm"
+                        >
+                          💵 Pay in Cash instead
+                        </button>
+                      )}
+
                       {booking.status === "pending" && (
                         <button
                           type="button"
@@ -547,7 +633,7 @@ export default function MyBookings() {
                             >
                               {busyId === booking.id ? (
                                 <>
-                                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-red-500 border-t-white" />
+                                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-red-550 border-t-white" />
                                   Cancelling…
                                 </>
                               ) : (
@@ -618,178 +704,7 @@ export default function MyBookings() {
         )}
       </div>
 
-      {/* Fake Razorpay/PhonePe Payment Gateway Modal */}
-      {showPaymentGateway && activeBookingForPayment && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-fade-in text-slate-800">
-          <div className="w-full max-w-sm rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden relative flex flex-col">
-            {/* Gateway Header */}
-            <div className="bg-slate-50 p-4 border-b border-slate-200 flex justify-between items-center">
-              <div className="flex items-center gap-2 text-left">
-                <span className="text-xl">💳</span>
-                <div>
-                  <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">QuickSeva Secure Pay</h2>
-                  <p className="text-[10px] text-slate-500">Stage 2 Quotation Payment Emulator</p>
-                </div>
-              </div>
-              <button 
-                onClick={() => {
-                  setShowPaymentGateway(false);
-                  setGatewaySubView("select");
-                }}
-                className="text-slate-400 hover:text-slate-600 text-sm cursor-pointer p-1"
-              >
-                ✕
-              </button>
-            </div>
 
-            {paymentGatewayStatus === "idle" && (
-              <div className="p-6 space-y-5 flex-1 text-left">
-                {/* Total box */}
-                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-center">
-                  <span className="block text-[10px] text-slate-500 uppercase font-semibold">Payable Quote Amount / भुगतान राशि</span>
-                  <span className="text-3xl font-black text-emerald-600 mt-1 block font-mono">
-                    ₹{Number(
-                      parseFloat(activeBookingForPayment.service_charge_amount || 0) + 
-                      parseFloat(activeBookingForPayment.parts_cost_amount || 0) - 
-                      parseFloat(activeBookingForPayment.discount_amount || 0)
-                    ).toLocaleString("en-IN")}
-                  </span>
-                </div>
-
-                {gatewaySubView === "select" && (
-                  <>
-                    <div className="space-y-2.5">
-                      <span className="block text-[10px] text-slate-500 uppercase font-bold tracking-wider">Select Payment Mode</span>
-                      {[
-                        { id: "upi_qr", icon: "📱", name: "UPI QR (GPay / PhonePe / Paytm)" },
-                        { id: "card_info", icon: "💳", name: "Debit / Credit Card" }
-                      ].map((opt) => (
-                        <button
-                          key={opt.id}
-                          type="button"
-                          onClick={() => setGatewaySubView(opt.id)}
-                          className="w-full text-left p-3.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition flex items-center gap-3 cursor-pointer group active:scale-[0.99]"
-                        >
-                          <span className="text-lg bg-slate-100 p-1.5 rounded-lg group-hover:bg-slate-200">{opt.icon}</span>
-                          <span className="text-xs font-bold text-slate-700 group-hover:text-slate-800 flex-1">{opt.name}</span>
-                          <span className="text-slate-400 text-xs">➔</span>
-                        </button>
-                      ))}
-                    </div>
-                    <div className="flex gap-2.5 pt-1">
-                      <button
-                        type="button"
-                        onClick={() => executeApproveQuotation(activeBookingForPayment.id)}
-                        className="w-full py-2.5 text-xs font-bold bg-slate-100 hover:bg-slate-250 text-slate-700 border border-slate-200 rounded-xl active:scale-95 transition cursor-pointer text-center"
-                      >
-                        Bypass Directly ✓ (Simulate Success)
-                      </button>
-                    </div>
-                  </>
-                )}
-
-                {gatewaySubView === "upi_qr" && (
-                  <div className="space-y-4 text-center">
-                    <span className="block text-[10px] text-slate-500 uppercase font-bold tracking-wider text-left">Scan UPI QR Code</span>
-                    <div className="flex flex-col items-center justify-center p-4 bg-white rounded-xl border border-slate-200 shadow-inner">
-                      <svg className="h-32 w-32 text-slate-800 animate-pulse" viewBox="0 0 100 100" fill="currentColor">
-                        <path d="M0 0h30v30H0V0zm10 10v10h10V10H10zm60-10h30v30H70V0zm10 10v10h10V10H10zM0 70h30v30H0V70zm10 10v10h10V10H10zm45-45h10v10H55zm10 10h10v10H65zm-20 20h10v10H45zm25 0h10v10H70zm-15 15h10v10H55zm15 0h10v10H70zm-35-15h10v10H35zm0-20h10v10H35zm30-25h5v5h-5z" />
-                      </svg>
-                      <span className="text-[10px] text-slate-400 font-semibold mt-2">Scan with GPay, PhonePe, or Paytm</span>
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setGatewaySubView("select")}
-                        className="flex-1 py-2.5 text-xs font-bold bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl active:scale-95 transition cursor-pointer"
-                      >
-                        Back / पीछे
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => executeApproveQuotation(activeBookingForPayment.id)}
-                        className="flex-1 py-2.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl active:scale-95 transition cursor-pointer"
-                      >
-                        I have Scanned &amp; Paid
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {gatewaySubView === "card_info" && (
-                  <div className="space-y-4">
-                    <span className="block text-[10px] text-slate-500 uppercase font-bold tracking-wider">Card Details</span>
-                    <div className="space-y-3">
-                      <div>
-                        <label className="text-[10px] text-slate-500 block mb-1">Card Number</label>
-                        <input
-                          type="text"
-                          placeholder="4111 2222 3333 4444"
-                          maxLength="19"
-                          className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="text-[10px] text-slate-500 block mb-1">Expiry Date</label>
-                          <input
-                            type="text"
-                            placeholder="MM/YY"
-                            maxLength="5"
-                            className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[10px] text-slate-500 block mb-1">CVV</label>
-                          <input
-                            type="password"
-                            placeholder="•••"
-                            maxLength="3"
-                            className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex gap-2 pt-2">
-                      <button
-                        type="button"
-                        onClick={() => setGatewaySubView("select")}
-                        className="flex-1 py-2.5 text-xs font-bold bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl active:scale-95 transition cursor-pointer"
-                      >
-                        Back / पीछे
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => executeApproveQuotation(activeBookingForPayment.id)}
-                        className="flex-1 py-2.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl active:scale-95 transition cursor-pointer"
-                      >
-                        Pay &amp; Confirm
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-
-              </div>
-            )}
-
-            {paymentGatewayStatus === "failed" && (
-              <div className="p-6 text-center space-y-5 flex flex-col items-center justify-center flex-1">
-                <span className="text-5xl text-red-500">❌</span>
-                <h3 className="text-base font-bold text-red-700">Payment Failed</h3>
-                <p className="text-xs text-slate-500">{gatewayError || "Transaction rejected."}</p>
-                <button
-                  type="button"
-                  onClick={() => setPaymentGatewayStatus("idle")}
-                  className="w-full py-2.5 text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-850 rounded-lg active:scale-95 transition cursor-pointer"
-                >
-                  Try Again
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Custom Dispute Reason Modal */}
       {showDisputeModal && disputeBookingItem && (

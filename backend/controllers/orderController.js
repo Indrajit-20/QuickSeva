@@ -296,7 +296,16 @@ exports.completeOrder = async (req, res) => {
     if (order.status !== "in_progress")
       return errorRes(res, "Order not in progress", 400);
 
-    // No completion PIN check required for cash orders. Seller confirms cash collection directly.
+    // Verify completion PIN for cash orders
+    if (order.payment_method === "cash") {
+      const { otp } = req.body;
+      if (!otp) {
+        return errorRes(res, "Completion PIN is required for cash payments", 400);
+      }
+      if (order.completion_otp_code !== otp) {
+        return errorRes(res, "Invalid completion PIN. Please ask the customer for the correct code.", 400);
+      }
+    }
 
     await OrderModel.updateStatus(req.params.id, "completed", {
       completed_at: new Date(),
@@ -557,8 +566,33 @@ exports.approveQuotation = async (req, res) => {
       return errorRes(res, "Quotation has already been approved", 400);
     }
 
+    const {
+      razorpay_payment_id,
+      razorpay_order_id,
+      razorpay_signature,
+    } = req.body;
+
     const subtotal = parseFloat(order.service_charge_amount || 0) + parseFloat(order.parts_cost_amount || 0) - parseFloat(order.discount_amount || 0);
     const remaining = subtotal; // No platform fee on final bill (Stage 2)
+
+    // Verify online payment if required
+    if (order.payment_method === "online" && remaining > 0) {
+      if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature) {
+        return errorRes(res, "Missing payment details for online quotation approval", 400);
+      }
+      
+      if (process.env.RAZORPAY_KEY_SECRET) {
+        const body = razorpay_order_id + "|" + razorpay_payment_id;
+        const expectedSignature = crypto
+          .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+          .update(body)
+          .digest("hex");
+        
+        if (expectedSignature !== razorpay_signature) {
+          return errorRes(res, "Payment signature verification failed", 400);
+        }
+      }
+    }
 
     const final_pay_status = (order.payment_method === "online") ? "paid" : "pending";
 
@@ -567,9 +601,10 @@ exports.approveQuotation = async (req, res) => {
       : null;
 
     // Update order totals and statuses
-    // Set status to quoted but final payment status updated. Seller enters Start OTP to move back to in_progress
+    // Set status to in_progress directly. No start OTP needed.
     await pool.query(
       `UPDATE orders SET
+        status = 'in_progress',
         final_payment_status = ?,
         total_amount = total_amount + ?,
         platform_fee = platform_fee + ?,
@@ -688,5 +723,53 @@ exports.disputeOrder = async (req, res) => {
   } catch (err) {
     console.error("Dispute order error:", err);
     return errorRes(res, "Failed to dispute order");
+  }
+};
+
+// Switch payment method from Online to Cash (buyer or seller)
+exports.switchToCash = async (req, res) => {
+  try {
+    const order = await OrderModel.findById(req.params.id);
+    if (!order) return errorRes(res, "Order not found", 404);
+
+    // Verify authorized user (either the buyer or the seller of this order)
+    const isBuyer = order.buyer_id === req.user.id;
+    const seller = await SellerModel.findByUserId(req.user.id).catch(() => null);
+    const isSeller = seller && order.seller_id === seller.id;
+
+    if (!isBuyer && !isSeller) {
+      return errorRes(res, "Unauthorized", 403);
+    }
+
+    if (order.status === "completed" || order.status === "cancelled") {
+      return errorRes(res, "Cannot change payment method for completed or cancelled bookings", 400);
+    }
+
+    const completion_otp_code = order.completion_otp_code || Math.floor(1000 + Math.random() * 9000).toString();
+
+    await pool.query(
+      `UPDATE orders SET
+        payment_method = 'cash',
+        completion_otp_code = ?
+       WHERE id = ?`,
+      [completion_otp_code, req.params.id]
+    );
+
+    // Notify the other party
+    const recipientId = isBuyer ? (await pool.query("SELECT user_id FROM sellers WHERE id = ?", [order.seller_id]))[0][0].user_id : order.buyer_id;
+    await pool.query(
+      `INSERT INTO notifications (user_id, title, message, type, ref_id) VALUES (?, ?, ?, 'order', ?)`,
+      [
+        recipientId,
+        "Payment Method Changed!",
+        `Payment method for order #${order.order_number} was switched to Cash on Delivery.`,
+        order.id
+      ]
+    );
+
+    return successRes(res, { completion_otp_code }, "Switched to Cash payment successfully");
+  } catch (err) {
+    console.error("Switch to cash error:", err);
+    return errorRes(res, "Failed to switch payment method");
   }
 };

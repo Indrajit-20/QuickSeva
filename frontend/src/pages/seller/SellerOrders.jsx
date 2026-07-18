@@ -54,9 +54,7 @@ export default function SellerOrders() {
     }
   };
 
-  const [verifyingOrderId, setVerifyingOrderId] = useState(null);
-  const [otpCode, setOtpCode] = useState("");
-  const [verifyingOtp, setVerifyingOtp] = useState(false);
+
 
   const [completingOrderId, setCompletingOrderId] = useState(null);
   const [completionPin, setCompletionPin] = useState("");
@@ -135,21 +133,7 @@ export default function SellerOrders() {
     }
   };
 
-  const handleOtpVerify = async (e) => {
-    e.preventDefault();
-    if (!verifyingOrderId || otpCode.length !== 4) return;
-    setVerifyingOtp(true);
-    try {
-      await sellerOrdersApi.start(verifyingOrderId, { otp: otpCode });
-      setVerifyingOrderId(null);
-      setOtpCode("");
-      await fetchOrders();
-    } catch (err) {
-      alert(err?.response?.data?.message || "Invalid start code");
-    } finally {
-      setVerifyingOtp(false);
-    }
-  };
+
 
   const fetchOrders = async () => {
     try {
@@ -183,10 +167,7 @@ export default function SellerOrders() {
     try {
       if (action === "accept") await sellerOrdersApi.accept(id);
       else if (action === "start") {
-        setVerifyingOrderId(id);
-        setOtpCode("");
-        setBusyId(null);
-        return;
+        await sellerOrdersApi.start(id);
       }
       else if (action === "complete") {
         const order = orders.find(o => o.id === id);
@@ -466,46 +447,7 @@ export default function SellerOrders() {
                       )}
                     </div>
 
-                    {/* ── Inline OTP Verify ── */}
-                    {verifyingOrderId === id && (
-                      <form onSubmit={handleOtpVerify} style={{ marginTop: 12, background: '#f8fafc', borderRadius: 14, padding: 16, border: '1px solid #e2e8f0' }}>
-                        <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1e293b', marginBottom: 4 }}>
-                          Verify Start Code / काम शुरू करने का कोड
-                        </h3>
-                        <p style={{ fontSize: 12, color: '#64748b', marginBottom: 12 }}>
-                          Ask customer for their 4-digit code
-                        </p>
-                        <div className="flex items-center gap-3">
-                          <input
-                            type="text"
-                            required
-                            maxLength="4"
-                            pattern="\d{4}"
-                            value={otpCode}
-                            onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
-                            placeholder="• • • •"
-                            className="seller-otp-input"
-                            style={{ width: 120, height: 52, fontSize: 20 }}
-                            autoFocus
-                          />
-                          <button
-                            type="submit"
-                            disabled={verifyingOtp || otpCode.length !== 4}
-                            className="seller-action-btn seller-action-btn--success"
-                            style={{ flex: 1, fontSize: 13 }}
-                          >
-                            {verifyingOtp ? "Verifying…" : "✓ Verify & Start"}
-                          </button>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setVerifyingOrderId(null)}
-                          style={{ fontSize: 12, color: '#64748b', fontWeight: 600, marginTop: 8, background: 'none', border: 'none', cursor: 'pointer' }}
-                        >
-                          Cancel
-                        </button>
-                      </form>
-                    )}
+
 
                     {/* ── Inline Completion PIN ── */}
                     {completingOrderId === id && (
@@ -641,33 +583,17 @@ export default function SellerOrders() {
                     )}
                     {order.status === "quoted" && (
                       <>
-                        {(order.payment_method === "cash" ? order.completion_otp_code : order.final_payment_status === "paid") ? (
-                          <button
-                            type="button"
-                            disabled={busy || verifyingOrderId === id}
-                            onClick={() => { setVerifyingOrderId(id); setOtpCode(""); }}
-                            className="seller-action-btn seller-action-btn--primary seller-action-btn--full"
-                            style={{ fontSize: 13 }}
-                          >
-                            🔑 Enter Start Code
-                          </button>
-                        ) : (
-                          <span style={{
-                            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                            fontSize: 12, fontWeight: 700, color: '#b45309', background: '#fffbeb',
-                            border: '1px solid #fde68a', borderRadius: 14, padding: '10px 16px',
-                          }}>
-                            ⏳ Awaiting Customer Approval
-                          </span>
-                        )}
+                        <span style={{ fontSize: 12, fontWeight: 700, color: '#f59e0b', background: '#fef3c7', padding: '10px 14px', borderRadius: 12, display: 'inline-block', textAlign: 'center', width: '100%' }}>
+                          ⏳ Waiting for Customer Approval
+                        </span>
                         <button
                           type="button"
                           disabled={busy}
                           onClick={() => runAction("cancel", id)}
-                          className="seller-action-btn seller-action-btn--outline"
-                          style={{ fontSize: 13, color: '#dc2626', flex: 'none', padding: '12px 14px' }}
+                          className="seller-action-btn seller-action-btn--outline seller-action-btn--full"
+                          style={{ fontSize: 13, color: '#dc2626', width: '100%', marginTop: 8 }}
                         >
-                          <XCircle size={16} />
+                          <XCircle size={16} /> Cancel
                         </button>
                       </>
                     )}
