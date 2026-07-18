@@ -151,26 +151,74 @@ function SellerSidebar({ user, onLogout, onNavigate, pendingOrdersCount, onToggl
   );
 }
 
+// Sound alert generator using browser Web Audio API
+const playChime = () => {
+  try {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const playNote = (frequency, startTime, duration) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(frequency, startTime);
+      gain.gain.setValueAtTime(0.15, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(startTime);
+      osc.stop(startTime + duration);
+    };
+    // Pleasant notification chime
+    playNote(523.25, audioCtx.currentTime, 0.2); // C5
+    playNote(783.99, audioCtx.currentTime + 0.15, 0.35); // G5
+  } catch (err) {
+    console.error("Audio chime playback failed:", err);
+  }
+};
+
 export default function SellerLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { user, logout, updateUser } = useAuth();
   const navigate = useNavigate();
   const [pendingOrdersCount, setPendingOrdersCount] = useState(0);
+  const [newOrderNotification, setNewOrderNotification] = useState(null);
 
   useEffect(() => {
     let active = true;
-    const fetchPendingCount = async () => {
+    const fetchPendingCount = async (isInitial = false) => {
       try {
         const res = await sellerOrdersApi.list();
         const list = res?.data?.orders || res?.orders || [];
         const count = Array.isArray(list) ? list.filter(o => o.status === "pending").length : 0;
-        if (active) setPendingOrdersCount(count);
+        if (active) {
+          setPendingOrdersCount((prev) => {
+            // Trigger audio + visual notification if a new pending order arrived
+            if (!isInitial && count > prev) {
+              playChime();
+              const pendingList = list.filter(o => o.status === "pending");
+              const latestOrder = pendingList[pendingList.length - 1];
+              setNewOrderNotification({
+                orderNumber: latestOrder?.order_number || `#${latestOrder?.id || 'New'}`,
+                service: latestOrder?.service_title || latestOrder?.service_name || "Service Request",
+                address: latestOrder?.address || "Nearby customer",
+              });
+              // Auto close banner in 6 seconds
+              setTimeout(() => {
+                setNewOrderNotification(null);
+              }, 6000);
+            }
+            return count;
+          });
+        }
       } catch (err) {
         console.error("Failed to fetch pending orders count:", err);
       }
     };
-    fetchPendingCount();
-    const interval = setInterval(fetchPendingCount, 15000); // Poll every 15 seconds
+    
+    // Initial fetch on mount
+    fetchPendingCount(true);
+    
+    // Poll every 10 seconds for real-time notification feel
+    const interval = setInterval(() => fetchPendingCount(false), 10000);
     return () => {
       active = false;
       clearInterval(interval);
@@ -296,6 +344,75 @@ export default function SellerLayout() {
       </main>
 
       <BottomNavSeller pendingOrdersCount={pendingOrdersCount} />
+
+      {/* Dynamic Pop-up Toast Alert */}
+      {newOrderNotification && (
+        <>
+          <style>{`
+            @keyframes slideInRight {
+              from {
+                transform: translate3d(100%, 0, 0);
+                opacity: 0;
+              }
+              to {
+                transform: translate3d(0, 0, 0);
+                opacity: 1;
+              }
+            }
+            .animate-slide-in-right {
+              animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            }
+            @media (max-width: 640px) {
+              @keyframes slideInTop {
+                from {
+                  transform: translate3d(-50%, -100%, 0);
+                  opacity: 0;
+                }
+                to {
+                  transform: translate3d(-50%, 0, 0);
+                  opacity: 1;
+                }
+              }
+              .animate-slide-in-right {
+                animation: slideInTop 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+              }
+            }
+          `}</style>
+          <div 
+            onClick={() => {
+              setNewOrderNotification(null);
+              navigate("/seller/orders");
+            }}
+            className="fixed left-1/2 top-4 z-[9999] w-[calc(100%-32px)] max-w-sm -translate-x-1/2 cursor-pointer rounded-2xl border border-blue-200 bg-white/95 p-4 shadow-2xl backdrop-blur-md transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] sm:left-auto sm:right-6 sm:translate-x-0 animate-slide-in-right flex gap-3 text-slate-800"
+            style={{ boxShadow: "0 20px 25px -5px rgba(59, 130, 246, 0.1), 0 10px 10px -5px rgba(59, 130, 246, 0.04)" }}
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500 text-white animate-bounce text-lg">
+              🔔
+            </div>
+            <div className="flex-1 text-left">
+              <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-widest">New Booking Request!</h4>
+              <p className="mt-0.5 text-xs font-extrabold text-slate-900 leading-snug">
+                {newOrderNotification.service}
+              </p>
+              <p className="mt-1 text-[10px] font-semibold text-slate-500 truncate">
+                📍 {newOrderNotification.address}
+              </p>
+              <span className="mt-2 inline-block text-[9px] font-bold text-blue-500 hover:underline">
+                Tap to open Orders / ऑर्डर देखने के लिए छुएं ➔
+              </span>
+            </div>
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                setNewOrderNotification(null);
+              }}
+              className="text-slate-400 hover:text-slate-650 self-start p-0.5 text-xs"
+            >
+              ✕
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
