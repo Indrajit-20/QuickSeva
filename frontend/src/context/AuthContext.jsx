@@ -6,6 +6,7 @@ import {
   verifyOtp,
   sendOtp,
   login,
+  logoutUser,
   getBackendErrorMessage,
 } from "../api/authService";
 
@@ -137,14 +138,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        const token = localStorage.getItem("authToken");
-        if (!token) {
-          setIsAuthenticated(false);
-          setUser(null);
-          return;
-        }
-
-        // Fetch /api/auth/me to validate token + get user
+        // Fetch /api/auth/me to validate token + get user (automatically sends cookie)
         const { data } = await getMe();
         setUser(data.user || null);
         setIsAuthenticated(Boolean(data?.user));
@@ -177,16 +171,14 @@ export const AuthProvider = ({ children }) => {
       } catch (err) {
         console.error("Auth init failed:", err);
         const status = err?.response?.status;
+        setUser(null);
+        setIsAuthenticated(false);
+        localStorage.removeItem("authToken");
+        localStorage.removeItem("userRole");
         if (status === 401 || status === 403) {
-          localStorage.removeItem("authToken");
-          localStorage.removeItem("userRole");
-          setUser(null);
-          setIsAuthenticated(false);
-          setAuthError("Session expired. Please login again.");
+          // Silent on load for guest users
+          setAuthError(null);
         } else {
-          // Network error or database 500 error: keep token, but set error
-          setIsAuthenticated(false);
-          setUser(null);
           setAuthError("Unable to connect to server. Please try again.");
         }
       } finally {
@@ -227,11 +219,11 @@ export const AuthProvider = ({ children }) => {
       const token = result?.data?.token;
       const userData = result?.data?.user;
 
-      if (!token || !userData) {
+      if (!userData) {
         throw new Error("Invalid OTP verification response from server.");
       }
 
-      localStorage.setItem("authToken", token);
+      localStorage.setItem("authToken", token || "");
       if (userData?.role) localStorage.setItem("userRole", userData.role);
 
       setUser(userData);
@@ -258,11 +250,11 @@ export const AuthProvider = ({ children }) => {
       const token = result?.data?.token;
       const userData = result?.data?.user;
 
-      if (!token || !userData) {
+      if (!userData) {
         throw new Error("Invalid response from server.");
       }
 
-      localStorage.setItem("authToken", token);
+      localStorage.setItem("authToken", token || "");
       if (userData?.role) localStorage.setItem("userRole", userData.role);
 
       setUser(userData);
@@ -280,7 +272,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const authenticateSession = (token, userData) => {
-    localStorage.setItem("authToken", token);
+    localStorage.setItem("authToken", token || "");
     if (userData?.role) localStorage.setItem("userRole", userData.role);
     setUser(userData);
     setIsAuthenticated(true);
@@ -304,8 +296,6 @@ export const AuthProvider = ({ children }) => {
 
   const refreshAuth = async () => {
     try {
-      const token = localStorage.getItem("token") || localStorage.getItem("authToken");
-      if (!token) return;
       const { data } = await getMe();
       if (data?.user) {
         setUser(data.user);
@@ -332,7 +322,12 @@ export const AuthProvider = ({ children }) => {
   // ========================================
   // LOGOUT
   // ========================================
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await logoutUser();
+    } catch (err) {
+      console.error("Logout API call failed:", err);
+    }
     localStorage.removeItem("authToken");
     localStorage.removeItem("userRole");
     localStorage.removeItem("otpTimerExpiry");

@@ -3676,3 +3676,23 @@ span.qs-distance-badge {
     display: none !important;
   }
 }
+
+/* Seller/Partner Register Button in Navbar */
+.btn-partner-register {
+  display: block;
+  text-align: center;
+  background-color: #0284c7 !important;
+  color: #ffffff !important;
+  font-weight: 600;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.2);
+}
+
+.btn-partner-register:hover {
+  background-color: #0274ae !important;
+  color: #ffffff !important;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(2, 132, 199, 0.35);
+}

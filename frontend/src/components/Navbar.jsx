@@ -211,7 +211,7 @@ const Navbar = () => {
                           setIsMenuOpen(false);
                           setIsPartnerOpen(false);
                         }}
-                        className="block rounded-lg bg-[#e53935] px-3 py-2 text-center font-semibold text-white transition hover:-translate-y-0.5 hover:shadow-[0_10px_22px_-14px_#e53935]"
+                        className="btn-partner-register"
                       >
                         Register as Seller
                       </Link>
@@ -319,7 +319,7 @@ const Navbar = () => {
                   <Link
                     to="/seller-register"
                     onClick={() => setIsMenuOpen(false)}
-                    className="block w-full rounded-lg bg-[#e53935] px-3 py-2 text-center font-semibold text-white transition hover:-translate-y-0.5 hover:shadow-[0_10px_22px_-14px_#e53935]"
+                    className="btn-partner-register"
                   >
                     Register as Seller
                   </Link>

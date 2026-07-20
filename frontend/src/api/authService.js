@@ -101,6 +101,15 @@ export const verifyOtp = async ({
 };
 
 // ========================================
+// LOGOUT
+// POST /api/auth/logout
+// ========================================
+export const logoutUser = async () => {
+  const response = await apiClient.post("/auth/logout");
+  return unwrapSuccessData(response.data);
+};
+
+// ========================================
 // Error normalization helper
 // ========================================
 export const getBackendErrorMessage = (error) => {

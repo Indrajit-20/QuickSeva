@@ -5,6 +5,15 @@ const WalletModel = require("../models/walletModel");
 const SellerModel = require("../models/sellerModel");
 const { generateToken } = require("../utils/jwtUtils");
 
+const sendTokenCookie = (res, token) => {
+  res.cookie("authToken", token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax", // 'lax' is generally more compatible for local development cross-origin setups than 'strict'
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  });
+};
+
 const { pool } = require("../config/db");
 const { successRes, errorRes } = require("../utils/helpers");
 const { sendEmail, otpEmailTemplate } = require("../utils/sendEmail");
@@ -173,6 +182,8 @@ exports.register = async (req, res) => {
     const token = generateToken({ id: userId, role });
     const user = await UserModel.findById(userId);
 
+    sendTokenCookie(res, token);
+
     return successRes(
       res,
       { user, token },
@@ -230,6 +241,8 @@ exports.login = async (req, res) => {
       user.role === "seller" && profile_completed !== null
         ? { ...userData, profile_completed, services_count }
         : userData;
+
+    sendTokenCookie(res, token);
 
     return successRes(
       res,
@@ -411,6 +424,8 @@ exports.verifyOTP = async (req, res) => {
         is_available = seller?.is_available ?? 0;
       }
 
+      sendTokenCookie(res, token);
+
       return successRes(
         res,
         {
@@ -471,6 +486,8 @@ exports.verifyOTP = async (req, res) => {
         const token = generateToken({ id: userId, role });
         const user = await UserModel.findById(userId);
         const { password: _, ...userData } = user;
+
+        sendTokenCookie(res, token);
 
         return successRes(
           res,
@@ -570,6 +587,8 @@ exports.verifyOTP = async (req, res) => {
 
         const seller = await SellerModel.findByUserId(userId);
         const profile_completed = seller?.profile_completed ?? 0;
+
+        sendTokenCookie(res, token);
 
         return successRes(
           res,
@@ -686,6 +705,8 @@ exports.adminLogin = async (req, res) => {
 
     const token = generateToken({ id: admin.id, role: "admin" });
 
+    sendTokenCookie(res, token);
+
     return successRes(
       res,
       {
@@ -702,6 +723,20 @@ exports.adminLogin = async (req, res) => {
   } catch (err) {
     console.error("Admin login error:", err);
     return errorRes(res, "Admin login failed");
+  }
+};
+
+exports.logout = async (req, res) => {
+  try {
+    res.clearCookie("authToken", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+    });
+    return successRes(res, null, "Logged out successfully");
+  } catch (err) {
+    console.error("Logout error:", err);
+    return errorRes(res, "Logout failed");
   }
 };
 

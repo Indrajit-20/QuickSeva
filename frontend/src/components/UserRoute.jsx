@@ -23,22 +23,23 @@ export default function UserRoute({ allowGuests = false, guestOnly = false }) {
     );
   }
 
-  // If a route allows guests, anyone (authenticated or not, admin, seller, buyer) can view it.
+  // Case 1: Authenticated as Admin -> Force redirect to Admin Dashboard
+  // This prevents admins from accessing or seeing the customer-facing interface.
+  if (isAuthenticated && user?.role === "admin") {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
+
+  // If a route allows guests, anyone (authenticated or not, seller, buyer) can view it.
   if (allowGuests) {
     return <Outlet />;
   }
 
-  // Case 1: Not Authenticated
+  // Case 2: Not Authenticated
   if (!isAuthenticated) {
     if (guestOnly) {
       return <Outlet />;
     }
     return <Navigate to="/login" replace />;
-  }
-
-  // Case 2: Authenticated as Admin
-  if (user?.role === "admin") {
-    return <Navigate to="/admin/dashboard" replace />;
   }
 
   // Case 3: Authenticated as Seller

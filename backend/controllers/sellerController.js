@@ -452,6 +452,13 @@ exports.registerSeller = async (req, res) => {
     const { generateToken } = require("../utils/jwtUtils");
     const token = generateToken({ id: userId, role: "seller" });
 
+    res.cookie("authToken", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
     const [userRows] = await conn.query(
       `SELECT id, name, email, phone, role, profile_pic, address, city, state, pincode, lat, lng, gender, dob, is_verified, is_active, created_at
        FROM users WHERE id = ?`,

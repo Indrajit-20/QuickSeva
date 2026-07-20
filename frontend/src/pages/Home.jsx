@@ -104,16 +104,8 @@ const Home = () => {
     <main className="min-h-screen flex flex-col" style={{ backgroundColor: "#f8fafc" }}>
 
       {/* ── Services Near You Section (light hero) ── */}
-      <section className="bg-white py-12 border-b border-slate-100">
+      <section className="bg-white pt-4 pb-12 border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col items-center text-center mb-8">
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-850 tracking-tight">
-              Services Near You
-            </h1>
-            <p className="text-sm text-slate-500 mt-1 max-w-xl font-semibold">
-              Find verified professionals within 5km of your location
-            </p>
-          </div>
           <NearbyServices />
         </div>
       </section>

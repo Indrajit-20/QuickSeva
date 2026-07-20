@@ -2,15 +2,27 @@ const { verifyToken } = require("../utils/jwtUtils");
 const { pool } = require("../config/db");
 const { errorRes } = require("../utils/helpers");
 
-// Verify JWT token
 const protect = async (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    let token;
+
+    // Check cookies first
+    if (req.cookies && req.cookies.authToken) {
+      token = req.cookies.authToken;
+    }
+
+    // Fallback to Authorization header
+    if (!token) {
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith("Bearer ")) {
+        token = authHeader.split(" ")[1];
+      }
+    }
+
+    if (!token) {
       return errorRes(res, "Unauthorized: No token provided", 401);
     }
 
-    const token = authHeader.split(" ")[1];
     const decoded = verifyToken(token);
 
     let user;

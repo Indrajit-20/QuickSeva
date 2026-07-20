@@ -1632,7 +1632,7 @@ export default function NearbyServices({
             {/* STEP 1: Service search (What service do you need?) */}
             <div className="relative" ref={serviceDropRef}>
               <label className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700">
-                Service / सेवा
+                Services Near You / आपके आस-पास सेवाएँ
               </label>
               <div className="relative">
                 <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-450 h-4.5 w-4.5" />

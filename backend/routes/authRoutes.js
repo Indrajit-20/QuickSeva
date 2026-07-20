@@ -11,6 +11,7 @@ const {
   resetPassword,
   adminLogin,
   getCaptcha,
+  logout,
 } = require("../controllers/authController");
 
 const { protect } = require("../middleware/authMiddleware");
@@ -31,6 +32,7 @@ router.post("/verify-otp",      verifyOTP);
 // Password-based login (legacy / admin)
 router.post("/login",           login);
 router.post("/admin-login",     adminLogin);
+router.post("/logout",          logout);
 
 // Password management
 router.post("/reset-password",  resetPassword);

@@ -67,6 +67,24 @@ app.use(
     credentials: true,
   }),
 );
+
+// Simple custom cookie parser middleware to populate req.cookies
+app.use((req, res, next) => {
+  req.cookies = {};
+  const cookieHeader = req.headers.cookie;
+  if (cookieHeader) {
+    cookieHeader.split(";").forEach((cookie) => {
+      const parts = cookie.split("=");
+      if (parts.length >= 2) {
+        const name = parts[0].trim();
+        const val = parts.slice(1).join("=").trim();
+        req.cookies[name] = decodeURIComponent(val);
+      }
+    });
+  }
+  next();
+});
+
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(requestLogger);
