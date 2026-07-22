@@ -104,14 +104,14 @@ const Home = () => {
     <main className="min-h-screen flex flex-col" style={{ backgroundColor: "#f8fafc" }}>
 
       {/* ── Services Near You Section (light hero) ── */}
-      <section className="bg-white pt-4 pb-12 border-b border-slate-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <NearbyServices />
+      <section className="mobile-map-section bg-white pt-4 pb-12 border-b border-slate-100 lg:pt-4 lg:pb-12 lg:border-b lg:border-slate-100">
+        <div className="mobile-map-container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <NearbyServices lockScrollOnMobile={true} />
         </div>
       </section>
 
       {/* ── Why Choose QuickSeva (white background) ── */}
-      <section ref={sectionRef} className="bg-white py-20 border-t border-slate-100">
+      <section ref={sectionRef} className="hidden lg:block bg-white py-20 border-t border-slate-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
             <h2 className="text-4xl font-bold text-slate-900 mb-3">
@@ -184,7 +184,7 @@ const Home = () => {
       </section>
 
       {/* ── Call to Action (light theme) ── */}
-      <section className="py-16 bg-slate-50/50 border-t border-slate-100 flex-grow flex items-center justify-center relative overflow-hidden">
+      <section className="hidden lg:block py-16 bg-slate-50/50 border-t border-slate-100 flex-grow flex items-center justify-center relative overflow-hidden">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
           <div className="relative overflow-hidden rounded-3xl bg-white border border-slate-200/80 px-8 py-12 shadow-sm sm:px-16 sm:py-16 text-center">
             <div className="relative z-10 max-w-2xl mx-auto">

@@ -89,10 +89,10 @@ const Navbar = () => {
   return (
     <nav className="sticky top-0 z-50 border-b border-[#e5e7eb] bg-white shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-20">
+        <div className="flex justify-between items-center h-14 sm:h-16 md:h-20">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2" onClick={() => window.scrollTo({ top: 0, behavior: "instant" })}>
-            <span className="text-3xl font-bold text-[#0284c7]">
+            <span className="text-2xl sm:text-3xl font-extrabold text-[#0284c7] tracking-tight">
               QuickSeva
             </span>
           </Link>
@@ -104,7 +104,7 @@ const Navbar = () => {
             </span>
           </div>
 
-          <NavbarSearch className="hidden sm:flex w-[280px]" onTriggerSearch={() => setIsSearchOverlayOpen(true)} />
+
 
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center space-x-6">
@@ -228,18 +228,19 @@ const Navbar = () => {
           {/* Mobile Menu Button */}
           <button
             onClick={toggleMenu}
-            className="flex h-10 w-10 flex-col items-center justify-center rounded-md transition hover:bg-[#0284c7]/10 md:hidden"
+            aria-label="Toggle Menu"
+            className="flex h-9 w-9 flex-col items-center justify-center rounded-lg transition hover:bg-[#0284c7]/10 active:scale-95 md:hidden"
           >
             <span
-              className={`mb-1.5 block h-0.5 w-6 bg-[#e53935] transition-transform duration-300 ${isMenuOpen ? "rotate-45 translate-y-2" : ""
+              className={`mb-1 block h-0.5 w-5 bg-[#e53935] rounded-full transition-transform duration-300 ${isMenuOpen ? "rotate-45 translate-y-1.5" : ""
                 }`}
             ></span>
             <span
-              className={`block h-0.5 w-6 bg-[#e53935] transition-opacity duration-300 ${isMenuOpen ? "opacity-0" : ""
+              className={`block h-0.5 w-5 bg-[#e53935] rounded-full transition-opacity duration-300 ${isMenuOpen ? "opacity-0" : ""
                 }`}
             ></span>
             <span
-              className={`block h-0.5 w-6 bg-[#e53935] transition-transform duration-300 ${isMenuOpen ? "-rotate-45 -translate-y-2" : ""
+              className={`mt-1 block h-0.5 w-5 bg-[#e53935] rounded-full transition-transform duration-300 ${isMenuOpen ? "-rotate-45 -translate-y-1.5" : ""
                 }`}
             ></span>
           </button>
@@ -248,13 +249,7 @@ const Navbar = () => {
         {/* Mobile Menu */}
         {isMenuOpen && (
           <div className="md:hidden py-4 space-y-3 animate-fade-in-down">
-            <NavbarSearch
-              className="flex w-full"
-              onTriggerSearch={() => {
-                setIsMenuOpen(false);
-                setIsSearchOverlayOpen(true);
-              }}
-            />
+
 
             <Link
               to="/"

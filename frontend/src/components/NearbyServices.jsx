@@ -38,6 +38,7 @@ import {
   Hash,
   SlidersHorizontal,
   ChevronDown,
+  ChevronRight,
   Map,
   Lock,
   Unlock,
@@ -452,6 +453,7 @@ export default function NearbyServices({
   centerLat = null,
   centerLon = null,
   locationFilter = "",
+  lockScrollOnMobile = false,
 }) {
   // buyerPos = user's actual GPS/set location (for the "You are here" marker & radius)
   // searchCenter = the map view center (changes on map pan, does NOT move the user marker)
@@ -465,6 +467,9 @@ export default function NearbyServices({
   const [isMapUnlocked, setIsMapUnlocked] = useState(false);
   const [isMapFullScreen, setIsMapFullScreen] = useState(false);
 
+  const [showLocationDrawer, setShowLocationDrawer] = useState(false);
+  const [filtersDrawerOpen, setFiltersDrawerOpen] = useState(false);
+
   useEffect(() => {
     const checkMobile = () => {
       const isMobileSize = window.innerWidth < 1024;
@@ -477,15 +482,33 @@ export default function NearbyServices({
   }, []);
 
   useEffect(() => {
-    if (isMapFullScreen) {
+    if (isMobile && lockScrollOnMobile) {
+      document.body.classList.add("mobile-map-active");
+      return () => {
+        document.body.classList.remove("mobile-map-active");
+      };
+    }
+  }, [isMobile, lockScrollOnMobile]);
+
+  useEffect(() => {
+    if (isMobile && (showLocationDrawer || filtersDrawerOpen || isMapFullScreen)) {
       document.body.style.overflow = "hidden";
+      document.body.style.position = "fixed";
+      document.body.style.width = "100%";
+      document.body.style.height = "100%";
     } else {
       document.body.style.overflow = "";
+      document.body.style.position = "";
+      document.body.style.width = "";
+      document.body.style.height = "";
     }
     return () => {
       document.body.style.overflow = "";
+      document.body.style.position = "";
+      document.body.style.width = "";
+      document.body.style.height = "";
     };
-  }, [isMapFullScreen]);
+  }, [isMobile, showLocationDrawer, filtersDrawerOpen, isMapFullScreen]);
 
   const [search, setSearch] = useState(initialSearch);
   const [locationQuery, setLocationQuery] = useState("");
@@ -1394,6 +1417,15 @@ export default function NearbyServices({
     }
   };
 
+  const handleUnifiedSearchSubmit = async (e) => {
+    if (e) e.preventDefault();
+    if (pincode.trim().length === 6) {
+      await handlePincodeSearch();
+    } else {
+      await handleLocationSearchSubmit(e);
+    }
+  };
+
   const handleMapClick = async (latlng) => {
     if (!latlng) return;
     // Map click: only move the SEARCH CENTER (radius circle & seller search area).
@@ -1621,276 +1653,351 @@ export default function NearbyServices({
                 </span>
               </button>
             ))}
-
           </div>,
           document.body,
         )}
 
       <div className={`qs-grid-area-search ${isMapFullScreen ? "hidden" : "block"}`}>
         <div className="qs-search-panel-card">
-          <div className="relative z-10 flex flex-col gap-5">
-            {/* STEP 1: Service search (What service do you need?) */}
-            <div className="relative" ref={serviceDropRef}>
-              <label className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700">
+          <div className="relative z-10 flex flex-col gap-4">
+            {/* Title & Subtitle */}
+            <div className="mb-1 hidden lg:block">
+              <h3 className="text-lg font-black text-slate-800 tracking-tight flex items-center gap-2">
                 Services Near You / आपके आस-पास सेवाएँ
-              </label>
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-450 h-4.5 w-4.5" />
-                <input
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                    setShowServiceDrop(true);
-                  }}
-                  onFocus={() => setShowServiceDrop(true)}
-                  placeholder="Search services (e.g. Plumber, AC Repair, Cleaning...)"
-                  className="w-full rounded-xl bg-[#f8fafc] border border-slate-200 py-3.5 pl-12 pr-10 text-sm font-semibold text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-500/10"
-                  style={{ paddingLeft: "3.25rem" }}
-                />
-                {search && (
-                  <button
-                    type="button"
-                    onClick={() => setSearch("")}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
-
-              {/* Service Dropdown Suggestions */}
-              {showServiceDrop && filteredServiceSuggestions.length > 0 && (
-                <div className="absolute left-0 right-0 top-full z-[1000] mt-2 max-h-[220px] overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl p-1.5 scrollbar-none">
-                  {filteredServiceSuggestions.map((item) => {
-                    const IconComponent = getServiceIcon(item);
-                    return (
-                      <button
-                        key={item}
-                        type="button"
-                        onClick={() => handleServiceSelect(item)}
-                        className="w-full rounded-xl px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-100 hover:text-indigo-600 transition-colors duration-200 cursor-pointer flex items-center gap-2.5"
-                      >
-                        <IconComponent className="h-4 w-4 text-indigo-500 shrink-0" />
-                        <span>{item}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+              </h3>
+              <p className="text-xs text-slate-400 font-semibold mt-0.5">
+                Find trusted local experts for all your home needs.
+              </p>
             </div>
 
-            {/* Toggle for Advanced Filters & Location on Mobile */}
-            <div className="lg:hidden flex items-center justify-between border-t border-slate-100 pt-3">
-              <button
-                type="button"
-                onClick={() => setIsSearchExpanded((prev) => !prev)}
-                className="flex items-center gap-1.5 text-xs font-black text-indigo-600 uppercase tracking-wider hover:underline cursor-pointer focus:outline-none"
-              >
-                <span>📍 Filters & Location {isSearchExpanded ? "▲" : "▼"}</span>
-                <span className="text-[10px] text-slate-400 font-semibold lowercase">
-                  ({locationQuery || "Current Loc"}, {radiusKm}km)
-                </span>
-              </button>
-            </div>
-
-            <div className={`${isSearchExpanded ? "block animate-fade-in-down animate-duration-150" : "hidden lg:block"} space-y-5`}>
-              {/* STEP 2: Location selection & Pincode */}
-              <form
-                onSubmit={handleLocationSearchSubmit}
-                className="relative isolate z-[70]"
-              >
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-1">
-                  {/* Location Input */}
-                  <div ref={locationSearchRef} className="relative z-[2]">
-                    <label className="relative z-[2] mb-2 block text-xs font-bold uppercase tracking-wider text-slate-700">
-                      Location (Area / Landmark) / जगह
-                    </label>
-                    <div className="flex gap-2 items-center">
-                      <div className="relative flex-1">
-                        <MapPin className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-rose-500 h-4.5 w-4.5" />
-                        <input
-                          value={locationQuery}
-                          onChange={(e) => setLocationQuery(e.target.value)}
-                          onFocus={() => {
-                            if (locationQuery.trim().length >= 3) {
-                              searchLocation(locationQuery);
-                            }
-                          }}
-                          autoComplete="off"
-                          className="w-full rounded-xl bg-[#f8fafc] border border-slate-200 py-3 pl-12 pr-10 text-sm font-semibold text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-500/10"
-                          placeholder="Search Area or Landmark (e.g. Nikol)"
-                          style={{ paddingLeft: "3.25rem" }}
-                        />
-                        {locationQuery && (
-                          <button
-                            type="button"
-                            onClick={clearLocationInput}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                            aria-label="Clear location"
-                            title="Clear location"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                        )}
-                      </div>
-                      <button
-                        type="submit"
-                        className="h-12 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl px-6 text-sm font-bold transition shadow-md shadow-indigo-600/10 cursor-pointer whitespace-nowrap"
-                      >
-                        {locationLoading ? "..." : "Search"}
-                      </button>
-                    </div>
+            {/* Desktop Unified Search Capsule Form */}
+            <form onSubmit={handleUnifiedSearchSubmit} className="hidden lg:block relative z-[70] w-full">
+              <div className="flex flex-col lg:flex-row items-stretch gap-2.5 bg-slate-50/50 p-2.5 rounded-2xl border border-slate-200/80">
+                {/* Input 1: Service search */}
+                <div className="relative flex-[2.5] min-w-0" ref={serviceDropRef}>
+                  <Search className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-455 h-4.5 w-4.5" />
+                  <input
+                    value={search}
+                    onChange={(e) => {
+                      setSearch(e.target.value);
+                      setShowServiceDrop(true);
+                    }}
+                    onFocus={() => setShowServiceDrop(true)}
+                    placeholder="Search services (e.g. Plumber, AC Repair, Cleaning...)"
+                    className="w-full rounded-xl bg-white border border-slate-200 py-3 pl-11 pr-8 text-sm font-semibold text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10"
+                    style={{ paddingLeft: "2.75rem" }}
+                  />
+                  {search && (
                     <button
                       type="button"
-                      onClick={handleUseMyLocation}
-                      className="mt-2.5 inline-flex items-center gap-1.5 text-[10px] font-bold text-indigo-600 uppercase tracking-wider hover:underline"
+                      onClick={() => setSearch("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-655 cursor-pointer"
                     >
-                      <Crosshair className="h-3 w-3" />
-                      USE CURRENT LOCATION
+                      ✕
                     </button>
-                  </div>
-
-                  {/* Pincode Input */}
-                  <div>
-                    <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-700">
-                      Pincode / पिनकोड
-                    </label>
-                    <div className="flex gap-2 items-center">
-                      <div className="relative flex-1">
-                        <Hash className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-450 h-4.5 w-4.5" />
-                        <input
-                          value={pincode}
-                          onChange={(e) => {
-                            const val = e.target.value.replace(/\D/g, "").slice(0, 6);
-                            setPincode(val);
-                            setPincodeError("");
-                            setLocationNotFoundMsg("");
-                          }}
-                          onKeyDown={(e) => e.key === "Enter" && handlePincodeSearch()}
-                          className="w-full rounded-xl bg-[#f8fafc] border border-slate-200 py-3 pl-12 pr-10 text-sm font-semibold text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-500/10"
-                          placeholder="Enter 6-digit Pincode (e.g. 382350)"
-                          maxLength={6}
-                          style={{ paddingLeft: "3.25rem" }}
-                        />
-                        {pincode && (
+                  )}
+                  {showServiceDrop && filteredServiceSuggestions.length > 0 && (
+                    <div className="absolute left-0 right-0 top-full z-[100] mt-2 max-h-[220px] overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-2xl p-1.5 scrollbar-none">
+                      {filteredServiceSuggestions.map((item) => {
+                        const IconComponent = getServiceIcon(item);
+                        return (
                           <button
+                            key={item}
                             type="button"
-                            onClick={clearPincodeInput}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                            aria-label="Clear pincode"
-                            title="Clear pincode"
+                            onClick={() => handleServiceSelect(item)}
+                            className="w-full rounded-lg px-3.5 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 hover:text-blue-600 transition-colors duration-150 cursor-pointer flex items-center gap-2"
                           >
-                            <X className="h-4 w-4" />
+                            <IconComponent className="h-4 w-4 text-blue-500 shrink-0" />
+                            <span>{item}</span>
                           </button>
-                        )}
-                      </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Collapsible/Desktop inputs */}
+                <div className="flex flex-col lg:flex-row flex-1 lg:flex-[2.8] items-stretch gap-2.5">
+                  {/* Input 2: Location */}
+                  <div ref={locationSearchRef} className="relative flex-[1.8] min-w-0">
+                    <MapPin className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-rose-500 h-4.5 w-4.5" />
+                    <input
+                      value={locationQuery}
+                      onChange={(e) => setLocationQuery(e.target.value)}
+                      onFocus={() => {
+                        if (locationQuery.trim().length >= 3) {
+                          searchLocation(locationQuery);
+                        }
+                      }}
+                      autoComplete="off"
+                      className="w-full rounded-xl bg-white border border-slate-200 py-3 pl-11 pr-8 text-sm font-semibold text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10"
+                      placeholder="Area or Landmark"
+                      style={{ paddingLeft: "2.75rem" }}
+                    />
+                    {locationQuery && (
                       <button
                         type="button"
-                        onClick={handlePincodeSearch}
-                        disabled={pincode.length !== 6 || pincodeLoading}
-                        className="h-12 bg-slate-100 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed text-slate-600 rounded-xl px-6 text-sm font-bold transition cursor-pointer"
+                        onClick={clearLocationInput}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-655 cursor-pointer"
+                        aria-label="Clear location"
                       >
-                        {pincodeLoading ? "..." : "Go"}
+                        <X className="h-4 w-4" />
                       </button>
-                    </div>
+                    )}
+                  </div>
+
+                  {/* Input 3: Pincode */}
+                  <div className="relative flex-[1] min-w-0">
+                    <Hash className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-455 h-4.5 w-4.5" />
+                    <input
+                      value={pincode}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, "").slice(0, 6);
+                        setPincode(val);
+                        setPincodeError("");
+                        setLocationNotFoundMsg("");
+                      }}
+                      className="w-full rounded-xl bg-white border border-slate-200 py-3 pl-11 pr-8 text-sm font-semibold text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10"
+                      placeholder="Pincode"
+                      maxLength={6}
+                      style={{ paddingLeft: "2.75rem" }}
+                    />
+                    {pincode && (
+                      <button
+                        type="button"
+                        onClick={clearPincodeInput}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-655 cursor-pointer"
+                        aria-label="Clear pincode"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
 
+                {/* Search Button */}
+                <button
+                  type="submit"
+                  className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-5 py-3 text-sm font-bold transition shadow-md shadow-blue-600/15 cursor-pointer flex items-center justify-center gap-2 self-stretch lg:self-auto min-h-[44px]"
+                  disabled={locationLoading || pincodeLoading}
+                >
+                  {locationLoading || pincodeLoading ? (
+                    <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <Search className="h-4.5 w-4.5 shrink-0" />
+                      <span>Search</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+
+            {/* Mobile-only Unified Search Layout */}
+            <div className="lg:hidden relative w-full">
+              <form onSubmit={handleUnifiedSearchSubmit} className="relative z-[70] w-full">
+                <div className="flex items-stretch gap-2 w-full">
+                  <div className="relative flex-1 min-w-0" ref={serviceDropRef}>
+                    <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
+                    <input
+                      value={search}
+                      onChange={(e) => {
+                        setSearch(e.target.value);
+                        setShowServiceDrop(true);
+                      }}
+                      onFocus={() => setShowServiceDrop(true)}
+                      placeholder="Search services (e.g. Plumber, AC Repair...)"
+                      className="w-full rounded-xl bg-slate-50 border border-slate-200/80 py-2.5 pl-9 pr-8 text-xs font-semibold text-slate-800 placeholder-slate-400 focus:bg-white focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10"
+                      style={{ paddingLeft: "2.25rem" }}
+                    />
+                    {search && (
+                      <button
+                        type="button"
+                        onClick={() => setSearch("")}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-455 hover:text-slate-655 cursor-pointer"
+                      >
+                        ✕
+                      </button>
+                    )}
+                    {showServiceDrop && filteredServiceSuggestions.length > 0 && (
+                      <div className="absolute left-0 right-0 top-full z-[100] mt-1 max-h-[180px] overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-2xl p-1.5 scrollbar-none">
+                        {filteredServiceSuggestions.map((item) => {
+                          const IconComponent = getServiceIcon(item);
+                          return (
+                            <button
+                              key={item}
+                              type="button"
+                              onClick={() => handleServiceSelect(item)}
+                              className="w-full rounded-lg px-3 py-1.5 text-left text-xs text-slate-700 hover:bg-slate-50 hover:text-blue-600 transition-colors duration-150 cursor-pointer flex items-center gap-2"
+                            >
+                              <IconComponent className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                              <span>{item}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    type="submit"
+                    className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-4 py-2.5 text-xs font-bold transition shadow-md shadow-blue-600/15 cursor-pointer flex items-center justify-center min-h-[38px] shrink-0"
+                  >
+                    <Search className="h-4 w-4" />
+                  </button>
+                </div>
+              </form>
+
+              {/* Compact horizontal pills for Location & Filters */}
+              <div className="flex overflow-x-auto flex-nowrap items-center gap-1.5 mt-2.5 pt-2.5 border-t border-slate-100 no-scrollbar w-full">
+                <button
+                  type="button"
+                  onClick={() => setShowLocationDrawer(true)}
+                  className="flex items-center gap-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/60 rounded-full px-3 py-1.5 text-[11px] font-bold text-slate-700 transition"
+                >
+                  <MapPin className="h-3.5 w-3.5 text-rose-500 shrink-0" />
+                  <span className="truncate max-w-[150px]">
+                    {locationQuery || pincode ? `Near: ${locationQuery || pincode}` : "Area / Pincode / GPS"}
+                  </span>
+                  <span className="text-slate-350 font-normal">|</span>
+                  <span className="whitespace-nowrap">{radiusKm} km</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setFiltersDrawerOpen(true)}
+                  className={`flex items-center gap-1.5 border rounded-full px-3 py-1.5 text-[11px] font-bold transition-all ${activeFilterCount > 0
+                    ? "bg-indigo-50 border-indigo-200 text-indigo-700 font-extrabold"
+                    : "bg-slate-50 border-slate-200/60 text-slate-700"
+                    }`}
+                >
+                  <SlidersHorizontal className="h-3.5 w-3.5 text-indigo-550 shrink-0" />
+                  <span>Filters</span>
+                  {activeFilterCount > 0 && (
+                    <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-indigo-650 text-[9px] font-black text-white ml-0.5">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleMapToggle}
+                  disabled={mapToggleLocked}
+                  className={`flex items-center gap-1 border rounded-full px-3 py-1.5 text-[11px] font-bold transition-all ${showMap
+                    ? "bg-indigo-50 border-indigo-200 text-indigo-700 font-extrabold"
+                    : "bg-slate-50 border-slate-200/60 text-slate-700"
+                    }`}
+                >
+                  <span>{showMap ? "Hide Map" : "Show Map"}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Desktop bottom section (filters, range, links, alerts) */}
+            <div className="hidden lg:block space-y-4">
+              {/* USE CURRENT LOCATION Link & Validation Errors */}
+              <div className="flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={handleUseMyLocation}
+                  className="inline-flex items-center gap-1.5 text-[10px] font-bold text-blue-600 uppercase tracking-wider hover:underline self-start cursor-pointer"
+                >
+                  <Crosshair className="h-3 w-3 text-blue-600" />
+                  USE CURRENT LOCATION
+                </button>
+
                 {locationNotFoundMsg && (
-                  <div className="mt-3 rounded-xl border border-amber-400/25 bg-amber-500/10 px-3 py-2 text-sm font-medium text-amber-100">
+                  <div className="rounded-xl border border-amber-450/20 bg-amber-50 px-3.5 py-2 text-xs font-semibold text-amber-700">
                     ⚠ {locationNotFoundMsg}
                   </div>
                 )}
 
                 {pincodeError && (
-                  <div className="mt-3 rounded-xl border border-red-400/25 bg-red-500/10 px-3 py-2 text-sm font-medium text-red-200">
+                  <div className="rounded-xl border border-red-200 bg-red-50 px-3.5 py-2 text-xs font-semibold text-red-600">
                     ⚠ {pincodeError}
                   </div>
                 )}
-              </form>
+              </div>
 
-              {/* Divider Line */}
-              <div className="border-t border-slate-100 my-4" />
-
-              {/* STEP 3: Range Slider and Filters */}
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+              {/* STEP 3: Streamlined Range Slider and Filters Panel */}
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pt-3 border-t border-slate-100 mt-3">
                 {/* Range Slider */}
-                <div className="min-w-[240px] flex-1 max-w-xs">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                      Distance Range
-                    </span>
-                    <span className="qs-distance-badge text-[10px] font-bold bg-blue-600 px-2 py-0.5 rounded-md text-white">{radiusKm} km</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <input
-                      type="range"
-                      min={1}
-                      max={50}
-                      step={1}
-                      value={radiusKm}
-                      onChange={(e) => setRadiusKm(parseInt(e.target.value || "5", 10))}
-                      className="qs-range w-full"
-                      style={{
-                        background: `linear-gradient(to right, var(--qs-primary, #2563eb) 0%, var(--qs-primary, #2563eb) ${((radiusKm - 1) / 49) * 100}%, #e2e8f0 ${((radiusKm - 1) / 49) * 100}%, #e2e8f0 100%)`,
-                      }}
-                    />
-                    <span className="text-[9px] text-slate-400 mt-1 font-semibold">
-                      → {radiusKm <= 5 ? "Nearby" : radiusKm <= 20 ? "Moderate" : "Far"}
-                    </span>
-                  </div>
+                <div className="flex items-center gap-3 min-w-[260px] flex-1 max-w-sm">
+                  <span className="text-[11px] font-bold text-slate-500 whitespace-nowrap flex items-center gap-1">
+                    📍 {radiusKm} km
+                  </span>
+                  <input
+                    type="range"
+                    min={1}
+                    max={50}
+                    step={1}
+                    value={radiusKm}
+                    onChange={(e) => setRadiusKm(parseInt(e.target.value || "5", 10))}
+                    className="qs-range flex-1"
+                    style={{
+                      background: `linear-gradient(to right, var(--qs-primary, #2563eb) 0%, var(--qs-primary, #2563eb) ${((radiusKm - 1) / 49) * 100}%, #e2e8f0 ${((radiusKm - 1) / 49) * 100}%, #e2e8f0 100%)`,
+                    }}
+                  />
+                  <span className="text-[10px] font-bold text-slate-500 bg-slate-100 rounded-full px-2 py-0.5 border border-slate-200/50">
+                    {radiusKm <= 5 ? "Nearby" : radiusKm <= 20 ? "Moderate" : "Far"}
+                  </span>
                 </div>
 
-                {/* Quick Filters & Refine button group */}
-                <div className="flex flex-wrap items-center gap-4 lg:ml-auto">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
-                      Filters / फ़िल्टर:
-                    </span>
-                    <div className="flex flex-wrap items-center gap-2">
-                      {quickFilterItems.map(({ key, label, Icon }) => {
-                        const active = quickFilters[key];
-                        return (
-                          <button
-                            key={key}
-                            type="button"
-                            onClick={() => toggleQuickFilter(key)}
-                            aria-pressed={active}
-                            className={`qs-quick-filter-btn inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-xs font-semibold transition-all ${active ? "active" : ""
-                              }`}
-                          >
-                            <Icon className="h-3.5 w-3.5" />
-                            <span className="whitespace-nowrap">{label}</span>
-                          </button>
-                        );
-                      })}
+                {/* Desktop Vertical Divider */}
+                <div className="hidden lg:block h-5 w-px bg-slate-200 self-center mx-2" />
 
-                      <button
-                        type="button"
-                        onClick={() => setFiltersOpen((prev) => !prev)}
-                        className={`qs-refine-toggle-btn inline-flex items-center justify-center gap-2 rounded-full px-5 py-2 text-xs font-bold cursor-pointer whitespace-nowrap ml-1 ${filtersOpen ? "active" : ""}`}
-                      >
-                        <SlidersHorizontal className="h-3.5 w-3.5 shrink-0" />
-                        <span>Refine Results</span>
-                        {activeFilterCount > 0 && (
-                          <span className="qs-filter-badge inline-flex h-4 w-4 items-center justify-center rounded-full bg-white text-[10px] font-extrabold text-[#0f172a]">
-                            {activeFilterCount}
-                          </span>
-                        )}
-                        <ChevronDown className="h-3.5 w-3.5 shrink-0 transition-transform duration-200" style={{ transform: filtersOpen ? "rotate(180deg)" : "none" }} />
-                      </button>
-                    </div>
+                {/* Quick Filters & Refine button group */}
+                <div className="flex flex-wrap items-center gap-2 lg:ml-auto">
+                  <span className="text-[11px] font-black text-slate-455 uppercase tracking-wider flex items-center gap-1">
+                    ⚡ Filters:
+                  </span>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {quickFilterItems.map(({ key, label, Icon }) => {
+                      const active = quickFilters[key];
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => toggleQuickFilter(key)}
+                          aria-pressed={active}
+                          className={`qs-quick-filter-btn inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-bold transition-all ${active ? "active" : ""
+                            }`}
+                        >
+                          <Icon className="h-3.5 w-3.5" />
+                          <span className="whitespace-nowrap">{label}</span>
+                        </button>
+                      );
+                    })}
+
+                    <button
+                      type="button"
+                      onClick={() => setFiltersOpen((prev) => !prev)}
+                      className={`qs-refine-toggle-btn inline-flex items-center justify-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-black cursor-pointer whitespace-nowrap ml-1 ${filtersOpen ? "active" : ""
+                        }`}
+                    >
+                      <SlidersHorizontal className="h-3.5 w-3.5 shrink-0" />
+                      <span>Refine</span>
+                      {activeFilterCount > 0 && (
+                        <span className="qs-filter-badge inline-flex h-4 w-4 items-center justify-center rounded-full bg-white text-[10px] font-extrabold text-[#0f172a]">
+                          {activeFilterCount}
+                        </span>
+                      )}
+                      <ChevronDown
+                        className="h-3 w-3 shrink-0 transition-transform duration-200"
+                        style={{ transform: filtersOpen ? "rotate(180deg)" : "none" }}
+                      />
+                    </button>
                   </div>
                 </div>
               </div>
 
               {/* Collapsible Refine Results filter options */}
               {filtersOpen && (
-                <div className="qs-refine-panel rounded-xl border p-4 space-y-4">
+                <div className="qs-refine-panel rounded-xl border p-4 mt-3 space-y-4">
                   {/* Price Range */}
                   <div>
-                    <p className="mb-2 text-xs font-bold uppercase tracking-wider text-indigo-300/80">
-                      💰 Price Range
+                    <p className="mb-2 text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                      <span className="text-sm">💰</span> Price Range
                     </p>
                     <div className="flex flex-wrap gap-1.5">
                       {PRICE_OPTIONS.map((opt) => (
@@ -1909,8 +2016,8 @@ export default function NearbyServices({
 
                   {/* Duration */}
                   <div>
-                    <p className="mb-2 text-xs font-bold uppercase tracking-wider text-indigo-300/80">
-                      ⏱ Time to Complete
+                    <p className="mb-2 text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                      <span className="text-sm">⏱</span> Time to Complete
                     </p>
                     <div className="flex flex-wrap gap-1.5">
                       {DURATION_OPTIONS.map((opt) => (
@@ -1929,8 +2036,8 @@ export default function NearbyServices({
 
                   {/* Booking Type */}
                   <div>
-                    <p className="mb-2 text-xs font-bold uppercase tracking-wider text-indigo-300/80">
-                      📅 Booking Type
+                    <p className="mb-2 text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                      <span className="text-sm">📅</span> Booking Type
                     </p>
                     <div className="flex flex-wrap gap-1.5">
                       {BOOKING_OPTIONS.map((opt) => (
@@ -1949,11 +2056,11 @@ export default function NearbyServices({
 
                   {/* Clear all */}
                   {activeFilterCount > 0 && (
-                    <div className="border-t border-indigo-400/15 pt-3">
+                    <div className="border-t border-slate-200 pt-3">
                       <button
                         type="button"
                         onClick={clearAllFilters}
-                        className="text-xs font-semibold text-red-300 hover:text-red-200 transition-colors cursor-pointer"
+                        className="text-xs font-bold text-rose-600 hover:text-rose-700 transition-colors cursor-pointer flex items-center gap-1"
                       >
                         ✕ Clear All Filters
                       </button>
@@ -2015,58 +2122,46 @@ export default function NearbyServices({
 
       {/* ============ MAP ============ */}
       <div
-        className={`qs-grid-area-map w-full ${showMap ? (isMapFullScreen ? "block" : "block animate-fade-in") : "hidden"}`}
+        className={`qs-grid-area-map w-full ${showMap ? (isMapFullScreen ? "block qs-map-fullscreen" : "block animate-fade-in") : "hidden"}`}
         aria-hidden={!showMap}
       >
         <MapErrorBoundary>
           <div
             className={`qs-map-frame overflow-hidden ${isMapFullScreen
-                ? "fixed inset-0 z-[2000] w-screen h-screen rounded-none"
-                : "relative isolate rounded-3xl h-[300px] sm:h-[350px] lg:h-[520px] w-full"
+              ? "fixed inset-0 z-[2000] w-screen h-screen rounded-none qs-map-frame-fullscreen"
+              : "relative isolate rounded-2xl sm:rounded-3xl h-[260px] sm:h-[320px] lg:h-[520px] w-full shadow-xl border border-slate-200/90 bg-slate-100"
               }`}
           >
 
-            {/* Top-left: providers count */}
-            <div className="pointer-events-none absolute left-3 top-3 z-[600]">
-              <div className="qs-map-pill flex items-center gap-2">
-                <Users className="h-4 w-4 text-[#0284c7] shrink-0" />
-                <div className="leading-tight">
-                  <div className="text-[10px] uppercase tracking-wider text-indigo-200/80">
-                    Providers
-                  </div>
-                  <div className="text-sm font-bold text-white">
-                    {nearby.length} found
-                  </div>
+            {/* Top-left: providers count pill (Visible on Mobile & Desktop) */}
+            <div className="pointer-events-none absolute left-2.5 top-2.5 sm:left-3 sm:top-3 z-[600]">
+              <div className="flex items-center gap-1.5 bg-slate-900/85 backdrop-blur-md border border-white/15 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-white shadow-md">
+                <Users className="h-3.5 w-3.5 text-sky-400 shrink-0" />
+                <div className="flex items-center gap-1 text-[11px] sm:text-xs">
+                  <span className="font-bold text-white">{nearby.length}</span>
+                  <span className="text-slate-300 hidden xs:inline">providers</span>
                 </div>
               </div>
             </div>
 
-
-            {/* Top-right: live radius badge */}
-            <div className={`pointer-events-none absolute top-3 z-[600] ${isMapFullScreen ? "right-52" : "right-3"}`}>
-              <div className="qs-map-pill flex items-center gap-2">
-                <Radar className="h-4 w-4 text-emerald-500 animate-pulse shrink-0" />
-                <div className="leading-tight">
-                  <div className="text-[10px] uppercase tracking-wider text-indigo-200/80">
-                    Live Radius
-                  </div>
-                  <div className="text-sm font-bold text-white">
-                    {radiusKm} km
-                  </div>
+            {/* Top-right: live radius badge (Visible on Mobile & Desktop) */}
+            <div className={`pointer-events-none absolute top-2.5 sm:top-3 z-[600] ${isMapFullScreen ? "right-52" : "right-2.5 sm:right-3"}`}>
+              <div className="flex items-center gap-1.5 bg-slate-900/85 backdrop-blur-md border border-white/15 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-white shadow-md">
+                <Radar className="h-3.5 w-3.5 text-emerald-400 animate-pulse shrink-0" />
+                <div className="flex items-center gap-1 text-[11px] sm:text-xs font-semibold text-white">
+                  <span>{radiusKm} km</span>
+                  <span className="text-slate-300/80 text-[10px] uppercase hidden xs:inline">radius</span>
                 </div>
               </div>
             </div>
 
-            {/* Bottom: user location badge */}
+            {/* Bottom-left: user location badge */}
             {buyerPos && (
-              <div className="pointer-events-none absolute bottom-3 left-1/2 z-[600] -translate-x-1/2">
-                <div className="qs-map-pill flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-rose-500 shrink-0" />
-                  <span className="text-xs font-semibold text-indigo-100">
-                    You are here
-                  </span>
-                  <span className="text-[10px] text-indigo-300/80">
-                    {buyerPos.lat.toFixed(3)}, {buyerPos.lng.toFixed(3)}
+              <div className="pointer-events-none absolute bottom-2.5 left-2.5 sm:left-3 z-[600]">
+                <div className="flex items-center gap-1.5 bg-slate-900/85 backdrop-blur-md border border-white/15 px-2.5 py-1 rounded-full text-white shadow-md max-w-[180px] sm:max-w-none">
+                  <MapPin className="h-3.5 w-3.5 text-rose-400 shrink-0" />
+                  <span className="text-[10px] sm:text-xs font-semibold text-indigo-100 truncate">
+                    Live Location
                   </span>
                 </div>
               </div>
@@ -2076,32 +2171,67 @@ export default function NearbyServices({
             {searchCenter && buyerPos &&
               (Math.abs(searchCenter.lat - buyerPos.lat) > 0.0001 ||
                 Math.abs(searchCenter.lng - buyerPos.lng) > 0.0001) && (
-                <div className="pointer-events-none absolute bottom-14 left-1/2 z-[600] -translate-x-1/2">
-                  <div className="qs-map-pill flex items-center gap-2 bg-blue-600/90 border border-blue-400/40">
-                    <Crosshair className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-                    <span className="text-xs font-semibold text-emerald-350">
-                      Searching here
+                <div className="pointer-events-none absolute bottom-10 left-2.5 sm:left-3 z-[600]">
+                  <div className="flex items-center gap-1.5 bg-blue-600/90 backdrop-blur-md border border-blue-400/40 px-2.5 py-1 rounded-full text-white shadow-md">
+                    <Crosshair className="h-3 w-3 text-emerald-300 shrink-0" />
+                    <span className="text-[10px] sm:text-xs font-semibold text-emerald-100">
+                      Searching Area
                     </span>
                   </div>
                 </div>
               )}
 
-            {/* Floating Bottom-Right: Locate Me Button */}
-            <div className="absolute bottom-3 right-3 z-[600]">
-              <button
-                type="button"
-                onClick={handleUseMyLocation}
-                disabled={geoLoading}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
-                title="Locate Me / मेरी स्थिति"
-              >
-                {geoLoading ? (
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                ) : (
-                  <Crosshair className="h-5 w-5 text-white" />
-                )}
-              </button>
-            </div>
+            {/* Floating Bottom-Right: Map Controls (Locate Me & Expand Map) */}
+            {!isMapFullScreen && (
+              <div className="absolute bottom-2.5 right-2.5 sm:bottom-3 sm:right-3 z-[600] flex items-center gap-2">
+                {/* Locate Me button */}
+                <button
+                  type="button"
+                  onClick={handleUseMyLocation}
+                  disabled={geoLoading}
+                  className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 cursor-pointer shrink-0 border border-blue-400/30"
+                  title="Locate Me / मेरी स्थिति"
+                >
+                  {geoLoading ? (
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  ) : (
+                    <Crosshair className="h-4 w-4 text-white" />
+                  )}
+                </button>
+
+                {/* Expand Map button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMapFullScreen(true);
+                    setIsMapUnlocked(true);
+                  }}
+                  className="flex items-center gap-1.5 h-8 sm:h-9 px-3 rounded-full bg-white/95 backdrop-blur-md border border-slate-200 text-[#0284c7] shadow-lg text-[10px] sm:text-xs font-black uppercase tracking-wider hover:bg-white transition active:scale-95 cursor-pointer shrink-0"
+                >
+                  <Map className="h-3.5 w-3.5 text-[#0284c7]" />
+                  <span>Expand</span>
+                </button>
+              </div>
+            )}
+
+            {/* Locate Me Button when Full Screen */}
+            {isMapFullScreen && (
+              <div className="absolute bottom-3 right-3 z-[600]">
+                <button
+                  type="button"
+                  onClick={handleUseMyLocation}
+                  disabled={geoLoading}
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
+                  title="Locate Me / मेरी स्थिति"
+                >
+                  {geoLoading ? (
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  ) : (
+                    <Crosshair className="h-4.5 w-4.5 text-white" />
+                  )}
+                </button>
+              </div>
+            )}
 
             {/* Selected Seller Floating Card Overlay (Map Context) */}
             {selectedSeller && (
@@ -2187,9 +2317,9 @@ export default function NearbyServices({
               zoom={buyerPos ? 14 : 5}
               style={{ height: "100%", width: "100%" }}
               scrollWheelZoom={!isMobile}
-              dragging={!isMobile || isMapUnlocked}
-              touchZoom={!isMobile || isMapUnlocked}
-              doubleClickZoom={!isMobile || isMapUnlocked}
+              dragging={!isMobile || isMapUnlocked || lockScrollOnMobile}
+              touchZoom={!isMobile || isMapUnlocked || lockScrollOnMobile}
+              doubleClickZoom={!isMobile || isMapUnlocked || lockScrollOnMobile}
             >
               <MapInteractionController
                 isMobile={isMobile}
@@ -2259,56 +2389,23 @@ export default function NearbyServices({
             </MapContainer>
 
             {/* Mobile Interaction Overlay */}
-            {!isMapUnlocked && isMobile && (
+            {!isMapUnlocked && isMobile && !lockScrollOnMobile && (
               <div
                 onClick={() => setIsMapUnlocked(true)}
-                style={{
-                  backgroundColor: "rgba(15, 23, 42, 0.75)",
-                  backdropFilter: "blur(4px)",
-                  WebkitBackdropFilter: "blur(4px)",
-                  zIndex: 2500
-                }}
-                className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer transition-all"
+                className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer transition-all bg-slate-900/60 backdrop-blur-xs z-[2400]"
               >
-                <div
-                  style={{
-                    backgroundColor: "#1e293b",
-                    border: "1px solid rgba(99, 102, 241, 0.4)",
-                  }}
-                  className="flex flex-col items-center gap-2 rounded-2xl px-6 py-5 text-center shadow-2xl animate-fade-in max-w-[85%]"
-                >
-                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 mb-1">
-                    <Map className="h-5.5 w-5.5 text-white" />
+                <div className="flex flex-col items-center gap-1 text-white bg-slate-900/95 border border-slate-700/50 rounded-xl px-4 py-2 text-center shadow-lg max-w-[85%]">
+                  <div className="flex items-center gap-1.5">
+                    <Lock className="h-3.5 w-3.5 text-blue-400 shrink-0" />
+                    <span className="text-[11px] font-black tracking-wider uppercase">Tap to interact</span>
                   </div>
-                  <h3 style={{ color: "#ffffff" }} className="text-sm font-extrabold tracking-wider uppercase">
-                    Tap to use map
-                  </h3>
-                  <p style={{ color: "#e2e8f0" }} className="text-xs font-semibold">
-                    नक्शे का उपयोग करने के लिए टैप करें
-                  </p>
-                  <p style={{ color: "#94a3b8" }} className="text-[10px] mt-1 max-w-[200px] leading-normal">
-                    Allows dragging map. Scrolls page when locked.<br />
-                    लॉक होने पर पेज स्क्रॉल होगा।
-                  </p>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsMapFullScreen(true);
-                      setIsMapUnlocked(true);
-                    }}
-                    style={{ backgroundColor: "#4f46e5", color: "#ffffff" }}
-                    className="mt-3.5 flex items-center gap-2 px-5 py-2.5 rounded-xl font-extrabold text-xs shadow-lg transition-all active:scale-95 cursor-pointer border border-indigo-400/30"
-                  >
-                    <Maximize2 className="h-3.5 w-3.5 text-white" />
-                    <span>Full Map / पूरा नक्शा</span>
-                  </button>
+                  <span className="text-[9px] text-slate-355 font-semibold">नक्शा उपयोग करने के लिए टैप करें</span>
                 </div>
               </div>
             )}
 
             {/* Mobile Re-lock Button */}
-            {isMapUnlocked && !isMapFullScreen && isMobile && (
+            {isMapUnlocked && !isMapFullScreen && isMobile && !lockScrollOnMobile && (
               <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[2500]">
                 <button
                   type="button"
@@ -2322,30 +2419,6 @@ export default function NearbyServices({
                 >
                   <Lock className="h-3 w-3 text-indigo-400" />
                   <span style={{ color: "#ffffff" }}>Lock / लॉक</span>
-                </button>
-              </div>
-            )}
-
-            {/* Full Screen Toggle (when map is unlocked on mobile, or on desktop, but not full-screen) */}
-            {!isMapFullScreen && (!isMobile || isMapUnlocked) && (
-              <div className="absolute bottom-3 left-3 z-[2500]">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsMapFullScreen(true);
-                    if (isMobile) {
-                      setIsMapUnlocked(true);
-                    }
-                  }}
-                  style={{
-                    backgroundColor: "#ffffff",
-                    border: "1px solid rgba(0, 0, 0, 0.15)",
-                    color: "#4f46e5"
-                  }}
-                  className="flex items-center justify-center h-8 w-8 rounded-full shadow-lg hover:scale-105 active:scale-95 transition-all cursor-pointer"
-                  title="Full Screen / पूरा नक्शा"
-                >
-                  <Maximize2 className="h-4 w-4 text-indigo-600" />
                 </button>
               </div>
             )}
@@ -2411,52 +2484,34 @@ export default function NearbyServices({
             </div>
           )}
 
-          {!apiLoading && !buyerPos && sellers.length === 0 && (
-            <div className="qs-glass-panel w-full py-14 text-center text-indigo-300">
-              <p className="text-sm font-semibold">No service providers registered on map yet.</p>
-              <p className="text-xs text-indigo-300/60 mt-1">
-                Be the first to register as a service partner!
-              </p>
-            </div>
-          )}
-
-          {!apiLoading && buyerPos && nearby.length === 0 && (
-            <div className="w-full">
-              <NoProvidersLeadForm
-                category={selectedCategory || search.trim()}
-                pincode={targetPincode}
-                radiusKm={radiusKm}
-                buyerPos={buyerPos}
-              />
-              {activeFilterCount > 0 && (
-                <button
-                  type="button"
-                  onClick={clearAllFilters}
-                  className="mt-3 rounded-xl border border-indigo-400/30 bg-indigo-500/15 px-5 py-2 text-sm font-semibold text-indigo-200 transition hover:bg-indigo-500/25"
-                >
-                  ✕ Clear All Filters
-                </button>
-              )}
-            </div>
-          )}
-
           {nearby.slice(0, visibleCount).map((seller, idx) => {
             const packageRank = getSellerPackageRank(seller);
+            const isPremium = packageRank >= 2;
 
             const sId = seller.id || seller.sellerId;
             const isSelected = selectedSellerId === sId;
             const distanceLabel = Number(seller.distanceKm || 0).toFixed(1);
             const isAvailable = seller.isAvailable !== undefined ? Boolean(seller.isAvailable) : (seller.is_available !== undefined ? Boolean(seller.is_available) : true);
 
+            const serviceModeLabel =
+              seller.serviceMode === "online"
+                ? "Online"
+                : seller.serviceMode === "offline"
+                  ? "On-site"
+                  : seller.serviceMode === "both"
+                    ? "Online/On-site"
+                    : "";
+
             return (
               <div
                 key={sId}
                 id={`seller-card-${sId}`}
                 onClick={() => handlePremiumSellerClick(seller)}
-                style={{ animationDelay: `${Math.min(idx * 50, 400)}ms` }}
-                className={`qs-card group cursor-pointer w-full lg:w-auto relative ${isSelected ? "qs-card-active" : ""
+                style={{ padding: "0.75rem 0.875rem", animationDelay: `${Math.min(idx * 50, 400)}ms` }}
+                className={`qs-card group cursor-pointer w-full relative flex items-center justify-between gap-3 rounded-xl border transition hover:shadow-md ${isSelected ? "qs-card-active shadow-md border-blue-500/30" : "bg-white border-slate-100"
                   }`}
               >
+                {/* Close Button if Selected */}
                 {isSelected && (
                   <button
                     type="button"
@@ -2467,124 +2522,96 @@ export default function NearbyServices({
                         mapRef.current.closePopup();
                       }
                     }}
-                    style={{ zIndex: 10 }}
-                    className="absolute top-3 right-3 flex h-5.5 w-5.5 items-center justify-center rounded-full bg-slate-100 hover:bg-red-500 hover:text-white text-slate-500 transition-all shadow-md border border-slate-200/60 cursor-pointer hover:scale-105 active:scale-95"
-                    title="Deselect / बंद करें"
+                    className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 hover:bg-red-500 hover:text-white text-slate-500 transition shadow-sm border border-slate-200"
+                    title="Deselect"
                   >
                     <X className="h-3 w-3" />
                   </button>
                 )}
-                {/* Header: avatar + name + distance */}
-                <div className="flex items-center gap-3 pr-6">
-                  <div className="relative h-10 w-10 flex-shrink-0">
+
+                {/* Left Side: Avatar & Info Column (Clicking here view details) */}
+                <div
+                  onClick={(e) => handleViewDetailsClick(seller, e)}
+                  className="flex items-center gap-3.5 min-w-0 flex-1 hover:opacity-90 transition-opacity"
+                >
+                  {/* Rounded-Square Avatar */}
+                  <div className="relative h-12 w-12 flex-shrink-0">
                     {(seller.profilePhotoUrl || seller.profile_pic) ? (
                       <img
                         src={getImageUrl(seller.profilePhotoUrl || seller.profile_pic)}
                         alt={seller.name}
-                        className="h-10 w-10 rounded-full object-cover border border-slate-200"
+                        className="h-12 w-12 rounded-xl object-cover border border-slate-100 shadow-2xs"
                       />
                     ) : (
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1565C0] font-bold text-white text-sm qs-avatar-default">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-xl font-extrabold text-lg bg-blue-50 text-blue-600 border border-blue-100/50 shadow-2xs">
                         {seller.name?.[0]?.toUpperCase() || "?"}
                       </div>
                     )}
-                    {/* Availability status dot badge */}
+                    {/* Availability Dot */}
                     <span
-                      className={`absolute -bottom-0.5 -right-0.5 block h-3 w-3 rounded-full border-2 border-white shadow-[0_1px_3.5px_rgba(0,0,0,0.15)] ${isAvailable ? "bg-[#1E8E5A] qs-status-available" : "bg-[#e53935] qs-status-unavailable"
+                      className={`absolute -bottom-0.5 -right-0.5 block h-3 w-3 rounded-full border-2 border-white shadow-xs ${isAvailable ? "bg-[#1E8E5A]" : "bg-[#e53935]"
                         }`}
                       title={isAvailable ? "Available" : "Unavailable"}
                     />
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5">
-                      <h4 className="text-[15px] font-semibold text-slate-800 tracking-tight leading-snug">
-                        {seller.name}
-                      </h4>
+
+                  {/* Text Details Column */}
+                  <div className="min-w-0 flex-1 flex flex-col gap-0.5">
+                    <h4 className="text-[14px] font-black text-slate-800 tracking-tight leading-snug truncate flex items-center gap-1.5 flex-wrap">
+                      <span className="truncate">{seller.name}</span>
+                      {isPremium && (
+                        <BadgeCheck className="h-4 w-4 text-amber-500 fill-amber-500/10 shrink-0" title="Premium Partner" />
+                      )}
+                    </h4>
+
+                    <div className="text-xs font-semibold text-slate-500 flex items-center gap-1.5 truncate">
+                      <span>{seller.service}</span>
+                      {serviceModeLabel && (
+                        <>
+                          <span className="text-slate-300 font-normal">•</span>
+                          <span className="text-slate-500 font-semibold">{serviceModeLabel}</span>
+                        </>
+                      )}
+                      <span className="text-slate-300 font-normal">•</span>
+                      <span className="text-blue-650 font-bold">{distanceLabel}km</span>
                     </div>
-                    <div className="truncate text-xs font-medium text-slate-500 mt-0.5">
-                      {seller.service}
+
+                    {/* Badge Row (inline chips) */}
+                    <div className="flex items-center gap-2 mt-1">
+                      {/* Rating */}
+                      <span className="inline-flex items-center gap-0.5 text-[11px] font-extrabold text-emerald-700">
+                        <Star className="h-3 w-3 fill-emerald-600 text-emerald-600" />
+                        <span>{Number(seller?.rating || 0).toFixed(1)}</span>
+                      </span>
+
+                      {/* Fast Response */}
+                      {packageRank >= 2 && (
+                        <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-slate-500 ml-1">
+                          <Zap className="h-3.5 w-3.5 text-amber-500 fill-amber-500 shrink-0" />
+                          <span>Fast Response</span>
+                        </span>
+                      )}
+
+                      {/* Instant Service */}
+                      {seller?.instantService && (
+                        <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-slate-500 ml-1">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse mr-0.5" />
+                          <span>Instant</span>
+                        </span>
+                      )}
                     </div>
                   </div>
-                  <div className="qs-custom-distance-badge">
-                    <MapPin className="h-3 w-3 shrink-0" />
-                    <span>{`${distanceLabel}km away`}</span>
-                  </div>
                 </div>
 
-                {/* Address */}
-                <div className="mt-3.5 flex items-start gap-1.5 text-xs text-slate-500">
-                  <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400 mt-0.5" />
-                  <span className="truncate">{seller.address}</span>
-                </div>
-
-                {/* Badge row */}
-                <div className="mt-3.5 flex flex-wrap gap-2">
-                  {/* Service Mode badges */}
-                  {seller?.serviceMode === "online" && (
-                    <span className="qs-tag qs-tag-indigo">
-                      <Globe className="h-3 w-3 shrink-0" />
-                      <span>Online Service</span>
-                    </span>
-                  )}
-                  {seller?.serviceMode === "offline" && (
-                    <span className="qs-tag qs-tag-emerald">
-                      <MapPin className="h-3 w-3 shrink-0" />
-                      <span>On-site Service</span>
-                    </span>
-                  )}
-                  {seller?.serviceMode === "both" && (
-                    <span className="qs-tag qs-tag-indigo">
-                      <Globe className="h-3 w-3 shrink-0" />
-                      <span>Online + On-site</span>
-                    </span>
-                  )}
-
-                  {/* Instant Service */}
-                  {seller?.instantService && (
-                    <span
-                      className="qs-custom-instant-badge"
-                      title="Instant Service"
-                    >
-                      <span className="qs-custom-instant-badge-dot" />
-                      <Zap className="h-3 w-3 fill-current text-amber-600 shrink-0" />
-                      <span>Instant Service</span>
-                    </span>
-                  )}
-
-                  {/* Rating badge */}
-                  <span className="qs-tag qs-tag-gold">
-                    <Star className="h-3 w-3 fill-current text-amber-500 shrink-0" />
-                    <span className="font-bold">{Number(seller?.rating || 0).toFixed(1)}</span>
-                    <span className="opacity-80 font-normal">
-                      ({Number(seller?.reviews || 0)} Reviews)
-                    </span>
-                  </span>
-
-                  {/* Top Rated */}
-                  {seller?.isTopRated && (
-                    <span className="qs-tag qs-tag-gold">
-                      <Sparkles className="h-3 w-3 fill-current text-yellow-600 shrink-0" />
-                      <span>Top Rated</span>
-                    </span>
-                  )}
-
-                  {/* Verification-related UI temporarily hidden */}
-                  {packageRank >= 2 && (
-                    <span className="qs-tag qs-tag-amber">
-                      <Zap className="h-3 w-3 fill-current text-amber-600 shrink-0" />
-                      <span>Fast Response</span>
-                    </span>
-                  )}
-                </div>
-
-                {/* CTA */}
-                <a
-                  href={`/seller/${sId}`}
+                {/* Right Side: Chevron click to view profile */}
+                <button
+                  type="button"
                   onClick={(e) => handleViewDetailsClick(seller, e)}
-                  className="btn qs-seller-card-btn mt-5 block w-full text-center text-xs"
+                  className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-slate-50 text-slate-400 hover:text-slate-650 transition-colors shrink-0 cursor-pointer"
+                  title="View Details"
                 >
-                  View Profile / प्रोफ़ाइल देखें →
-                </a>
+                  <ChevronRight className="h-5 w-5 shrink-0" />
+                </button>
               </div>
             );
           })}
@@ -2594,36 +2621,15 @@ export default function NearbyServices({
             <>
               {/* Show More Trigger */}
               {nearby.length > visibleCount && (
-                <>
-                  {/* Mobile horizontal scroll Card (only when map is showing) */}
-                  {showMap ? (
-                    <div className="rounded-2xl border border-dashed border-slate-200 flex flex-col items-center justify-center p-6 text-center bg-white lg:hidden w-full qs-card">
-                      <span className="text-2xl mb-2">⚡</span>
-                      <h5 className="text-sm font-bold text-slate-800 mb-1">More Partners Found</h5>
-                      <p className="text-xs text-slate-400 mb-4">View more local service providers near you</p>
-                      <button
-                        onClick={() => setVisibleCount((prev) => prev + 5)}
-                        className="btn qs-seller-card-btn px-5 py-2 text-xs font-bold rounded-xl cursor-pointer"
-                      >
-                        Show More
-                      </button>
-                    </div>
-                  ) : null}
-
-                  {/* Desktop button or grid full-width button */}
-                  <div className={`mt-4 ${showMap
-                    ? "hidden lg:block w-full"
-                    : "w-full col-span-full flex justify-center mt-6"
-                    }`}>
-                    <button
-                      type="button"
-                      onClick={() => setVisibleCount((prev) => prev + 5)}
-                      className="btn qs-seller-card-btn w-full py-3 text-xs font-bold rounded-xl text-center"
-                    >
-                      Show More Services / और दिखाएं ↓
-                    </button>
-                  </div>
-                </>
+                <div className="mt-4 w-full flex justify-center col-span-full">
+                  <button
+                    type="button"
+                    onClick={() => setVisibleCount((prev) => prev + 5)}
+                    className="btn qs-seller-card-btn w-full py-3 text-xs font-bold rounded-xl text-center cursor-pointer"
+                  >
+                    Show More Services / और दिखाएं ↓
+                  </button>
+                </div>
               )}
 
               {/* Seller Advertisement container */}
@@ -2681,6 +2687,302 @@ export default function NearbyServices({
           await handleUseMyLocation();
         }}
       />
+
+      {/* ============ MOBILE LOCATION & RANGE DRAWER ============ */}
+      {showLocationDrawer && isMobile && createPortal(
+        <div className="fixed inset-0 z-[999999] flex items-end justify-center">
+          {/* Backdrop */}
+          <div
+            onClick={() => setShowLocationDrawer(false)}
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs"
+          />
+          {/* Drawer Body */}
+          <div className="relative w-full max-h-[85vh] bg-white rounded-t-3xl p-5 shadow-2xl z-[999999] flex flex-col gap-4 animate-slide-up overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                <MapPin className="h-4 w-4 text-rose-500 shrink-0" />
+                Location & Radius
+              </h4>
+              <button
+                type="button"
+                onClick={() => setShowLocationDrawer(false)}
+                className="h-6 w-6 flex items-center justify-center rounded-full bg-slate-100 hover:bg-red-500 hover:text-white text-slate-500 transition cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <p className="text-[11px] text-slate-500 leading-relaxed -mt-2 bg-slate-50 rounded-xl p-3 border border-slate-100">
+              Find local service experts near you by using your current <strong>GPS Location</strong>, searching for a <strong>Landmark Area</strong>, or entering a <strong>Pincode</strong>.
+            </p>
+
+            {/* GPS Button */}
+            <button
+              type="button"
+              onClick={() => {
+                handleUseMyLocation();
+                setShowLocationDrawer(false);
+              }}
+              disabled={geoLoading}
+              className="w-full flex items-center justify-center gap-2 bg-blue-50 border border-blue-200 text-blue-600 rounded-xl py-3 text-xs font-bold hover:bg-blue-100 transition disabled:opacity-50 cursor-pointer"
+            >
+              {geoLoading ? (
+                <span className="h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Crosshair className="h-4 w-4 text-blue-600" />
+              )}
+              <span>USE CURRENT GPS LOCATION</span>
+            </button>
+
+            {/* Area Search Input */}
+            <div ref={locationSearchRef} className="relative w-full">
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Search Area/Landmark</label>
+              <div className="relative">
+                <MapPin className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-rose-500 h-4 w-4" />
+                <input
+                  value={locationQuery}
+                  onChange={(e) => setLocationQuery(e.target.value)}
+                  onFocus={() => {
+                    if (locationQuery.trim().length >= 3) {
+                      searchLocation(locationQuery);
+                    }
+                  }}
+                  autoComplete="off"
+                  className="w-full rounded-xl bg-slate-50 border border-slate-200 py-2.5 pl-10 pr-8 text-xs font-semibold text-slate-800 placeholder-slate-400 focus:bg-white focus:border-blue-500 focus:outline-none"
+                  style={{ paddingLeft: "2.5rem" }}
+                  placeholder="Search landmark, street, city..."
+                />
+                {locationQuery && (
+                  <button
+                    type="button"
+                    onClick={clearLocationInput}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-655 cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+              {/* Autocomplete Results for Drawer */}
+              {locationResults.length > 0 && (
+                <div className="mt-2 border border-slate-100 rounded-xl bg-white shadow-lg max-h-48 overflow-y-auto">
+                  {locationResults.map((result) => (
+                    <button
+                      key={`${result.place_id}-${result.lat}-${result.lon}`}
+                      type="button"
+                      onClick={() => {
+                        handleResultClick(result);
+                        setShowLocationDrawer(false);
+                      }}
+                      className="block w-full text-left px-3 py-2.5 text-xs hover:bg-slate-50 border-b border-slate-50 last:border-0"
+                    >
+                      <span className="block font-bold text-slate-800">
+                        {(result.display_name || "").split(",")[0]}
+                      </span>
+                      <span className="block text-[10px] text-slate-450 truncate mt-0.5">
+                        {result.display_name}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Pincode Input */}
+            <div className="w-full">
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Enter Pincode</label>
+              <div className="relative">
+                <Hash className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
+                <input
+                  value={pincode}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, "").slice(0, 6);
+                    setPincode(val);
+                    setPincodeError("");
+                  }}
+                  className="w-full rounded-xl bg-slate-50 border border-slate-200 py-2.5 pl-10 pr-8 text-xs font-semibold text-slate-800 placeholder-slate-400 focus:bg-white focus:border-blue-500 focus:outline-none"
+                  style={{ paddingLeft: "2.5rem" }}
+                  placeholder="Enter 6-digit pincode..."
+                  maxLength={6}
+                />
+                {pincode && (
+                  <button
+                    type="button"
+                    onClick={clearPincodeInput}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-455 hover:text-slate-655 cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Range / Radius Slider */}
+            <div className="w-full mt-1">
+              <div className="flex justify-between items-center mb-1.5">
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Search Radius</label>
+                <span className="text-[11px] font-bold text-blue-650 bg-blue-50 rounded-full px-2.5 py-0.5 border border-blue-100 flex items-center gap-1">
+                  <MapPin className="h-3 w-3 text-rose-500 shrink-0" />
+                  {radiusKm} km
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="range"
+                  min={1}
+                  max={50}
+                  step={1}
+                  value={radiusKm}
+                  onChange={(e) => setRadiusKm(parseInt(e.target.value || "5", 10))}
+                  className="qs-range flex-1"
+                  style={{
+                    background: `linear-gradient(to right, var(--qs-primary, #2563eb) 0%, var(--qs-primary, #2563eb) ${((radiusKm - 1) / 49) * 100}%, #e2e8f0 ${((radiusKm - 1) / 49) * 100}%, #e2e8f0 100%)`,
+                  }}
+                />
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowLocationDrawer(false)}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-3 text-xs font-extrabold transition shadow-md shadow-blue-600/15 cursor-pointer text-center mt-2"
+            >
+              APPLY SETTINGS
+            </button>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ============ MOBILE FILTERS DRAWER ============ */}
+      {filtersDrawerOpen && isMobile && createPortal(
+        <div className="fixed inset-0 z-[999999] flex items-end justify-center">
+          {/* Backdrop */}
+          <div
+            onClick={() => setFiltersDrawerOpen(false)}
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs"
+          />
+          {/* Drawer Body */}
+          <div className="relative w-full max-h-[85vh] bg-white rounded-t-3xl p-5 shadow-2xl z-[999999] flex flex-col gap-4 animate-slide-up overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                ⚡ Refine Results
+              </h4>
+              <button
+                type="button"
+                onClick={() => setFiltersDrawerOpen(false)}
+                className="h-6 w-6 flex items-center justify-center rounded-full bg-slate-100 hover:bg-red-500 hover:text-white text-slate-500 transition cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Quick Filters */}
+            <div>
+              <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">Quick Sorting & Badges</p>
+              <div className="grid grid-cols-2 gap-2">
+                {quickFilterItems.map(({ key, label, Icon }) => {
+                  const active = quickFilters[key];
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => toggleQuickFilter(key)}
+                      className={`inline-flex items-center justify-center gap-1.5 rounded-xl border p-2.5 text-xs font-bold transition-all ${active
+                        ? "bg-indigo-50 border-indigo-200 text-indigo-700 font-extrabold"
+                        : "bg-slate-50 border-slate-100 text-slate-655"
+                        }`}
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                      <span>{label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Price Range */}
+            <div>
+              <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">💰 Price Range</p>
+              <div className="flex flex-wrap gap-1.5">
+                {PRICE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setFilterPrice(opt.value)}
+                    className={`rounded-lg px-3 py-2 text-xs font-bold transition-all cursor-pointer ${filterPrice === opt.value
+                      ? "bg-indigo-650 border border-indigo-650 text-white font-extrabold shadow-sm"
+                      : "bg-slate-50 border border-slate-200/40 text-slate-655"
+                      }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Duration */}
+            <div>
+              <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">⏱ Time to Complete</p>
+              <div className="flex flex-wrap gap-1.5">
+                {DURATION_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setFilterDuration(opt.value)}
+                    className={`rounded-lg px-3 py-2 text-xs font-bold transition-all cursor-pointer ${filterDuration === opt.value
+                      ? "bg-indigo-650 border border-indigo-650 text-white font-extrabold shadow-sm"
+                      : "bg-slate-50 border border-slate-200/40 text-slate-655"
+                      }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Booking Type */}
+            <div>
+              <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">📅 Booking Type</p>
+              <div className="flex flex-wrap gap-1.5">
+                {BOOKING_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setFilterBooking(opt.value)}
+                    className={`rounded-lg px-3 py-2 text-xs font-bold transition-all cursor-pointer ${filterBooking === opt.value
+                      ? "bg-indigo-650 border border-indigo-650 text-white font-extrabold shadow-sm"
+                      : "bg-slate-50 border border-slate-200/40 text-slate-655"
+                      }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-3 mt-2 border-t border-slate-100 pt-4">
+              {activeFilterCount > 0 && (
+                <button
+                  type="button"
+                  onClick={clearAllFilters}
+                  className="flex-1 border border-rose-200 hover:bg-rose-50 text-rose-650 py-3 text-xs font-bold rounded-xl transition cursor-pointer text-center"
+                >
+                  ✕ Clear All
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setFiltersDrawerOpen(false)}
+                className="flex-[2] bg-blue-600 hover:bg-blue-700 text-white py-3 text-xs font-extrabold rounded-xl transition shadow-md shadow-blue-600/15 cursor-pointer text-center"
+              >
+                APPLY FILTERS
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

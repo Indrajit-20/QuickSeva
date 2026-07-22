@@ -718,7 +718,7 @@ export default function SellerPublicProfile() {
           )}
 
           {/* Image container with clean white frame and beautiful shadow */}
-          <div 
+          <div
             className="relative max-w-full max-h-[75vh] flex items-center justify-center bg-white p-2.5 sm:p-3.5 rounded-2xl border border-slate-200/80 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.15)]"
             onClick={(e) => e.stopPropagation()}
           >
@@ -731,7 +731,7 @@ export default function SellerPublicProfile() {
 
           {/* Thumbnail list (only show if multiple images) */}
           {lightboxImages.length > 1 && (
-            <div 
+            <div
               className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 overflow-x-auto max-w-[90vw] p-2 bg-white/95 rounded-2xl border border-slate-200 shadow-xl backdrop-blur-sm scrollbar-none"
               onClick={(e) => e.stopPropagation()}
             >
@@ -740,11 +740,10 @@ export default function SellerPublicProfile() {
                   key={idx}
                   src={getImageUrl(imgUrl)}
                   alt={`Thumbnail ${idx + 1}`}
-                  className={`w-12 h-12 rounded-lg object-cover cursor-pointer border-2 transition-all duration-200 ${
-                    idx === lightboxIndex 
-                      ? "border-blue-500 scale-110 shadow-md opacity-100" 
+                  className={`w-12 h-12 rounded-lg object-cover cursor-pointer border-2 transition-all duration-200 ${idx === lightboxIndex
+                      ? "border-blue-500 scale-110 shadow-md opacity-100"
                       : "border-slate-200 opacity-60 hover:opacity-100"
-                  }`}
+                    }`}
                   onClick={() => setLightboxIndex(idx)}
                 />
               ))}

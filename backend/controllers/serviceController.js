@@ -123,11 +123,11 @@ exports.getServicesBySeller = async (req, res) => {
 // Search services (public)
 exports.searchServices = async (req, res) => {
   try {
-    const { keyword, category_id, min_price, max_price, page = 1, limit = 10 } = req.query;
+    const { keyword, category_id, category, min_price, max_price, state, city, page = 1, limit = 10 } = req.query;
     const { limit: lim, offset } = paginate(page, limit);
 
     const services = await ServiceModel.search({
-      keyword, category_id, min_price, max_price, limit: lim, offset,
+      keyword, category_id, category, min_price, max_price, state, city, limit: lim, offset,
     });
 
     return successRes(res, { services, page: parseInt(page), limit: lim });

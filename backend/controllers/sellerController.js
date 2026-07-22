@@ -107,10 +107,7 @@ exports.getSellerById = async (req, res) => {
 exports.updateSellerProfile = async (req, res) => {
   try {
     if (!req.user?.role || req.user.role !== "seller") {
-      return {
-        success: false,
-        message: "Seller access required",
-      };
+      return errorRes(res, "Seller access required", 403);
     }
 
     let seller = await SellerModel.findByUserId(req.user.id);
@@ -142,6 +139,7 @@ exports.updateSellerProfile = async (req, res) => {
       address,
       pincode,
       seller_type,
+      service_mode,
     } = req.body;
 
     // Keep sellers.phone synchronized with users.phone
@@ -156,6 +154,7 @@ exports.updateSellerProfile = async (req, res) => {
     if (is_available !== undefined) fields.is_available = is_available;
     if (gst_number !== undefined) fields.gst_number = gst_number;
     if (seller_type !== undefined) fields.seller_type = seller_type;
+    if (service_mode !== undefined) fields.service_mode = service_mode;
     if (profile_completed !== undefined)
       fields.profile_completed = profile_completed;
 

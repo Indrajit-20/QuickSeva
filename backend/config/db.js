@@ -1,6 +1,8 @@
 const mysql = require("mysql2/promise");
 require('dotenv').config({
-  path: process.env.USE_RAILWAY === 'true' ? '.env.railway' : '.env.local'
+  path: process.env.NODE_ENV === 'production'
+    ? '.env.production'
+    : (process.env.USE_RAILWAY === 'true' ? '.env.railway' : '.env.local')
 });
 
 const pool = mysql.createPool({

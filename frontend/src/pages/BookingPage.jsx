@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import apiClient from "../api/axiosConfig";
@@ -518,13 +518,15 @@ export default function BookingPage() {
           <div className="mt-8 grid gap-3 sm:grid-cols-2">
             <Link
               to="/my-bookings"
-              className="rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-3 text-xs font-bold text-white text-center shadow-sm transition active:scale-95 cursor-pointer"
+              className="rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-3 text-xs font-bold text-white force-text-white text-center shadow-sm transition active:scale-95 cursor-pointer"
+              style={{ color: "#ffffff" }}
             >
               View My Bookings
             </Link>
             <Link
               to="/"
               className="rounded-xl border border-slate-300 bg-white hover:bg-slate-50 px-5 py-3 text-xs font-bold text-slate-700 text-center active:scale-95 transition cursor-pointer"
+              style={{ color: "#334155" }}
             >
               Go Home
             </Link>

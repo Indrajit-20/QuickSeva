@@ -17,13 +17,14 @@ export default function SellerProfile() {
 
   const [profile, setProfile] = useState({
     fullName: user?.name || "",
+    businessName: "",
     phoneNumber: user?.phone || "",
     gstnumber: "",
     serviceType: "AC Repair",
     bio: "",
     experience: "",
-    serviceMode: "online",
-    serviceModeLabel: "Online Only",
+    serviceMode: "offline",
+    serviceModeLabel: "Offline Only",
     instantService: false,
     lat: null,
     lng: null,
@@ -80,10 +81,13 @@ export default function SellerProfile() {
           setProfile((prev) => ({
             ...prev,
             fullName: user?.name || prev.fullName,
+            businessName: seller.business_name || "",
             phoneNumber: user?.phone || prev.phoneNumber,
             gstnumber: seller.gst_number || prev.gstnumber,
             bio: seller.bio || prev.bio,
             experience: seller.experience_yrs !== undefined ? seller.experience_yrs : prev.experience,
+            serviceMode: seller.service_mode || "offline",
+            serviceModeLabel: seller.service_mode === "online" ? "Online Only" : seller.service_mode === "both" ? "Both Online & Offline" : "Offline Only",
             lat: seller.lat || seller.latitude || null,
             lng: seller.lng || seller.longitude || null,
             address: seller.location_address || seller.address || "",
@@ -258,11 +262,13 @@ export default function SellerProfile() {
       });
 
       await apiClient.put("/sellers/me/profile", {
+        business_name: profile.businessName,
         bio: profile.bio,
         experience_yrs: Number(profile.experience || 0),
         gst_number: profile.gstnumber,
         profile_completed: 1,
         seller_type: profile.sellerType,
+        service_mode: profile.serviceMode,
         lat: profile.lat,
         lng: profile.lng,
         address: profile.address,
@@ -378,11 +384,16 @@ export default function SellerProfile() {
 
         {/* User Centered Details */}
         <h1 style={{ marginTop: 14, fontSize: 22, fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
-          {profile.fullName || "Seller"}
+          {profile.businessName || profile.fullName || "Seller"}
           {Number(user?.profile_completed ?? 0) === 1 && (
             <ShieldCheck className="text-[#0284c7] fill-[#0284c7]/10" size={20} />
           )}
         </h1>
+        {profile.businessName && (
+          <p style={{ marginTop: 2, fontSize: 13, fontWeight: 700, color: '#475569' }}>
+            Owner: {profile.fullName}
+          </p>
+        )}
         <p style={{ marginTop: 6, fontSize: 13, fontWeight: 500, color: '#64748b', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
           <span>{profile.serviceType || "Service Provider"}</span>
           <span>•</span>
@@ -616,12 +627,22 @@ export default function SellerProfile() {
           {/* Form Inputs */}
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <label className={labelClass}>Full Name</label>
+              <label className={labelClass}>Full Name (Owner)</label>
               <input
                 name="fullName"
                 value={profile.fullName}
                 onChange={handleChange}
                 className={inputClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Business / Company Name (व्यापार या कंपनी का नाम)</label>
+              <input
+                name="businessName"
+                value={profile.businessName}
+                onChange={handleChange}
+                className={inputClass}
+                placeholder="Enter Business Name"
               />
             </div>
             <div>
@@ -837,12 +858,19 @@ export default function SellerProfile() {
             )}
           </div>
 
-          {/* Form Action Buttons — Sticky on mobile */}
-          <div className="seller-sticky-save flex gap-3">
+          {/* Form Action Buttons */}
+          <div className="mt-8 pt-6 border-t border-slate-100 flex flex-col sm:flex-row justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => setIsEditing(false)}
+              className="px-5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-600 hover:bg-slate-50 active:scale-95 transition"
+            >
+              Cancel
+            </button>
             <button
               type="submit"
               disabled={isSaving}
-              className="seller-action-btn seller-action-btn--primary seller-action-btn--full"
+              className="btn btn-primary px-6 py-2.5 flex items-center justify-center gap-2 active:scale-95 transition"
             >
               {isSaving ? (
                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
@@ -850,14 +878,6 @@ export default function SellerProfile() {
                 <Save size={17} />
               )}
               {isSaving ? "Saving..." : "Save Profile"}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setIsEditing(false)}
-              className="seller-action-btn seller-action-btn--outline seller-action-btn--full"
-            >
-              Cancel
             </button>
           </div>
         </form>

@@ -169,7 +169,6 @@ export const AuthProvider = ({ children }) => {
           setActiveRole(savedRole);
         }
       } catch (err) {
-        console.error("Auth init failed:", err);
         const status = err?.response?.status;
         setUser(null);
         setIsAuthenticated(false);
@@ -179,6 +178,7 @@ export const AuthProvider = ({ children }) => {
           // Silent on load for guest users
           setAuthError(null);
         } else {
+          console.error("Auth init failed:", err);
           setAuthError("Unable to connect to server. Please try again.");
         }
       } finally {

@@ -250,36 +250,26 @@ async function run() {
     ];
 
     const AREAS = [
-      { name: "Bopal", lat: 23.0284, lng: 72.4687 },
-      { name: "Satellite", lat: 23.029, lng: 72.515 },
-      { name: "Navrangpura", lat: 23.0395, lng: 72.5595 },
-      { name: "Maninagar", lat: 22.9915, lng: 72.605 },
-      { name: "Gota", lat: 23.1003, lng: 72.54 },
-      { name: "Chandkheda", lat: 23.1063, lng: 72.585 },
-      { name: "Nikol", lat: 23.036, lng: 72.65 },
-      { name: "Vatva", lat: 22.96, lng: 72.635 },
-      { name: "Prahlad Nagar", lat: 23.012, lng: 72.505 },
-      { name: "Thaltej", lat: 23.0508, lng: 72.5025 },
-      { name: "SG Highway", lat: 23.0456, lng: 72.5071 },
-      { name: "Naranpura", lat: 23.06, lng: 72.565 },
-      { name: "Vastral", lat: 23.015, lng: 72.67 },
-      { name: "Vejalpur", lat: 23.0, lng: 72.53 },
-      { name: "Isanpur", lat: 22.98, lng: 72.62 },
-      { name: "Naroda", lat: 23.08, lng: 72.65 },
-      { name: "Odhav", lat: 23.02, lng: 72.68 },
-      { name: "Paldi", lat: 23.015, lng: 72.575 },
-      { name: "Ambawadi", lat: 23.032, lng: 72.558 },
-      { name: "Shahibaug", lat: 23.065, lng: 72.595 },
-      { name: "Ghatlodiya", lat: 23.078, lng: 72.535 },
-      { name: "Sola", lat: 23.07, lng: 72.52 },
-      { name: "Bodakdev", lat: 23.044, lng: 72.495 },
-      { name: "Shela", lat: 23.01, lng: 72.44 },
-      { name: "Motera", lat: 23.1, lng: 72.6 },
-      { name: "Sabarmati", lat: 23.085, lng: 72.58 },
-      { name: "Bapunagar", lat: 23.05, lng: 72.63 },
-      { name: "New Ranip", lat: 23.092, lng: 72.57 },
-      { name: "Tragad", lat: 23.11, lng: 72.64 },
-      { name: "Vastrapur", lat: 23.035, lng: 72.525 },
+      { name: "Satellite", city: "Ahmedabad", state: "Gujarat", lat: 23.029, lng: 72.515 },
+      { name: "Bopal", city: "Ahmedabad", state: "Gujarat", lat: 23.0284, lng: 72.4687 },
+      { name: "Navrangpura", city: "Ahmedabad", state: "Gujarat", lat: 23.0395, lng: 72.5595 },
+      { name: "Adajan", city: "Surat", state: "Gujarat", lat: 21.196, lng: 72.795 },
+      { name: "Vesu", city: "Surat", state: "Gujarat", lat: 21.135, lng: 72.775 },
+      { name: "Varachha", city: "Surat", state: "Gujarat", lat: 21.215, lng: 72.840 },
+      { name: "Alkapuri", city: "Vadodara", state: "Gujarat", lat: 22.312, lng: 73.167 },
+      { name: "Gotri", city: "Vadodara", state: "Gujarat", lat: 22.318, lng: 73.136 },
+      { name: "Andheri West", city: "Mumbai", state: "Maharashtra", lat: 19.1363, lng: 72.8276 },
+      { name: "Bandra West", city: "Mumbai", state: "Maharashtra", lat: 19.0544, lng: 72.8402 },
+      { name: "Borivali West", city: "Mumbai", state: "Maharashtra", lat: 19.2307, lng: 72.8567 },
+      { name: "Kothrud", city: "Pune", state: "Maharashtra", lat: 18.5074, lng: 73.8077 },
+      { name: "Koregaon Park", city: "Pune", state: "Maharashtra", lat: 18.5362, lng: 73.8930 },
+      { name: "Indiranagar", city: "Bengaluru", state: "Karnataka", lat: 12.9719, lng: 77.6412 },
+      { name: "Koramangala", city: "Bengaluru", state: "Karnataka", lat: 12.9352, lng: 77.6244 },
+      { name: "Jayanagar", city: "Bengaluru", state: "Karnataka", lat: 12.9250, lng: 77.5897 },
+      { name: "Connaught Place", city: "New Delhi", state: "Delhi NCR", lat: 28.6304, lng: 77.2177 },
+      { name: "Saket", city: "New Delhi", state: "Delhi NCR", lat: 28.5244, lng: 77.2066 },
+      { name: "Sector 62", city: "Noida", state: "Delhi NCR", lat: 28.6219, lng: 77.3639 },
+      { name: "DLF Phase 3", city: "Gurugram", state: "Delhi NCR", lat: 28.4901, lng: 77.0896 }
     ];
 
     const SURNAMES = [
@@ -347,16 +337,17 @@ async function run() {
 
       // 6a. Create User
       const [userRes] = await pool.query(
-        `INSERT INTO users (name, email, phone, password, role, address, city, lat, lng, is_verified, is_active)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1)`,
+        `INSERT INTO users (name, email, phone, password, role, address, city, state, lat, lng, is_verified, is_active)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1)`,
         [
           `${surname} ${SERVICE_LABELS[service]} Owner`,
           `seller${index}@quickseva.com`,
           seededPhone(index),
           hashedPassword,
           "seller",
-          `${area.name}, Ahmedabad, Gujarat`,
-          "Ahmedabad",
+          `${area.name}, ${area.city}, ${area.state}`,
+          area.city,
+          area.state,
           lat,
           lng
         ]
@@ -393,7 +384,7 @@ async function run() {
           lng, // longitude
           lat, // lat
           lng, // lng
-          `${area.name}, Ahmedabad, Gujarat`,
+          `${area.name}, ${area.city}, ${area.state}`,
           5 + (index % 4) * 5, // service_radius: 5, 10, 15, 20
           serviceMode,
           instantService ? 1 : 0,

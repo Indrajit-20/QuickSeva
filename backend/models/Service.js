@@ -48,7 +48,7 @@ const Service = {
   },
 
   // Public search query method
-  search: async ({ keyword, category_id, min_price, max_price, limit, offset }) => {
+  search: async ({ keyword, category_id, category, min_price, max_price, state, city, limit, offset }) => {
     let where = ["sv.is_active = 1", "s.is_available = 1", "u.is_active = 1"];
     const params = [];
 
@@ -57,15 +57,18 @@ const Service = {
       params.push(`%${keyword}%`, `%${keyword}%`);
     }
     if (category_id) { where.push("sv.category_id = ?"); params.push(category_id); }
+    if (category)    { where.push("c.name = ?");         params.push(category); }
     if (min_price)   { where.push("sv.price >= ?");      params.push(min_price); }
     if (max_price)   { where.push("sv.price <= ?");      params.push(max_price); }
+    if (state)       { where.push("u.state = ?");        params.push(state); }
+    if (city)        { where.push("u.city = ?");         params.push(city); }
 
     params.push(limit, offset);
 
     const [rows] = await pool.query(
       `SELECT sv.id, sv.title, sv.price, sv.price_type, sv.images,
-              s.id AS seller_id, s.avg_rating, s.business_name,
-              u.name AS seller_name, u.city,
+              s.id AS seller_id, s.avg_rating, s.business_name, s.is_premium,
+              u.name AS seller_name, u.city, u.state, u.address, u.phone, u.lat, u.lng,
               c.name AS category_name, c.icon AS category_icon,
               ss.name AS sub_service_name
        FROM services sv

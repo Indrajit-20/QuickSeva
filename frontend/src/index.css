@@ -840,16 +840,33 @@ input[type="range"] {
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
+   12.5. QS FILTER BAR CARD (Unified Panel)
+   ────────────────────────────────────────────────────────────────────────── */
+.qs-filter-bar-card {
+  background: #ffffff;
+  border: 1px solid var(--qs-border-md);
+  border-radius: var(--qs-radius-xl);
+  padding: 1.25rem 1.5rem;
+  box-shadow: var(--qs-shadow-sm);
+  transition: var(--qs-transition);
+}
+
+.qs-filter-bar-card:hover {
+  box-shadow: var(--qs-shadow-md);
+  border-color: #cbd5e1;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
    13. QS QUICK FILTER BUTTONS (Pills)
    ────────────────────────────────────────────────────────────────────────── */
 .qs-quick-filter-btn {
   background: var(--qs-surface);
-  border: 1.5px solid var(--qs-border-md);
+  border: 1.5px solid var(--qs-border);
   color: var(--qs-text-md);
-  border-radius: var(--qs-radius-sm);
-  padding: 0.375rem 0.875rem;
+  border-radius: 9999px; /* Fully rounded pill */
+  padding: 0.45rem 1rem;
   font-size: 0.8125rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: var(--qs-transition);
   display: inline-flex;
@@ -861,21 +878,20 @@ input[type="range"] {
 .qs-quick-filter-btn:hover {
   border-color: var(--qs-primary);
   color: var(--qs-primary);
-  background: rgba(59, 130, 246, 0.04);
+  background: rgba(59, 130, 246, 0.05);
   transform: translateY(-1px);
 }
 
 .qs-quick-filter-btn.active {
-  background: var(--qs-primary);
-  border-color: var(--qs-primary);
+  background: linear-gradient(135deg, var(--qs-primary) 0%, var(--qs-primary-hover) 100%);
+  border-color: var(--qs-primary-hover);
   color: #ffffff;
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
 }
 
 .qs-quick-filter-btn.active:hover {
-  background: var(--qs-primary-hover);
-  border-color: var(--qs-primary-hover);
-  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(59, 130, 246, 0.3);
 }
 
 .qs-quick-filter-btn.active span,
@@ -888,12 +904,12 @@ input[type="range"] {
    ────────────────────────────────────────────────────────────────────────── */
 .qs-refine-toggle-btn {
   background: var(--qs-surface);
-  border: 1.5px solid var(--qs-border-md);
+  border: 1.5px solid var(--qs-border);
   color: var(--qs-text-md);
-  border-radius: var(--qs-radius-sm);
-  padding: 0.375rem 0.875rem;
+  border-radius: 9999px; /* Fully rounded pill */
+  padding: 0.45rem 1rem;
   font-size: 0.8125rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: var(--qs-transition);
   display: inline-flex;
@@ -904,17 +920,17 @@ input[type="range"] {
 }
 
 .qs-refine-toggle-btn:hover {
-  border-color: var(--qs-primary);
-  color: var(--qs-primary);
-  background: rgba(59, 130, 246, 0.04);
+  border-color: #6366f1;
+  color: #6366f1;
+  background: rgba(99, 102, 241, 0.05);
   transform: translateY(-1px);
 }
 
 .qs-refine-toggle-btn.active {
-  background: var(--qs-primary);
-  border-color: var(--qs-primary);
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  border-color: #4f46e5;
   color: #ffffff;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
 }
 
 .qs-refine-toggle-btn.active span,
@@ -927,14 +943,14 @@ input[type="range"] {
   color: #ffffff;
   border-radius: 9999px;
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 800;
   padding: 1px 6px;
   line-height: 1.4;
 }
 
 .qs-refine-toggle-btn.active .qs-filter-badge {
   background: #ffffff;
-  color: var(--qs-primary);
+  color: #4f46e5;
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -1313,6 +1329,14 @@ img.qs-avatar {
   box-shadow: 0 4px 14px rgba(59, 130, 246, 0.25);
 }
 
+.qs-search-panel-card button[type="submit"] span,
+.qs-search-panel-card button[type="submit"] svg,
+.qs-search-panel-card form>div button[type="submit"] span,
+.qs-search-panel-card form>div button[type="submit"] svg {
+  color: #ffffff;
+  stroke: #ffffff;
+}
+
 .qs-search-panel-card button[type="submit"]:hover {
   background: var(--qs-primary-hover);
 }
@@ -1638,8 +1662,8 @@ img.qs-avatar {
   grid-template-columns: 100%;
   grid-template-areas:
     "search"
-    "header"
     "map"
+    "header"
     "list";
   gap: 1.25rem;
 }
@@ -2331,7 +2355,9 @@ img.qs-avatar {
   }
 
   .qs-search-panel-card {
-    padding: 1.25rem;
+    padding: 0.75rem;
+    border-radius: 1.25rem;
+    margin-bottom: 0.75rem;
   }
 
   .qs-lead-form-card {
@@ -2422,15 +2448,21 @@ span.qs-distance-badge {
   height: 18px;
   border-radius: 50%;
   background: #ffffff;
-  border: 2px solid var(--qs-primary, #2563eb);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  border: 3px solid var(--qs-primary, #2563eb);
+  box-shadow: 0 0 0 0px rgba(59, 130, 246, 0.2), 0 2px 5px rgba(0, 0, 0, 0.15);
   cursor: pointer;
-  transition: transform 0.1s ease, border-color 0.1s ease;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .qs-range::-webkit-slider-thumb:hover {
-  transform: scale(1.15);
-  border-color: #1d4ed8;
+  transform: scale(1.2);
+  border-color: var(--qs-primary-hover, #1d4ed8);
+  box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.15), 0 3px 8px rgba(0, 0, 0, 0.2);
+}
+
+.qs-range::-webkit-slider-thumb:active {
+  transform: scale(1.25);
+  box-shadow: 0 0 0 10px rgba(59, 130, 246, 0.25), 0 4px 10px rgba(0, 0, 0, 0.25);
 }
 
 .qs-range::-moz-range-thumb {
@@ -2438,15 +2470,21 @@ span.qs-distance-badge {
   height: 18px;
   border-radius: 50%;
   background: #ffffff;
-  border: 2px solid var(--qs-primary, #2563eb);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  border: 3px solid var(--qs-primary, #2563eb);
+  box-shadow: 0 0 0 0px rgba(59, 130, 246, 0.2), 0 2px 5px rgba(0, 0, 0, 0.15);
   cursor: pointer;
-  transition: transform 0.1s ease, border-color 0.1s ease;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .qs-range::-moz-range-thumb:hover {
-  transform: scale(1.15);
-  border-color: #1d4ed8;
+  transform: scale(1.2);
+  border-color: var(--qs-primary-hover, #1d4ed8);
+  box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.15), 0 3px 8px rgba(0, 0, 0, 0.2);
+}
+
+.qs-range::-moz-range-thumb:active {
+  transform: scale(1.25);
+  box-shadow: 0 0 0 10px rgba(59, 130, 246, 0.25), 0 4px 10px rgba(0, 0, 0, 0.25);
 }
 
 /* Prevent Tailwind from conflicting on bg-emerald or bg-green small classes */
@@ -3695,4 +3733,136 @@ span.qs-distance-badge {
   color: #ffffff !important;
   transform: translateY(-1px);
   box-shadow: 0 8px 20px rgba(2, 132, 199, 0.35);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   37. MOBILE NATIVE-STYLE MAP & SEARCH EXPERIENCE
+   ────────────────────────────────────────────────────────────────────────── */
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@media (max-width: 1023px) {
+  /* Allow natural scrolling when mobile map view layout is active */
+  body.mobile-map-active {
+    overflow: auto !important;
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+  }
+
+  body.mobile-map-active #root {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Make the section flow naturally in the scroll height */
+  body.mobile-map-active .mobile-map-section {
+    padding: 0 !important;
+    margin: 0 !important;
+    border-bottom: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    background-color: #ffffff;
+  }
+
+  body.mobile-map-active .mobile-map-container {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+    height: auto !important;
+  }
+
+  /* Arrange map at top, search bar below it, and list of sellers scrolling naturally */
+  body.mobile-map-active .qs-main-grid-layout {
+    display: flex !important;
+    flex-direction: column !important;
+    height: auto !important;
+    overflow: visible !important;
+    gap: 0 !important;
+  }
+
+  /* Map top rendering */
+  body.mobile-map-active .qs-grid-area-map:not(.qs-map-fullscreen) {
+    height: 180px !important; /* Visual map size */
+    flex-shrink: 0 !important;
+    width: 100% !important;
+    order: 1 !important;
+    border-bottom: 1.5px solid rgba(226, 232, 240, 0.8) !important;
+  }
+
+  body.mobile-map-active .qs-map-frame:not(.qs-map-frame-fullscreen) {
+    height: 180px !important;
+    border-radius: 0 !important;
+  }
+
+  /* Make Leaflet tiles look flat, minimalist, and extremely professional */
+  body.mobile-map-active .leaflet-tile-container {
+    filter: saturate(0.65) contrast(1.01) brightness(0.98) !important;
+  }
+
+  /* Search bar on mobile scrolls naturally with map */
+  body.mobile-map-active .qs-grid-area-search {
+    position: static !important;
+    background: #ffffff !important;
+    flex-shrink: 0 !important;
+    order: 2 !important;
+    box-shadow: none !important;
+  }
+
+  body.mobile-map-active .qs-search-panel-card {
+    background: #ffffff !important;
+    border: none !important;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.6) !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0.75rem 1rem !important;
+    margin-bottom: 0 !important;
+  }
+
+  /* Stats / Header */
+  body.mobile-map-active .qs-grid-area-header {
+    display: none !important; /* Hidden on mobile to save space */
+  }
+
+  /* Scrollable provider list */
+  body.mobile-map-active .qs-grid-area-list {
+    flex: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: #f8fafc !important;
+    order: 4 !important;
+  }
+
+  body.mobile-map-active .qs-list {
+    height: auto !important;
+    overflow: visible !important;
+    padding: 0.75rem 1rem 3rem 1rem !important;
+    margin-top: 0 !important;
+    -webkit-overflow-scrolling: touch; /* smooth native touch momentum scrolling */
+  }
+
+  /* Shrink advertisement card on mobile viewports */
+  .qs-featured-ad-card {
+    min-height: auto !important;
+    padding: 1rem !important;
+  }
+
+  /* Hide scrollbar utility */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none !important;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none !important;  /* IE and Edge */
+    scrollbar-width: none !important;  /* Firefox */
+  }
 }
