@@ -546,8 +546,10 @@ export default function SellerPublicProfile() {
                       chargeAndRevealContact();
                     }}
                     disabled={contactLoading}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-200 bg-blue-50/50 px-4 py-3 font-semibold text-blue-600 hover:bg-blue-600 hover:text-white transition disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer shadow-sm hover:shadow-md active:scale-[0.98]"
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white force-text-white px-4 py-3.5 text-base font-extrabold shadow-md transition disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer active:scale-[0.98]"
+                    style={{ color: '#ffffff', backgroundColor: '#059669' }}
                   >
+                    <Phone size={18} className="text-white" />
                     {contactLoading ? "Connecting…" : "View Contact"}
                   </button>
                 )}

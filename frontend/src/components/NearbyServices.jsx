@@ -1687,10 +1687,12 @@ export default function NearbyServices({
           <div className="relative z-10 flex flex-col gap-4">
             {/* Title & Subtitle */}
             <div className="mb-1 hidden lg:block">
-              <h3 className="text-lg font-black text-slate-800 tracking-tight flex items-center gap-2">
-                Services Near You / आपके आस-पास सेवाएँ
+              <h3 className="text-base font-semibold text-slate-800 tracking-tight flex items-center gap-2">
+                Services Near You
+                <span className="text-slate-400 font-normal text-[13px]">/</span>
+                <span className="text-slate-600 font-medium text-[13px]">आपके आस-पास सेवाएँ</span>
               </h3>
-              <p className="text-xs text-slate-400 font-semibold mt-0.5">
+              <p className="text-xs text-slate-400 font-normal mt-0.5">
                 Find trusted local experts for all your home needs.
               </p>
             </div>
@@ -1709,7 +1711,7 @@ export default function NearbyServices({
                     }}
                     onFocus={() => setShowServiceDrop(true)}
                     placeholder="Search services (e.g. Plumber, AC Repair, Cleaning...)"
-                    className="w-full rounded-xl bg-white border border-slate-200 py-3 pl-11 pr-8 text-sm font-semibold text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10"
+                    className="w-full rounded-xl bg-white border border-slate-200 py-3 pl-11 pr-8 text-[13px] font-normal text-slate-700 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10"
                     style={{ paddingLeft: "2.75rem" }}
                   />
                   {search && (
@@ -1926,11 +1928,12 @@ export default function NearbyServices({
                   type="button"
                   onClick={handleMapToggle}
                   disabled={mapToggleLocked}
-                  className={`flex items-center gap-1 border rounded-full px-3 py-1.5 text-[11px] font-bold transition-all ${showMap
-                    ? "bg-indigo-50 border-indigo-200 text-indigo-700 font-extrabold"
-                    : "bg-slate-50 border-slate-200/60 text-slate-700"
+                  className={`flex items-center gap-1.5 border rounded-full px-3 py-1.5 text-[11px] font-bold transition-all shrink-0 whitespace-nowrap cursor-pointer ${showMap
+                    ? "bg-indigo-50 border-indigo-200 text-indigo-700 font-extrabold shadow-sm"
+                    : "bg-slate-50 border-slate-200/80 text-slate-700 hover:bg-slate-100"
                     }`}
                 >
+                  <Map className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
                   <span>{showMap ? "Hide Map" : "Show Map"}</span>
                 </button>
               </div>
@@ -2154,11 +2157,11 @@ export default function NearbyServices({
             type="button"
             onClick={handleMapToggle}
             disabled={mapToggleLocked}
-            className={`qs-map-toggle-btn inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold rounded-full border transition-all ${mapToggleLocked ? "cursor-wait opacity-70" : "cursor-pointer"
-              } ${showMap ? "active" : ""}`}
+            className={`qs-map-toggle-btn inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-full border transition-all shrink-0 whitespace-nowrap ${mapToggleLocked ? "cursor-wait opacity-70" : "cursor-pointer"
+              } ${showMap ? "active bg-indigo-50 border-indigo-200 text-indigo-700 font-extrabold" : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"}`}
           >
-            <Map className="h-4 w-4 shrink-0" />
-            <span>{showMap ? "Hide Map / नक्शा छुपाएं" : "Show Map / नक्शा दिखाएं"}</span>
+            <Map className="h-4 w-4 shrink-0 text-indigo-600" />
+            <span>{showMap ? "Hide Map" : "Show Map"}</span>
           </button>
         </div>
       </div>
@@ -2172,7 +2175,7 @@ export default function NearbyServices({
           <div
             className={`qs-map-frame overflow-hidden ${isMapFullScreen
               ? "fixed inset-0 z-[2000] w-screen h-screen rounded-none qs-map-frame-fullscreen"
-              : "relative isolate rounded-2xl sm:rounded-3xl h-[260px] sm:h-[320px] lg:h-[520px] w-full shadow-xl border border-slate-200/90 bg-slate-100"
+              : "relative isolate rounded-2xl sm:rounded-3xl h-[200px] sm:h-[300px] lg:h-[500px] w-full shadow-xl border border-slate-200/90 bg-slate-100"
               }`}
           >
 

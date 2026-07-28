@@ -156,25 +156,33 @@ export default function AddFundsModal({
 
         {!isSuccess ? (
           <div className="text-left">
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-              <div>
-                <h2 className="text-2xl font-bold text-slate-800">Buy Credits</h2>
-                <p className="mt-1 text-sm text-slate-500 font-semibold">
-                  Choose an amount of lead credits to buy (1 credit = ₹1).
-                </p>
-              </div>
-              <div className="flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3.5 py-2 self-start">
-                <Plus size={16} className="text-blue-600" />
-                <span className="text-sm font-bold text-blue-700">
-                  Credits: {walletBalance}
-                </span>
-              </div>
+            <div className="pr-8">
+              <h2 className="text-2xl font-black text-slate-800 tracking-tight">Buy Credits</h2>
+              <p className="mt-1 text-sm text-slate-500 font-semibold">
+                Choose an amount of lead credits to buy (1 credit = ₹1).
+              </p>
             </div>
 
-            <div className="mt-4">
-              <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider">
-                Number of Credits
+            <div className="mt-5">
+              <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
+                Select or Enter Credits
               </label>
+              <div className="grid grid-cols-4 gap-2 mb-3">
+                {[100, 250, 500, 1000].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => setAmountStr(String(preset))}
+                    className={`py-2 px-3 rounded-xl border text-xs font-extrabold transition cursor-pointer ${
+                      Number(amountStr) === preset
+                        ? "border-blue-600 bg-blue-50 text-blue-700 shadow-2xs"
+                        : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                    }`}
+                  >
+                    +{preset}
+                  </button>
+                ))}
+              </div>
               <input
                 value={amountStr}
                 onChange={(e) => setAmountStr(e.target.value)}

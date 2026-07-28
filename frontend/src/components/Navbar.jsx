@@ -23,7 +23,7 @@ const getInitials = (name) => {
   return (parts[0][0] + parts[1][0]).toUpperCase();
 };
 
-import { Search, MapPin } from "lucide-react";
+import { Search, MapPin, Globe, CalendarCheck, Wrench, LayoutDashboard } from "lucide-react";
 import SearchOverlay from "./SearchOverlay";
 
 function NavbarSearch({ className = "", onTriggerSearch }) {
@@ -89,10 +89,11 @@ const Navbar = () => {
   return (
     <nav className="sticky top-0 z-50 border-b border-[#e5e7eb] bg-white shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-14 sm:h-16 md:h-20">
+        <div className="flex justify-between items-center h-14">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2" onClick={() => window.scrollTo({ top: 0, behavior: "instant" })}>
-            <span className="text-2xl sm:text-3xl font-extrabold text-[#0284c7] tracking-tight">
+            <span className="text-xl sm:text-2xl font-bold text-[#0284c7] tracking-tight"
+              style={{ fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif" }}>
               QuickSeva
             </span>
           </Link>
@@ -111,32 +112,45 @@ const Navbar = () => {
             <Link
               to="/"
               onClick={() => window.scrollTo({ top: 0, behavior: "instant" })}
-              className="font-semibold text-[#1a1a1a] transition-colors duration-300 hover:text-[#4f46e5]"
+              className="flex items-center gap-1.5 text-sm font-medium text-slate-700 transition-colors duration-200 hover:text-[#0284c7]"
             >
-              Home
+              <MapPin className="h-3.5 w-3.5 text-rose-500 shrink-0" />
+              <span>Nearby Map</span>
+            </Link>
+
+            <Link
+              to="/services"
+              onClick={() => window.scrollTo({ top: 0, behavior: "instant" })}
+              className="flex items-center gap-1.5 text-sm font-medium text-slate-700 transition-colors duration-200 hover:text-[#0284c7]"
+            >
+              <Globe className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+              <span>All India Services</span>
             </Link>
 
             {isAuthenticated && activeRole === "seller" ? (
               <>
                 <Link
                   to="/seller/services"
-                  className="font-semibold text-[#1a1a1a] transition-colors duration-300 hover:text-[#4f46e5]"
+                  className="flex items-center gap-1.5 text-sm font-medium text-slate-700 transition-colors duration-200 hover:text-[#0284c7]"
                 >
-                  My Services
+                  <Wrench className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                  <span>My Services</span>
                 </Link>
                 <Link
                   to="/seller/dashboard"
-                  className="font-semibold text-[#1a1a1a] transition-colors duration-300 hover:text-[#4f46e5]"
+                  className="flex items-center gap-1.5 text-sm font-medium text-slate-700 transition-colors duration-200 hover:text-[#0284c7]"
                 >
-                  Dashboard
+                  <LayoutDashboard className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
+                  <span>Dashboard</span>
                 </Link>
               </>
             ) : isAuthenticated && (
               <Link
                 to="/my-bookings"
-                className="font-semibold text-[#1a1a1a] transition-colors duration-300 hover:text-[#4f46e5]"
+                className="flex items-center gap-1.5 text-sm font-medium text-slate-700 transition-colors duration-200 hover:text-[#0284c7]"
               >
-                My Bookings
+                <CalendarCheck className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                <span>My Bookings</span>
               </Link>
             )}
 
@@ -257,9 +271,22 @@ const Navbar = () => {
                 setIsMenuOpen(false);
                 window.scrollTo({ top: 0, behavior: "instant" });
               }}
-              className="block rounded-lg px-3 py-2 font-semibold text-[#1a1a1a] transition-colors hover:bg-[#f8f9fb] hover:text-[#4f46e5]"
+              className="flex items-center gap-2 rounded-lg px-3 py-2 font-semibold text-[#1a1a1a] transition-colors hover:bg-[#f8f9fb] hover:text-[#4f46e5]"
             >
-              Home
+              <MapPin className="h-4 w-4 text-rose-500 shrink-0" />
+              <span>Nearby Map (GPS)</span>
+            </Link>
+
+            <Link
+              to="/services"
+              onClick={() => {
+                setIsMenuOpen(false);
+                window.scrollTo({ top: 0, behavior: "instant" });
+              }}
+              className="flex items-center gap-2 rounded-lg px-3 py-2 font-semibold text-[#1a1a1a] transition-colors hover:bg-[#f8f9fb] hover:text-[#4f46e5]"
+            >
+              <Globe className="h-4 w-4 text-blue-600 shrink-0" />
+              <span>All India Services (City Search)</span>
             </Link>
 
             {isAuthenticated && activeRole === "seller" ? (

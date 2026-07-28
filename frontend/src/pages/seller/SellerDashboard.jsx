@@ -66,6 +66,7 @@ export default function SellerDashboard() {
       color: "blue",
       iconBg: "#eff6ff",
       iconColor: "#3b82f6",
+      path: "/seller/orders",
     },
     {
       label: "Pending",
@@ -74,6 +75,7 @@ export default function SellerDashboard() {
       color: "amber",
       iconBg: "#fffbeb",
       iconColor: "#f59e0b",
+      path: "/seller/orders",
     },
     {
       label: "Completed",
@@ -82,6 +84,7 @@ export default function SellerDashboard() {
       color: "emerald",
       iconBg: "#ecfdf5",
       iconColor: "#10b981",
+      path: "/seller/orders",
     },
     {
       label: "Earnings",
@@ -90,6 +93,7 @@ export default function SellerDashboard() {
       color: "violet",
       iconBg: "#f5f3ff",
       iconColor: "#8b5cf6",
+      path: "/seller/wallet",
     },
   ];
 
@@ -202,12 +206,16 @@ export default function SellerDashboard() {
         </div>
       )}
 
-      {/* ── Stat Chips — Horizontal Scroll ── */}
-      <div className="seller-scroll-row">
+      {/* ── Stat Cards Grid (2x2 grid on mobile so no horizontal swipe is required, 4-cols on desktop) ── */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (
-            <div key={stat.label} className={`seller-stat-chip seller-stat-chip--${stat.color}`}>
+            <Link
+              key={stat.label}
+              to={stat.path}
+              className={`seller-stat-chip seller-stat-chip--${stat.color} !min-w-0 transition-transform active:scale-95 text-left no-underline hover:shadow-md block`}
+            >
               <div className="seller-stat-icon" style={{ background: stat.iconBg }}>
                 <Icon size={20} style={{ color: stat.iconColor }} />
               </div>
@@ -215,13 +223,13 @@ export default function SellerDashboard() {
                 {loading ? "…" : stat.value}
               </div>
               <div className="seller-stat-label">{stat.label}</div>
-            </div>
+            </Link>
           );
         })}
       </div>
 
-      {/* ── Quick Actions Grid ── */}
-      <div>
+      {/* ── Quick Actions Grid (Desktop / Tablet only; hidden on mobile since bottom navbar has these actions) ── */}
+      <div className="hidden md:block">
         <h2 style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', marginBottom: 12 }}>
           Quick Actions
         </h2>

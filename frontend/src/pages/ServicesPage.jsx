@@ -546,8 +546,15 @@ export default function ServicesPage() {
               <SlidersHorizontal className="w-5 h-5" />
             </div>
             <div className="text-left">
-              <h3 className="text-sm font-bold text-slate-800">Filter by Location</h3>
-              <p className="text-xs text-slate-500 font-medium">Find active service providers in your state & city</p>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-slate-800">Pan-India & City Directory</h3>
+                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200">
+                  All India
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">
+                Browse sellers across Gujarat & India by State & City (or tap 📍 Nearby for GPS map search)
+              </p>
             </div>
           </div>
           

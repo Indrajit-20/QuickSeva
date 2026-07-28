@@ -94,49 +94,76 @@ export default function SellerWallet() {
         <p className="seller-page-subtitle">Manage your search credits / सर्च क्रेडिट प्रबंधित करें</p>
       </div>
 
-      {/* ── Balance Hero Card ── */}
-      <div className={`seller-wallet-hero seller-wallet-hero--${tier}`}>
-        <div style={{ position: 'relative', zIndex: 1 }}>
-          <div className="flex items-center gap-3" style={{ marginBottom: 16 }}>
-            <div style={{
-              width: 48, height: 48, borderRadius: 14,
-              background: 'rgba(255,255,255,0.18)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <Wallet size={24} />
+      {/* ── Professional Wallet Balance Card (Clean Light Theme) ── */}
+      <div className="bg-white rounded-3xl border border-slate-200/90 p-5 sm:p-6 shadow-sm relative overflow-hidden transition-all">
+        {/* Subtle accent border at top */}
+        <div
+          className={`absolute top-0 left-0 right-0 h-1.5 ${
+            balance <= 0
+              ? "bg-gradient-to-r from-red-500 via-rose-500 to-red-600"
+              : "bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500"
+          }`}
+        />
+
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-100">
+          <div className="flex items-center gap-3.5">
+            <div
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
+                balance <= 0
+                  ? "bg-red-50 text-red-600 border border-red-100"
+                  : "bg-blue-50 text-blue-600 border border-blue-100"
+              }`}
+            >
+              <Wallet size={24} strokeWidth={2.2} />
             </div>
             <div>
-              <p style={{ fontSize: 12, fontWeight: 600, opacity: 0.75 }}>Available Credits</p>
-              <p style={{ fontSize: 36, fontWeight: 900, letterSpacing: '-0.02em', lineHeight: 1 }}>
-                {balance} Credits
-              </p>
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Available Credits</span>
+              <div className="flex items-baseline gap-2 mt-0.5">
+                <span
+                  className={`text-3xl sm:text-4xl font-black tracking-tight ${
+                    balance <= 0 ? "text-red-600" : "text-slate-900"
+                  }`}
+                >
+                  {balance}
+                </span>
+                <span className="text-base font-bold text-slate-500">Credits</span>
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setRechargeOpen(true)}
-              style={{
-                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                padding: '14px 20px', borderRadius: 14,
-                background: 'rgba(255,255,255,0.2)',
-                border: '1px solid rgba(255,255,255,0.3)',
-                color: 'white', fontSize: 14, fontWeight: 700,
-                cursor: 'pointer', transition: 'all 0.2s ease',
-                backdropFilter: 'blur(8px)',
-              }}
-              className="active:scale-95"
-            >
-              <Plus size={18} /> Buy Credits
-            </button>
-            <div style={{
-              padding: '14px 16px', borderRadius: 14,
-              background: 'rgba(255,255,255,0.15)',
-              border: '1px solid rgba(255,255,255,0.2)',
-              fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap',
-            }}>
-              Free Listing ✓
+          <div className="flex items-center gap-2">
+            {balance <= 0 ? (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold bg-red-50 text-red-700 border border-red-200 shadow-2xs">
+                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" /> Out of Credits
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> Active Wallet
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Zero Credits Alert Banner */}
+        {balance <= 0 && (
+          <div className="mt-4 p-3.5 rounded-2xl bg-red-50 border border-red-200/80 text-xs font-semibold text-red-800 flex items-center gap-2.5">
+            <span className="text-base leading-none">⚠️</span>
+            <div>
+              <span className="font-bold">Zero Credits Alert:</span> Your balance is 0. Top up credits now to receive new customer bookings & lead alerts!
             </div>
+          </div>
+        )}
+
+        {/* Action Row */}
+        <div className="flex items-center gap-3 pt-4">
+          <button
+            onClick={() => setRechargeOpen(true)}
+            className="flex-1 flex items-center justify-center gap-2 py-3 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-sm shadow-md shadow-blue-500/20 active:scale-95 transition-all cursor-pointer border-0"
+          >
+            <Plus size={18} strokeWidth={2.5} /> Buy Credits
+          </button>
+          <div className="py-3 px-4 rounded-xl bg-slate-100 border border-slate-200 text-xs font-extrabold text-slate-700 whitespace-nowrap">
+            Free Listing ✓
           </div>
         </div>
       </div>

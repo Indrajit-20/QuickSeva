@@ -1,18 +1,18 @@
 import { useState, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { Home, CalendarCheck, User, Compass } from "lucide-react";
+import { MapPin, CalendarCheck, User, Globe } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
 const guestItems = [
-  { label: "Home", path: "/", icon: Home },
-  { label: "Services", path: "/services", icon: Compass },
+  { label: "Nearby", path: "/", icon: MapPin },
+  { label: "All India", path: "/services", icon: Globe },
   { label: "Bookings", path: "/my-bookings", icon: CalendarCheck },
   { label: "Login", path: "/login", icon: User },
 ];
 
 const userItems = [
-  { label: "Home", path: "/", icon: Home },
-  { label: "Services", path: "/services", icon: Compass },
+  { label: "Nearby", path: "/", icon: MapPin },
+  { label: "All India", path: "/services", icon: Globe },
   { label: "Bookings", path: "/my-bookings", icon: CalendarCheck },
   { label: "Me", path: "/profile", icon: User },
 ];
@@ -49,9 +49,7 @@ export default function BottomNavUser() {
 
   return (
     <nav
-      className={`bottom-nav-bar bottom-nav-bar--user ${
-        isKeyboardVisible ? "bottom-nav-bar--hidden" : ""
-      }`}
+      className={`bottom-nav-bar bottom-nav-bar--user ${isKeyboardVisible ? "bottom-nav-bar--hidden" : ""}`}
       aria-label="Quick navigation"
     >
       {items.map((item) => {

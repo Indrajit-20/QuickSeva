@@ -291,7 +291,7 @@ export default function MyBookings() {
             </p>
             <Link
               to="/services"
-              className="mt-6 rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow-sm hover:bg-blue-700 transition"
+              className="mt-6 rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white hover:text-white shadow-sm hover:bg-blue-700 transition"
             >
               Find Services
             </Link>
