@@ -23,9 +23,9 @@ const InputField = ({
     <label className="block text-xs font-bold text-slate-600 mb-2 uppercase tracking-wider">
       {label} {required && <span className="text-red-500">*</span>}
     </label>
-    <div className="relative">
+    <div className="relative flex items-center">
       {prefix && (
-        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-450 font-bold text-sm pointer-events-none select-none">
+        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-600 font-bold text-sm pointer-events-none select-none z-10">
           {prefix}
         </span>
       )}
@@ -38,7 +38,8 @@ const InputField = ({
         placeholder={placeholder}
         maxLength={maxLength}
         disabled={disabled}
-        className={`w-full ${prefix ? "pl-12 pr-3" : "px-3.5"} py-2.5 rounded-xl border text-sm font-medium bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-105 transition disabled:opacity-60 disabled:cursor-not-allowed ${
+        style={prefix ? { paddingLeft: "3.25rem" } : {}}
+        className={`w-full ${prefix ? "pr-3" : "px-3.5"} py-2.5 rounded-xl border text-sm font-medium bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-100 transition disabled:opacity-60 disabled:cursor-not-allowed ${
           error && isTouched
             ? "border-red-300 focus:border-red-500 focus:ring-red-100"
             : !error && isTouched && value
@@ -193,7 +194,11 @@ const ForgotPassword = () => {
       setSuccessMessage("Password reset successful! Redirecting to login...");
       setTimeout(() => navigate("/login"), 1800);
     } catch (err) {
-      setServerError(err.message || "OTP verification failed or session expired.");
+      let msg = err.message || "OTP verification failed or session expired.";
+      if (msg.includes("2Factor") || msg.includes("OTP Mismatch") || msg.includes("Details")) {
+        msg = "Invalid OTP code. Please check and try again.";
+      }
+      setServerError(msg);
     } finally {
       setIsLoading(false);
     }

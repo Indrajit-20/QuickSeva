@@ -98,13 +98,24 @@ const verifyWith2Factor = async ({ sessionId, otp }) => {
   console.log("================================");
 
   if (!response.ok) {
-    throw new Error(`2Factor VERIFY failed: ${text}`);
+    if (text.includes("OTP Mismatch")) {
+      throw new Error("Invalid OTP code. Please check and try again.");
+    }
+    throw new Error("OTP verification failed. Please try again.");
   }
 
-  const data = JSON.parse(text);
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch (e) {
+    throw new Error("OTP verification failed. Please try again.");
+  }
 
   if (data?.Status !== "Success") {
-    throw new Error(data?.Details || "2Factor VERIFY failed");
+    if (data?.Details === "OTP Mismatch" || (typeof data?.Details === "string" && data.Details.includes("Mismatch"))) {
+      throw new Error("Invalid OTP code. Please check and try again.");
+    }
+    throw new Error(data?.Details || "Invalid OTP code. Please check and try again.");
   }
 
   return { verified: true, raw: data };

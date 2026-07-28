@@ -27,19 +27,18 @@ const InputField = ({
       {label}{" "}
       {required && <span className="required">*</span>}
     </label>
-    <div className="relative">
+    <div className="relative flex items-center">
       {prefix && (
         <span
+          className="z-10 pointer-events-none select-none"
           style={{
             position: "absolute",
-            left: "0.75rem",
+            left: "0.875rem",
             top: "50%",
             transform: "translateY(-50%)",
             color: "var(--qs-muted)",
             fontWeight: 600,
             fontSize: "0.875rem",
-            pointerEvents: "none",
-            userSelect: "none",
           }}
         >
           {prefix}
@@ -56,7 +55,7 @@ const InputField = ({
         maxLength={maxLength}
         disabled={disabled}
         className={`form-input${error && isTouched ? " error" : ""}${!error && isTouched && value ? " success" : ""}`}
-        style={prefix ? { paddingLeft: "2.75rem" } : {}}
+        style={prefix ? { paddingLeft: "3.25rem" } : {}}
       />
     </div>
     {error && isTouched && (

@@ -530,17 +530,23 @@ const SellerRegister = () => {
                 <label className="block text-xs font-bold text-slate-600 mb-2 uppercase tracking-wider">
                   Mobile Number <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="tel"
-                  name="mobileNumber"
-                  value={formData.mobileNumber}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  placeholder="98765 43210"
-                  maxLength={10}
-                  disabled={isLoading}
-                  className={`${inputClass} ${errors.mobileNumber && touched.mobileNumber ? "border-red-300 focus:ring-red-100" : ""}`}
-                />
+                <div className="relative flex items-center">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-600 font-bold text-sm pointer-events-none select-none z-10">
+                    +91
+                  </span>
+                  <input
+                    type="tel"
+                    name="mobileNumber"
+                    value={formData.mobileNumber}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    placeholder="98765 43210"
+                    maxLength={10}
+                    disabled={isLoading}
+                    style={{ paddingLeft: "3.25rem" }}
+                    className={`${inputClass} ${errors.mobileNumber && touched.mobileNumber ? "border-red-300 focus:ring-red-100" : ""}`}
+                  />
+                </div>
                 {errors.mobileNumber && touched.mobileNumber && (
                   <p className="mt-1.5 text-xs font-semibold text-red-600">⚠ {errors.mobileNumber}</p>
                 )}

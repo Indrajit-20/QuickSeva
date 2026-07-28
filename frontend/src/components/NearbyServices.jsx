@@ -513,7 +513,8 @@ export default function NearbyServices({
   const [search, setSearch] = useState(initialSearch);
   const [locationQuery, setLocationQuery] = useState("");
   const [showServiceDrop, setShowServiceDrop] = useState(false);
-  const serviceDropRef = useRef(null);
+  const desktopServiceDropRef = useRef(null);
+  const mobileServiceDropRef = useRef(null);
   const resultsHeaderRef = useRef(null);
 
   const scrollToResults = () => {
@@ -542,11 +543,14 @@ export default function NearbyServices({
   const handleServiceSelect = (item) => {
     setSearch(item);
     setShowServiceDrop(false);
+    setTimeout(scrollToResults, 100);
   };
 
   useEffect(() => {
     const handleMouseDown = (e) => {
-      if (serviceDropRef.current && !serviceDropRef.current.contains(e.target)) {
+      const inDesktop = desktopServiceDropRef.current && desktopServiceDropRef.current.contains(e.target);
+      const inMobile = mobileServiceDropRef.current && mobileServiceDropRef.current.contains(e.target);
+      if (!inDesktop && !inMobile) {
         setShowServiceDrop(false);
       }
     };
@@ -968,7 +972,17 @@ export default function NearbyServices({
           );
           if (!res.ok) throw new Error("Failed to fetch sellers in view");
           const data = await res.json();
-          setSellers(data);
+          // Deduplicate incoming sellers by ID
+          const seenSellerIds = new Set();
+          const uniqueSellersList = [];
+          (data || []).forEach((item) => {
+            const sId = item.id || item.sellerId;
+            if (sId && !seenSellerIds.has(sId)) {
+              seenSellerIds.add(sId);
+              uniqueSellersList.push(item);
+            }
+          });
+          setSellers(uniqueSellersList);
           lastFetchedBoundsRef.current = currentBoundsStr;
         } catch (err) {
           console.error("fetchSellersInView error:", err);
@@ -1277,13 +1291,24 @@ export default function NearbyServices({
       return true;
     });
 
-    return filteredByQuick.sort((a, b) => {
+    const sortedList = filteredByQuick.sort((a, b) => {
       if (quickFilters.nearest) return a.distanceKm - b.distanceKm;
       const rankA = getSellerPackageRank(a);
       const rankB = getSellerPackageRank(b);
       if (rankA !== rankB) return rankB - rankA;
       return a.distanceKm - b.distanceKm;
     });
+
+    const seenNearbyIds = new Set();
+    const uniqueNearbyList = [];
+    sortedList.forEach((item) => {
+      const sId = item.id || item.sellerId;
+      if (sId && !seenNearbyIds.has(sId)) {
+        seenNearbyIds.add(sId);
+        uniqueNearbyList.push(item);
+      }
+    });
+    return uniqueNearbyList;
   }, [
     buyerPos,
     searchCenter,
@@ -1674,7 +1699,7 @@ export default function NearbyServices({
             <form onSubmit={handleUnifiedSearchSubmit} className="hidden lg:block relative z-[70] w-full">
               <div className="flex flex-col lg:flex-row items-stretch gap-2.5 bg-slate-50/50 p-2.5 rounded-2xl border border-slate-200/80">
                 {/* Input 1: Service search */}
-                <div className="relative flex-[2.5] min-w-0" ref={serviceDropRef}>
+                <div className="relative flex-[2.5] min-w-0" ref={desktopServiceDropRef}>
                   <Search className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-455 h-4.5 w-4.5" />
                   <input
                     value={search}
@@ -1704,7 +1729,16 @@ export default function NearbyServices({
                           <button
                             key={item}
                             type="button"
-                            onClick={() => handleServiceSelect(item)}
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleServiceSelect(item);
+                            }}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleServiceSelect(item);
+                            }}
                             className="w-full rounded-lg px-3.5 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 hover:text-blue-600 transition-colors duration-150 cursor-pointer flex items-center gap-2"
                           >
                             <IconComponent className="h-4 w-4 text-blue-500 shrink-0" />
@@ -1797,7 +1831,7 @@ export default function NearbyServices({
             <div className="lg:hidden relative w-full">
               <form onSubmit={handleUnifiedSearchSubmit} className="relative z-[70] w-full">
                 <div className="flex items-stretch gap-2 w-full">
-                  <div className="relative flex-1 min-w-0" ref={serviceDropRef}>
+                  <div className="relative flex-1 min-w-0" ref={mobileServiceDropRef}>
                     <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
                     <input
                       value={search}
@@ -1827,7 +1861,16 @@ export default function NearbyServices({
                             <button
                               key={item}
                               type="button"
-                              onClick={() => handleServiceSelect(item)}
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleServiceSelect(item);
+                              }}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleServiceSelect(item);
+                              }}
                               className="w-full rounded-lg px-3 py-1.5 text-left text-xs text-slate-700 hover:bg-slate-50 hover:text-blue-600 transition-colors duration-150 cursor-pointer flex items-center gap-2"
                             >
                               <IconComponent className="h-3.5 w-3.5 text-blue-500 shrink-0" />
@@ -1978,7 +2021,7 @@ export default function NearbyServices({
                       <SlidersHorizontal className="h-3.5 w-3.5 shrink-0" />
                       <span>Refine</span>
                       {activeFilterCount > 0 && (
-                        <span className="qs-filter-badge inline-flex h-4 w-4 items-center justify-center rounded-full bg-white text-[10px] font-extrabold text-[#0f172a]">
+                        <span className="qs-filter-badge">
                           {activeFilterCount}
                         </span>
                       )}
@@ -2133,17 +2176,6 @@ export default function NearbyServices({
               }`}
           >
 
-            {/* Top-left: providers count pill (Visible on Mobile & Desktop) */}
-            <div className="pointer-events-none absolute left-2.5 top-2.5 sm:left-3 sm:top-3 z-[600]">
-              <div className="flex items-center gap-1.5 bg-slate-900/85 backdrop-blur-md border border-white/15 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-white shadow-md">
-                <Users className="h-3.5 w-3.5 text-sky-400 shrink-0" />
-                <div className="flex items-center gap-1 text-[11px] sm:text-xs">
-                  <span className="font-bold text-white">{nearby.length}</span>
-                  <span className="text-slate-300 hidden xs:inline">providers</span>
-                </div>
-              </div>
-            </div>
-
             {/* Top-right: live radius badge (Visible on Mobile & Desktop) */}
             <div className={`pointer-events-none absolute top-2.5 sm:top-3 z-[600] ${isMapFullScreen ? "right-52" : "right-2.5 sm:right-3"}`}>
               <div className="flex items-center gap-1.5 bg-slate-900/85 backdrop-blur-md border border-white/15 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-white shadow-md">
@@ -2155,31 +2187,16 @@ export default function NearbyServices({
               </div>
             </div>
 
-            {/* Bottom-left: user location badge */}
-            {buyerPos && (
-              <div className="pointer-events-none absolute bottom-2.5 left-2.5 sm:left-3 z-[600]">
-                <div className="flex items-center gap-1.5 bg-slate-900/85 backdrop-blur-md border border-white/15 px-2.5 py-1 rounded-full text-white shadow-md max-w-[180px] sm:max-w-none">
-                  <MapPin className="h-3.5 w-3.5 text-rose-400 shrink-0" />
-                  <span className="text-[10px] sm:text-xs font-semibold text-indigo-100 truncate">
-                    Live Location
-                  </span>
+            {/* Bottom-left: Providers Count Badge */}
+            <div className="pointer-events-none absolute bottom-2.5 left-2.5 sm:bottom-3 sm:left-3 z-[600]">
+              <div className="flex items-center gap-1.5 bg-slate-900/85 backdrop-blur-md border border-white/15 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-white shadow-md">
+                <Users className="h-3.5 w-3.5 text-sky-400 shrink-0" />
+                <div className="flex items-center gap-1 text-[10px] sm:text-xs font-semibold text-white">
+                  <span className="font-extrabold text-white">{nearby.length}</span>
+                  <span className="text-slate-300">Provider{nearby.length !== 1 ? "s" : ""}</span>
                 </div>
               </div>
-            )}
-
-            {/* Search center badge (when map was clicked to different area) */}
-            {searchCenter && buyerPos &&
-              (Math.abs(searchCenter.lat - buyerPos.lat) > 0.0001 ||
-                Math.abs(searchCenter.lng - buyerPos.lng) > 0.0001) && (
-                <div className="pointer-events-none absolute bottom-10 left-2.5 sm:left-3 z-[600]">
-                  <div className="flex items-center gap-1.5 bg-blue-600/90 backdrop-blur-md border border-blue-400/40 px-2.5 py-1 rounded-full text-white shadow-md">
-                    <Crosshair className="h-3 w-3 text-emerald-300 shrink-0" />
-                    <span className="text-[10px] sm:text-xs font-semibold text-emerald-100">
-                      Searching Area
-                    </span>
-                  </div>
-                </div>
-              )}
+            </div>
 
             {/* Floating Bottom-Right: Map Controls (Locate Me & Expand Map) */}
             {!isMapFullScreen && (
@@ -2255,27 +2272,34 @@ export default function NearbyServices({
                 </button>
 
                 <div className="flex items-center gap-3 pr-6">
-                  <div className="relative h-9 w-9 flex-shrink-0">
-                    {(selectedSeller.profilePhotoUrl || selectedSeller.profile_pic) ? (
-                      <img
-                        src={getImageUrl(selectedSeller.profilePhotoUrl || selectedSeller.profile_pic)}
-                        alt={selectedSeller.name}
-                        className="h-9 w-9 rounded-full object-cover border border-slate-200"
-                      />
-                    ) : (
-                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#1565C0] font-bold text-white text-xs">
-                        {selectedSeller.name?.[0]?.toUpperCase() || "?"}
-                      </div>
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h4 className="truncate text-xs font-bold text-slate-800">
-                      {selectedSeller.name}
-                    </h4>
-                    <p className="truncate text-[10px] font-semibold text-[#0284c7] mt-0.5">
-                      {selectedSeller.service}
-                    </p>
-                  </div>
+                  {(() => {
+                    const selName = selectedSeller.business_name || selectedSeller.businessName || selectedSeller.name || selectedSeller.ownerName || "Service Partner";
+                    return (
+                      <>
+                        <div className="relative h-9 w-9 flex-shrink-0">
+                          {(selectedSeller.profilePhotoUrl || selectedSeller.profile_pic) ? (
+                            <img
+                              src={getImageUrl(selectedSeller.profilePhotoUrl || selectedSeller.profile_pic)}
+                              alt={selName}
+                              className="h-9 w-9 rounded-full object-cover border border-slate-200"
+                            />
+                          ) : (
+                            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#1565C0] font-bold text-white text-xs">
+                              {selName?.[0]?.toUpperCase() || "?"}
+                            </div>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h4 className="truncate text-xs font-bold text-slate-800">
+                            {selName}
+                          </h4>
+                          <p className="truncate text-[10px] font-semibold text-[#0284c7] mt-0.5">
+                            {selectedSeller.service}
+                          </p>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
 
                 <div className="mt-2.5 flex items-center justify-between text-[11px] border-t border-slate-100 pt-2.5">
@@ -2493,6 +2517,8 @@ export default function NearbyServices({
             const distanceLabel = Number(seller.distanceKm || 0).toFixed(1);
             const isAvailable = seller.isAvailable !== undefined ? Boolean(seller.isAvailable) : (seller.is_available !== undefined ? Boolean(seller.is_available) : true);
 
+            const sellerDisplayName = seller.business_name || seller.businessName || seller.name || seller.ownerName || "Service Partner";
+
             const serviceModeLabel =
               seller.serviceMode === "online"
                 ? "Online"
@@ -2539,12 +2565,12 @@ export default function NearbyServices({
                     {(seller.profilePhotoUrl || seller.profile_pic) ? (
                       <img
                         src={getImageUrl(seller.profilePhotoUrl || seller.profile_pic)}
-                        alt={seller.name}
+                        alt={sellerDisplayName}
                         className="h-12 w-12 rounded-xl object-cover border border-slate-100 shadow-2xs"
                       />
                     ) : (
                       <div className="flex h-12 w-12 items-center justify-center rounded-xl font-extrabold text-lg bg-blue-50 text-blue-600 border border-blue-100/50 shadow-2xs">
-                        {seller.name?.[0]?.toUpperCase() || "?"}
+                        {sellerDisplayName?.[0]?.toUpperCase() || "?"}
                       </div>
                     )}
                     {/* Availability Dot */}
@@ -2556,45 +2582,53 @@ export default function NearbyServices({
                   </div>
 
                   {/* Text Details Column */}
-                  <div className="min-w-0 flex-1 flex flex-col gap-0.5">
-                    <h4 className="text-[14px] font-black text-slate-800 tracking-tight leading-snug truncate flex items-center gap-1.5 flex-wrap">
-                      <span className="truncate">{seller.name}</span>
+                  <div className="min-w-0 flex-1 flex flex-col gap-0.5 sm:gap-1">
+                    {/* Name & Verified Badge in ONE single line */}
+                    <div className="flex items-center gap-1.5 min-w-0 w-full">
+                      <h4 className="text-[13.5px] sm:text-sm font-extrabold text-slate-800 tracking-tight leading-snug truncate min-w-0 flex-1">
+                        {sellerDisplayName}
+                      </h4>
                       {isPremium && (
                         <BadgeCheck className="h-4 w-4 text-amber-500 fill-amber-500/10 shrink-0" title="Premium Partner" />
                       )}
-                    </h4>
-
-                    <div className="text-xs font-semibold text-slate-500 flex items-center gap-1.5 truncate">
-                      <span>{seller.service}</span>
-                      {serviceModeLabel && (
-                        <>
-                          <span className="text-slate-300 font-normal">•</span>
-                          <span className="text-slate-500 font-semibold">{serviceModeLabel}</span>
-                        </>
-                      )}
-                      <span className="text-slate-300 font-normal">•</span>
-                      <span className="text-blue-650 font-bold">{distanceLabel}km</span>
                     </div>
 
-                    {/* Badge Row (inline chips) */}
-                    <div className="flex items-center gap-2 mt-1">
+                    {/* Subtitle / Service & Mode */}
+                    <div className="text-[11px] sm:text-xs font-medium text-slate-500 flex items-center gap-1.5 min-w-0 truncate">
+                      <span className="font-semibold text-slate-700 truncate min-w-0">{seller.service}</span>
+                      {serviceModeLabel && (
+                        <>
+                          <span className="text-slate-300 font-normal shrink-0">•</span>
+                          <span className="text-slate-500 truncate shrink-0">{serviceModeLabel}</span>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Badges & Distance Pill Row */}
+                    <div className="flex items-center gap-1.5 flex-wrap mt-0.5 text-[10px] sm:text-[11px]">
                       {/* Rating */}
-                      <span className="inline-flex items-center gap-0.5 text-[11px] font-extrabold text-emerald-700">
-                        <Star className="h-3 w-3 fill-emerald-600 text-emerald-600" />
+                      <span className="inline-flex items-center gap-0.5 font-black text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200/60">
+                        <Star className="h-3 w-3 fill-emerald-600 text-emerald-600 shrink-0" />
                         <span>{Number(seller?.rating || 0).toFixed(1)}</span>
+                      </span>
+
+                      {/* Distance Pill */}
+                      <span className="inline-flex items-center gap-0.5 font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-md border border-blue-200/60">
+                        <MapPin className="h-3 w-3 text-blue-600 shrink-0" />
+                        <span>{distanceLabel} km</span>
                       </span>
 
                       {/* Fast Response */}
                       {packageRank >= 2 && (
-                        <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-slate-500 ml-1">
-                          <Zap className="h-3.5 w-3.5 text-amber-500 fill-amber-500 shrink-0" />
-                          <span>Fast Response</span>
+                        <span className="inline-flex items-center gap-0.5 font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-md border border-amber-200/60">
+                          <Zap className="h-3 w-3 text-amber-500 fill-amber-500 shrink-0" />
+                          <span className="hidden xs:inline">Fast Response</span>
                         </span>
                       )}
 
                       {/* Instant Service */}
                       {seller?.instantService && (
-                        <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-slate-500 ml-1">
+                        <span className="inline-flex items-center gap-0.5 font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200/60">
                           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse mr-0.5" />
                           <span>Instant</span>
                         </span>

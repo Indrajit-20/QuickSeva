@@ -9,37 +9,52 @@ async function setup() {
 
     // 1. Configure the logged-in user "CT" (8160977394) to be in pincode 389320
     const [ctUsers] = await pool.query("SELECT id FROM users WHERE phone = ?", ["8160977394"]);
+    let ctUserId;
     if (ctUsers.length > 0) {
-      const ctUserId = ctUsers[0].id;
+      ctUserId = ctUsers[0].id;
       console.log(`Found CT user (ID: ${ctUserId}). Updating location/pincode...`);
       await pool.query(
         "UPDATE users SET pincode = '389320', address = 'SH87, Halol, Halol Taluka, Gujarat, 389320' WHERE id = ?",
         [ctUserId]
       );
-
-      // Make sure CT is a premium seller for Home Painting (Category ID 7)
-      const [ctSellers] = await pool.query("SELECT id FROM sellers WHERE user_id = ?", [ctUserId]);
-      let ctSellerId;
-      if (ctSellers.length > 0) {
-        ctSellerId = ctSellers[0].id;
-        console.log(`Updating existing seller profile for CT (Seller ID: ${ctSellerId})...`);
-        await pool.query(
-          "UPDATE sellers SET category_id = 7, is_premium = 1, plan = 'pro', premium_expires_at = '2030-01-01 00:00:00', is_available = 1, is_verified = 1 WHERE id = ?",
-          [ctSellerId]
-        );
-      } else {
-        console.log("Creating new seller profile for CT...");
-        const [res] = await pool.query(
-          `INSERT INTO sellers (user_id, business_name, category_id, is_premium, plan, premium_expires_at, is_available, is_verified)
-           VALUES (?, 'CT Home Services', 7, 1, 'pro', '2030-01-01 00:00:00', 1, 1)`,
-          [ctUserId]
-        );
-        ctSellerId = res.insertId;
-      }
-      await pool.query("INSERT IGNORE INTO seller_categories (seller_id, category_id) VALUES (?, 7)", [ctSellerId]);
     } else {
-      console.log("⚠️ CT user (8160977394) not found in users table. Make sure you are registered and logged in first.");
+      console.log("Creating CT user (8160977394)...");
+      const [res] = await pool.query(
+        `INSERT INTO users (name, email, phone, gender, password, role, address, city, state, pincode, is_verified, is_active)
+         VALUES (?, ?, ?, ?, ?, 'seller', ?, 'Halol', 'Gujarat', '389320', 1, 1)`,
+        [
+          "CT",
+          "ct@quickseva.com",
+          "8160977394",
+          "male",
+          hashedPassword,
+          "SH87, Halol, Halol Taluka, Gujarat, 389320"
+        ]
+      );
+      ctUserId = res.insertId;
+      await pool.query("INSERT IGNORE INTO wallets (user_id, balance) VALUES (?, 1000.00)", [ctUserId]);
     }
+
+    // Make sure CT is a premium seller for Home Painting (Category ID 7)
+    const [ctSellers] = await pool.query("SELECT id FROM sellers WHERE user_id = ?", [ctUserId]);
+    let ctSellerId;
+    if (ctSellers.length > 0) {
+      ctSellerId = ctSellers[0].id;
+      console.log(`Updating existing seller profile for CT (Seller ID: ${ctSellerId})...`);
+      await pool.query(
+        "UPDATE sellers SET category_id = 7, is_premium = 1, plan = 'pro', premium_expires_at = '2030-01-01 00:00:00', is_available = 1, is_verified = 1 WHERE id = ?",
+        [ctSellerId]
+      );
+    } else {
+      console.log("Creating new seller profile for CT...");
+      const [res] = await pool.query(
+        `INSERT INTO sellers (user_id, business_name, category_id, is_premium, plan, premium_expires_at, is_available, is_verified)
+         VALUES (?, 'CT Home Services', 7, 1, 'pro', '2030-01-01 00:00:00', 1, 1)`,
+        [ctUserId]
+      );
+      ctSellerId = res.insertId;
+    }
+    await pool.query("INSERT IGNORE INTO seller_categories (seller_id, category_id) VALUES (?, 7)", [ctSellerId]);
 
     // 2. Create/Update a separate test seller "Halol Painters Owner" (7777777777)
     // This allows you to test sending a lead and logging in as a separate provider to receive it.

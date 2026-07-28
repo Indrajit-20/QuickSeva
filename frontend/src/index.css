@@ -939,18 +939,25 @@ input[type="range"] {
 }
 
 .qs-filter-badge {
-  background: var(--qs-primary);
-  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.35rem;
   border-radius: 9999px;
-  font-size: 10px;
-  font-weight: 800;
-  padding: 1px 6px;
-  line-height: 1.4;
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.3);
 }
 
 .qs-refine-toggle-btn.active .qs-filter-badge {
-  background: #ffffff;
-  color: #4f46e5;
+  background-color: #ffffff !important;
+  color: #4f46e5 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 }
 
 /* ──────────────────────────────────────────────────────────────────────────

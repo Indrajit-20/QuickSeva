@@ -712,17 +712,25 @@ export default function BookingPage() {
               <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Mobile Number / मोबाइल नंबर
               </label>
-              <input
-                value={formData.mobile}
-                onChange={(e) =>
-                  updateField(
-                    "mobile",
-                    e.target.value.replace(/\D/g, "").slice(0, 10),
-                  )
-                }
-                placeholder="E.g., 9876543210"
-                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition"
-              />
+              <div className="relative flex items-center">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-600 font-bold text-sm pointer-events-none select-none z-10">
+                  +91
+                </span>
+                <input
+                  type="tel"
+                  value={formData.mobile}
+                  onChange={(e) =>
+                    updateField(
+                      "mobile",
+                      e.target.value.replace(/\D/g, "").slice(0, 10),
+                    )
+                  }
+                  placeholder="98765 43210"
+                  maxLength={10}
+                  style={{ paddingLeft: "3.25rem" }}
+                  className="w-full pr-3 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition"
+                />
+              </div>
               {errors.mobile && (
                 <p className="text-xs font-semibold text-red-600 flex items-center gap-1 mt-1">
                   <span>⚠</span> {errors.mobile}

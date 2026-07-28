@@ -369,6 +369,7 @@ export const AuthProvider = ({ children }) => {
     switchRole,
     refreshAuth,
     authenticateSession,
+    clearAuthError: () => setAuthError(null),
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

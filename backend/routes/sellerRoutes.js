@@ -110,6 +110,7 @@ router.get("/in-view", async (req, res) => {
         JOIN users u ON s.user_id = u.id
         LEFT JOIN categories c ON s.category_id = c.id
         LEFT JOIN wallets w ON s.user_id = w.user_id
+        GROUP BY s.id
       ) AS sellers_in_view
       WHERE lat BETWEEN ? AND ? AND lng BETWEEN ? AND ?
       LIMIT 200`,

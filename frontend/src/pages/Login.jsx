@@ -5,7 +5,7 @@ import { getCaptcha } from "../api/authService";
 
 const Login = () => {
   const navigate = useNavigate();
-  const { loginWithPassword, isLoading, authError } = useAuth();
+  const { loginWithPassword, isLoading, authError, clearAuthError } = useAuth();
 
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
@@ -20,8 +20,9 @@ const Login = () => {
 
   const digitsOnlyPhone = phone.replace(/\D/g, "");
 
-  // Load Captcha on mount
+  // Clear auth errors and load Captcha on mount
   useEffect(() => {
+    if (clearAuthError) clearAuthError();
     fetchNewCaptcha();
   }, []);
 
@@ -121,26 +122,44 @@ const Login = () => {
           </div>
         )}
 
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleLogin} className="space-y-4" autoComplete="off">
           {/* Phone Field */}
           <div className="form-group">
             <label className="form-label" htmlFor="login-phone">
               Phone Number <span className="required">*</span>
             </label>
-            <input
-              id="login-phone"
-              type="tel"
-              value={phone}
-              onChange={(e) => {
-                const val = e.target.value.replace(/\D/g, "").slice(0, 10);
-                setPhone(val);
-                setLocalErrors((prev) => ({ ...prev, phone: "" }));
-              }}
-              placeholder="98765 43210"
-              maxLength={10}
-              disabled={isLoading}
-              className={`form-input${localErrors.phone ? " error" : ""}`}
-            />
+            <div className="relative flex items-center">
+              <span
+                className="z-10 pointer-events-none select-none"
+                style={{
+                  position: "absolute",
+                  left: "0.875rem",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  color: "#64748b",
+                  fontWeight: 600,
+                  fontSize: "0.875rem",
+                }}
+              >
+                +91
+              </span>
+              <input
+                id="login-phone"
+                type="tel"
+                value={phone}
+                autoComplete="off"
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                  setPhone(val);
+                  setLocalErrors((prev) => ({ ...prev, phone: "" }));
+                }}
+                placeholder="98765 43210"
+                maxLength={10}
+                disabled={isLoading}
+                className={`form-input${localErrors.phone ? " error" : ""}`}
+                style={{ paddingLeft: "3.25rem" }}
+              />
+            </div>
             {localErrors.phone && (
               <p className="form-error">⚠ {localErrors.phone}</p>
             )}
@@ -164,6 +183,7 @@ const Login = () => {
               id="login-password"
               type="password"
               value={password}
+              autoComplete="new-password"
               onChange={(e) => {
                 setPassword(e.target.value);
                 setLocalErrors((prev) => ({ ...prev, password: "" }));
