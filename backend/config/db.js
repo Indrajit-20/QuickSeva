@@ -7,7 +7,7 @@ require('dotenv').config({
 
 const isSSLRequired = process.env.DB_SSL === 'true' || (process.env.NODE_ENV === 'production' && process.env.DB_HOST !== 'localhost' && process.env.DB_HOST !== '127.0.0.1');
 
-const pool = mysql.createPool({
+let poolConfig = {
   host: process.env.DB_HOST || "127.0.0.1",
   port: Number(process.env.DB_PORT) || 3306,
   user: process.env.DB_USER || "root",
@@ -22,7 +22,24 @@ const pool = mysql.createPool({
   keepAliveInitialDelay: 10000, // Send TCP keepalive every 10 seconds
   ssl: isSSLRequired ? { rejectUnauthorized: false } : false,
   timezone: "+05:30", // IST
-});
+};
+
+// Auto-parse MYSQL_URL / DATABASE_URL if provided by cloud DB host
+const connectionString = process.env.MYSQL_URL || process.env.DATABASE_URL;
+if (connectionString) {
+  try {
+    const parsedUrl = new URL(connectionString);
+    poolConfig.host = parsedUrl.hostname;
+    poolConfig.port = Number(parsedUrl.port) || 3306;
+    poolConfig.user = parsedUrl.username;
+    poolConfig.password = decodeURIComponent(parsedUrl.password);
+    poolConfig.database = parsedUrl.pathname.replace(/^\//, '') || poolConfig.database;
+  } catch (e) {
+    console.warn("⚠️ Could not parse MYSQL_URL, falling back to individual DB_* variables.");
+  }
+}
+
+const pool = mysql.createPool(poolConfig);
 
 // Resilient DB Connection check with retry logic
 const connectDB = async (retries = 5, delay = 3000) => {
