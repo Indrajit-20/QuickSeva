@@ -80,48 +80,50 @@ const startAvailabilitySafetyCheck = () => {
       );
 
       for (const order of overdueOrders) {
-        console.log(`⏰ Safety check: Auto-completing accepted order #${order.order_number} (overdue by 48+ hours)`);
+        try {
+          console.log(`⏰ Safety check: Auto-completing accepted order #${order.order_number} (overdue by 48+ hours)`);
 
-        await pool.query(
-          "UPDATE orders SET status = 'completed', completed_at = NOW() WHERE id = ?",
-          [order.id]
-        );
+          await pool.query(
+            "UPDATE orders SET status = 'completed', completed_at = NOW() WHERE id = ?",
+            [order.id]
+          );
 
-        // Auto-payout is handled directly/offline now, no wallet credit logic
+          await pool.query(
+            `UPDATE sellers SET total_orders = total_orders + 1 WHERE id = ?`,
+            [order.seller_id]
+          );
 
-        await pool.query(
-          `UPDATE sellers SET total_orders = total_orders + 1 WHERE id = ?`,
-          [order.seller_id]
-        );
+          await pool.query(
+            `INSERT INTO notifications (user_id, title, message, type, ref_id) VALUES (?, ?, ?, 'order', ?)`,
+            [
+              order.buyer_id,
+              "Order Auto-Completed",
+              `Your booking #${order.order_number} was auto-completed because the slot passed and no dispute was raised.`,
+              order.id
+            ]
+          );
 
-        await pool.query(
-          `INSERT INTO notifications (user_id, title, message, type, ref_id) VALUES (?, ?, ?, 'order', ?)`,
-          [
-            order.buyer_id,
-            "Order Auto-Completed",
-            `Your booking #${order.order_number} was auto-completed because the slot passed and no dispute was raised.`,
-            order.id
-          ]
-        );
-
-        await pool.query(
-          `INSERT INTO notifications (user_id, title, message, type, ref_id) VALUES (?, ?, ?, 'order', ?)`,
-          [
-            order.seller_user_id,
-            "Order Auto-Completed",
-            `Booking #${order.order_number} has been auto-completed and earnings have been credited to your wallet.`,
-            order.id
-          ]
-        );
+          await pool.query(
+            `INSERT INTO notifications (user_id, title, message, type, ref_id) VALUES (?, ?, ?, 'order', ?)`,
+            [
+              order.seller_user_id,
+              "Order Auto-Completed",
+              `Booking #${order.order_number} has been auto-completed and earnings have been credited to your wallet.`,
+              order.id
+            ]
+          );
+        } catch (itemErr) {
+          console.error(`⚠️ Error processing overdue order #${order.order_number}:`, itemErr.message);
+        }
       }
 
     } catch (error) {
-      console.error("❌ Error running availability safety check:", error);
+      console.warn("⚠️ Availability safety check deferred (DB unreachable or busy):", error.message);
     }
   };
 
-  // Run once immediately on startup
-  checkAndCleanup();
+  // Run initial check after 5 seconds delay so DB pool connection settles first
+  setTimeout(checkAndCleanup, 5000);
 
   // Run every 1 hour
   setInterval(checkAndCleanup, 60 * 60 * 1000);
