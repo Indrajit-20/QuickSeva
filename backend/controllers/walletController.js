@@ -24,9 +24,12 @@ exports.getTransactions = async (req, res) => {
   }
 };
 
-// Top-up wallet (admin grants or via payment gateway callback)
+// Top-up wallet (restricted to payment gateway callback / admin)
 exports.topUpWallet = async (req, res) => {
   try {
+    if (req.user?.role !== "admin") {
+      return errorRes(res, "Direct wallet top-up is disabled. Please recharge via payment gateway.", 403);
+    }
     const { amount, description = "Credits top-up" } = req.body;
 
     if (!amount || parseFloat(amount) <= 0) {

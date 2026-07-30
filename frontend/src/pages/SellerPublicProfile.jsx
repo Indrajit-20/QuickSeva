@@ -232,7 +232,7 @@ export default function SellerPublicProfile() {
         service.description || "Professional service from a verified provider.",
       price: service.price ?? "Price on request",
       price_type: "negotiable",
-      visiting_charge: service.visiting_charge ?? 100,
+      visiting_charge: Math.max(100, Number(service.visiting_charge || 100)),
       duration: service.duration_hrs
         ? `${service.duration_hrs} hrs`
         : service.duration || "1-2 hours",
@@ -624,7 +624,7 @@ export default function SellerPublicProfile() {
                   <div className="mt-4 grid gap-2 text-sm font-bold text-slate-600 sm:grid-cols-3">
                     <span className="inline-flex items-center gap-1 text-emerald-600">
                       <IndianRupee size={15} />
-                      <span>Visit Fee: ₹{Number(service.visiting_charge || 0).toLocaleString("en-IN")}</span>
+                      <span>Visit Fee: ₹{Math.max(100, Number(service.visiting_charge || 100)).toLocaleString("en-IN")}</span>
                     </span>
                     <span className="inline-flex items-center gap-1 text-slate-500">
                       <Clock size={15} />

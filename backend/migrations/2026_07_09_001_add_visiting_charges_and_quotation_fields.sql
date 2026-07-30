@@ -14,7 +14,7 @@ INSERT INTO system_settings (`key`, `value`, `description`) VALUES
 ON DUPLICATE KEY UPDATE `description` = VALUES(`description`);
 
 -- Modify columns in services table
-ALTER TABLE services ADD COLUMN visiting_charge DECIMAL(10,2) DEFAULT 0.00;
+ALTER TABLE services ADD COLUMN visiting_charge DECIMAL(10,2) DEFAULT 100.00;
 ALTER TABLE services ADD COLUMN is_inspection_required TINYINT(1) DEFAULT 1;
 ALTER TABLE services ADD COLUMN final_price_after_inspection TINYINT(1) DEFAULT 1;
 

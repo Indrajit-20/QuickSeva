@@ -399,8 +399,8 @@ async function run() {
       // Basic Service
       const isInstantBasic = index % 4 === 0;
       await pool.query(
-        `INSERT INTO services (seller_id, category_id, title, description, price, price_type, duration_hrs, duration, is_instant, is_active)
-         VALUES (?, ?, ?, ?, ?, 'fixed', 1.5, ?, ?, 1)`,
+        `INSERT INTO services (seller_id, category_id, title, description, price, price_type, duration_hrs, duration, is_instant, visiting_charge, is_active)
+         VALUES (?, ?, ?, ?, ?, 'fixed', 1.5, ?, ?, 100.00, 1)`,
         [
           sellerId,
           categoryId,
@@ -414,8 +414,8 @@ async function run() {
 
       // Deep Service
       await pool.query(
-        `INSERT INTO services (seller_id, category_id, title, description, price, price_type, duration_hrs, duration, is_instant, is_active)
-         VALUES (?, ?, ?, ?, ?, 'fixed', 2.5, ?, 0, 1)`,
+        `INSERT INTO services (seller_id, category_id, title, description, price, price_type, duration_hrs, duration, is_instant, visiting_charge, is_active)
+         VALUES (?, ?, ?, ?, ?, 'fixed', 2.5, ?, 0, 150.00, 1)`,
         [
           sellerId,
           categoryId,

@@ -528,7 +528,7 @@ export default function SellerOrders() {
                           className="seller-action-btn seller-action-btn--primary seller-action-btn--full"
                           style={{ fontSize: 13 }}
                         >
-                          <PlayCircle size={16} /> Start Job
+                          <PlayCircle size={16} /> Start Visit / Out for Service
                         </button>
                         <button
                           type="button"
@@ -537,7 +537,7 @@ export default function SellerOrders() {
                           className="seller-action-btn seller-action-btn--outline seller-action-btn--full"
                           style={{ fontSize: 13, color: '#dc2626' }}
                         >
-                          <XCircle size={16} /> Cancel
+                          <XCircle size={16} /> Cancel Order
                         </button>
                       </>
                     )}
@@ -550,7 +550,7 @@ export default function SellerOrders() {
                           className="seller-action-btn seller-action-btn--primary seller-action-btn--full"
                           style={{ fontSize: 13 }}
                         >
-                          ➕ Create Quote
+                          ➕ Create Work Quote
                         </button>
                         <button
                           type="button"
@@ -559,7 +559,7 @@ export default function SellerOrders() {
                           className="seller-action-btn seller-action-btn--outline seller-action-btn--full"
                           style={{ fontSize: 13, color: '#dc2626' }}
                         >
-                          <XCircle size={16} /> Cancel
+                          <XCircle size={16} /> Cancel Order
                         </button>
                       </>
                     )}

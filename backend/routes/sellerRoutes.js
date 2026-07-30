@@ -101,7 +101,6 @@ router.get("/in-view", async (req, res) => {
                s.premium_expires_at AS premiumExpiresAt,
                s.location_address AS address,
                u.phone AS phone,
-               w.balance AS walletBalance,
                s.is_available,
                s.is_available AS isAvailable,
                u.profile_pic,
@@ -109,7 +108,6 @@ router.get("/in-view", async (req, res) => {
         FROM sellers s
         JOIN users u ON s.user_id = u.id
         LEFT JOIN categories c ON s.category_id = c.id
-        LEFT JOIN wallets w ON s.user_id = w.user_id
         GROUP BY s.id
       ) AS sellers_in_view
       WHERE lat BETWEEN ? AND ? AND lng BETWEEN ? AND ?
@@ -124,7 +122,6 @@ router.get("/in-view", async (req, res) => {
       rating: r.rating !== null && r.rating !== undefined ? parseFloat(r.rating) : 0,
       avg_rating: r.avg_rating !== null && r.avg_rating !== undefined ? parseFloat(r.avg_rating) : 0,
       reviews: r.reviews !== null && r.reviews !== undefined ? parseInt(r.reviews) : 0,
-      walletBalance: r.walletBalance !== null && r.walletBalance !== undefined ? parseFloat(r.walletBalance) : 0,
       isPremium: (r.isPremium && r.premiumExpiresAt && new Date(r.premiumExpiresAt) > new Date()) ? true : false,
       instantService: r.instantService ? true : false,
     }));

@@ -1906,7 +1906,7 @@ img.qs-avatar {
   bottom: 0;
   left: 0;
   right: 0;
-  z-index: 9999 !important;
+  z-index: 1000 !important;
   display: flex;
   align-items: stretch;
   justify-content: space-around;
@@ -2996,7 +2996,7 @@ span.qs-distance-badge {
 .seller-bottom-sheet-overlay {
   position: fixed;
   inset: 0;
-  z-index: 10050;
+  z-index: 10050 !important;
   background: rgba(0, 0, 0, 0.45);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);

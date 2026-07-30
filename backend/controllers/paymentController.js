@@ -81,11 +81,41 @@ exports.verifyPayment = async (req, res) => {
 
     await conn.beginTransaction();
 
+    // Idempotency check: verify payment_id was not already processed
+    const [existingTx] = await conn.query(
+      "SELECT id FROM wallet_transactions WHERE reference_id = ? LIMIT 1 FOR UPDATE",
+      [razorpay_payment_id]
+    );
+
+    if (existingTx.length > 0) {
+      await conn.rollback();
+      const wallet = await WalletModel.findByUserId(req.user.id);
+      return successRes(res, { balance: wallet ? wallet.balance : 0 }, "Payment already processed");
+    }
+
+    // Validate amount from Razorpay Order if SDK is available
+    let verifiedAmount = parseFloat(amount);
+    if (razorpay) {
+      try {
+        const rzpOrder = await razorpay.orders.fetch(razorpay_order_id);
+        if (rzpOrder && rzpOrder.amount) {
+          verifiedAmount = rzpOrder.amount / 100;
+        }
+      } catch (fetchErr) {
+        console.warn("Razorpay order fetch info:", fetchErr.message);
+      }
+    }
+
+    if (!verifiedAmount || verifiedAmount <= 0) {
+      await conn.rollback();
+      return errorRes(res, "Invalid payment amount", 400);
+    }
+
     if (purpose === "wallet_recharge") {
       // 1. Credit wallet
       const balance = await WalletModel.credit(
         req.user.id,
-        amount,
+        verifiedAmount,
         "topup",
         razorpay_payment_id,
         "Credits purchased via Razorpay",

@@ -104,10 +104,11 @@ exports.placeOrder = async (req, res) => {
     // Calculate how much the customer pays in Stage 1
     const total_stage_1 = feeModel === "buyer" ? (visiting_charge + visiting_platform_fee) : visiting_charge;
 
-    // Verify online payment if required
-    if (payment_method === "online" && total_stage_1 > 0) {
+    // Stage 1 (Visiting Charge) is always paid online upfront during booking
+    const isVisitingPaid = !!razorpay_payment_id;
+    if (total_stage_1 > 0 || isVisitingPaid) {
       if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature) {
-        return errorRes(res, "Missing payment details for online booking", 400);
+        return errorRes(res, "Visiting charge payment online verification details are required", 400);
       }
       
       if (process.env.RAZORPAY_KEY_SECRET) {
@@ -140,10 +141,10 @@ exports.placeOrder = async (req, res) => {
       notes,
       visiting_charge_amount: visiting_charge.toFixed(2),
       visiting_platform_fee: visiting_platform_fee.toFixed(2),
-      visiting_payment_status: (payment_method === "online") ? "paid" : "pending",
+      visiting_payment_status: isVisitingPaid ? "paid" : "pending",
     });
 
-    if (payment_method === "online") {
+    if (isVisitingPaid) {
       await OrderModel.updatePaymentStatus(orderId, "paid");
       // For immediate verification, if paid, also auto-accept or transition status to accepted
       await OrderModel.updateStatus(orderId, "accepted");

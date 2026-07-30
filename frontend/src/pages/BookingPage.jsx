@@ -258,7 +258,7 @@ export default function BookingPage() {
   }, [selectedServiceState?.price]);
 
   const visitingCharge = useMemo(() => {
-    const raw = Number(selectedServiceState?.visiting_charge || 0);
+    const raw = Number(selectedServiceState?.visiting_charge || 100);
     return raw < 100 ? 100 : raw;
   }, [selectedServiceState?.visiting_charge]);
 
@@ -473,6 +473,11 @@ export default function BookingPage() {
       };
 
       const rzp = new window.Razorpay(options);
+      rzp.on("payment.failed", function (response) {
+        console.error("Razorpay Payment Failed:", response.error);
+        setSubmitError(response?.error?.description || "Payment failed or gateway connection error. Please check internet/DNS.");
+        setBookingLoading(false);
+      });
       rzp.open();
     } catch (err) {
       console.error("Razorpay loading error:", err);
@@ -798,8 +803,8 @@ export default function BookingPage() {
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { value: "online", icon: "📱", title: "Online", desc: "UPI/Card after work" },
-                    { value: "cash", icon: "💵", title: "Cash (COD)", desc: "Pay technician" }
+                    { value: "online", icon: "📱", title: "Online", desc: "Pay visiting fee online now; pay final quote online after work" },
+                    { value: "cash", icon: "💵", title: "Cash (COD)", desc: "Pay visiting fee online now; pay final quote in cash after work" }
                   ].map((pm) => {
                     const active = paymentMethod === pm.value;
                     return (
@@ -862,7 +867,7 @@ export default function BookingPage() {
 
       {/* Invoice / Confirmation Modal */}
       {showInvoiceModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-fade-in">
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-fade-in">
           <div className="w-full max-w-md rounded-2xl bg-white border border-slate-200 p-6 shadow-2xl space-y-5 text-slate-800 relative">
             {/* Header */}
             <div className="flex items-start justify-between border-b border-slate-100 pb-4">
@@ -946,7 +951,7 @@ export default function BookingPage() {
                 disabled={bookingLoading}
                 onClick={() => {
                   setShowInvoiceModal(false);
-                  if (visitingCharge === 0 || paymentMethod === "cash") {
+                  if (visitingCharge === 0) {
                     handleCreateBookingDirectly();
                   } else {
                     handleRazorpayBookingPayment();
@@ -957,7 +962,7 @@ export default function BookingPage() {
                 {bookingLoading && (
                   <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent mr-1.5 align-middle" />
                 )}
-                {(visitingCharge === 0 || paymentMethod === "cash") ? "Confirm Booking" : `Pay ₹${totalPayable}`}
+                {visitingCharge === 0 ? "Confirm Booking" : `Pay ₹${totalPayable} Online & Confirm`}
               </button>
             </div>
           </div>

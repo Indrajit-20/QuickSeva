@@ -2,10 +2,11 @@ const { pool } = require("../config/db");
 
 const Service = {
   // Create new service
-  create: async ({ seller_id, category_id, sub_service_id, title, description, price, price_type }) => {
+  create: async ({ seller_id, category_id, sub_service_id, title, description, price, price_type, visiting_charge }) => {
+    const vCharge = Math.max(100, Number(visiting_charge || 100));
     const [result] = await pool.query(
-      `INSERT INTO services (seller_id, category_id, sub_service_id, title, description, price, price_type, is_active)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 1)`,
+      `INSERT INTO services (seller_id, category_id, sub_service_id, title, description, price, price_type, visiting_charge, is_active)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`,
       [
         seller_id,
         category_id || null,
@@ -13,7 +14,8 @@ const Service = {
         title,
         description || null,
         price,
-        price_type || "fixed"
+        price_type || "fixed",
+        vCharge
       ]
     );
     return result.insertId;
@@ -66,7 +68,7 @@ const Service = {
     params.push(limit, offset);
 
     const [rows] = await pool.query(
-      `SELECT sv.id, sv.title, sv.price, sv.price_type, sv.images,
+      `SELECT sv.id, sv.title, sv.price, sv.price_type, sv.images, sv.visiting_charge,
               s.id AS seller_id, s.avg_rating, s.business_name, s.is_premium,
               u.name AS seller_name, u.city, u.state, u.address, u.phone, u.lat, u.lng,
               c.name AS category_name, c.icon AS category_icon,

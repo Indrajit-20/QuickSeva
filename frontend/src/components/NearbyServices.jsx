@@ -315,6 +315,32 @@ function MapController({ center, flyTrigger }) {
   return null;
 }
 
+function MapRadiusController({ radiusKm, center }) {
+  const map = useMap();
+  const prevRadiusRef = useRef(radiusKm);
+  const prevCenterRef = useRef(center);
+
+  useEffect(() => {
+    if (!map || !center || center.lat === undefined || center.lng === undefined) return;
+
+    const radiusChanged = prevRadiusRef.current !== radiusKm;
+    const centerChanged =
+      !prevCenterRef.current ||
+      Math.abs(prevCenterRef.current.lat - center.lat) > 0.0001 ||
+      Math.abs(prevCenterRef.current.lng - center.lng) > 0.0001;
+
+    if (radiusChanged || centerChanged) {
+      prevRadiusRef.current = radiusKm;
+      prevCenterRef.current = center;
+
+      const bounds = L.latLng(center.lat, center.lng).toBounds(radiusKm * 1000);
+      map.fitBounds(bounds, { animate: true, duration: 0.8, maxZoom: 16 });
+    }
+  }, [radiusKm, center, map]);
+
+  return null;
+}
+
 function MapClickHandler({ onMapClick }) {
   useMapEvents({
     click: (e) => {
@@ -1406,8 +1432,9 @@ export default function NearbyServices({
     setTimeout(scrollToResults, 100);
   };
 
-  const handlePincodeSearch = async () => {
-    const trimmed = pincode.trim();
+  const handlePincodeSearch = async (targetPin) => {
+    const pinToUse = typeof targetPin === "string" ? targetPin : pincode;
+    const trimmed = pinToUse.trim();
     if (trimmed.length !== 6 || !/^\d{6}$/.test(trimmed)) {
       setPincodeError("Enter a valid 6-digit pincode");
       return;
@@ -2368,6 +2395,10 @@ export default function NearbyServices({
                 }
                 flyTrigger={mapFlyTrigger}
               />
+              <MapRadiusController
+                radiusKm={radiusKm}
+                center={searchCenter || buyerPos}
+              />
               <MapClickHandler onMapClick={handleMapClick} />
 
               <TileLayer
@@ -2508,6 +2539,30 @@ export default function NearbyServices({
             <div className="qs-glass-panel w-full py-14 text-center text-indigo-300">
               <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-indigo-400 border-t-white" />
               <p className="mt-2 text-sm font-semibold">Loading local service partners…</p>
+            </div>
+          )}
+
+          {!apiLoading && nearby.length === 0 && (
+            <div className="w-full py-10 px-4 text-center border border-slate-200/80 rounded-2xl bg-white shadow-xs col-span-full">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-blue-50 text-blue-600 mb-3 border border-blue-100">
+                <MapPin className="h-5 w-5 text-blue-600" />
+              </div>
+              <h4 className="text-sm font-extrabold text-slate-800">
+                No service providers found within {radiusKm} km
+              </h4>
+              <p className="mt-1 text-xs text-slate-500 max-w-xs mx-auto font-medium">
+                Try expanding your search radius to find providers in surrounding areas.
+              </p>
+              {radiusKm < 50 && (
+                <button
+                  type="button"
+                  onClick={() => setRadiusKm((prev) => Math.min(prev + 15, 50))}
+                  className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-xs font-extrabold rounded-xl shadow-md hover:bg-blue-700 active:scale-95 transition cursor-pointer"
+                >
+                  <Radar className="h-4 w-4 text-emerald-400 animate-pulse" />
+                  <span>Expand Search Radius (+15 km)</span>
+                </button>
+              )}
             </div>
           )}
 
@@ -2749,109 +2804,174 @@ export default function NearbyServices({
               </button>
             </div>
 
-            <p className="text-[11px] text-slate-500 leading-relaxed -mt-2 bg-slate-50 rounded-xl p-3 border border-slate-100">
-              Find local service experts near you by using your current <strong>GPS Location</strong>, searching for a <strong>Landmark Area</strong>, or entering a <strong>Pincode</strong>.
-            </p>
+            {/* Mode Switcher Tabs */}
+            <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200/80">
+              <button
+                type="button"
+                onClick={() => {
+                  setLocationMode("area");
+                  setPincodeError("");
+                }}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                  locationMode === "area"
+                    ? "bg-white text-blue-600 shadow-sm font-extrabold"
+                    : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                <MapPin className="h-3.5 w-3.5 text-rose-500" />
+                <span>Area / Landmark</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setLocationMode("pincode");
+                  setLocationNotFoundMsg("");
+                }}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                  locationMode === "pincode"
+                    ? "bg-white text-blue-600 shadow-sm font-extrabold"
+                    : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                <Hash className="h-3.5 w-3.5 text-indigo-500" />
+                <span>Pincode</span>
+              </button>
+            </div>
 
-            {/* GPS Button */}
-            <button
-              type="button"
-              onClick={() => {
-                handleUseMyLocation();
-                setShowLocationDrawer(false);
-              }}
-              disabled={geoLoading}
-              className="w-full flex items-center justify-center gap-2 bg-blue-50 border border-blue-200 text-blue-600 rounded-xl py-3 text-xs font-bold hover:bg-blue-100 transition disabled:opacity-50 cursor-pointer"
-            >
-              {geoLoading ? (
-                <span className="h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <Crosshair className="h-4 w-4 text-blue-600" />
-              )}
-              <span>USE CURRENT GPS LOCATION</span>
-            </button>
-
-            {/* Area Search Input */}
-            <div ref={locationSearchRef} className="relative w-full">
-              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Search Area/Landmark</label>
-              <div className="relative">
-                <MapPin className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-rose-500 h-4 w-4" />
-                <input
-                  value={locationQuery}
-                  onChange={(e) => setLocationQuery(e.target.value)}
-                  onFocus={() => {
-                    if (locationQuery.trim().length >= 3) {
-                      searchLocation(locationQuery);
-                    }
+            {/* Mode 1: Area / Landmark Search */}
+            {locationMode === "area" ? (
+              <>
+                {/* GPS Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleUseMyLocation();
+                    setShowLocationDrawer(false);
                   }}
-                  autoComplete="off"
-                  className="w-full rounded-xl bg-slate-50 border border-slate-200 py-2.5 pl-10 pr-8 text-xs font-semibold text-slate-800 placeholder-slate-400 focus:bg-white focus:border-blue-500 focus:outline-none"
-                  style={{ paddingLeft: "2.5rem" }}
-                  placeholder="Search landmark, street, city..."
-                />
-                {locationQuery && (
-                  <button
-                    type="button"
-                    onClick={clearLocationInput}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-655 cursor-pointer"
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
-              {/* Autocomplete Results for Drawer */}
-              {locationResults.length > 0 && (
-                <div className="mt-2 border border-slate-100 rounded-xl bg-white shadow-lg max-h-48 overflow-y-auto">
-                  {locationResults.map((result) => (
-                    <button
-                      key={`${result.place_id}-${result.lat}-${result.lon}`}
-                      type="button"
-                      onClick={() => {
-                        handleResultClick(result);
-                        setShowLocationDrawer(false);
+                  disabled={geoLoading}
+                  className="w-full flex items-center justify-center gap-2 bg-blue-50 border border-blue-200 text-blue-600 rounded-xl py-3 text-xs font-bold hover:bg-blue-100 transition disabled:opacity-50 cursor-pointer"
+                >
+                  {geoLoading ? (
+                    <span className="h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Crosshair className="h-4 w-4 text-blue-600" />
+                  )}
+                  <span>USE CURRENT GPS LOCATION</span>
+                </button>
+
+                {/* Area Search Input */}
+                <div ref={locationSearchRef} className="relative w-full">
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                    Search Area/Landmark
+                  </label>
+                  <div className="relative">
+                    <MapPin className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-rose-500 h-4 w-4" />
+                    <input
+                      value={locationQuery}
+                      onChange={(e) => setLocationQuery(e.target.value)}
+                      onFocus={() => {
+                        if (locationQuery.trim().length >= 3) {
+                          searchLocation(locationQuery);
+                        }
                       }}
-                      className="block w-full text-left px-3 py-2.5 text-xs hover:bg-slate-50 border-b border-slate-50 last:border-0"
-                    >
-                      <span className="block font-bold text-slate-800">
-                        {(result.display_name || "").split(",")[0]}
-                      </span>
-                      <span className="block text-[10px] text-slate-450 truncate mt-0.5">
-                        {result.display_name}
-                      </span>
-                    </button>
-                  ))}
+                      autoComplete="off"
+                      className="w-full rounded-xl bg-slate-50 border border-slate-200 py-2.5 pl-10 pr-8 text-xs font-semibold text-slate-800 placeholder-slate-400 focus:bg-white focus:border-blue-500 focus:outline-none"
+                      style={{ paddingLeft: "2.5rem" }}
+                      placeholder="Search landmark, street, city..."
+                    />
+                    {locationQuery && (
+                      <button
+                        type="button"
+                        onClick={clearLocationInput}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                  {/* Autocomplete Results for Drawer */}
+                  {locationResults.length > 0 && (
+                    <div className="mt-2 border border-slate-100 rounded-xl bg-white shadow-lg max-h-48 overflow-y-auto">
+                      {locationResults.map((result) => (
+                        <button
+                          key={`${result.place_id}-${result.lat}-${result.lon}`}
+                          type="button"
+                          onClick={() => {
+                            handleResultClick(result);
+                            setShowLocationDrawer(false);
+                          }}
+                          className="block w-full text-left px-3 py-2.5 text-xs hover:bg-slate-50 border-b border-slate-50 last:border-0"
+                        >
+                          <span className="block font-bold text-slate-800">
+                            {(result.display_name || "").split(",")[0]}
+                          </span>
+                          <span className="block text-[10px] text-slate-450 truncate mt-0.5">
+                            {result.display_name}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {locationNotFoundMsg && (
+                    <p className="mt-1.5 text-xs font-medium text-amber-600 bg-amber-50 rounded-lg p-2 border border-amber-200">
+                      {locationNotFoundMsg}
+                    </p>
+                  )}
                 </div>
-              )}
-            </div>
-
-            {/* Pincode Input */}
-            <div className="w-full">
-              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Enter Pincode</label>
-              <div className="relative">
-                <Hash className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
-                <input
-                  value={pincode}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/\D/g, "").slice(0, 6);
-                    setPincode(val);
-                    setPincodeError("");
-                  }}
-                  className="w-full rounded-xl bg-slate-50 border border-slate-200 py-2.5 pl-10 pr-8 text-xs font-semibold text-slate-800 placeholder-slate-400 focus:bg-white focus:border-blue-500 focus:outline-none"
-                  style={{ paddingLeft: "2.5rem" }}
-                  placeholder="Enter 6-digit pincode..."
-                  maxLength={6}
-                />
-                {pincode && (
-                  <button
-                    type="button"
-                    onClick={clearPincodeInput}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-455 hover:text-slate-655 cursor-pointer"
-                  >
-                    ✕
-                  </button>
+              </>
+            ) : (
+              /* Mode 2: Pincode Search */
+              <div className="w-full">
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                  Enter 6-Digit Pincode
+                </label>
+                <div className="relative">
+                  <Hash className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-indigo-500 h-4 w-4" />
+                  <input
+                    value={pincode}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, "").slice(0, 6);
+                      setPincode(val);
+                      setPincodeError("");
+                      if (val.length === 6) {
+                        handlePincodeSearch(val);
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && pincode.trim().length === 6) {
+                        handlePincodeSearch(pincode);
+                        setShowLocationDrawer(false);
+                      }
+                    }}
+                    autoFocus
+                    className="w-full rounded-xl bg-slate-50 border border-slate-200 py-2.5 pl-10 pr-8 text-xs font-semibold text-slate-800 placeholder-slate-400 focus:bg-white focus:border-indigo-500 focus:outline-none"
+                    style={{ paddingLeft: "2.5rem" }}
+                    placeholder="e.g. 382430"
+                    maxLength={6}
+                  />
+                  {pincode && (
+                    <button
+                      type="button"
+                      onClick={clearPincodeInput}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+                {pincodeLoading && (
+                  <p className="mt-2 text-xs font-semibold text-blue-600 flex items-center gap-1.5">
+                    <span className="h-3 w-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                    Finding pincode location...
+                  </p>
+                )}
+                {pincodeError && (
+                  <p className="mt-2 text-xs font-semibold text-red-600 bg-red-50 p-2.5 rounded-xl border border-red-200">
+                    ⚠️ {pincodeError}
+                  </p>
                 )}
               </div>
-            </div>
+            )}
 
             {/* Range / Radius Slider */}
             <div className="w-full mt-1">
@@ -2880,10 +3000,25 @@ export default function NearbyServices({
 
             <button
               type="button"
-              onClick={() => setShowLocationDrawer(false)}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-3 text-xs font-extrabold transition shadow-md shadow-blue-600/15 cursor-pointer text-center mt-2"
+              onClick={async () => {
+                if (locationMode === "pincode" || (pincode.trim().length === 6 && !locationQuery.trim())) {
+                  if (pincode.trim().length === 6) {
+                    await handlePincodeSearch(pincode);
+                  } else if (pincode.trim().length > 0) {
+                    setPincodeError("Please enter a valid 6-digit pincode");
+                    return;
+                  }
+                } else if (locationQuery.trim().length >= 3) {
+                  await handleLocationSearchSubmit();
+                }
+                setShowLocationDrawer(false);
+              }}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-3 text-xs font-extrabold transition shadow-md shadow-blue-600/15 cursor-pointer text-center mt-2 flex items-center justify-center gap-2"
             >
-              APPLY SETTINGS
+              {pincodeLoading || locationLoading ? (
+                <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : null}
+              <span>APPLY SETTINGS</span>
             </button>
           </div>
         </div>,
@@ -2907,7 +3042,8 @@ export default function NearbyServices({
               <button
                 type="button"
                 onClick={() => setFiltersDrawerOpen(false)}
-                className="h-6 w-6 flex items-center justify-center rounded-full bg-slate-100 hover:bg-red-500 hover:text-white text-slate-500 transition cursor-pointer"
+                className="h-8 w-8 flex items-center justify-center rounded-full bg-slate-100 border border-slate-200 hover:bg-red-500 hover:text-white text-slate-700 transition cursor-pointer shadow-xs"
+                aria-label="Close"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -2925,8 +3061,8 @@ export default function NearbyServices({
                       type="button"
                       onClick={() => toggleQuickFilter(key)}
                       className={`inline-flex items-center justify-center gap-1.5 rounded-xl border p-2.5 text-xs font-bold transition-all ${active
-                        ? "bg-indigo-50 border-indigo-200 text-indigo-700 font-extrabold"
-                        : "bg-slate-50 border-slate-100 text-slate-655"
+                        ? "bg-blue-600 border-blue-600 text-white font-extrabold shadow-sm"
+                        : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
                         }`}
                     >
                       <Icon className="h-3.5 w-3.5" />
@@ -2946,9 +3082,9 @@ export default function NearbyServices({
                     key={opt.value}
                     type="button"
                     onClick={() => setFilterPrice(opt.value)}
-                    className={`rounded-lg px-3 py-2 text-xs font-bold transition-all cursor-pointer ${filterPrice === opt.value
-                      ? "bg-indigo-650 border border-indigo-650 text-white font-extrabold shadow-sm"
-                      : "bg-slate-50 border border-slate-200/40 text-slate-655"
+                    className={`rounded-xl px-3.5 py-2 text-xs font-bold transition-all cursor-pointer ${filterPrice === opt.value
+                      ? "bg-blue-600 border border-blue-600 text-white font-extrabold shadow-sm"
+                      : "bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100"
                       }`}
                   >
                     {opt.label}
@@ -2966,9 +3102,9 @@ export default function NearbyServices({
                     key={opt.value}
                     type="button"
                     onClick={() => setFilterDuration(opt.value)}
-                    className={`rounded-lg px-3 py-2 text-xs font-bold transition-all cursor-pointer ${filterDuration === opt.value
-                      ? "bg-indigo-650 border border-indigo-650 text-white font-extrabold shadow-sm"
-                      : "bg-slate-50 border border-slate-200/40 text-slate-655"
+                    className={`rounded-xl px-3.5 py-2 text-xs font-bold transition-all cursor-pointer ${filterDuration === opt.value
+                      ? "bg-blue-600 border border-blue-600 text-white font-extrabold shadow-sm"
+                      : "bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100"
                       }`}
                   >
                     {opt.label}
@@ -2986,9 +3122,9 @@ export default function NearbyServices({
                     key={opt.value}
                     type="button"
                     onClick={() => setFilterBooking(opt.value)}
-                    className={`rounded-lg px-3 py-2 text-xs font-bold transition-all cursor-pointer ${filterBooking === opt.value
-                      ? "bg-indigo-650 border border-indigo-650 text-white font-extrabold shadow-sm"
-                      : "bg-slate-50 border border-slate-200/40 text-slate-655"
+                    className={`rounded-xl px-3.5 py-2 text-xs font-bold transition-all cursor-pointer ${filterBooking === opt.value
+                      ? "bg-blue-600 border border-blue-600 text-white font-extrabold shadow-sm"
+                      : "bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100"
                       }`}
                   >
                     {opt.label}
@@ -3003,7 +3139,7 @@ export default function NearbyServices({
                 <button
                   type="button"
                   onClick={clearAllFilters}
-                  className="flex-1 border border-rose-200 hover:bg-rose-50 text-rose-650 py-3 text-xs font-bold rounded-xl transition cursor-pointer text-center"
+                  className="flex-1 border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-600 py-3 text-xs font-bold rounded-xl transition cursor-pointer text-center"
                 >
                   ✕ Clear All
                 </button>

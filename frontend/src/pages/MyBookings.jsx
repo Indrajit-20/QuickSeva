@@ -195,6 +195,11 @@ export default function MyBookings() {
         };
 
         const rzp = new window.Razorpay(options);
+        rzp.on("payment.failed", function (response) {
+          console.error("Razorpay Payment Failed:", response.error);
+          alert(response?.error?.description || "Payment failed or gateway connection error. Please check internet/DNS.");
+          setBusyId(null);
+        });
         rzp.open();
       } catch (err) {
         console.error("Quotation Razorpay initiation error:", err);
@@ -404,8 +409,8 @@ export default function MyBookings() {
                               <div className="flex items-center justify-between text-xs text-slate-500">
                                 <span className="font-semibold">Stage 1: Visiting Charge / विजिटिंग चार्ज:</span>
                                 <span className="font-bold text-emerald-700">
-                                  ₹{Number(booking.visiting_charge_amount || booking.total_amount || 0).toLocaleString("en-IN")}
-                                  {booking.payment_method === "cash" && booking.visiting_payment_status !== "paid" ? " (Pay via Cash / नकद भुगतान)" : " (✓ Paid / भुगतान हुआ)"}
+                                  ₹{Math.max(100, Number(booking.visiting_charge_amount || booking.total_amount || 100)).toLocaleString("en-IN")}
+                                  {booking.visiting_payment_status === "paid" ? " (✓ Paid Online / ऑनलाइन भुगतान हुआ)" : " (Pay via Cash / नकद भुगतान)"}
                                 </span>
                               </div>
                               
@@ -491,16 +496,20 @@ export default function MyBookings() {
                               <div className="mt-3.5 p-3.5 rounded-2xl border border-emerald-250 bg-emerald-50 text-center shadow-sm">
                                 <span className="block text-[10px] font-bold text-emerald-700 uppercase tracking-widest">Share this Completion PIN with Technician / काम पूरा होने का कोड</span>
                                 <span className="block text-2xl font-black text-emerald-755 mt-1.5 tracking-widest">{booking.completion_otp_code}</span>
-                                <span className="block text-[10px] text-emerald-600 mt-1.5 font-semibold leading-normal">Share this ONLY after the service is done and you have paid the technician ₹{Number(parseFloat(booking.service_charge_amount || 0) + parseFloat(booking.parts_cost_amount || 0) - parseFloat(booking.discount_amount || 0) + parseFloat(booking.visiting_charge_amount || 0)).toLocaleString("en-IN")} in cash.</span>
+                                <span className="block text-[10px] text-emerald-600 mt-1.5 font-semibold leading-normal">
+                                  Share this ONLY after the service is done and you have paid the technician ₹{Number(Math.max(0, parseFloat(booking.service_charge_amount || 0) + parseFloat(booking.parts_cost_amount || 0) - parseFloat(booking.discount_amount || 0))).toLocaleString("en-IN")} in cash.
+                                </span>
                               </div>
                             )}
 
                             {/* Cash Payment Information */}
                             {booking.status === "in_progress" && booking.payment_method === "cash" && !booking.completion_otp_code && (
                               <div className="mt-3.5 p-3.5 rounded-2xl border border-amber-250 bg-amber-50 text-center shadow-sm">
-                                <span className="block text-[10px] font-bold text-amber-700 uppercase tracking-widest">Cash Payment / नकद भुगतान</span>
+                                <span className="block text-[10px] font-bold text-amber-700 uppercase tracking-widest">Cash on Delivery / नकद भुगतान (काम पूरा होने पर)</span>
                                 <p className="text-xs text-amber-800 font-bold mt-1.5">
-                                  Please pay ₹{Number(parseFloat(booking.service_charge_amount || 0) + parseFloat(booking.parts_cost_amount || 0) - parseFloat(booking.discount_amount || 0) + parseFloat(booking.visiting_charge_amount || 0)).toLocaleString("en-IN")} in cash to the technician.
+                                  {booking.service_charge_amount > 0
+                                    ? `Please pay remaining bill of ₹${Number(Math.max(0, parseFloat(booking.service_charge_amount || 0) + parseFloat(booking.parts_cost_amount || 0) - parseFloat(booking.discount_amount || 0))).toLocaleString("en-IN")} in cash to the technician after work completion.`
+                                    : `Visiting charge (₹${Math.max(100, Number(booking.visiting_charge_amount || 100))}) is paid online. Pay final service bill in cash after inspection.`}
                                 </p>
                               </div>
                             )}
@@ -721,7 +730,7 @@ export default function MyBookings() {
 
       {/* Custom Dispute Reason Modal */}
       {showDisputeModal && disputeBookingItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-fade-in text-slate-850">
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-fade-in text-slate-850">
           <div className="w-full max-w-md rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden relative flex flex-col">
             {/* Modal Header */}
             <div className="bg-slate-50 p-4 border-b border-slate-200 flex justify-between items-center">

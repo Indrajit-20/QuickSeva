@@ -362,7 +362,7 @@ export default function SellerServices() {
                       <div className="text-right">
                         <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Visiting Charge / फीस</span>
                         <span className="text-lg font-extrabold text-slate-850 mt-0.5 block">
-                          ₹{Number(service.visiting_charge) || 100}
+                          ₹{Math.max(100, Number(service.visiting_charge || 100))}
                         </span>
                       </div>
                     </div>
@@ -1147,6 +1147,7 @@ function AddServiceWizard({ onCancel, onSuccess, user, updateUser, editingServic
                   <span className="absolute text-lg font-bold text-slate-400" style={{ left: "12px" }}>₹</span>
                   <input
                     type="number"
+                    min="100"
                     value={visitingCharge}
                     onChange={(e) => {
                       const val = e.target.value;

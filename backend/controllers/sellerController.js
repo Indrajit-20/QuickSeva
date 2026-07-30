@@ -194,10 +194,7 @@ exports.updateSellerProfile = async (req, res) => {
 exports.toggleAvailability = async (req, res) => {
   try {
     if (!req.user?.role || req.user.role !== "seller") {
-      return {
-        success: false,
-        message: "Seller access required",
-      };
+      return errorRes(res, "Seller access required", 403);
     }
 
     const seller = await SellerModel.findByUserId(req.user.id);
@@ -222,10 +219,7 @@ exports.toggleAvailability = async (req, res) => {
 exports.uploadDocuments = async (req, res) => {
   try {
     if (!req.user?.role || req.user.role !== "seller") {
-      return {
-        success: false,
-        message: "Seller access required",
-      };
+      return errorRes(res, "Seller access required", 403);
     }
 
     const seller = await SellerModel.findByUserId(req.user.id);

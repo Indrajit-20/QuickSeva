@@ -9,7 +9,7 @@ exports.createService = async (req, res) => {
     const seller = await SellerModel.findByUserId(req.user.id);
     if (!seller) return errorRes(res, "Seller profile required", 403);
 
-    const { category_id, sub_service_id, title, description, price, price_type, duration_hrs, tags } = req.body;
+    const { category_id, sub_service_id, title, description, price, price_type, duration_hrs, tags, visiting_charge } = req.body;
 
     if (!category_id) {
       return errorRes(res, "Category is required", 400);
@@ -27,6 +27,8 @@ exports.createService = async (req, res) => {
     if (price_type !== "negotiable" && (isNaN(numPrice) || numPrice <= 0)) {
       return errorRes(res, "Price must be a positive number", 400);
     }
+
+    const vCharge = Math.max(100, Number(visiting_charge || 100));
 
     // Auto-register seller under category if not already registered
     const [catCheck] = await pool.query(
@@ -60,6 +62,7 @@ exports.createService = async (req, res) => {
       description: description || null,
       price: numPrice,
       price_type,
+      visiting_charge: vCharge,
       duration_hrs: duration_hrs || null,
       images,
       tags: parsedTags,
@@ -147,11 +150,12 @@ exports.updateService = async (req, res) => {
       return errorRes(res, "Service not found or unauthorized", 403);
     }
 
-    const { title, description, price, price_type, duration_hrs, category_id, sub_service_id, is_active } = req.body;
+    const { title, description, price, price_type, duration_hrs, category_id, sub_service_id, is_active, visiting_charge } = req.body;
     const fields = {};
 
     if (is_active !== undefined) fields.is_active = is_active ? 1 : 0;
     if (sub_service_id !== undefined) fields.sub_service_id = sub_service_id || null;
+    if (visiting_charge !== undefined) fields.visiting_charge = Math.max(100, Number(visiting_charge || 100));
 
     if (title !== undefined) {
       if (!title || !title.trim()) {

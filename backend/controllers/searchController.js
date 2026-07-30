@@ -39,7 +39,6 @@ exports.searchNearby = async (req, res) => {
         s.premium_expires_at AS premiumExpiresAt,
         s.location_address AS address,
         u.phone AS phone,
-        w.balance AS walletBalance,
         s.is_available AS isAvailable,
         s.is_available AS is_available,
         u.profile_pic AS profilePhotoUrl,
@@ -57,7 +56,6 @@ exports.searchNearby = async (req, res) => {
       FROM sellers s
       JOIN users u ON s.user_id = u.id
       LEFT JOIN categories c ON s.category_id = c.id
-      LEFT JOIN wallets w ON s.user_id = w.user_id
       WHERE u.is_active = 1 AND (s.latitude IS NOT NULL OR u.lat IS NOT NULL)
       HAVING distance <= ?
       ORDER BY distance ASC`,

@@ -168,14 +168,17 @@ exports.submitLead = async (req, res) => {
 
 exports.getSellerLeads = async (req, res) => {
   try {
+    const [[userSeller]] = await pool.query("SELECT id FROM sellers WHERE user_id = ?", [req.user.id]);
+    const mySellerId = userSeller?.id || null;
 
-    let sellerId = req.query.sellerId ? Number(req.query.sellerId) : null;
-    if (!sellerId && req.user?.id) {
-      const [[seller]] = await pool.query("SELECT id FROM sellers WHERE user_id = ?", [req.user.id]);
-      sellerId = seller?.id || null;
+    let sellerId = mySellerId;
+    if (req.user?.role === "admin" && req.query.sellerId) {
+      sellerId = Number(req.query.sellerId);
+    } else if (req.query.sellerId && Number(req.query.sellerId) !== mySellerId) {
+      return errorRes(res, "Unauthorized access to seller leads", 403);
     }
 
-    if (!sellerId) return errorRes(res, "sellerId is required", 400);
+    if (!sellerId) return errorRes(res, "Seller profile not found", 403);
 
     const [rows] = await pool.query(
       `SELECT
