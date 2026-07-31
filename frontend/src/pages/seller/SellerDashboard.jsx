@@ -251,45 +251,48 @@ export default function SellerDashboard() {
 
       {/* ── Premium Boost Banner ── */}
       {!hasPremium && (
-        <div className="seller-card" style={{ overflow: 'hidden' }}>
+        <div className="seller-card" style={{ overflow: 'hidden', borderRadius: 16 }}>
           <div style={{
-            background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
-            padding: '20px',
+            background: 'linear-gradient(135deg, #8b5cf6 0%, #a78bfa 50%, #7c3aed 100%)',
+            padding: '18px 16px',
             color: 'white',
             display: 'flex',
             alignItems: 'center',
-            gap: 16,
+            gap: 14,
           }}>
             <div style={{
-              width: 48,
-              height: 48,
+              width: 46,
+              height: 46,
               borderRadius: 14,
-              background: 'rgba(255,255,255,0.15)',
+              background: 'rgba(255,255,255,0.2)',
+              backdropFilter: 'blur(6px)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               flexShrink: 0,
+              border: '1px solid rgba(255,255,255,0.15)',
             }}>
-              <Rocket size={24} style={{ transform: 'rotate(45deg)' }} />
+              <Rocket size={22} style={{ transform: 'rotate(45deg)' }} />
             </div>
             <div style={{ flex: 1 }}>
-              <h3 style={{ fontSize: 15, fontWeight: 800 }}>Boost with Premium</h3>
-              <p style={{ fontSize: 12, opacity: 0.8, marginTop: 2 }}>
-                Get top placement, highlighted pin & gold badge
+              <h3 style={{ fontSize: 14, fontWeight: 800, color: '#ffffff', letterSpacing: '-0.01em' }}>Boost with Premium</h3>
+              <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.9)', marginTop: 3, lineHeight: 1.4 }}>
+                Lead Alerts • Top placement • Gold badge
               </p>
             </div>
             <Link
               to="/seller/packages"
               style={{
-                background: 'rgba(255,255,255,0.2)',
-                borderRadius: 12,
-                padding: '10px 16px',
-                fontSize: 12,
+                background: '#ffffff',
+                borderRadius: 10,
+                padding: '8px 14px',
+                fontSize: 11,
                 fontWeight: 700,
-                border: '1px solid rgba(255,255,255,0.3)',
-                color: 'white',
+                border: 'none',
+                color: '#7c3aed',
                 textDecoration: 'none',
                 whiteSpace: 'nowrap',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
               }}
             >
               Upgrade →

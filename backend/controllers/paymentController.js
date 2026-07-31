@@ -3,6 +3,7 @@ const crypto = require("crypto");
 const { pool } = require("../config/db");
 const WalletModel = require("../models/walletModel");
 const { successRes, errorRes } = require("../utils/helpers");
+const { emitToUser } = require("../utils/socketService");
 
 let razorpay = null;
 if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
@@ -123,6 +124,7 @@ exports.verifyPayment = async (req, res) => {
       );
 
       await conn.commit();
+      emitToUser(req.user.id, "payment_updated", { balance, purpose: "wallet_recharge" });
       return successRes(res, { balance }, "Wallet topped up successfully");
     } else if (purpose === "premium_package") {
       // 2. Premium package direct purchase:

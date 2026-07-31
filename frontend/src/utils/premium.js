@@ -75,11 +75,12 @@ export function getNewExpiryIfExtended(expiresAt, days) {
 export function getUpgradedFeatures(currentPlanId, newPlanId) {
   const rankMap = {
     basic: ["Top results", "Contact visible"],
-    standard: ["Top results", "Contact visible", "Highlighted pin"],
+    standard: ["Top results", "Contact visible", "Highlighted pin", "Lead Alerts"],
     pro: [
       "Top results",
       "Contact visible",
       "Highlighted pin",
+      "Lead Alerts",
       "Gold badge",
       "Priority support",
     ],
@@ -87,6 +88,7 @@ export function getUpgradedFeatures(currentPlanId, newPlanId) {
       "Top results",
       "Contact visible",
       "Highlighted pin",
+      "Lead Alerts",
       "Gold badge",
       "Priority support",
     ],

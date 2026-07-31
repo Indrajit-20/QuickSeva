@@ -32,6 +32,10 @@ export const buyerOrdersApi = {
     apiClient.patch(`/orders/${orderId}/cancel`, payload),
   approveQuotation: async (orderId) =>
     apiClient.patch(`/orders/${orderId}/approve-quotation`),
+  rejectQuotation: async (orderId, reason = "") =>
+    apiClient.patch(`/orders/${orderId}/reject-quotation`, { reason }),
+  switchPaymentMethod: async (orderId, payment_method) =>
+    apiClient.patch(`/orders/${orderId}/switch-payment-method`, { payment_method }),
   dispute: async (orderId, payload = {}) =>
     apiClient.patch(`/orders/${orderId}/dispute`, payload),
 };

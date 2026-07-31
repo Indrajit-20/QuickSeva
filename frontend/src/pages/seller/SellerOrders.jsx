@@ -3,24 +3,72 @@ import { CheckCircle2, PlayCircle, XCircle, Download, FileText, Clock, ChevronDo
 import { formatCurrency, statusClasses } from "./sellerData";
 import { sellerOrdersApi } from "../../api/orderApi";
 import { useAuth } from "../../context/AuthContext";
+import { useSocket } from "../../context/SocketContext";
 import apiClient from "../../api/axiosConfig";
 
 import PageTransition from "../../components/PageTransition";
 import "../../index.css";
 
-const tabs = ["all", "pending", "accepted", "in_progress", "quoted", "completed", "cancelled"];
+const tabs = ["all", "pending", "accepted", "in_progress", "quoted", "quote_rejected", "completed", "cancelled"];
 
 const maskPhone = (phone) =>
   phone ? `${String(phone).slice(0, 2)}XXXXXX${String(phone).slice(-2)}` : "";
 
 export default function SellerOrders() {
   const { user, updateUser } = useAuth();
+  const { socket } = useSocket();
   const [activeTab, setActiveTab] = useState("all");
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [busyId, setBusyId] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
+
+  const fetchSilently = async () => {
+    try {
+      const res = await sellerOrdersApi.list();
+      const list = res?.data?.orders || res?.orders || [];
+      setOrders(Array.isArray(list) ? list : []);
+    } catch (err) {
+      // silent catch
+    }
+  };
+
+  const fetchOrders = async () => {
+    try {
+      const res = await sellerOrdersApi.list();
+      const list = res?.data?.orders || res?.orders || [];
+      setOrders(Array.isArray(list) ? list : []);
+    } catch (err) {
+      setError(err?.response?.data?.message || "Failed to load orders");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { 
+    fetchOrders();
+    localStorage.setItem("seller_orders_last_visited_at", new Date().toISOString());
+    window.dispatchEvent(new CustomEvent("orders-visited"));
+  }, []);
+
+  useEffect(() => {
+    if (!socket) return;
+    const handleOrderUpdate = () => {
+      fetchSilently();
+    };
+    socket.on("order_updated", handleOrderUpdate);
+    return () => {
+      socket.off("order_updated", handleOrderUpdate);
+    };
+  }, [socket]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      fetchSilently();
+    }, 12000);
+    return () => clearInterval(timer);
+  }, []);
 
   const [quotingOrderId, setQuotingOrderId] = useState(null);
   const [quoteForm, setQuoteForm] = useState({
@@ -136,22 +184,6 @@ export default function SellerOrders() {
       setSubmittingQuote(false);
     }
   };
-
-
-
-  const fetchOrders = async () => {
-    try {
-      const res = await sellerOrdersApi.list();
-      const list = res?.data?.orders || res?.orders || [];
-      setOrders(Array.isArray(list) ? list : []);
-    } catch (err) {
-      setError(err?.response?.data?.message || "Failed to load orders");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { fetchOrders(); }, []);
 
   const tabCounts = useMemo(() => {
     const counts = { all: orders.length };
@@ -340,43 +372,65 @@ export default function SellerOrders() {
                       {/* Detail Grid */}
                       <div className="seller-order-detail-grid" style={{ marginTop: 8 }}>
                         <div className="seller-order-detail-item">
-                          <span className="seller-order-detail-label">Payment</span>
-                          <span className="seller-order-detail-value" style={{ textTransform: 'capitalize' }}>
-                            {order.payment_method || "—"}
+                          <span className="seller-order-detail-label">Scheduled Slot / समय</span>
+                          <span className="seller-order-detail-value" style={{ fontWeight: 700, color: '#1d4ed8' }}>
+                            {order.scheduled_at
+                              ? new Date(order.scheduled_at).toLocaleString("en-IN", {
+                                  day: "numeric", month: "short", year: "numeric",
+                                  hour: "2-digit", minute: "2-digit", hour12: true
+                                })
+                              : "Immediate / ASAP"}
                           </span>
                         </div>
                         <div className="seller-order-detail-item">
-                          <span className="seller-order-detail-label">Date</span>
+                          <span className="seller-order-detail-label">Booked On / तिथि</span>
                           <span className="seller-order-detail-value">
                             {order.created_at
-                              ? new Date(order.created_at).toLocaleDateString("en-IN")
+                              ? new Date(order.created_at).toLocaleString("en-IN", {
+                                  day: "numeric", month: "short", year: "numeric",
+                                  hour: "2-digit", minute: "2-digit", hour12: true
+                                })
                               : "—"}
                           </span>
                         </div>
+                        <div className="seller-order-detail-item">
+                          <span className="seller-order-detail-label">Payment Mode</span>
+                          <span className="seller-order-detail-value" style={{ textTransform: 'uppercase', fontWeight: 700, color: '#059669' }}>
+                            {order.payment_method || "ONLINE"}
+                          </span>
+                        </div>
 
-                        {/* Contact (for accepted+) */}
-                        {["accepted", "in_progress", "quoted", "completed"].includes(order.status) && phone && (
+                        {/* Contact */}
+                        {phone && (
                           <div className="seller-order-detail-item">
-                            <span className="seller-order-detail-label">Contact</span>
+                            <span className="seller-order-detail-label">Customer Contact</span>
                             <div className="flex items-center gap-1">
                               <Phone size={12} style={{ color: '#059669' }} />
-                              <span className="seller-order-detail-value" style={{ fontSize: 13, color: '#059669' }}>
+                              <a href={`tel:${phone}`} className="seller-order-detail-value hover:underline" style={{ fontSize: 13, color: '#059669', fontWeight: 700 }}>
                                 {order.status === "completed" ? maskPhone(phone) : phone}
-                              </span>
+                              </a>
                             </div>
                           </div>
                         )}
 
                         {/* Address */}
-                        {["accepted", "in_progress", "quoted", "completed"].includes(order.status) && order.address && (
-                          <div className="seller-order-detail-item" style={{ gridColumn: phone ? 'auto' : '1 / -1' }}>
-                            <span className="seller-order-detail-label">Address</span>
+                        {order.address && (
+                          <div className="seller-order-detail-item" style={{ gridColumn: '1 / -1' }}>
+                            <span className="seller-order-detail-label">Customer Address</span>
                             <div className="flex items-start gap-1">
                               <MapPin size={12} style={{ color: '#3b82f6', marginTop: 2, flexShrink: 0 }} />
-                              <span className="seller-order-detail-value" style={{ fontSize: 12, fontWeight: 600 }}>
+                              <span className="seller-order-detail-value" style={{ fontSize: 12, fontWeight: 600, color: '#1e293b' }}>
                                 {order.address}
                               </span>
                             </div>
+                          </div>
+                        )}
+
+                        {/* Booking Notes */}
+                        {order.notes && (
+                          <div className="seller-order-detail-item" style={{ gridColumn: '1 / -1', background: '#f8fafc', padding: 8, borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                            <span className="seller-order-detail-label" style={{ color: '#475569', fontWeight: 700 }}>Instructions / Special Notes:</span>
+                            <span style={{ fontSize: 12, color: '#334155', fontWeight: 600 }}>{order.notes}</span>
                           </div>
                         )}
                       </div>
@@ -496,130 +550,184 @@ export default function SellerOrders() {
                   </div>
 
                   {/* ── Action Buttons ── */}
-                  <div className="seller-order-actions">
+                  <div className="seller-order-actions flex flex-wrap items-center justify-between gap-2 p-3 bg-slate-50/80 border-t border-slate-100 rounded-b-2xl">
                     {order.status === "pending" && (
-                      <>
+                      <div className="w-full flex items-center justify-end gap-2">
                         <button
                           type="button"
                           disabled={busy}
                           onClick={() => runAction("accept", id)}
-                          className="seller-action-btn seller-action-btn--primary seller-action-btn--full"
-                          style={{ fontSize: 13 }}
+                          className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-sm transition active:scale-95 cursor-pointer flex items-center gap-1"
                         >
-                          <CheckCircle2 size={16} /> Accept
+                          <CheckCircle2 size={14} /> Accept
                         </button>
                         <button
                           type="button"
                           disabled={busy}
                           onClick={() => runAction("cancel", id)}
-                          className="seller-action-btn seller-action-btn--outline seller-action-btn--full"
-                          style={{ fontSize: 13, color: '#dc2626' }}
+                          className="px-3.5 py-1.5 bg-white border border-red-200 hover:bg-red-50 text-red-600 text-xs font-bold rounded-xl transition active:scale-95 cursor-pointer flex items-center gap-1"
                         >
-                          <XCircle size={16} /> Decline
+                          <XCircle size={14} /> Decline
                         </button>
-                      </>
+                      </div>
                     )}
                     {order.status === "accepted" && (
-                      <>
+                      <div className="w-full flex items-center justify-end gap-2">
                         <button
                           type="button"
                           disabled={busy}
                           onClick={() => runAction("start", id)}
-                          className="seller-action-btn seller-action-btn--primary seller-action-btn--full"
-                          style={{ fontSize: 13 }}
+                          className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-sm transition active:scale-95 cursor-pointer flex items-center gap-1"
                         >
-                          <PlayCircle size={16} /> Start Visit / Out for Service
+                          <PlayCircle size={14} /> Start Visit
                         </button>
                         <button
                           type="button"
                           disabled={busy}
                           onClick={() => runAction("cancel", id)}
-                          className="seller-action-btn seller-action-btn--outline seller-action-btn--full"
-                          style={{ fontSize: 13, color: '#dc2626' }}
+                          className="px-3.5 py-1.5 bg-white border border-red-200 hover:bg-red-50 text-red-600 text-xs font-bold rounded-xl transition active:scale-95 cursor-pointer flex items-center gap-1"
                         >
-                          <XCircle size={16} /> Cancel Order
+                          <XCircle size={14} /> Cancel
                         </button>
-                      </>
+                      </div>
                     )}
                     {order.status === "in_progress" && (!order.service_charge_amount || parseFloat(order.service_charge_amount) === 0) && (
-                      <>
+                      <div className="w-full flex items-center justify-end gap-2">
                         <button
                           type="button"
                           disabled={busy || quotingOrderId === id}
                           onClick={() => setQuotingOrderId(id)}
-                          className="seller-action-btn seller-action-btn--primary seller-action-btn--full"
-                          style={{ fontSize: 13 }}
+                          className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-sm transition active:scale-95 cursor-pointer flex items-center gap-1"
                         >
-                          ➕ Create Work Quote
+                          ➕ Create Quote
                         </button>
                         <button
                           type="button"
                           disabled={busy}
                           onClick={() => runAction("cancel", id)}
-                          className="seller-action-btn seller-action-btn--outline seller-action-btn--full"
-                          style={{ fontSize: 13, color: '#dc2626' }}
+                          className="px-3.5 py-1.5 bg-white border border-red-200 hover:bg-red-50 text-red-600 text-xs font-bold rounded-xl transition active:scale-95 cursor-pointer flex items-center gap-1"
                         >
-                          <XCircle size={16} /> Cancel Order
+                          <XCircle size={14} /> Cancel
                         </button>
-                      </>
+                      </div>
                     )}
                     {order.status === "in_progress" && order.service_charge_amount > 0 && (
-                      <>
+                      <div className="w-full flex items-center justify-end gap-2">
                         <button
                           type="button"
                           disabled={busy}
                           onClick={() => runAction("complete", id)}
-                          className="seller-action-btn seller-action-btn--success seller-action-btn--full"
-                          style={{ fontSize: 13 }}
+                          className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm transition active:scale-95 cursor-pointer flex items-center gap-1"
                         >
-                          <CheckCircle2 size={16} /> Mark Complete
+                          <CheckCircle2 size={14} /> Mark Complete
                         </button>
                         <button
                           type="button"
                           disabled={busy}
                           onClick={() => runAction("cancel", id)}
-                          className="seller-action-btn seller-action-btn--outline seller-action-btn--full"
-                          style={{ fontSize: 13, color: '#dc2626' }}
+                          className="px-3.5 py-1.5 bg-white border border-red-200 hover:bg-red-50 text-red-600 text-xs font-bold rounded-xl transition active:scale-95 cursor-pointer flex items-center gap-1"
                         >
-                          <XCircle size={16} /> Cancel
+                          <XCircle size={14} /> Cancel
                         </button>
-                      </>
+                      </div>
                     )}
                     {order.status === "quoted" && (
-                      <>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: '#f59e0b', background: '#fef3c7', padding: '10px 14px', borderRadius: 12, display: 'inline-block', textAlign: 'center', width: '100%' }}>
+                      <div className="w-full flex items-center justify-between flex-wrap gap-2">
+                        <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200">
                           ⏳ Waiting for Customer Approval
                         </span>
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => runAction("cancel", id)}
-                          className="seller-action-btn seller-action-btn--outline seller-action-btn--full"
-                          style={{ fontSize: 13, color: '#dc2626', width: '100%', marginTop: 8 }}
-                        >
-                          <XCircle size={16} /> Cancel
-                        </button>
-                      </>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            disabled={busy || quotingOrderId === id}
+                            onClick={() => {
+                              setQuotingOrderId(id);
+                              if (order.service_charge_amount) {
+                                setQuoteForm({
+                                  service_charge: String(order.service_charge_amount || ""),
+                                  parts_cost: String(order.parts_cost_amount || ""),
+                                  discount: String(order.discount_amount || ""),
+                                  notes: "",
+                                });
+                              }
+                            }}
+                            className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-sm transition active:scale-95 cursor-pointer"
+                          >
+                            ✏️ Revise Quote
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => runAction("cancel", id)}
+                            className="px-3.5 py-1.5 bg-white border border-red-200 hover:bg-red-50 text-red-600 text-xs font-bold rounded-xl transition active:scale-95 cursor-pointer"
+                          >
+                            ❌ Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    {order.status === "quote_rejected" && (
+                      <div className="w-full flex flex-col gap-2 p-2.5 rounded-xl bg-red-50/70 border border-red-200 text-left">
+                        <div className="text-xs font-extrabold text-red-800 flex items-center gap-1">
+                          ⚠️ Customer Declined Quote: <span className="font-semibold text-slate-700">{order.quotation_notes || "Requested price revision"}</span>
+                        </div>
+                        <div className="flex items-center justify-end gap-2 mt-1">
+                          <button
+                            type="button"
+                            disabled={busy || quotingOrderId === id}
+                            onClick={() => {
+                              setQuotingOrderId(id);
+                              if (order.service_charge_amount) {
+                                setQuoteForm({
+                                  service_charge: String(order.service_charge_amount || ""),
+                                  parts_cost: String(order.parts_cost_amount || ""),
+                                  discount: String(order.discount_amount || ""),
+                                  notes: "",
+                                });
+                              }
+                            }}
+                            className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-sm transition active:scale-95 cursor-pointer"
+                          >
+                            ✏️ Revise Quote
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => runAction("cancel", id)}
+                            className="px-3.5 py-1.5 bg-white border border-red-200 hover:bg-red-50 text-red-600 text-xs font-bold rounded-xl transition active:scale-95 cursor-pointer"
+                          >
+                            ❌ Cancel Order
+                          </button>
+                        </div>
+                      </div>
                     )}
                     {order.status === "completed" && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const payload = {
-                            ...order,
-                            customer_name: order.customer_name || "Customer",
-                            customer_phone: order.customer_phone || "",
-                            service_name: order.service_name || "Service",
-                            seller_business: order.seller_business || "QuickSeva",
-                            date: order.scheduled_at || order.created_at || order.date,
-                          };
-                          import("../../utils/invoiceGenerator").then((m) => m.generateInvoicePDF(payload));
-                        }}
-                        className="seller-action-btn seller-action-btn--outline seller-action-btn--full"
-                        style={{ fontSize: 13 }}
-                      >
-                        <Download size={16} /> Download Invoice
-                      </button>
+                      <div className="w-full flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const payload = {
+                              ...order,
+                              customer_name: order.customer_name || "Customer",
+                              customer_phone: order.customer_phone || "",
+                              service_name: order.service_name || "Service",
+                              seller_business: order.seller_business || "QuickSeva",
+                              date: order.scheduled_at || order.created_at || order.date,
+                            };
+                            import("../../utils/invoiceGenerator").then((m) => m.generateInvoicePDF(payload));
+                          }}
+                          className="px-3.5 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl transition active:scale-95 cursor-pointer flex items-center gap-1"
+                        >
+                          <Download size={14} /> Download Invoice
+                        </button>
+                      </div>
+                    )}
+                    {order.status === "cancelled" && (
+                      <div className="w-full flex items-center justify-between flex-wrap gap-2 pt-0.5">
+                        <span className="text-xs font-semibold text-slate-500 flex items-center gap-1">
+                          ❌ Order Cancelled {order.cancel_reason ? `(${order.cancel_reason})` : ''}
+                        </span>
+                      </div>
                     )}
                   </div>
                 </article>

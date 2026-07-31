@@ -14,6 +14,8 @@ const {
   verifyStartCode,
   disputeOrder,
   switchToCash,
+  switchPaymentMethod,
+  rejectQuotation,
 } = require("../controllers/orderController");
 const { protect, sellerOnly } = require("../middleware/authMiddleware");
 
@@ -28,7 +30,9 @@ router.patch("/:id/cancel", protect, cancelOrder);
 router.patch("/:id/dispute", protect, disputeOrder);
 router.patch("/:id/quotation", protect, sellerOnly, submitQuotation);
 router.patch("/:id/approve-quotation", protect, approveQuotation);
+router.patch("/:id/reject-quotation", protect, rejectQuotation);
 router.post("/:id/verify-start-code", protect, sellerOnly, verifyStartCode);
 router.patch("/:id/switch-to-cash", protect, switchToCash);
+router.patch("/:id/switch-payment-method", protect, switchPaymentMethod);
 
 module.exports = router;

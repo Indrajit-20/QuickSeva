@@ -361,7 +361,7 @@ export default function ServicesPage() {
   };
 
   const handleSearchSubmit = (e) => {
-    e.preventDefault();
+    if (e?.preventDefault) e.preventDefault();
     setIsDropdownOpen(false);
     const params = new URLSearchParams(searchParams);
     if (query.trim()) {

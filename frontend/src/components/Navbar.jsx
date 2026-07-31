@@ -26,6 +26,8 @@ const getInitials = (name) => {
 import { Search, MapPin, Globe, CalendarCheck, Wrench, LayoutDashboard } from "lucide-react";
 import SearchOverlay from "./SearchOverlay";
 
+import NotificationBell from "./NotificationBell";
+
 function NavbarSearch({ className = "", onTriggerSearch }) {
   return (
     <div className={`relative ${className}`}>
@@ -183,7 +185,10 @@ const Navbar = () => {
               </div>
             )}
             {user ? (
-              <ProfileDropdown user={user} onLogout={handleLogout} />
+              <>
+                <NotificationBell isSeller={activeRole === "seller"} />
+                <ProfileDropdown user={user} onLogout={handleLogout} />
+              </>
             ) : (
               <>
                 <Link
@@ -239,25 +244,28 @@ const Navbar = () => {
             )}
           </div>
 
-          {/* Mobile Menu Button */}
-          <button
-            onClick={toggleMenu}
-            aria-label="Toggle Menu"
-            className="flex h-9 w-9 flex-col items-center justify-center rounded-lg transition hover:bg-[#0284c7]/10 active:scale-95 md:hidden"
-          >
-            <span
-              className={`mb-1 block h-0.5 w-5 bg-[#e53935] rounded-full transition-transform duration-300 ${isMenuOpen ? "rotate-45 translate-y-1.5" : ""
-                }`}
-            ></span>
-            <span
-              className={`block h-0.5 w-5 bg-[#e53935] rounded-full transition-opacity duration-300 ${isMenuOpen ? "opacity-0" : ""
-                }`}
-            ></span>
-            <span
-              className={`mt-1 block h-0.5 w-5 bg-[#e53935] rounded-full transition-transform duration-300 ${isMenuOpen ? "-rotate-45 -translate-y-1.5" : ""
-                }`}
-            ></span>
-          </button>
+          {/* Mobile Right Controls: Notification Bell + Hamburger Button */}
+          <div className="flex items-center gap-2 md:hidden">
+            {user && <NotificationBell isSeller={activeRole === "seller"} align="right" />}
+            <button
+              onClick={toggleMenu}
+              aria-label="Toggle Menu"
+              className="flex h-9 w-9 flex-col items-center justify-center rounded-lg transition hover:bg-[#0284c7]/10 active:scale-95"
+            >
+              <span
+                className={`mb-1 block h-0.5 w-5 bg-[#e53935] rounded-full transition-transform duration-300 ${isMenuOpen ? "rotate-45 translate-y-1.5" : ""
+                  }`}
+              ></span>
+              <span
+                className={`block h-0.5 w-5 bg-[#e53935] rounded-full transition-opacity duration-300 ${isMenuOpen ? "opacity-0" : ""
+                  }`}
+              ></span>
+              <span
+                className={`mt-1 block h-0.5 w-5 bg-[#e53935] rounded-full transition-transform duration-300 ${isMenuOpen ? "-rotate-45 -translate-y-1.5" : ""
+                  }`}
+              ></span>
+            </button>
+          </div>
         </div>
 
         {/* Mobile Menu */}

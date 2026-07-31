@@ -16,6 +16,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 import WorkspaceSwitcher from "../components/WorkspaceSwitcher";
 import BottomNavSeller from "../components/BottomNavSeller";
+import NotificationBell from "../components/NotificationBell";
 import { sellerOrdersApi } from "../api/orderApi";
 import apiClient from "../api/axiosConfig";
 
@@ -38,10 +39,11 @@ const navItems = [
 
 const getInitial = (name) => (name?.trim()?.[0] || "S").toUpperCase();
 
-function SellerNavLink({ item, onClick, badgeCount }) {
+function SellerNavLink({ item, onClick, pendingOrdersCount = 0, unreadLeadsCount = 0 }) {
   const location = useLocation();
   const Icon = item.icon;
   const active = location.pathname === item.path;
+  const count = item.label === "Orders" ? pendingOrdersCount : item.label === "Leads" ? unreadLeadsCount : 0;
 
   return (
     <NavLink
@@ -56,16 +58,16 @@ function SellerNavLink({ item, onClick, badgeCount }) {
         <Icon size={18} />
         <span>{item.label}</span>
       </div>
-      {item.label === "Orders" && badgeCount > 0 && (
-        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#e53935] px-1.5 text-xs font-bold text-white shadow-none">
-          {badgeCount}
+      {count > 0 && (
+        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#e53935] px-1.5 text-xs font-bold text-white shadow-none animate-pulse">
+          {count > 9 ? "9+" : count}
         </span>
       )}
     </NavLink>
   );
 }
 
-function SellerSidebar({ user, onLogout, onNavigate, pendingOrdersCount, onToggleAvailability, onClose }) {
+function SellerSidebar({ user, onLogout, onNavigate, pendingOrdersCount = 0, unreadLeadsCount = 0, onToggleAvailability, onClose }) {
   return (
     <div className="flex h-full flex-col border-r border-[#e5e7eb] bg-white px-4 py-4 pb-24 text-[#1a1a1a]">
       <div className="mb-4 flex flex-col gap-2">
@@ -76,28 +78,31 @@ function SellerSidebar({ user, onLogout, onNavigate, pendingOrdersCount, onToggl
             </div>
             <p className="mt-0.5 text-xs font-semibold text-[#6b7280]">Seller Panel</p>
           </div>
-          {onClose ? (
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex items-center justify-center w-10 h-10 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 active:scale-90 transition shrink-0"
-              aria-label="Close menu"
-            >
-              <X size={20} />
-            </button>
-          ) : (
-            /* Small Availability Toggle */
-            <button
-              onClick={onToggleAvailability}
-              className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${user?.is_available ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-slate-300 hover:bg-slate-400'}`}
-              title={user?.is_available ? "Active: Customers can see and book your services / चालू: ग्राहक आपकी सेवाएं देख सकते हैं" : "Inactive: Customers cannot see or book your services / बंद: ग्राहक आपकी सेवाएं नहीं देख सकते"}
-              aria-label="Toggle availability"
-            >
-              <span
-                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${user?.is_available ? 'translate-x-4' : 'translate-x-0'}`}
-              />
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            <NotificationBell isSeller={true} align="left" />
+            {onClose ? (
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex items-center justify-center w-10 h-10 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 active:scale-90 transition shrink-0"
+                aria-label="Close menu"
+              >
+                <X size={20} />
+              </button>
+            ) : (
+              /* Small Availability Toggle */
+              <button
+                onClick={onToggleAvailability}
+                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${user?.is_available ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-slate-300 hover:bg-slate-400'}`}
+                title={user?.is_available ? "Active: Customers can see and book your services / चालू: ग्राहक आपकी सेवाएं देख सकते हैं" : "Inactive: Customers cannot see or book your services / बंद: ग्राहक आपकी सेवाएं नहीं देख सकते"}
+                aria-label="Toggle availability"
+              >
+                <span
+                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${user?.is_available ? 'translate-x-4' : 'translate-x-0'}`}
+                />
+              </button>
+            )}
+          </div>
         </div>
         {!onClose && (
           <div className="flex items-center gap-1.5 text-[10px] font-bold">
@@ -111,7 +116,13 @@ function SellerSidebar({ user, onLogout, onNavigate, pendingOrdersCount, onToggl
 
       <nav className="flex-1 space-y-1 overflow-y-auto no-scrollbar">
         {navItems.map((item) => (
-          <SellerNavLink key={item.path} item={item} onClick={onNavigate} badgeCount={pendingOrdersCount} />
+          <SellerNavLink
+            key={item.path}
+            item={item}
+            onClick={onNavigate}
+            pendingOrdersCount={pendingOrdersCount}
+            unreadLeadsCount={unreadLeadsCount}
+          />
         ))}
       </nav>
 
@@ -179,34 +190,45 @@ export default function SellerLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { user, logout, updateUser } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [pendingOrdersCount, setPendingOrdersCount] = useState(0);
+  const [unreadLeadsCount, setUnreadLeadsCount] = useState(0);
   const [newOrderNotification, setNewOrderNotification] = useState(null);
 
+  // Fetch pending orders count (unvisited only)
   useEffect(() => {
     let active = true;
     const fetchPendingCount = async (isInitial = false) => {
       try {
         const res = await sellerOrdersApi.list();
         const list = res?.data?.orders || res?.orders || [];
-        const count = Array.isArray(list) ? list.filter(o => o.status === "pending").length : 0;
+        const pendingList = Array.isArray(list) ? list.filter(o => o.status === "pending") : [];
+
+        // If seller is currently on orders page, mark as visited
+        if (window.location.pathname === "/seller/orders") {
+          localStorage.setItem("seller_orders_last_visited_at", new Date().toISOString());
+        }
+
+        const lastVisited = localStorage.getItem("seller_orders_last_visited_at");
+        const unvisitedCount = lastVisited
+          ? pendingList.filter(o => o.created_at && new Date(o.created_at) > new Date(lastVisited)).length
+          : (window.location.pathname === "/seller/orders" ? 0 : pendingList.length);
+
         if (active) {
           setPendingOrdersCount((prev) => {
-            // Trigger audio + visual notification if a new pending order arrived
-            if (!isInitial && count > prev) {
+            if (!isInitial && unvisitedCount > prev) {
               playChime();
-              const pendingList = list.filter(o => o.status === "pending");
               const latestOrder = pendingList[pendingList.length - 1];
               setNewOrderNotification({
                 orderNumber: latestOrder?.order_number || `#${latestOrder?.id || 'New'}`,
                 service: latestOrder?.service_title || latestOrder?.service_name || "Service Request",
                 address: latestOrder?.address || "Nearby customer",
               });
-              // Auto close banner in 6 seconds
               setTimeout(() => {
                 setNewOrderNotification(null);
               }, 6000);
             }
-            return count;
+            return unvisitedCount;
           });
         }
       } catch (err) {
@@ -214,16 +236,60 @@ export default function SellerLayout() {
       }
     };
     
-    // Initial fetch on mount
     fetchPendingCount(true);
-    
-    // Poll every 10 seconds for real-time notification feel
+
+    const handleOrdersVisited = () => setPendingOrdersCount(0);
+    window.addEventListener("orders-visited", handleOrdersVisited);
+
     const interval = setInterval(() => fetchPendingCount(false), 10000);
     return () => {
       active = false;
+      window.removeEventListener("orders-visited", handleOrdersVisited);
       clearInterval(interval);
     };
   }, []);
+
+  // Fetch unread leads count & sync with leads-read event
+  useEffect(() => {
+    let active = true;
+    const fetchUnreadLeads = async () => {
+      try {
+        const res = await apiClient.get("/seller/leads/unread-count");
+        const count = Number(res?.data?.data?.count || 0);
+        if (active) setUnreadLeadsCount(count);
+      } catch {
+        // Ignore fallback
+      }
+    };
+
+    fetchUnreadLeads();
+
+    const handleLeadsRead = () => setUnreadLeadsCount(0);
+    const handleSync = () => fetchUnreadLeads();
+
+    window.addEventListener("leads-read", handleLeadsRead);
+    window.addEventListener("notifications-updated", handleSync);
+
+    const interval = setInterval(fetchUnreadLeads, 12000);
+
+    return () => {
+      active = false;
+      window.removeEventListener("leads-read", handleLeadsRead);
+      window.removeEventListener("notifications-updated", handleSync);
+      clearInterval(interval);
+    };
+  }, []);
+
+  // Auto-clear badges when seller visits corresponding pages
+  useEffect(() => {
+    if (location.pathname === "/seller/orders") {
+      localStorage.setItem("seller_orders_last_visited_at", new Date().toISOString());
+      setPendingOrdersCount(0);
+    }
+    if (location.pathname === "/seller/dashboard/leads") {
+      setUnreadLeadsCount(0);
+    }
+  }, [location.pathname]);
 
   const handleLogout = () => {
     logout();
@@ -250,6 +316,7 @@ export default function SellerLayout() {
           user={user}
           onLogout={handleLogout}
           pendingOrdersCount={pendingOrdersCount}
+          unreadLeadsCount={unreadLeadsCount}
           onToggleAvailability={handleToggleAvailability}
         />
       </aside>
@@ -275,8 +342,10 @@ export default function SellerLayout() {
             </div>
           </div>
 
-          {/* Right: Status + Avatar */}
-          <div className="flex items-center gap-3">
+          {/* Right: Notification + Status + Avatar */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            <NotificationBell isSeller={true} />
+
             {/* Availability indicator */}
             <button
               onClick={handleToggleAvailability}
@@ -332,6 +401,7 @@ export default function SellerLayout() {
               onLogout={handleLogout}
               onNavigate={() => setDrawerOpen(false)}
               pendingOrdersCount={pendingOrdersCount}
+              unreadLeadsCount={unreadLeadsCount}
               onToggleAvailability={handleToggleAvailability}
               onClose={() => setDrawerOpen(false)}
             />
@@ -343,7 +413,7 @@ export default function SellerLayout() {
         <Outlet />
       </main>
 
-      <BottomNavSeller pendingOrdersCount={pendingOrdersCount} />
+      <BottomNavSeller pendingOrdersCount={pendingOrdersCount} unreadLeadsCount={unreadLeadsCount} />
 
       {/* Dynamic Pop-up Toast Alert */}
       {newOrderNotification && (

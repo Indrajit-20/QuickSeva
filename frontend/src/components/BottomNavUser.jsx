@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { MapPin, CalendarCheck, User, Globe } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import apiClient from "../api/axiosConfig";
 
 const guestItems = [
   { label: "Nearby", path: "/", icon: MapPin },
@@ -21,6 +22,7 @@ export default function BottomNavUser() {
   const location = useLocation();
   const { isAuthenticated } = useAuth();
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     const handleFocusIn = (e) => {
@@ -45,6 +47,35 @@ export default function BottomNavUser() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const fetchUnread = async () => {
+      try {
+        const res = await apiClient.get("/notifications?page=1&limit=20");
+        const count = Number(res?.data?.data?.unread || 0);
+        setUnreadCount(count);
+      } catch {
+        // silent catch
+      }
+    };
+
+    fetchUnread();
+
+    const handleSync = () => fetchUnread();
+    window.addEventListener("notifications-updated", handleSync);
+
+    return () => {
+      window.removeEventListener("notifications-updated", handleSync);
+    };
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (location.pathname === "/my-bookings") {
+      setUnreadCount(0);
+    }
+  }, [location.pathname]);
+
   const items = isAuthenticated ? userItems : guestItems;
 
   return (
@@ -67,6 +98,11 @@ export default function BottomNavUser() {
           >
             <span className="bottom-nav-icon-wrap">
               <Icon size={20} strokeWidth={isActive ? 2.4 : 1.8} />
+              {item.label === "Bookings" && unreadCount > 0 && (
+                <span className="bottom-nav-badge">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
             </span>
             <span className="bottom-nav-label">{item.label}</span>
             {isActive && <span className="bottom-nav-indicator" />}

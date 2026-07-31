@@ -125,9 +125,14 @@ app.use(notFound);
 app.use(errorHandler);
 
 // ── Start Server ──────────────────────────────────────────────────────────────
+const http = require("http");
+const { initSocket } = require("./utils/socketService");
 const { startAvailabilitySafetyCheck } = require("./services/availabilitySafetyCheck");
 
-app.listen(PORT, () => {
+const server = http.createServer(app);
+initSocket(server);
+
+server.listen(PORT, () => {
   logger.info(`🚀 QuickSeva API running on http://localhost:${PORT}`);
   logger.info(`📋 Health check: http://localhost:${PORT}/api/health`);
   logger.info(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);

@@ -8,6 +8,7 @@ const {
   paginate,
   generateOrderNumber,
 } = require("../utils/helpers");
+const { emitToUser, emitToOrder } = require("../utils/socketService");
 
 // Helper to get system settings dynamically
 async function getSystemSetting(key, defaultValue = "") {
@@ -167,6 +168,10 @@ exports.placeOrder = async (req, res) => {
     );
 
     const order = await OrderModel.findById(orderId);
+    if (sellerUser[0]?.[0]?.user_id) {
+      emitToUser(sellerUser[0][0].user_id, "order_updated", { orderId, order, event: "order_created" });
+    }
+    emitToUser(req.user.id, "order_updated", { orderId, order, event: "order_created" });
     return successRes(res, { order }, "Order placed successfully", 201);
   } catch (err) {
     console.error("Place order error:", err.message);
@@ -260,6 +265,10 @@ exports.acceptOrder = async (req, res) => {
       ],
     );
 
+    emitToUser(order.buyer_id, "order_updated", { orderId: order.id, status: "accepted" });
+    emitToUser(req.user.id, "order_updated", { orderId: order.id, status: "accepted" });
+    emitToOrder(order.id, "order_updated", { orderId: order.id, status: "accepted" });
+
     return successRes(res, null, "Order accepted");
   } catch (err) {
     return errorRes(res, "Failed to accept order");
@@ -280,6 +289,11 @@ exports.startOrder = async (req, res) => {
     await OrderModel.updateStatus(req.params.id, "in_progress", {
       started_at: new Date(),
     });
+
+    emitToUser(order.buyer_id, "order_updated", { orderId: order.id, status: "in_progress" });
+    emitToUser(req.user.id, "order_updated", { orderId: order.id, status: "in_progress" });
+    emitToOrder(order.id, "order_updated", { orderId: order.id, status: "in_progress" });
+
     return successRes(res, null, "Order started");
   } catch (err) {
     return errorRes(res, "Failed to start order");
@@ -328,6 +342,10 @@ exports.completeOrder = async (req, res) => {
         order.id,
       ],
     );
+
+    emitToUser(order.buyer_id, "order_updated", { orderId: order.id, status: "completed" });
+    emitToUser(req.user.id, "order_updated", { orderId: order.id, status: "completed" });
+    emitToOrder(order.id, "order_updated", { orderId: order.id, status: "completed" });
 
     return successRes(res, null, "Order completed");
   } catch (err) {
@@ -471,6 +489,12 @@ exports.cancelOrder = async (req, res) => {
       }
     }
 
+    emitToUser(order.buyer_id, "order_updated", { orderId: order.id, status: "cancelled" });
+    if (sellerUserId) {
+      emitToUser(sellerUserId, "order_updated", { orderId: order.id, status: "cancelled" });
+    }
+    emitToOrder(order.id, "order_updated", { orderId: order.id, status: "cancelled" });
+
     return successRes(res, null, "Order cancelled");
   } catch (err) {
     console.error("Cancel order error:", err);
@@ -487,8 +511,8 @@ exports.submitQuotation = async (req, res) => {
 
     if (!order || order.seller_id !== seller.id)
       return errorRes(res, "Order not found", 404);
-    if (order.status !== "in_progress")
-      return errorRes(res, "Order must be in progress to submit quotation", 400);
+    if (!["in_progress", "quoted", "quote_rejected", "cancelled"].includes(order.status))
+      return errorRes(res, "Quotation cannot be created or revised at this stage", 400);
 
     const sCharge = parseFloat(service_charge || 0);
     const pCost = parseFloat(parts_cost || 0);
@@ -547,6 +571,10 @@ exports.submitQuotation = async (req, res) => {
         order.id
       ]
     );
+
+    emitToUser(order.buyer_id, "order_updated", { orderId: order.id, status: "quoted" });
+    emitToUser(req.user.id, "order_updated", { orderId: order.id, status: "quoted" });
+    emitToOrder(order.id, "order_updated", { orderId: order.id, status: "quoted" });
 
     return successRes(res, { start_otp_code }, "Quotation submitted successfully");
   } catch (err) {
@@ -636,6 +664,12 @@ exports.approveQuotation = async (req, res) => {
         order.id
       ]
     );
+
+    emitToUser(order.buyer_id, "order_updated", { orderId: order.id, status: "in_progress", final_payment_status: final_pay_status });
+    if (sellerUser[0]?.[0]?.user_id) {
+      emitToUser(sellerUser[0][0].user_id, "order_updated", { orderId: order.id, status: "in_progress", final_payment_status: final_pay_status });
+    }
+    emitToOrder(order.id, "order_updated", { orderId: order.id, status: "in_progress", final_payment_status: final_pay_status });
 
     return successRes(res, null, "Quotation approved and paid");
   } catch (err) {
@@ -774,5 +808,113 @@ exports.switchToCash = async (req, res) => {
   } catch (err) {
     console.error("Switch to cash error:", err);
     return errorRes(res, "Failed to switch payment method");
+  }
+};
+
+// Switch payment method dynamically between Online and Cash
+exports.switchPaymentMethod = async (req, res) => {
+  try {
+    const { payment_method } = req.body;
+    if (!["online", "cash"].includes(payment_method)) {
+      return errorRes(res, "Invalid payment method. Must be 'online' or 'cash'", 400);
+    }
+    const order = await OrderModel.findById(req.params.id);
+    if (!order) return errorRes(res, "Order not found", 404);
+
+    const isBuyer = order.buyer_id === req.user.id;
+    const seller = await SellerModel.findByUserId(req.user.id).catch(() => null);
+    const isSeller = seller && order.seller_id === seller.id;
+
+    if (!isBuyer && !isSeller) {
+      return errorRes(res, "Unauthorized", 403);
+    }
+
+    if (order.status === "completed" || order.status === "cancelled") {
+      return errorRes(res, "Cannot change payment method for completed or cancelled bookings", 400);
+    }
+
+    let completion_otp_code = order.completion_otp_code;
+    if (payment_method === "cash" && !completion_otp_code) {
+      completion_otp_code = Math.floor(1000 + Math.random() * 9000).toString();
+    }
+
+    await pool.query(
+      `UPDATE orders SET payment_method = ?, completion_otp_code = ? WHERE id = ?`,
+      [payment_method, completion_otp_code, req.params.id]
+    );
+
+    const [sellerRows] = await pool.query("SELECT user_id FROM sellers WHERE id = ?", [order.seller_id]);
+    const sellerUserId = sellerRows[0]?.user_id;
+
+    const targetUserId = isBuyer ? sellerUserId : order.buyer_id;
+    if (targetUserId) {
+      await pool.query(
+        `INSERT INTO notifications (user_id, title, message, type, ref_id) VALUES (?, ?, ?, 'order', ?)`,
+        [
+          targetUserId,
+          "Payment Method Changed!",
+          `Payment method for order #${order.order_number} was changed to ${payment_method.toUpperCase()}.`,
+          order.id
+        ]
+      );
+    }
+
+    emitToUser(order.buyer_id, "order_updated", { orderId: order.id, payment_method });
+    if (sellerUserId) {
+      emitToUser(sellerUserId, "order_updated", { orderId: order.id, payment_method });
+    }
+    emitToOrder(order.id, "order_updated", { orderId: order.id, payment_method });
+
+    return successRes(res, { payment_method, completion_otp_code }, `Payment method switched to ${payment_method}`);
+  } catch (err) {
+    console.error("Switch payment method error:", err);
+    return errorRes(res, "Failed to switch payment method");
+  }
+};
+
+// Reject quotation (buyer)
+exports.rejectQuotation = async (req, res) => {
+  try {
+    const { reason } = req.body;
+    const order = await OrderModel.findById(req.params.id);
+    if (!order || order.buyer_id !== req.user.id) {
+      return errorRes(res, "Order not found", 404);
+    }
+    if (order.status !== "quoted" && order.status !== "quote_rejected") {
+      return errorRes(res, "No active quotation to reject", 400);
+    }
+
+    const rejectionReason = reason?.trim() || "Customer requested price revision or declined the quotation.";
+
+    await pool.query(
+      `UPDATE orders SET status = 'quote_rejected', quotation_notes = ? WHERE id = ?`,
+      [`REJECTED BY BUYER: ${rejectionReason}`, req.params.id]
+    );
+
+    const [sellerRows] = await pool.query("SELECT user_id FROM sellers WHERE id = ?", [order.seller_id]);
+    const sellerUserId = sellerRows[0]?.user_id;
+
+    if (sellerUserId) {
+      await pool.query(
+        `INSERT INTO notifications (user_id, title, message, type, ref_id) VALUES (?, ?, ?, 'order', ?)`,
+        [
+          sellerUserId,
+          "Quotation Declined!",
+          `Customer declined quotation for order #${order.order_number}. Reason: "${rejectionReason}". You can revise your quotation or cancel the order.`,
+          order.id
+        ]
+      );
+    }
+
+    emitToUser(order.buyer_id, "order_updated", { orderId: order.id, status: "quote_rejected" });
+    if (sellerUserId) {
+      emitToUser(sellerUserId, "order_updated", { orderId: order.id, status: "quote_rejected" });
+    }
+    emitToOrder(order.id, "order_updated", { orderId: order.id, status: "quote_rejected" });
+
+    return successRes(res, null, "Quotation rejected. Technician has been notified to revise.");
+  } catch (err) {
+    console.error("Reject quotation error:", err);
+    return errorRes(res, "Failed to reject quotation");
   }
 };

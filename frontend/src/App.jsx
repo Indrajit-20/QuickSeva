@@ -26,6 +26,7 @@ import AdminRoute from "./components/AdminRoute";
 import UserRoute from "./components/UserRoute";
 
 import { WalletProvider } from "./context/WalletContext";
+import { SocketProvider } from "./context/SocketContext";
 
 import Home from "./pages/Home";
 import Login from "./pages/Login";
@@ -196,15 +197,16 @@ function AppRoutes() {
   );
 }
 
-// ✅ FIX: AuthProvider must be OUTERMOST, then WalletProvider inside it
-// so WalletProvider can access auth user if needed in future.
+// ✅ FIX: AuthProvider must be OUTERMOST, then SocketProvider and WalletProvider inside it
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <WalletProvider>
-          <AppRoutes />
-        </WalletProvider>
+        <SocketProvider>
+          <WalletProvider>
+            <AppRoutes />
+          </WalletProvider>
+        </SocketProvider>
       </AuthProvider>
     </BrowserRouter>
   );

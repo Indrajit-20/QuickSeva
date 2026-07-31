@@ -123,9 +123,10 @@ export default function NoProvidersLeadForm({
         description: "",
       }));
       setSearchQuery(targetCategory);
+      const count = data.data?.matchedPremiumSellers || 0;
       setStatus({
         type: "success",
-        message: `Request saved. ${data.data?.matchedPremiumSellers || 0} premium partners were notified.`,
+        message: `✅ Request submitted! ${count > 0 ? count : "Local"} verified technicians were notified and will contact you shortly.`,
       });
     } catch (err) {
       setStatus({
@@ -150,36 +151,49 @@ export default function NoProvidersLeadForm({
   );
 
   return (
-    <div className="qs-lead-form-card">
-      <div className="mb-5 pb-3 border-b border-slate-100">
-        <h4 className="text-base font-bold text-slate-800 flex items-center gap-2">
-          <BriefcaseBusiness className="h-5 w-5 text-indigo-600" />
-          No Direct Partners Found
-        </h4>
-        <p className="mt-1 text-xs text-slate-500 leading-normal">
-          Share your requirement and QuickSeva will notify matching premium partners in your area instantly.
-        </p>
+    <div className="w-full bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden text-left">
+      {/* Clean QuickSeva Signature Header */}
+      <div className="bg-slate-50/80 border-b border-slate-100 p-4 sm:p-5">
+        <div className="flex items-start sm:items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 border border-blue-100 text-blue-600 shrink-0 shadow-xs">
+            <BriefcaseBusiness className="h-5 w-5 text-blue-600" />
+          </div>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h4 className="text-sm sm:text-base font-extrabold text-slate-800 tracking-tight">
+                Broadcast Lead Request to Technicians
+              </h4>
+              <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200/80 text-[10px] font-extrabold tracking-wider uppercase">
+                ⚡ 0 Direct Partners
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 font-medium mt-0.5 leading-snug">
+              No online providers within {radiusKm || 5}km. Submit your requirement below and local verified experts will contact you!
+            </p>
+          </div>
+        </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+      {/* Form Content */}
+      <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-4" noValidate>
         <div className="grid gap-3.5 sm:grid-cols-2">
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1.5 flex items-center gap-1.5">
-              <User className="h-3.5 w-3.5 text-indigo-500" />
+            <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
+              <User className="h-3.5 w-3.5 text-blue-600" />
               Customer Name
             </label>
             <input
               value={form.customerName}
               onChange={(e) => update("customerName", e.target.value)}
               required
-              className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm font-medium text-slate-800 placeholder-slate-400 outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-100"
-              placeholder="Your name"
+              className="w-full rounded-xl border border-slate-200/90 bg-slate-50/60 px-3.5 py-2.5 text-xs font-semibold text-slate-800 placeholder-slate-400 outline-none transition focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-100"
+              placeholder="Your full name"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1.5 flex items-center gap-1.5">
-              <Phone className="h-3.5 w-3.5 text-indigo-500" />
+            <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
+              <Phone className="h-3.5 w-3.5 text-blue-600" />
               Contact Number
             </label>
             <input
@@ -187,7 +201,7 @@ export default function NoProvidersLeadForm({
               onChange={(e) => update("contactNumber", e.target.value)}
               required
               inputMode="tel"
-              className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm font-medium text-slate-800 placeholder-slate-400 outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-100"
+              className="w-full rounded-xl border border-slate-200/90 bg-slate-50/60 px-3.5 py-2.5 text-xs font-semibold text-slate-800 placeholder-slate-400 outline-none transition focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-100"
               placeholder="10-digit mobile number"
             />
           </div>
@@ -195,8 +209,8 @@ export default function NoProvidersLeadForm({
 
         <div className="grid gap-3.5 sm:grid-cols-2">
           <div className="relative" ref={dropdownRef}>
-            <label className="block text-xs font-semibold text-slate-600 mb-1.5 flex items-center gap-1.5">
-              <BriefcaseBusiness className="h-3.5 w-3.5 text-indigo-500" />
+            <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
+              <BriefcaseBusiness className="h-3.5 w-3.5 text-blue-600" />
               Service Category
             </label>
             <div className="relative">
@@ -210,7 +224,7 @@ export default function NoProvidersLeadForm({
                 }}
                 onFocus={() => setIsOpen(true)}
                 required
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2.5 pr-8 text-sm font-semibold text-slate-800 placeholder-slate-400 outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-100"
+                className="w-full rounded-xl border border-slate-200/90 bg-slate-50/60 px-3.5 py-2.5 pr-9 text-xs font-semibold text-slate-800 placeholder-slate-400 outline-none transition focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-100"
                 placeholder="Type or select category..."
               />
               <button
@@ -222,7 +236,7 @@ export default function NoProvidersLeadForm({
               </button>
             </div>
             {isOpen && (
-              <ul className="absolute left-0 right-0 z-50 mt-1 max-h-48 overflow-y-auto rounded-xl border border-slate-200 bg-white py-1.5 shadow-xl animate-in fade-in slide-in-from-top-1 duration-150">
+              <ul className="absolute left-0 right-0 z-50 mt-1 max-h-44 overflow-y-auto rounded-xl border border-slate-200 bg-white py-1 shadow-xl animate-in fade-in slide-in-from-top-1 duration-150">
                 {filteredCategories.length > 0 ? (
                   filteredCategories.map((cat) => (
                     <li
@@ -232,9 +246,9 @@ export default function NoProvidersLeadForm({
                         setSearchQuery(cat);
                         setIsOpen(false);
                       }}
-                      className={`cursor-pointer px-3.5 py-2 text-sm transition font-medium ${
+                      className={`cursor-pointer px-3.5 py-2 text-xs transition font-semibold ${
                         targetCategory.toLowerCase() === cat.toLowerCase()
-                          ? "bg-indigo-600 text-white font-bold"
+                          ? "bg-blue-600 text-white font-bold"
                           : "text-slate-700 hover:bg-slate-100"
                       }`}
                     >
@@ -257,8 +271,8 @@ export default function NoProvidersLeadForm({
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1.5 flex items-center gap-1.5">
-              <MapPin className="h-3.5 w-3.5 text-indigo-500" />
+            <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
+              <MapPin className="h-3.5 w-3.5 text-blue-600" />
               Target Pincode
             </label>
             <input
@@ -266,42 +280,42 @@ export default function NoProvidersLeadForm({
               onChange={(e) => setTargetPincode(e.target.value.replace(/\D/g, "").slice(0, 6))}
               inputMode="numeric"
               required
-              className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm font-medium text-slate-800 placeholder-slate-400 outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-100"
-              placeholder="Enter target pincode"
+              className="w-full rounded-xl border border-slate-200/90 bg-slate-50/60 px-3.5 py-2.5 text-xs font-semibold text-slate-800 placeholder-slate-400 outline-none transition focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-100"
+              placeholder="Enter 6-digit pincode"
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1.5 flex items-center gap-1.5">
-            <MapPin className="h-3.5 w-3.5 text-indigo-500" />
+          <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
+            <MapPin className="h-3.5 w-3.5 text-blue-600" />
             Service Address / सेवा का पता
           </label>
           <textarea
             value={form.address}
             onChange={(e) => update("address", e.target.value)}
             rows={2}
-            className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm font-medium text-slate-800 placeholder-slate-400 outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-100"
+            className="w-full resize-none rounded-xl border border-slate-200/90 bg-slate-50/60 px-3.5 py-2.5 text-xs font-semibold text-slate-800 placeholder-slate-400 outline-none transition focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-100"
             placeholder="Enter full address where service is required..."
           />
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+          <label className="block text-xs font-bold text-slate-700 mb-1.5">
             Requirement Details / काम का विवरण
           </label>
           <textarea
             value={form.description}
             onChange={(e) => update("description", e.target.value)}
-            rows={3}
-            className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm font-medium text-slate-800 placeholder-slate-400 outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-100"
-            placeholder="Describe what help you need, timing, landmark, etc..."
+            rows={2}
+            className="w-full resize-none rounded-xl border border-slate-200/90 bg-slate-50/60 px-3.5 py-2.5 text-xs font-semibold text-slate-800 placeholder-slate-400 outline-none transition focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-100"
+            placeholder="Describe what help you need (e.g. AC not cooling, need repair today)..."
           />
         </div>
 
         {status.message && (
           <div
-            className={`rounded-xl border px-3 py-2 text-xs font-semibold ${
+            className={`rounded-xl border p-3 text-xs font-bold ${
               status.type === "success"
                 ? "border-emerald-200 bg-emerald-50 text-emerald-800"
                 : "border-red-200 bg-red-50 text-red-800"
@@ -314,10 +328,10 @@ export default function NoProvidersLeadForm({
         <button
           type="submit"
           disabled={submitting || !targetCategory.trim() || targetPincode.length !== 6}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-indigo-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 shadow-md cursor-pointer hover:shadow-lg"
+          className="w-full flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white py-3 px-4 text-xs font-extrabold tracking-wide shadow-md hover:shadow-lg transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Send className="h-4 w-4 text-white" />
-          {submitting ? "Sending..." : "Notify Premium Partners"}
+          {submitting ? "Broadcasting Request…" : "🚀 Submit Lead & Broadcast Request"}
         </button>
       </form>
     </div>

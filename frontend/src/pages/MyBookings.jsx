@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { buyerOrdersApi } from "../api/orderApi";
 import apiClient from "../api/axiosConfig";
 import { useAuth } from "../context/AuthContext";
+import { useSocket } from "../context/SocketContext";
 import { loadRazorpayScript } from "../utils/razorpayLoader";
 import { createPaymentOrderApi } from "../api/walletApi";
 
@@ -45,6 +46,17 @@ export default function MyBookings() {
   const [disputeReasonText, setDisputeReasonText] = useState("");
 
   const { user } = useAuth();
+  const { socket } = useSocket();
+
+  const fetchSilently = async () => {
+    try {
+      const res = await buyerOrdersApi.list();
+      const list = res?.data?.orders || res?.orders || [];
+      setBookings(Array.isArray(list) ? list : []);
+    } catch (e) {
+      // silent background catch
+    }
+  };
 
   const refresh = async () => {
     try {
@@ -59,6 +71,28 @@ export default function MyBookings() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    refresh();
+  }, []);
+
+  useEffect(() => {
+    if (!socket) return;
+    const handleOrderUpdate = () => {
+      fetchSilently();
+    };
+    socket.on("order_updated", handleOrderUpdate);
+    return () => {
+      socket.off("order_updated", handleOrderUpdate);
+    };
+  }, [socket]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      fetchSilently();
+    }, 12000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     refresh();
@@ -221,15 +255,46 @@ export default function MyBookings() {
     }
   };
 
-  const handleSwitchToCash = async (orderId) => {
-    if (!window.confirm("Are you sure you want to change the payment method to Cash? / क्या आप वाकई भुगतान का माध्यम नकद करना चाहते हैं?")) return;
-    setBusyId(orderId);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectingBookingItem, setRejectingBookingItem] = useState(null);
+  const [rejectReasonText, setRejectReasonText] = useState("");
+
+  const openRejectQuotationModal = (booking) => {
+    setRejectingBookingItem(booking);
+    setRejectReasonText("");
+    setShowRejectModal(true);
+  };
+
+  const submitRejectQuotation = async () => {
+    if (!rejectReasonText.trim()) {
+      alert("Please enter a reason for declining the quotation. / कृपया कोटेशन अस्वीकार करने का कारण दर्ज करें।");
+      return;
+    }
+    const id = rejectingBookingItem.id;
+    setBusyId(id);
+    setShowRejectModal(false);
     try {
-      await apiClient.patch(`/orders/${orderId}/switch-to-cash`);
-      alert("Switched to Cash payment successfully! A Completion PIN has been generated for you.");
+      await buyerOrdersApi.rejectQuotation(id, rejectReasonText);
+      alert("Quotation declined. Technician has been notified to revise.");
       await refresh();
     } catch (e) {
-      alert(e?.response?.data?.message || "Failed to switch to Cash payment");
+      alert(e?.response?.data?.message || "Failed to decline quotation");
+    } finally {
+      setBusyId(null);
+      setRejectingBookingItem(null);
+    }
+  };
+
+  const handleSwitchPaymentMethod = async (orderId, targetMethod) => {
+    const methodLabel = targetMethod === "online" ? "Online Payment (UPI/Card)" : "Cash on Delivery";
+    if (!window.confirm(`Are you sure you want to change payment mode to ${methodLabel}? / क्या आप भुगतान का माध्यम ${methodLabel} करना चाहते हैं?`)) return;
+    setBusyId(orderId);
+    try {
+      await buyerOrdersApi.switchPaymentMethod(orderId, targetMethod);
+      alert(`Switched payment mode to ${targetMethod.toUpperCase()} successfully!`);
+      await refresh();
+    } catch (e) {
+      alert(e?.response?.data?.message || "Failed to switch payment method");
     } finally {
       setBusyId(null);
     }
@@ -544,7 +609,7 @@ export default function MyBookings() {
                         </Link>
                       )}
                       
-                      {booking.status === "quoted" && (booking.payment_method === "cash" ? !booking.completion_otp_code : booking.final_payment_status !== "paid") && (
+                      {booking.status === "quoted" && (
                         <>
                           <button
                             type="button"
@@ -567,37 +632,66 @@ export default function MyBookings() {
                             )}
                           </button>
                           
-                          {booking.payment_method === "online" && (
+                          {booking.payment_method === "online" ? (
                             <button
                               type="button"
                               disabled={busyId === booking.id}
-                              onClick={() => handleSwitchToCash(booking.id)}
-                              className="flex items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 px-4 py-2.5 text-xs font-bold text-amber-700 transition duration-300 w-full text-center cursor-pointer shadow-sm animate-pulse"
+                              onClick={() => handleSwitchPaymentMethod(booking.id, "cash")}
+                              className="flex items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 px-4 py-2.5 text-xs font-bold text-amber-700 transition duration-300 w-full text-center cursor-pointer shadow-sm"
                             >
                               💵 Pay in Cash instead
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              disabled={busyId === booking.id}
+                              onClick={() => handleSwitchPaymentMethod(booking.id, "online")}
+                              className="flex items-center justify-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 px-4 py-2.5 text-xs font-bold text-blue-700 transition duration-300 w-full text-center cursor-pointer shadow-sm"
+                            >
+                              💳 Pay Online instead (UPI/Card)
                             </button>
                           )}
 
                           <button
-                             type="button"
-                             disabled={busyId === booking.id}
-                             onClick={() => cancelBooking(booking)}
+                            type="button"
+                            disabled={busyId === booking.id}
+                            onClick={() => openRejectQuotationModal(booking)}
                             className="flex items-center justify-center gap-1.5 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 px-4 py-2.5 text-xs font-bold text-red-700 transition duration-300 w-full text-center disabled:opacity-50 cursor-pointer"
                           >
-                            Reject Quotation
+                            ❌ Decline Quotation
                           </button>
                         </>
                       )}
 
-                      {booking.status === "in_progress" && booking.payment_method === "online" && booking.final_payment_status !== "paid" && (
-                        <button
-                          type="button"
-                          disabled={busyId === booking.id}
-                          onClick={() => handleSwitchToCash(booking.id)}
-                          className="flex items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 px-4 py-2.5 text-xs font-bold text-amber-700 transition duration-300 w-full text-center cursor-pointer shadow-sm"
-                        >
-                          💵 Pay in Cash instead
-                        </button>
+                      {booking.status === "quote_rejected" && (
+                        <div className="w-full rounded-xl border border-amber-200 bg-amber-50 p-3 text-center">
+                          <span className="block text-[11px] font-bold text-amber-700 uppercase tracking-wider">⚠️ Quotation Declined</span>
+                          <p className="text-xs text-amber-800 font-semibold mt-1">
+                            Technician has been notified to send a revised quote.
+                          </p>
+                        </div>
+                      )}
+
+                      {booking.status === "in_progress" && booking.final_payment_status !== "paid" && (
+                        booking.payment_method === "online" ? (
+                          <button
+                            type="button"
+                            disabled={busyId === booking.id}
+                            onClick={() => handleSwitchPaymentMethod(booking.id, "cash")}
+                            className="flex items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 px-4 py-2.5 text-xs font-bold text-amber-700 transition duration-300 w-full text-center cursor-pointer shadow-sm"
+                          >
+                            💵 Pay in Cash instead
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={busyId === booking.id}
+                            onClick={() => handleSwitchPaymentMethod(booking.id, "online")}
+                            className="flex items-center justify-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 px-4 py-2.5 text-xs font-bold text-blue-700 transition duration-300 w-full text-center cursor-pointer shadow-sm"
+                          >
+                            💳 Pay Online instead (UPI/Card)
+                          </button>
+                        )
                       )}
 
                       {booking.status === "pending" && (
@@ -795,6 +889,90 @@ export default function MyBookings() {
                   className="flex-1 py-3 text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white rounded-xl active:scale-95 transition cursor-pointer text-center shadow-sm"
                 >
                   Submit Dispute / विवाद सबमिट करें
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Quotation Rejection Modal */}
+      {showRejectModal && rejectingBookingItem && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-fade-in text-slate-850">
+          <div className="w-full max-w-md rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden relative flex flex-col">
+            <div className="bg-slate-50 p-4 border-b border-slate-200 flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">❌</span>
+                <div className="text-left">
+                  <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Decline Quotation / कोटेशन अस्वीकार करें</h2>
+                  <p className="text-[10px] text-slate-500">Order #{rejectingBookingItem.order_number || rejectingBookingItem.id}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => {
+                  setShowRejectModal(false);
+                  setRejectingBookingItem(null);
+                }}
+                className="text-slate-400 hover:text-slate-600 text-sm cursor-pointer p-1.5"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 text-left">
+              <div className="space-y-1.5">
+                <span className="block text-[10px] text-slate-550 uppercase font-semibold">Quotation Total</span>
+                <p className="text-lg font-extrabold text-slate-800">
+                  ₹{Number(parseFloat(rejectingBookingItem.service_charge_amount || 0) + parseFloat(rejectingBookingItem.parts_cost_amount || 0) - parseFloat(rejectingBookingItem.discount_amount || 0)).toLocaleString("en-IN")}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-[10px] text-slate-500 uppercase font-semibold">
+                  Reason for Declining / अस्वीकार करने का कारण:
+                </label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {["Price too high", "Parts not required", "Want alternative quote", "Cancel service"].map((reasonPreset) => (
+                    <button
+                      key={reasonPreset}
+                      type="button"
+                      onClick={() => setRejectReasonText(reasonPreset)}
+                      className={`text-xs px-2.5 py-1 rounded-lg border font-semibold cursor-pointer ${
+                        rejectReasonText === reasonPreset
+                          ? "bg-blue-50 border-blue-500 text-blue-700"
+                          : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                      }`}
+                    >
+                      {reasonPreset}
+                    </button>
+                  ))}
+                </div>
+                <textarea
+                  rows={3}
+                  placeholder="Tell the provider why you're declining (e.g. Please reduce the parts cost) / कारण बताएं..."
+                  value={rejectReasonText}
+                  onChange={(e) => setRejectReasonText(e.target.value)}
+                  className="w-full text-xs bg-slate-50 border border-slate-200 hover:border-blue-500 focus:border-blue-500 rounded-xl p-3 text-slate-800 outline-none resize-none transition duration-200"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowRejectModal(false);
+                    setRejectingBookingItem(null);
+                  }}
+                  className="flex-1 py-3 text-xs font-bold bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl active:scale-95 transition cursor-pointer text-center"
+                >
+                  Back
+                </button>
+                <button
+                  type="button"
+                  onClick={submitRejectQuotation}
+                  className="flex-1 py-3 text-xs font-bold bg-red-600 hover:bg-red-700 text-white rounded-xl active:scale-95 transition cursor-pointer text-center shadow-sm"
+                >
+                  Decline Quotation
                 </button>
               </div>
             </div>

@@ -3,6 +3,7 @@ import { Component, useEffect, useMemo, useRef, useState, useCallback } from "re
 import { createPortal } from "react-dom";
 import { API_BASE_URL } from "../config/api";
 import { useNearbyLocation } from "../hooks/useNearbyLocation";
+import { useSocket } from "../context/SocketContext";
 
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -1023,6 +1024,47 @@ export default function NearbyServices({
     }
   }, []);
 
+  const { socket } = useSocket();
+
+  useEffect(() => {
+    if (!socket) return;
+    const handleAvailabilityChanged = (data) => {
+      if (data && (data.seller_id || data.user_id)) {
+        setSellers((prevSellers) =>
+          prevSellers.map((s) => {
+            const sid = s.id || s.sellerId || s.seller_id;
+            const uid = s.user_id || s.userId;
+            if (String(sid) === String(data.seller_id) || (uid && String(uid) === String(data.user_id))) {
+              return { ...s, is_available: data.is_available ? 1 : 0, isAvailable: data.is_available };
+            }
+            return s;
+          })
+        );
+      }
+    };
+    socket.on("seller_availability_changed", handleAvailabilityChanged);
+    return () => {
+      socket.off("seller_availability_changed", handleAvailabilityChanged);
+    };
+  }, [socket]);
+
+  // Auto-zoom map camera when search radius expands so sellers in expanded area are fetched & displayed
+  useEffect(() => {
+    if (mapRef.current && buyerPos) {
+      let targetZoom = 13;
+      if (radiusKm >= 50) targetZoom = 8;
+      else if (radiusKm >= 35) targetZoom = 9;
+      else if (radiusKm >= 20) targetZoom = 11;
+      else if (radiusKm >= 10) targetZoom = 12;
+
+      try {
+        mapRef.current.setView([buyerPos.lat, buyerPos.lng], targetZoom, { animate: true });
+      } catch (e) {
+        console.warn("Map view auto-zoom warning:", e);
+      }
+    }
+  }, [radiusKm, buyerPos]);
+
   const onMapReady = useCallback(async (map) => {
     setMapInitialized(true);
     setGeoLoading(true);
@@ -1352,7 +1394,7 @@ export default function NearbyServices({
   ]);
 
   const handleLocationSearchSubmit = async (e) => {
-    e.preventDefault();
+    if (e?.preventDefault) e.preventDefault();
     const val = locationQuery.trim();
     if (!val) return;
     if (/^\d{6}$/.test(val)) {
@@ -2543,26 +2585,13 @@ export default function NearbyServices({
           )}
 
           {!apiLoading && nearby.length === 0 && (
-            <div className="w-full py-10 px-4 text-center border border-slate-200/80 rounded-2xl bg-white shadow-xs col-span-full">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-blue-50 text-blue-600 mb-3 border border-blue-100">
-                <MapPin className="h-5 w-5 text-blue-600" />
-              </div>
-              <h4 className="text-sm font-extrabold text-slate-800">
-                No service providers found within {radiusKm} km
-              </h4>
-              <p className="mt-1 text-xs text-slate-500 max-w-xs mx-auto font-medium">
-                Try expanding your search radius to find providers in surrounding areas.
-              </p>
-              {radiusKm < 50 && (
-                <button
-                  type="button"
-                  onClick={() => setRadiusKm((prev) => Math.min(prev + 15, 50))}
-                  className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-xs font-extrabold rounded-xl shadow-md hover:bg-blue-700 active:scale-95 transition cursor-pointer"
-                >
-                  <Radar className="h-4 w-4 text-emerald-400 animate-pulse" />
-                  <span>Expand Search Radius (+15 km)</span>
-                </button>
-              )}
+            <div className="w-full bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden col-span-full">
+              <NoProvidersLeadForm
+                category={selectedCategory || search || ""}
+                pincode={pincode || ""}
+                radiusKm={radiusKm}
+                buyerPos={buyerPos}
+              />
             </div>
           )}
 

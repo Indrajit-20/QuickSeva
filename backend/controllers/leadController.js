@@ -92,6 +92,7 @@ exports.submitLead = async (req, res) => {
 
     const leadId = leadResult.insertId;
 
+    // Find PREMIUM sellers matching the category or pincode/area
     const [premiumSellers] = await conn.query(
       `SELECT DISTINCT s.id AS seller_id, s.user_id
        FROM sellers s
@@ -100,12 +101,14 @@ exports.submitLead = async (req, res) => {
        LEFT JOIN seller_categories sc ON sc.seller_id = s.id
        LEFT JOIN categories sc_c ON sc_c.id = sc.category_id
        WHERE s.is_premium = 1
+         AND s.plan IN ('standard', 'pro')
          AND (s.premium_expires_at IS NULL OR s.premium_expires_at > NOW())
          AND u.is_active = 1
-         AND (u.pincode = ? OR COALESCE(s.location_address, u.address, '') LIKE ?)
          AND (
            LOWER(c.name) = LOWER(?)
            OR LOWER(sc_c.name) = LOWER(?)
+           OR u.pincode = ?
+           OR COALESCE(s.location_address, u.address, '') LIKE ?
            OR EXISTS (
              SELECT 1
              FROM services svc
@@ -116,10 +119,10 @@ exports.submitLead = async (req, res) => {
            )
          )`,
       [
+        payload.category,
+        payload.category,
         payload.pincode,
         `%${payload.pincode}%`,
-        payload.category,
-        payload.category,
         `%${payload.category.toLowerCase()}%`,
         payload.category,
       ],
@@ -137,11 +140,34 @@ exports.submitLead = async (req, res) => {
          VALUES (?, ?, ?, 'system', ?)`,
         [
           seller.user_id,
-          `New ${payload.category} lead`,
-          `${payload.customerName} needs ${payload.category} service in ${payload.pincode}.`,
+          `🔔 New ${payload.category} Lead`,
+          `${payload.customerName} needs ${payload.category} service in pincode ${payload.pincode}. Open Leads tab to view details.`,
           leadId,
         ],
       );
+    }
+
+    // Broadcast real-time Socket.IO event to premium sellers
+    try {
+      const { broadcastEvent, emitToUser } = require("../utils/socketService");
+      broadcastEvent("new_lead_created", {
+        lead_id: leadId,
+        category: payload.category,
+        pincode: payload.pincode,
+        customer_name: payload.customerName,
+        premium_only: true,
+      });
+      // Also emit directly to each matched premium seller for instant notification
+      for (const seller of premiumSellers) {
+        emitToUser(seller.user_id, "new_lead_for_you", {
+          lead_id: leadId,
+          category: payload.category,
+          pincode: payload.pincode,
+          customer_name: payload.customerName,
+        });
+      }
+    } catch (e) {
+      console.warn("Socket broadcast warning on submitLead:", e.message);
     }
 
     await conn.commit();
@@ -154,7 +180,9 @@ exports.submitLead = async (req, res) => {
         matchedPremiumSellers: premiumSellers.length,
         planPrice: PRO_PLAN_PRICE,
       },
-      "Lead submitted successfully",
+      premiumSellers.length > 0
+        ? `Lead submitted! ${premiumSellers.length} premium partner(s) notified instantly.`
+        : "Lead submitted! Premium partners in your area will be notified when they come online.",
       200,
     );
   } catch (err) {
@@ -168,17 +196,35 @@ exports.submitLead = async (req, res) => {
 
 exports.getSellerLeads = async (req, res) => {
   try {
-    const [[userSeller]] = await pool.query("SELECT id FROM sellers WHERE user_id = ?", [req.user.id]);
-    const mySellerId = userSeller?.id || null;
+    const [[userSeller]] = await pool.query(
+      "SELECT id, is_premium, plan, premium_expires_at FROM sellers WHERE user_id = ?",
+      [req.user.id]
+    );
+    if (!userSeller) return errorRes(res, "Seller profile not found", 403);
+
+    const mySellerId = userSeller.id;
+    const hasLeadsAccess =
+      userSeller.is_premium === 1 &&
+      ['standard', 'pro'].includes(userSeller.plan) &&
+      (!userSeller.premium_expires_at || new Date(userSeller.premium_expires_at) > new Date());
+
+    // Non-premium sellers get a gated response with 0 leads
+    if (!hasLeadsAccess && req.user?.role !== "admin") {
+      return successRes(res, {
+        leads: [],
+        isPremium: false,
+        premiumRequired: true,
+        currentPlan: userSeller.plan || 'none',
+        message: userSeller.plan === 'basic'
+          ? "Lead Alerts are available with Standard & Pro plans. Upgrade your plan to unlock direct customer requests!"
+          : "Upgrade to Standard or Pro plan to unlock customer leads in your area. Get direct access to high-intent buyer requests!",
+      });
+    }
 
     let sellerId = mySellerId;
     if (req.user?.role === "admin" && req.query.sellerId) {
       sellerId = Number(req.query.sellerId);
-    } else if (req.query.sellerId && Number(req.query.sellerId) !== mySellerId) {
-      return errorRes(res, "Unauthorized access to seller leads", 403);
     }
-
-    if (!sellerId) return errorRes(res, "Seller profile not found", 403);
 
     const [rows] = await pool.query(
       `SELECT
@@ -218,6 +264,8 @@ exports.getSellerLeads = async (req, res) => {
         longitude: lead.longitude === null ? null : Number(lead.longitude),
         radiusKm: Number(lead.radiusKm || 0),
       })),
+      isPremium: true,
+      premiumRequired: false,
     });
   } catch (err) {
     console.error("getSellerLeads error:", err);
@@ -227,11 +275,22 @@ exports.getSellerLeads = async (req, res) => {
 
 exports.getUnreadLeadsCount = async (req, res) => {
   try {
-
     let sellerId = null;
     if (req.user?.id) {
-      const [[seller]] = await pool.query("SELECT id FROM sellers WHERE user_id = ?", [req.user.id]);
-      sellerId = seller?.id || null;
+      const [[seller]] = await pool.query(
+        "SELECT id, is_premium, plan, premium_expires_at FROM sellers WHERE user_id = ?",
+        [req.user.id]
+      );
+      if (!seller) return successRes(res, { count: 0 });
+
+      // Only Standard/Pro sellers get unread count
+      const hasLeadsAccess =
+        seller.is_premium === 1 &&
+        ['standard', 'pro'].includes(seller.plan) &&
+        (!seller.premium_expires_at || new Date(seller.premium_expires_at) > new Date());
+      if (!hasLeadsAccess) return successRes(res, { count: 0 });
+
+      sellerId = seller.id;
     }
 
     if (!sellerId) return successRes(res, { count: 0 });
@@ -247,3 +306,4 @@ exports.getUnreadLeadsCount = async (req, res) => {
     return errorRes(res, "Failed to fetch unread leads count");
   }
 };
+

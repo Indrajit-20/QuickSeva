@@ -1,5 +1,6 @@
 import { createContext, useContext, useCallback, useMemo, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
+import { useSocket } from "./SocketContext";
 import { getWalletApi, getTransactionsApi, topUpWalletApi } from "../api/walletApi";
 
 const WalletContext = createContext(null);
@@ -61,6 +62,18 @@ export function WalletProvider({ children }) {
       setTransactions([]);
     }
   }, [isAuthenticated, user, refreshWallet]);
+
+  const { socket } = useSocket();
+  useEffect(() => {
+    if (!socket) return;
+    const handlePaymentUpdate = () => {
+      refreshWallet();
+    };
+    socket.on("payment_updated", handlePaymentUpdate);
+    return () => {
+      socket.off("payment_updated", handlePaymentUpdate);
+    };
+  }, [socket, refreshWallet]);
 
   const value = useMemo(
     () => ({

@@ -205,9 +205,26 @@ exports.toggleAvailability = async (req, res) => {
       is_available: newStatus,
       availability_last_updated_at: new Date()
     });
+    await UserModel.update(req.user.id, { is_available: newStatus });
+
+    // Emit real-time socket events
+    try {
+      const { broadcastEvent, emitToUser } = require("../utils/socketService");
+      broadcastEvent("seller_availability_changed", {
+        seller_id: seller.id,
+        user_id: req.user.id,
+        is_available: Boolean(newStatus),
+      });
+      emitToUser(req.user.id, "user_availability_changed", {
+        is_available: Boolean(newStatus),
+      });
+    } catch (e) {
+      console.warn("Socket broadcast warning on toggleAvailability:", e.message);
+    }
+
     return successRes(
       res,
-      { is_available: !!newStatus },
+      { is_available: Boolean(newStatus) },
       newStatus ? "You are now available" : "You are now offline",
     );
   } catch (err) {

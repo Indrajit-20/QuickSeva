@@ -173,7 +173,7 @@ const Login = () => {
               </label>
               <Link
                 to="/forgot-password"
-                className="text-xs font-semibold"
+                className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline transition-colors"
                 style={{ backgroundImage: "none" }}
               >
                 Forgot Password?
