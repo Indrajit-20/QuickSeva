@@ -208,8 +208,13 @@ exports.getSellerLeads = async (req, res) => {
       ['standard', 'pro'].includes(userSeller.plan) &&
       (!userSeller.premium_expires_at || new Date(userSeller.premium_expires_at) > new Date());
 
-    // Non-premium sellers get a gated response with 0 leads
+    // Non-premium sellers get a gated response with 0 leads, but mark notifications as VIEWED so badge is cleared
     if (!hasLeadsAccess && req.user?.role !== "admin") {
+      await pool.query(
+        "UPDATE seller_lead_notifications SET status = 'VIEWED' WHERE seller_id = ? AND status = 'NEW'",
+        [mySellerId]
+      );
+
       return successRes(res, {
         leads: [],
         isPremium: false,

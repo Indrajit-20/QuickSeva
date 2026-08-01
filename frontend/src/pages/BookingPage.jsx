@@ -165,6 +165,12 @@ export default function BookingPage() {
   const [errors, setErrors] = useState({});
   const [bookedSlots, setBookedSlots] = useState([]);
 
+  useEffect(() => {
+    if (confirmedBooking || submitError) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [confirmedBooking, submitError]);
+
   const isSlotBooked = (date, slot) => {
     if (!date || !slot || !bookedSlots.length) return false;
     const candidateTimeStr = buildScheduledAt(date, slot);
@@ -354,6 +360,11 @@ export default function BookingPage() {
   const handleSubmit = (e) => {
     e.preventDefault();
     setSubmitError("");
+    if (seller && (seller.is_available === 0 || seller.is_available === false)) {
+      setSubmitError("This service provider is currently offline and not accepting new bookings. Please try again when they come online or choose another partner.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
     if (!seller || !validate(true)) {
       setSubmitError("Please fill in your delivery address and select an available time slot.");
       return;
@@ -520,10 +531,16 @@ export default function BookingPage() {
 
   if (confirmedBooking) {
     return (
-      <main className="min-h-screen bg-slate-50 py-12 px-4 flex items-center justify-center">
-        <div className="mx-auto w-full max-w-md bg-white rounded-3xl border border-slate-200 p-8 text-center shadow-md relative overflow-hidden">
+      <main className="min-h-screen bg-slate-50 py-8 px-4 flex items-start justify-center">
+        <div className="mx-auto w-full max-w-md bg-white rounded-3xl border border-emerald-200 p-8 text-center shadow-lg relative overflow-hidden mt-2">
+          {/* Prominent Top Confirmation Banner */}
+          <div className="mb-6 rounded-2xl bg-emerald-500 text-white p-4 font-bold text-base flex items-center justify-center gap-2 shadow-md">
+            <span className="text-xl">✅</span>
+            <span>Booking Done / बुकिंग सफलतापूर्वक हो गई!</span>
+          </div>
+
           <div className="text-6xl animate-bounce">🎉</div>
-          <h1 className="mt-4 text-2xl font-black text-slate-900">
+          <h1 className="mt-3 text-2xl font-black text-slate-900">
             Booking Confirmed!
           </h1>
           <p className="mt-2 text-slate-500 text-sm">Your service request has been sent to the partner.</p>
@@ -619,6 +636,21 @@ export default function BookingPage() {
             )}
           </div>
 
+          {/* Offline Banner if Seller is Offline */}
+          {seller && (seller.is_available === 0 || seller.is_available === false) && (
+            <div className="rounded-2xl bg-red-50 border border-red-200/90 p-4 text-red-950 text-xs font-semibold flex items-start gap-3 shadow-xs">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-100 text-red-700 font-extrabold text-base mt-0.5">
+                🚫
+              </div>
+              <div className="space-y-1">
+                <p className="font-bold text-red-950 text-sm">Provider is Currently Offline / प्रदाता वर्तमान में ऑफ़लाइन हैं</p>
+                <p className="text-xs text-red-800 font-medium leading-relaxed">
+                  This partner is currently offline and not accepting new bookings right now. New bookings are disabled for this partner. Please check back when they are online or choose another partner.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* ── 2. Booking Inputs Grid (Date, Time, Mobile, Address) ── */}
           <div className="space-y-3.5">
             <h2 className="text-sm font-bold text-slate-800 tracking-tight border-b border-slate-100 pb-2 flex items-center gap-2">
@@ -643,6 +675,40 @@ export default function BookingPage() {
                   }}
                   minDate={getMinDate()}
                   maxDate={getMaxDate()}
+                  mapDays={({ date }) => {
+                    if (!seller) return;
+                    const y = date.year;
+                    const m = String(date.month.number).padStart(2, "0");
+                    const d = String(date.day).padStart(2, "0");
+                    const yyyymmdd = `${y}-${m}-${d}`;
+
+                    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+                    const dayName = dayNames[date.weekDay.index];
+
+                    let availableDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+                    if (seller.available_days) {
+                      try {
+                        availableDays = typeof seller.available_days === "string" ? JSON.parse(seller.available_days) : seller.available_days;
+                      } catch {}
+                    }
+
+                    let unavailableDates = [];
+                    if (seller.unavailable_dates) {
+                      try {
+                        unavailableDates = typeof seller.unavailable_dates === "string" ? JSON.parse(seller.unavailable_dates) : seller.unavailable_dates;
+                      } catch {}
+                    }
+
+                    const isOnLeave = Array.isArray(unavailableDates) && unavailableDates.includes(yyyymmdd);
+                    const isOffDay = Array.isArray(availableDays) && !availableDays.includes(dayName);
+
+                    if (isOnLeave || isOffDay) {
+                      return {
+                        disabled: true,
+                        style: { color: "#cbd5e1", backgroundColor: "#f8fafc", cursor: "not-allowed", textDecoration: "line-through" },
+                      };
+                    }
+                  }}
                   format="DD-MM-YYYY"
                   portal
                   inputClass="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-700 text-[13px] font-normal focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition cursor-pointer"
@@ -848,10 +914,16 @@ export default function BookingPage() {
           {/* ── 5. Submit Button ── */}
           <button
             type="submit"
-            disabled={bookingLoading}
-            className="w-full rounded-xl bg-blue-600 hover:bg-blue-700 py-3 px-5 text-sm font-semibold text-white shadow-sm transition active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer border-0"
+            disabled={bookingLoading || Boolean(seller && (seller.is_available === 0 || seller.is_available === false))}
+            className={`w-full rounded-xl py-3.5 px-5 text-sm font-bold shadow-sm transition border-0 ${
+              seller && (seller.is_available === 0 || seller.is_available === false)
+                ? "bg-slate-200 text-slate-500 cursor-not-allowed border border-slate-300 opacity-85"
+                : "bg-blue-600 hover:bg-blue-700 text-white cursor-pointer active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+            }`}
           >
-            {bookingLoading ? (
+            {seller && (seller.is_available === 0 || seller.is_available === false) ? (
+              "🚫 Provider Offline — Cannot Book / प्रदाता ऑफ़लाइन हैं"
+            ) : bookingLoading ? (
               <span className="flex items-center justify-center gap-2">
                 <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
                 Placing Booking...

@@ -1,50 +1,67 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { User, Store, Sparkles, Layers } from "lucide-react";
 
-const WorkspaceSwitcher = ({ layout = "dropdown" }) => {
+const WorkspaceSwitcher = ({ layout = "dropdown", onClose }) => {
   const { isSeller, activeRole, switchRole } = useAuth();
+  const navigate = useNavigate();
 
   const isUserActive = activeRole === "user";
   const isSellerActive = activeRole === "seller";
 
+  const handleUserClick = () => {
+    onClose?.();
+    if (!isUserActive) switchRole("user");
+  };
+
+  const handleSellerClick = () => {
+    onClose?.();
+    if (!isSeller) {
+      navigate("/become-seller");
+    } else if (!isSellerActive) {
+      switchRole("seller");
+    }
+  };
+
   if (layout === "sidebar") {
     return (
-      <div className="py-2.5">
-        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5 px-0.5">
-          Workspace / कार्यक्षेत्र
-        </p>
-        <div className="relative flex rounded-xl bg-slate-100 p-0.5 border border-slate-200">
-          {/* Sliding indicator */}
+      <div className="py-3 px-1">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1">
+            <Layers className="w-3 h-3 text-indigo-500" />
+            Workspace
+          </span>
+        </div>
+        <div className="relative flex rounded-2xl bg-slate-100/90 p-1 border border-slate-200/80 shadow-inner">
           <div
-            className={`absolute top-0.5 bottom-0.5 left-0.5 w-[calc(50%-2px)] rounded-lg bg-white shadow-sm transition-transform duration-200 ease-out ${
-              isSellerActive ? "translate-x-full" : "translate-x-0"
+            className={`absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] rounded-xl transition-all duration-300 ease-out shadow-md ${
+              isSellerActive
+                ? "translate-x-full bg-gradient-to-r from-indigo-600 to-purple-600"
+                : "translate-x-0 bg-gradient-to-r from-blue-600 to-indigo-600"
             }`}
           />
           
           <button
             type="button"
-            onClick={() => !isUserActive && switchRole("user")}
-            className={`relative z-10 flex flex-1 items-center justify-center gap-1.5 py-2 text-xs font-extrabold transition-colors duration-200 ${
-              isUserActive ? "text-emerald-700" : "text-slate-500 hover:text-slate-700"
+            onClick={handleUserClick}
+            className={`relative z-10 flex flex-1 items-center justify-center gap-1.5 py-2 text-xs font-black transition-all duration-200 cursor-pointer ${
+              isUserActive ? "text-white" : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            👤 Customer
+            <User className="w-3.5 h-3.5" />
+            <span>Customer</span>
           </button>
           
           <button
             type="button"
-            onClick={() => {
-              if (!isSeller) {
-                switchRole("seller");
-              } else if (!isSellerActive) {
-                switchRole("seller");
-              }
-            }}
-            className={`relative z-10 flex flex-1 items-center justify-center gap-1.5 py-2 text-xs font-extrabold transition-colors duration-200 ${
-              isSellerActive ? "text-indigo-700" : "text-slate-500 hover:text-slate-700"
+            onClick={handleSellerClick}
+            className={`relative z-10 flex flex-1 items-center justify-center gap-1.5 py-2 text-xs font-black transition-all duration-200 cursor-pointer ${
+              isSellerActive ? "text-white" : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            🏪 {isSeller ? "Seller" : "Join"}
+            <Store className="w-3.5 h-3.5" />
+            <span>{isSeller ? "Seller" : "Join Partner"}</span>
           </button>
         </div>
       </div>
@@ -52,43 +69,44 @@ const WorkspaceSwitcher = ({ layout = "dropdown" }) => {
   }
 
   return (
-    <div className="px-4 py-2.5 border-t border-b border-slate-100 bg-slate-50/50 flex items-center justify-between gap-3">
-      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 shrink-0">
-        Workspace / कार्यक्षेत्र
-      </span>
+    <div className="px-5 py-3 border-y border-slate-100 bg-slate-50/70 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+      <div className="flex items-center gap-1.5 text-slate-500">
+        <Sparkles className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+          WORKSPACE / कार्यक्षेत्र
+        </span>
+      </div>
 
-      <div className="relative flex flex-1 rounded-xl bg-slate-200/80 p-0.5 border border-slate-300/40 max-w-[210px]">
+      <div className="relative flex flex-1 rounded-2xl bg-slate-200/80 p-1 border border-slate-300/50 max-w-none sm:max-w-[220px]">
         {/* Sliding indicator */}
         <div
-          className={`absolute top-0.5 bottom-0.5 left-0.5 w-[calc(50%-2px)] rounded-lg bg-white shadow-sm transition-transform duration-200 ease-out ${
-            isSellerActive ? "translate-x-full" : "translate-x-0"
+          className={`absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] rounded-xl transition-all duration-300 ease-out shadow-sm ${
+            isSellerActive
+              ? "translate-x-full bg-gradient-to-r from-indigo-600 to-purple-600"
+              : "translate-x-0 bg-gradient-to-r from-blue-600 to-indigo-600"
           }`}
         />
         
         <button
           type="button"
-          onClick={() => !isUserActive && switchRole("user")}
-          className={`relative z-10 flex flex-1 items-center justify-center py-1.5 text-xs font-black transition-colors duration-200 cursor-pointer ${
-            isUserActive ? "text-emerald-700" : "text-slate-500 hover:text-slate-700"
+          onClick={handleUserClick}
+          className={`relative z-10 flex flex-1 items-center justify-center gap-1.5 py-1.5 px-3 text-xs font-black transition-colors duration-200 cursor-pointer ${
+            isUserActive ? "text-white" : "text-slate-600 hover:text-slate-900"
           }`}
         >
-          👤 Customer
+          <User className="w-3.5 h-3.5 shrink-0" />
+          <span>Customer</span>
         </button>
         
         <button
           type="button"
-          onClick={() => {
-            if (!isSeller) {
-              switchRole("seller");
-            } else if (!isSellerActive) {
-              switchRole("seller");
-            }
-          }}
-          className={`relative z-10 flex flex-1 items-center justify-center py-1.5 text-xs font-black transition-colors duration-200 cursor-pointer ${
-            isSellerActive ? "text-indigo-700" : "text-slate-500 hover:text-slate-700"
+          onClick={handleSellerClick}
+          className={`relative z-10 flex flex-1 items-center justify-center gap-1.5 py-1.5 px-3 text-xs font-black transition-colors duration-200 cursor-pointer ${
+            isSellerActive ? "text-white" : "text-slate-600 hover:text-slate-900"
           }`}
         >
-          🏪 {isSeller ? "Seller" : "Join"}
+          <Store className="w-3.5 h-3.5 shrink-0" />
+          <span>{isSeller ? "Seller" : "Join"}</span>
         </button>
       </div>
     </div>

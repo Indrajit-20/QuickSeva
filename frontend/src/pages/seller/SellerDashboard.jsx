@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { formatCurrency, statusClasses } from "./sellerData";
 import { useAuth } from "../../context/AuthContext";
+import { useSocket } from "../../context/SocketContext";
 import { sellerOrdersApi } from "../../api/orderApi";
 import { Link } from "react-router-dom";
 import { isPremiumActive } from "../../utils/premium";
@@ -20,10 +21,21 @@ import apiClient from "../../api/axiosConfig";
 
 export default function SellerDashboard() {
   const { user, updateUser } = useAuth();
+  const { socket } = useSocket();
 
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const fetchSilently = async () => {
+    try {
+      const res = await sellerOrdersApi.list();
+      const list = res?.data?.orders || res?.orders || [];
+      setOrders(Array.isArray(list) ? list : []);
+    } catch {
+      // silent catch
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -43,6 +55,28 @@ export default function SellerDashboard() {
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  useEffect(() => {
+    if (!socket) return;
+    const handleUpdate = () => {
+      fetchSilently();
+    };
+    socket.on("order_updated", handleUpdate);
+    socket.on("order_created", handleUpdate);
+    socket.on("new_notification", handleUpdate);
+    return () => {
+      socket.off("order_updated", handleUpdate);
+      socket.off("order_created", handleUpdate);
+      socket.off("new_notification", handleUpdate);
+    };
+  }, [socket]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      fetchSilently();
+    }, 5000);
+    return () => clearInterval(timer);
   }, []);
 
   const completed = orders.filter((o) => o.status === "completed");

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import apiClient from "../api/axiosConfig";
+import { useSocket } from "../context/SocketContext";
 
 const FALLBACK_ACTIVITIES = [
   { name: "Sai Barath", role: "seller", category_name: "Civil Contractor", city: "Kanchipuram", created_at: new Date(Date.now() - 6 * 3600 * 1000).toISOString() },
@@ -25,32 +26,63 @@ const timeAgo = (dateString) => {
   return `${days} day${days > 1 ? "s" : ""} ago`;
 };
 
+const isWithin24Hours = (dateString) => {
+  if (!dateString) return false;
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now - date;
+  return diffMs >= 0 && diffMs <= 24 * 60 * 60 * 1000;
+};
+
 const ActivityNotification = () => {
+  const { socket } = useSocket();
   const [activities, setActivities] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
   const [isClosed, setIsClosed] = useState(false);
 
   useEffect(() => {
+    if (!socket) return;
+
+    const handleNewRegistration = (newUser) => {
+      if (!newUser || !newUser.name) return;
+      setActivities((prev) => [newUser, ...prev]);
+      setCurrentIndex(0);
+      setIsClosed(false);
+      setIsVisible(true);
+    };
+
+    socket.on("new_user_registered", handleNewRegistration);
+    return () => {
+      socket.off("new_user_registered", handleNewRegistration);
+    };
+  }, [socket]);
+
+  useEffect(() => {
     const fetchActivities = async () => {
       try {
         const response = await apiClient.get("/nearby/activities");
+        let list = [];
         if (response.data && response.data.success && response.data.data) {
           const fetched = response.data.data.activities || [];
-          // Deduplicate fallback activities so it looks organic
           const combined = [...fetched];
           FALLBACK_ACTIVITIES.forEach((fb) => {
             if (!combined.some((item) => item.name === fb.name)) {
               combined.push(fb);
             }
           });
-          setActivities(combined);
+          list = combined;
         } else {
-          setActivities(FALLBACK_ACTIVITIES);
+          list = FALLBACK_ACTIVITIES;
         }
+
+        // Strictly filter to registrations in the last 24 hours only
+        const recent24h = list.filter((item) => isWithin24Hours(item.created_at));
+        setActivities(recent24h);
       } catch (error) {
         console.error("Error fetching activities:", error);
-        setActivities(FALLBACK_ACTIVITIES);
+        const recent24h = FALLBACK_ACTIVITIES.filter((item) => isWithin24Hours(item.created_at));
+        setActivities(recent24h);
       }
     };
     fetchActivities();

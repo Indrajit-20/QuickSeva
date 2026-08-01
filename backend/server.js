@@ -1,7 +1,11 @@
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
-require("dotenv").config();
+require("dotenv").config({
+  path: process.env.NODE_ENV === "production"
+    ? ".env.production"
+    : (process.env.USE_RAILWAY === "true" ? ".env.railway" : ".env.local"),
+});
 
 const { connectDB } = require("./config/db");
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");

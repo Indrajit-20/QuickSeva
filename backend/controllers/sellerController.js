@@ -205,7 +205,6 @@ exports.toggleAvailability = async (req, res) => {
       is_available: newStatus,
       availability_last_updated_at: new Date()
     });
-    await UserModel.update(req.user.id, { is_available: newStatus });
 
     // Emit real-time socket events
     try {
@@ -228,6 +227,7 @@ exports.toggleAvailability = async (req, res) => {
       newStatus ? "You are now available" : "You are now offline",
     );
   } catch (err) {
+    console.error("toggleAvailability error details:", err);
     return errorRes(res, "Failed to toggle availability");
   }
 };

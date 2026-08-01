@@ -88,12 +88,24 @@ const Navbar = () => {
     return () => window.removeEventListener("open-global-search", handleOpenGlobalSearch);
   }, []);
 
+  const handleHomeClick = (e) => {
+    try {
+      sessionStorage.removeItem("qs_nearby_search_cache");
+    } catch {}
+    if (window.location.pathname === "/" && window.location.search) {
+      e?.preventDefault?.();
+      window.location.href = "/";
+    } else {
+      window.scrollTo({ top: 0, behavior: "instant" });
+    }
+  };
+
   return (
     <nav className="sticky top-0 z-50 border-b border-[#e5e7eb] bg-white shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-14">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2" onClick={() => window.scrollTo({ top: 0, behavior: "instant" })}>
+          <Link to="/" className="flex items-center gap-2" onClick={handleHomeClick}>
             <span className="text-xl sm:text-2xl font-bold text-[#0284c7] tracking-tight"
               style={{ fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif" }}>
               QuickSeva
@@ -113,7 +125,7 @@ const Navbar = () => {
           <div className="hidden md:flex items-center space-x-6">
             <Link
               to="/"
-              onClick={() => window.scrollTo({ top: 0, behavior: "instant" })}
+              onClick={handleHomeClick}
               className="flex items-center gap-1.5 text-sm font-medium text-slate-700 transition-colors duration-200 hover:text-[#0284c7]"
             >
               <MapPin className="h-3.5 w-3.5 text-rose-500 shrink-0" />
@@ -275,9 +287,9 @@ const Navbar = () => {
 
             <Link
               to="/"
-              onClick={() => {
+              onClick={(e) => {
                 setIsMenuOpen(false);
-                window.scrollTo({ top: 0, behavior: "instant" });
+                handleHomeClick(e);
               }}
               className="flex items-center gap-2 rounded-lg px-3 py-2 font-semibold text-[#1a1a1a] transition-colors hover:bg-[#f8f9fb] hover:text-[#4f46e5]"
             >

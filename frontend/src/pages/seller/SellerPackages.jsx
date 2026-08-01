@@ -201,6 +201,7 @@ export default function SellerPackages() {
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [toast, setToast] = useState("");
   const [processing, setProcessing] = useState(false);
+  const [modalError, setModalError] = useState("");
 
   const [invoiceOpen, setInvoiceOpen] = useState(false);
   const [invoice, setInvoice] = useState(null);
@@ -283,12 +284,14 @@ export default function SellerPackages() {
 
   const openConfirmation = (plan) => {
     setToast("");
+    setModalError("");
     setSelectedPlan(plan);
   };
 
   const closeConfirmation = useCallback(() => {
     if (processing) return;
     setSelectedPlan(null);
+    setModalError("");
   }, [processing]);
 
   const handleAddFundsSuccess = useCallback(() => {
@@ -337,27 +340,37 @@ export default function SellerPackages() {
     if (!selectedPlan || !purchasePreview || processing) return;
 
     setProcessing(true);
+    setModalError("");
 
     try {
-      // 1. Load Razorpay script
-      const isLoaded = await loadRazorpayScript();
-      if (!isLoaded) {
-        setToast("❌ Razorpay SDK failed to load. Please check your internet connection.");
+      // 1. Load Razorpay script with timeout + retry
+      const loadResult = await loadRazorpayScript({ timeoutMs: 15000, retries: 1 });
+      if (!loadResult.loaded) {
+        setModalError(loadResult.error || "Razorpay SDK failed to load. Please check your internet connection.");
         setProcessing(false);
         return;
       }
 
       // 2. Create payment order on backend
-      const orderRes = await createPaymentOrderApi(selectedPlan.price, "premium_package", selectedPlan.id);
+      let orderRes;
+      try {
+        orderRes = await createPaymentOrderApi(selectedPlan.price, "premium_package", selectedPlan.id);
+      } catch (apiErr) {
+        const msg = apiErr?.response?.data?.message || "Could not reach QuickSeva server. Please try again.";
+        setModalError(msg);
+        setProcessing(false);
+        return;
+      }
+
       if (!orderRes || !orderRes.success) {
-        setToast(orderRes?.message || "❌ Failed to create payment order");
+        setModalError(orderRes?.message || "Failed to create payment order. Please try again.");
         setProcessing(false);
         return;
       }
 
       const orderData = orderRes.data;
 
-      // 3. Launch Razorpay modal
+      // 3. Launch Razorpay modal — wrapped in try/catch for crash safety
       const options = {
         key: import.meta.env.VITE_RAZORPAY_KEY_ID,
         amount: orderData.amount,
@@ -368,6 +381,7 @@ export default function SellerPackages() {
         handler: async function (response) {
           try {
             setProcessing(true);
+            setModalError("");
             // 4. Verify payment on backend
             const verifyRes = await verifyPaymentApi({
               razorpay_payment_id: response.razorpay_payment_id,
@@ -422,15 +436,16 @@ export default function SellerPackages() {
               
               await refreshWallet();
               setSelectedPlan(null);
+              setModalError("");
               setToast(
                 `✅ ${selectedPlan.name} plan active until ${formatDate(updatedPremium.premium_expires_at)}.`,
               );
             } else {
-              setToast(verifyRes?.message || "❌ Payment verification failed");
+              setModalError(verifyRes?.message || "Payment verification failed. Contact support if amount was deducted.");
             }
           } catch (err) {
             console.error("Verification error:", err);
-            setToast("❌ Error verifying payment");
+            setModalError("Error verifying payment. If amount was deducted, please contact support.");
           } finally {
             setProcessing(false);
           }
@@ -450,14 +465,35 @@ export default function SellerPackages() {
         },
       };
 
-      const rzp = new window.Razorpay(options);
-      rzp.open();
+      let rzp;
+      try {
+        rzp = new window.Razorpay(options);
+      } catch (constructErr) {
+        console.error("Razorpay constructor error:", constructErr);
+        setModalError("Payment gateway initialization failed. Please refresh the page and try again.");
+        setProcessing(false);
+        return;
+      }
+
+      rzp.on("payment.failed", function (response) {
+        console.error("Razorpay Payment Failed:", response.error);
+        setModalError(response?.error?.description || "Payment failed. Please try again or use a different payment method.");
+        setProcessing(false);
+      });
+
+      try {
+        rzp.open();
+      } catch (openErr) {
+        console.error("Razorpay open error:", openErr);
+        setModalError("Could not open payment window. Please try again.");
+        setProcessing(false);
+      }
     } catch (err) {
       console.error("Razorpay purchase error:", err);
-      setToast(err.response?.data?.message || "❌ Error initiating package purchase");
+      setModalError(err?.response?.data?.message || "Something went wrong. Please try again.");
       setProcessing(false);
     }
-  }, [selectedPlan, purchasePreview, processing, refreshWallet, updateUser]);
+  }, [selectedPlan, purchasePreview, processing, refreshWallet, updateUser, user]);
 
   // Flag for UI: no longer using wallet balance check for packages
   const insufficient = false;
@@ -495,7 +531,7 @@ export default function SellerPackages() {
       {toast && (
         <div
           className={`rounded-2xl border p-4 text-sm font-semibold ${
-            toast.startsWith("Insufficient") || toast.startsWith("Failed") || toast.startsWith("Error")
+            toast.startsWith("Insufficient") || toast.startsWith("Failed") || toast.startsWith("Error") || toast.startsWith("❌")
               ? "border-red-200 bg-red-50 text-red-700"
               : "border-emerald-200 bg-emerald-50 text-emerald-700"
           }`}
@@ -879,7 +915,7 @@ export default function SellerPackages() {
                 <span style={{ fontWeight: 800, color: '#1e293b' }}>₹{selectedPlan.price}</span>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span>Payment method</span>
+                <span>Payment Method</span>
                 <span style={{ fontWeight: 700, color: '#2563eb' }}>Razorpay Online</span>
               </div>
               <div className="flex items-center justify-between gap-4" style={{ borderTop: '1px dashed #cbd5e1', paddingTop: 10 }}>
@@ -889,6 +925,30 @@ export default function SellerPackages() {
                 </span>
               </div>
             </div>
+
+            {/* ── Error message inside modal ── */}
+            {modalError && (
+              <div style={{
+                marginTop: 14,
+                borderRadius: 14,
+                border: '1px solid #fecaca',
+                background: '#fef2f2',
+                padding: '12px 14px',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 10,
+              }}>
+                <AlertTriangle size={18} style={{ color: '#dc2626', flexShrink: 0, marginTop: 1 }} />
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: '#991b1b', margin: 0 }}>
+                    Payment Error
+                  </p>
+                  <p style={{ fontSize: 12, color: '#b91c1c', marginTop: 3, lineHeight: 1.45 }}>
+                    {modalError}
+                  </p>
+                </div>
+              </div>
+            )}
 
             <div className="flex gap-3" style={{ marginTop: 20 }}>
               <button
@@ -904,10 +964,10 @@ export default function SellerPackages() {
                 type="button"
                 onClick={handleConfirmPurchase}
                 disabled={processing}
-                className="seller-action-btn seller-action-btn--success seller-action-btn--full"
+                className="seller-action-btn seller-action-btn--success seller-action-btn--full flex items-center justify-center gap-1.5"
               >
                 {processing && <Loader2 size={16} className="animate-spin" />}
-                Pay & Activate ✓
+                {modalError ? "Retry Payment ↻" : "Pay & Activate ✓"}
               </button>
             </div>
           </div>

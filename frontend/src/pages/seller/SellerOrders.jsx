@@ -58,15 +58,19 @@ export default function SellerOrders() {
       fetchSilently();
     };
     socket.on("order_updated", handleOrderUpdate);
+    socket.on("order_created", handleOrderUpdate);
+    socket.on("new_notification", handleOrderUpdate);
     return () => {
       socket.off("order_updated", handleOrderUpdate);
+      socket.off("order_created", handleOrderUpdate);
+      socket.off("new_notification", handleOrderUpdate);
     };
   }, [socket]);
 
   useEffect(() => {
     const timer = setInterval(() => {
       fetchSilently();
-    }, 12000);
+    }, 5000);
     return () => clearInterval(timer);
   }, []);
 
@@ -246,7 +250,6 @@ export default function SellerOrders() {
         {/* ── Filter Pills — Horizontal Scroll ── */}
         <div className="seller-filter-row">
           {tabs.map((tab) => {
-            const count = tabCounts[tab] || 0;
             const isActive = activeTab === tab;
             return (
               <button
@@ -256,9 +259,6 @@ export default function SellerOrders() {
                 className={`seller-filter-pill ${isActive ? "seller-filter-pill--active" : ""}`}
               >
                 {tabLabel(tab)}
-                {count > 0 && (
-                  <span className="seller-filter-count">{count}</span>
-                )}
               </button>
             );
           })}

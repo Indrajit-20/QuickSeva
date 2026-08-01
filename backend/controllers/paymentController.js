@@ -23,7 +23,7 @@ if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
 exports.createOrder = async (req, res) => {
   try {
     if (!razorpay) {
-      return errorRes(res, "Razorpay payment gateway is not configured on this server.", 503);
+      return errorRes(res, "Razorpay payment gateway is not configured on this server. Please contact support.", 503);
     }
     const { amount, purpose, planId } = req.body;
     if (!amount || parseFloat(amount) <= 0) {
@@ -44,10 +44,59 @@ exports.createOrder = async (req, res) => {
     const order = await razorpay.orders.create(options);
     return successRes(res, order, "Order created successfully");
   } catch (err) {
-    console.error("Razorpay order creation error:", err);
-    return errorRes(res, "Failed to create payment order");
+    console.error("Razorpay order creation error:", err?.message || err);
+
+    // Classify the error for a useful user-facing message
+    const errMsg = (err?.message || "").toLowerCase();
+    const errCode = err?.code || err?.statusCode || "";
+
+    // Network / DNS errors — server cannot reach Razorpay API
+    if (
+      errCode === "ENOTFOUND" ||
+      errCode === "ECONNREFUSED" ||
+      errCode === "ECONNRESET" ||
+      errCode === "ETIMEDOUT" ||
+      errCode === "EAI_AGAIN" ||
+      errMsg.includes("getaddrinfo") ||
+      errMsg.includes("network") ||
+      errMsg.includes("timeout") ||
+      errMsg.includes("socket hang up") ||
+      errMsg.includes("econnrefused")
+    ) {
+      return errorRes(
+        res,
+        "Cannot reach Razorpay payment servers. This is a temporary network issue — please try again in a few seconds.",
+        502
+      );
+    }
+
+    // Razorpay authentication / key errors
+    if (
+      err?.statusCode === 401 ||
+      errMsg.includes("unauthorized") ||
+      errMsg.includes("authentication")
+    ) {
+      return errorRes(
+        res,
+        "Razorpay API key is invalid or expired. Please contact support.",
+        502
+      );
+    }
+
+    // Razorpay API returned a bad request (e.g. invalid params)
+    if (err?.statusCode === 400) {
+      return errorRes(
+        res,
+        err?.error?.description || "Invalid payment request. Please try again.",
+        400
+      );
+    }
+
+    // Generic fallback
+    return errorRes(res, "Failed to create payment order. Please try again later.");
   }
 };
+
 
 // Verify Payment Signature
 exports.verifyPayment = async (req, res) => {

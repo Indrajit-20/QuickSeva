@@ -23,6 +23,7 @@ export default function AddFundsModal({
   );
   const [processing, setProcessing] = useState(false);
   const [paidAmount, setPaidAmount] = useState(null);
+  const [errorMsg, setErrorMsg] = useState("");
 
   // When modal opens for a new prefill, reset UI
   React.useEffect(() => {
@@ -31,6 +32,7 @@ export default function AddFundsModal({
     setAmountStr(prefillAmount ? String(prefillAmount) : "");
     setProcessing(false);
     setPaidAmount(null);
+    setErrorMsg("");
   }, [open, prefillAmount]);
 
   const amount = useMemo(() => {
@@ -45,20 +47,29 @@ export default function AddFundsModal({
     if (!amount || amount <= 0) return;
 
     setProcessing(true);
+    setErrorMsg("");
 
     try {
-      // 1. Load Razorpay script
-      const isLoaded = await loadRazorpayScript();
-      if (!isLoaded) {
-        alert("Razorpay SDK failed to load. Please check your internet connection.");
+      // 1. Load Razorpay script with timeout + retry
+      const loadResult = await loadRazorpayScript({ timeoutMs: 15000, retries: 1 });
+      if (!loadResult.loaded) {
+        setErrorMsg(loadResult.error || "Razorpay SDK failed to load. Please check your internet connection.");
         setProcessing(false);
         return;
       }
 
       // 2. Create order on backend
-      const orderRes = await createPaymentOrderApi(amount, "wallet_recharge");
+      let orderRes;
+      try {
+        orderRes = await createPaymentOrderApi(amount, "wallet_recharge");
+      } catch (apiErr) {
+        setErrorMsg(apiErr?.response?.data?.message || "Could not reach server. Please try again.");
+        setProcessing(false);
+        return;
+      }
+
       if (!orderRes || !orderRes.success) {
-        alert(orderRes?.message || "Failed to create payment order");
+        setErrorMsg(orderRes?.message || "Failed to create payment order.");
         setProcessing(false);
         return;
       }
@@ -76,6 +87,7 @@ export default function AddFundsModal({
         handler: async function (response) {
           try {
             setProcessing(true);
+            setErrorMsg("");
             // 4. Verify payment on backend
             const verifyRes = await verifyPaymentApi({
               razorpay_payment_id: response.razorpay_payment_id,
@@ -88,6 +100,7 @@ export default function AddFundsModal({
             if (verifyRes && verifyRes.success) {
               setPaidAmount(amount);
               setProcessing(false);
+              setErrorMsg("");
               // Trigger parent updates
               if (typeof onSuccess === "function") {
                 onSuccess({ amount, walletBalance: verifyRes.data?.balance || 0 });
@@ -96,12 +109,12 @@ export default function AddFundsModal({
                 onClose?.();
               }
             } else {
-              alert(verifyRes?.message || "Payment verification failed");
+              setErrorMsg(verifyRes?.message || "Payment verification failed. Contact support if amount was deducted.");
               setProcessing(false);
             }
           } catch (err) {
             console.error("Verification error:", err);
-            alert("Error verifying payment");
+            setErrorMsg("Error verifying payment. If amount was deducted, please contact support.");
             setProcessing(false);
           }
         },
@@ -120,11 +133,32 @@ export default function AddFundsModal({
         },
       };
 
-      const rzp = new window.Razorpay(options);
-      rzp.open();
+      let rzp;
+      try {
+        rzp = new window.Razorpay(options);
+      } catch (constructErr) {
+        console.error("Razorpay constructor error:", constructErr);
+        setErrorMsg("Payment gateway initialization failed. Please refresh the page and try again.");
+        setProcessing(false);
+        return;
+      }
+
+      rzp.on("payment.failed", function (response) {
+        console.error("Razorpay Payment Failed:", response.error);
+        setErrorMsg(response?.error?.description || "Payment failed. Please try again or use a different payment method.");
+        setProcessing(false);
+      });
+
+      try {
+        rzp.open();
+      } catch (openErr) {
+        console.error("Razorpay open error:", openErr);
+        setErrorMsg("Could not open payment window. Please try again.");
+        setProcessing(false);
+      }
     } catch (err) {
       console.error("Razorpay error:", err);
-      alert(err.response?.data?.message || "Error initiating payment");
+      setErrorMsg(err?.response?.data?.message || "Something went wrong. Please try again.");
       setProcessing(false);
     }
   };
@@ -192,6 +226,23 @@ export default function AddFundsModal({
               />
             </div>
 
+            {/* ── Inline error message ── */}
+            {errorMsg && (
+              <div style={{
+                marginTop: 12,
+                borderRadius: 12,
+                border: '1px solid #fecaca',
+                background: '#fef2f2',
+                padding: '10px 12px',
+                fontSize: 12,
+                fontWeight: 600,
+                color: '#b91c1c',
+                lineHeight: 1.45,
+              }}>
+                ⚠️ {errorMsg}
+              </div>
+            )}
+
             <button
               type="button"
               onClick={handleRealPay}
@@ -199,7 +250,7 @@ export default function AddFundsModal({
               className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-4 py-3 text-sm font-bold text-white transition disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer shadow-sm"
             >
               {processing && <Loader2 size={16} className="animate-spin" />}
-              {processing ? "Processing..." : `Pay ₹${amount || 0} for Credits`}
+              {processing ? "Processing..." : errorMsg ? `Retry Payment ₹${amount || 0}` : `Pay ₹${amount || 0} for Credits`}
             </button>
           </div>
         ) : (

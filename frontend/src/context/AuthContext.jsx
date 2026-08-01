@@ -284,7 +284,6 @@ export const AuthProvider = ({ children }) => {
   // New function
   const switchRole = (role) => {
     if (role === "seller" && !isSeller) {
-      toast.error("Register as a seller first");
       navigate("/become-seller");
       return;
     }

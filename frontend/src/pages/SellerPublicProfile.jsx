@@ -362,6 +362,10 @@ export default function SellerPublicProfile() {
   };
 
   const handleBook = () => {
+    if (seller && (seller.is_available === 0 || seller.is_available === false)) {
+      setBookingError("This provider is currently offline and not accepting new bookings. Please try again when they come online.");
+      return;
+    }
     if (!selectedService) {
       setBookingError("Please select a service to continue");
       return;
@@ -449,6 +453,17 @@ export default function SellerPublicProfile() {
             </h1>
 
             <div className="mt-2 flex flex-wrap gap-2 justify-center items-center">
+              {seller.is_available === 0 || seller.is_available === false ? (
+                <span className="rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-bold text-amber-800 flex items-center gap-1">
+                  <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+                  🔴 Offline (Scheduled Only)
+                </span>
+              ) : (
+                <span className="rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-800 flex items-center gap-1">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  🟢 Live &amp; Available
+                </span>
+              )}
               <span className="rounded-full border border-purple-200 bg-purple-50 px-3 py-1 text-xs font-semibold text-purple-700">
                 {seller.service || "Service Provider"}
               </span>
@@ -501,9 +516,16 @@ export default function SellerPublicProfile() {
               <button
                 type="button"
                 onClick={handleBook}
-                className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-700 px-4 py-3 text-base font-bold text-white force-text-white shadow-lg shadow-indigo-100/20 transition duration-150 active:scale-[0.98] cursor-pointer"
+                disabled={Boolean(seller && (seller.is_available === 0 || seller.is_available === false))}
+                className={`w-full rounded-xl px-4 py-3 text-base font-bold transition duration-150 border-0 ${
+                  seller && (seller.is_available === 0 || seller.is_available === false)
+                    ? "bg-slate-200 text-slate-500 cursor-not-allowed border border-slate-300 shadow-none opacity-85"
+                    : "bg-indigo-600 hover:bg-indigo-700 text-white force-text-white shadow-lg shadow-indigo-100/20 active:scale-[0.98] cursor-pointer"
+                }`}
               >
-                Book This Service
+                {seller && (seller.is_available === 0 || seller.is_available === false)
+                  ? "🚫 Partner Offline — Cannot Book"
+                  : "Book This Service"}
               </button>
               {bookingError && (
                 <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">

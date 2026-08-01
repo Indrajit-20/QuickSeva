@@ -45,14 +45,36 @@ exports.placeOrder = async (req, res) => {
 
     const seller = await SellerModel.findById(seller_id);
     if (!seller) return errorRes(res, "Seller not found", 404);
-    // Bypassed seller availability check to allow testing/fake payments when seller is unavailable
-    /*
-    if (!seller.is_available)
-      return errorRes(res, "Seller is currently unavailable", 400);
-    */
+    if (!seller.is_available) {
+      return errorRes(res, "This service provider is currently offline and not accepting new bookings.", 400);
+    }
 
-    // Check if the requested slot overlaps with an existing booking (within a 2-hour window)
+    // Validate seller leave dates and weekly off-days
     if (scheduled_at) {
+      const scheduledDate = new Date(scheduled_at);
+      const dateString = scheduledDate.toISOString().split("T")[0];
+
+      const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+      const dayName = dayNames[scheduledDate.getDay()];
+
+      let availableDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+      if (seller.available_days) {
+        availableDays = typeof seller.available_days === "string" ? JSON.parse(seller.available_days) : seller.available_days;
+      }
+
+      let unavailableDates = [];
+      if (seller.unavailable_dates) {
+        unavailableDates = typeof seller.unavailable_dates === "string" ? JSON.parse(seller.unavailable_dates) : seller.unavailable_dates;
+      }
+
+      if (unavailableDates.includes(dateString)) {
+        return errorRes(res, `The seller is on leave on ${dateString}. Please select another date.`, 400);
+      }
+
+      if (!availableDays.includes(dayName)) {
+        return errorRes(res, `The seller does not work on ${dayName}s. Please pick another day.`, 400);
+      }
+
       const [conflictingOrders] = await pool.query(
         `SELECT id, scheduled_at FROM orders 
          WHERE seller_id = ? 
@@ -169,9 +191,21 @@ exports.placeOrder = async (req, res) => {
 
     const order = await OrderModel.findById(orderId);
     if (sellerUser[0]?.[0]?.user_id) {
-      emitToUser(sellerUser[0][0].user_id, "order_updated", { orderId, order, event: "order_created" });
+      emitToUser(sellerUser[0][0].user_id, "order_updated", { orderId, order, event: "order_created", status: "accepted" });
+      emitToUser(sellerUser[0][0].user_id, "new_notification", {
+        title: "New Order Booked!",
+        message: `New order #${order_number} booked. Visiting charge paid.`,
+        type: "order",
+        ref_id: orderId,
+      });
     }
-    emitToUser(req.user.id, "order_updated", { orderId, order, event: "order_created" });
+    emitToUser(req.user.id, "order_updated", { orderId, order, event: "order_created", status: "accepted" });
+    emitToUser(req.user.id, "new_notification", {
+      title: "Order Placed Successfully",
+      message: `Your booking #${order_number} has been confirmed.`,
+      type: "order",
+      ref_id: orderId,
+    });
     return successRes(res, { order }, "Order placed successfully", 201);
   } catch (err) {
     console.error("Place order error:", err.message);
@@ -266,6 +300,12 @@ exports.acceptOrder = async (req, res) => {
     );
 
     emitToUser(order.buyer_id, "order_updated", { orderId: order.id, status: "accepted" });
+    emitToUser(order.buyer_id, "new_notification", {
+      title: "Order Accepted!",
+      message: `Your order #${order.order_number} was accepted by the service provider.`,
+      type: "order",
+      ref_id: order.id,
+    });
     emitToUser(req.user.id, "order_updated", { orderId: order.id, status: "accepted" });
     emitToOrder(order.id, "order_updated", { orderId: order.id, status: "accepted" });
 
@@ -344,6 +384,12 @@ exports.completeOrder = async (req, res) => {
     );
 
     emitToUser(order.buyer_id, "order_updated", { orderId: order.id, status: "completed" });
+    emitToUser(order.buyer_id, "new_notification", {
+      title: "Order Completed!",
+      message: `Your order #${order.order_number} is completed. Please rate your experience.`,
+      type: "order",
+      ref_id: order.id,
+    });
     emitToUser(req.user.id, "order_updated", { orderId: order.id, status: "completed" });
     emitToOrder(order.id, "order_updated", { orderId: order.id, status: "completed" });
 
@@ -490,8 +536,20 @@ exports.cancelOrder = async (req, res) => {
     }
 
     emitToUser(order.buyer_id, "order_updated", { orderId: order.id, status: "cancelled" });
+    emitToUser(order.buyer_id, "new_notification", {
+      title: "Booking Cancelled",
+      message: isSeller ? `Order #${order.order_number} was cancelled by the provider.` : `Your booking #${order.order_number} has been cancelled.`,
+      type: "order",
+      ref_id: order.id,
+    });
     if (sellerUserId) {
       emitToUser(sellerUserId, "order_updated", { orderId: order.id, status: "cancelled" });
+      emitToUser(sellerUserId, "new_notification", {
+        title: "Booking Cancelled",
+        message: isBuyer ? `Order #${order.order_number} was cancelled by the customer.` : `Booking #${order.order_number} was cancelled.`,
+        type: "order",
+        ref_id: order.id,
+      });
     }
     emitToOrder(order.id, "order_updated", { orderId: order.id, status: "cancelled" });
 

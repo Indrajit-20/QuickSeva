@@ -110,7 +110,7 @@ exports.getPublicStats = async (req, res) => {
   }
 };
 
-// Get recent user/seller registrations for social proof toast
+// Get recent user/seller registrations for social proof toast (last 24 hours only)
 exports.getRecentActivities = async (req, res) => {
   try {
     const [rows] = await pool.query(`
@@ -118,7 +118,7 @@ exports.getRecentActivities = async (req, res) => {
       FROM users u
       LEFT JOIN sellers s ON u.id = s.user_id
       LEFT JOIN categories c ON s.category_id = c.id
-      WHERE u.is_active = 1
+      WHERE u.is_active = 1 AND u.created_at >= NOW() - INTERVAL 24 HOUR
       ORDER BY u.created_at DESC
       LIMIT 10
     `);

@@ -4,6 +4,7 @@ const UserModel = require("../models/userModel");
 const WalletModel = require("../models/walletModel");
 const SellerModel = require("../models/sellerModel");
 const { generateToken } = require("../utils/jwtUtils");
+const socketService = require("../utils/socketService");
 
 const sendTokenCookie = (res, token) => {
   res.cookie("authToken", token, {
@@ -194,6 +195,15 @@ exports.register = async (req, res) => {
     const user = await UserModel.findById(userId);
 
     sendTokenCookie(res, token);
+
+    socketService.broadcastEvent("new_user_registered", {
+      id: user.id,
+      name: user.name,
+      role: user.role,
+      city: user.city || "India",
+      category_name: null,
+      created_at: new Date().toISOString(),
+    });
 
     return successRes(
       res,
@@ -500,6 +510,15 @@ exports.verifyOTP = async (req, res) => {
 
         sendTokenCookie(res, token);
 
+        socketService.broadcastEvent("new_user_registered", {
+          id: userData.id,
+          name: userData.name,
+          role: userData.role,
+          city: userData.city || "India",
+          category_name: null,
+          created_at: new Date().toISOString(),
+        });
+
         return successRes(
           res,
           {
@@ -600,6 +619,15 @@ exports.verifyOTP = async (req, res) => {
         const profile_completed = seller?.profile_completed ?? 0;
 
         sendTokenCookie(res, token);
+
+        socketService.broadcastEvent("new_user_registered", {
+          id: userData.id,
+          name: userData.name,
+          role: "seller",
+          city: userData.city || "India",
+          category_name: null,
+          created_at: new Date().toISOString(),
+        });
 
         return successRes(
           res,

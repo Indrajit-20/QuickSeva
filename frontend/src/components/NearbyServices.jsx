@@ -46,6 +46,7 @@ import {
   Maximize2,
   Minimize2,
 } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 
 import {
   deductContactView,
@@ -475,6 +476,15 @@ const reverseGeocode = async (lat, lng) => {
 };
 
 
+const getSavedSearchState = () => {
+  try {
+    const raw = sessionStorage.getItem("qs_nearby_search_cache");
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
 export default function NearbyServices({
   initialSearch = "",
   centerLat = null,
@@ -482,10 +492,23 @@ export default function NearbyServices({
   locationFilter = "",
   lockScrollOnMobile = false,
 }) {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const savedSearchState = useMemo(() => getSavedSearchState(), []);
+
   // buyerPos = user's actual GPS/set location (for the "You are here" marker & radius)
   // searchCenter = the map view center (changes on map pan, does NOT move the user marker)
-  const [buyerPos, setBuyerPos] = useState(null);
-  const [searchCenter, setSearchCenter] = useState(null);
+  const [buyerPos, setBuyerPos] = useState(() => {
+    const lat = searchParams.get("lat");
+    const lng = searchParams.get("lng");
+    if (lat && lng) return { lat: Number(lat), lng: Number(lng) };
+    return savedSearchState?.buyerPos || null;
+  });
+  const [searchCenter, setSearchCenter] = useState(() => {
+    const lat = searchParams.get("lat");
+    const lng = searchParams.get("lng");
+    if (lat && lng) return { lat: Number(lat), lng: Number(lng) };
+    return savedSearchState?.searchCenter || null;
+  });
   const [mapFlyTrigger, setMapFlyTrigger] = useState(0);
   const [geoError, setGeoError] = useState("");
   const [showLocationModal, setShowLocationModal] = useState(false);
@@ -537,8 +560,16 @@ export default function NearbyServices({
     };
   }, [isMobile, showLocationDrawer, filtersDrawerOpen, isMapFullScreen]);
 
-  const [search, setSearch] = useState(initialSearch);
-  const [locationQuery, setLocationQuery] = useState("");
+  const [search, setSearch] = useState(() => {
+    const urlVal = searchParams.get("q");
+    if (urlVal !== null) return urlVal;
+    return savedSearchState?.search !== undefined ? savedSearchState.search : initialSearch;
+  });
+  const [locationQuery, setLocationQuery] = useState(() => {
+    const urlVal = searchParams.get("location");
+    if (urlVal !== null) return urlVal;
+    return savedSearchState?.locationQuery || "";
+  });
   const [showServiceDrop, setShowServiceDrop] = useState(false);
   const desktopServiceDropRef = useRef(null);
   const mobileServiceDropRef = useRef(null);
@@ -553,7 +584,6 @@ export default function NearbyServices({
       }
     }
   };
-
 
   const [visibleCount, setVisibleCount] = useState(5);
 
@@ -588,10 +618,10 @@ export default function NearbyServices({
   const { address: detectedAddress } = useNearbyLocation();
 
   useEffect(() => {
-    if (detectedAddress && !locationQuery) {
+    if (detectedAddress && !locationQuery && !savedSearchState?.locationQuery) {
       setLocationQuery(detectedAddress);
     }
-  }, [detectedAddress]);
+  }, [detectedAddress, locationQuery, savedSearchState]);
 
   const [locationResults, setLocationResults] = useState([]);
   const [locationLoading, setLocationLoading] = useState(false);
@@ -609,13 +639,25 @@ export default function NearbyServices({
     }
   }), []);
 
-  const [locationMode, setLocationMode] = useState("area"); // "area" | "pincode"
-  const [pincode, setPincode] = useState("");
+  const [locationMode, setLocationMode] = useState(() => {
+    const urlVal = searchParams.get("pincode") ? "pincode" : null;
+    if (urlVal) return urlVal;
+    return savedSearchState?.locationMode || "area";
+  }); // "area" | "pincode"
+  const [pincode, setPincode] = useState(() => {
+    const urlVal = searchParams.get("pincode");
+    if (urlVal !== null) return urlVal;
+    return savedSearchState?.pincode || "";
+  });
   const [pincodeLoading, setPincodeLoading] = useState(false);
   const [pincodeError, setPincodeError] = useState("");
   const [pincodeResults, setPincodeResults] = useState([]);
 
-  const [selectedSellerId, setSelectedSellerId] = useState(null);
+  const [selectedSellerId, setSelectedSellerId] = useState(() => {
+    const urlVal = searchParams.get("selectedSellerId");
+    if (urlVal !== null) return Number(urlVal);
+    return savedSearchState?.selectedSellerId || null;
+  });
 
   useEffect(() => {
     if (selectedSellerId) {
@@ -735,7 +777,11 @@ export default function NearbyServices({
 
   const clickedSellers = useRef(new Set());
 
-  const [radiusKm, setRadiusKm] = useState(5);
+  const [radiusKm, setRadiusKm] = useState(() => {
+    const urlVal = searchParams.get("radius");
+    if (urlVal !== null) return Number(urlVal);
+    return savedSearchState?.radiusKm !== undefined ? Number(savedSearchState.radiusKm) : 5;
+  });
 
   const [locationNotFoundMsg, setLocationNotFoundMsg] = useState("");
 
@@ -780,8 +826,42 @@ export default function NearbyServices({
   const viewedContacts = useRef(new Set());
   const [revealedContacts, setRevealedContacts] = useState(() => new Set());
 
+
+  // Restore scroll position when returning from seller profile
+  useEffect(() => {
+    try {
+      const scrollKey = `qs_nearby_scroll_pos_${window.location.pathname}${window.location.search}`;
+      const savedPos = sessionStorage.getItem(scrollKey);
+      if (savedPos && !isNaN(Number(savedPos))) {
+        setTimeout(() => {
+          window.scrollTo({ top: Number(savedPos), behavior: "smooth" });
+          sessionStorage.removeItem(scrollKey);
+        }, 400);
+      }
+    } catch { }
+  }, [searchParams]);
+
   const navigateToSeller = (seller) => {
     const sId = seller?.id || seller?.sellerId;
+    if (!sId) return;
+    try {
+      const scrollKey = `qs_nearby_scroll_pos_${window.location.pathname}${window.location.search}`;
+      sessionStorage.setItem(scrollKey, window.scrollY.toString());
+      sessionStorage.setItem(
+        "qs_nearby_search_cache",
+        JSON.stringify({
+          locationQuery,
+          buyerPos,
+          searchCenter,
+          search,
+          radiusKm,
+          pincode,
+          locationMode,
+          selectedSellerId: sId,
+          sellers,
+        })
+      );
+    } catch { }
     window.location.href = `/seller/${sId}`;
   };
 
@@ -799,15 +879,22 @@ export default function NearbyServices({
   const locationSearchRef = useRef(null);
   const portalDropdownRef = useRef(null);
   const searchCache = useRef({});
-  const suppressNextLocationSearchRef = useRef(false);
+  const suppressNextLocationSearchRef = useRef(Boolean(savedSearchState));
+  const lastWrittenParamsRef = useRef(searchParams ? searchParams.toString() : "");
   const debounceTimerRef = useRef(null);
   const lastFetchedBoundsRef = useRef(null);
   const pendingBoundsRef = useRef(null);
 
   const nominatimSearch = async (q) => {
+    const trimmed = String(q || "").trim();
+    let queryParam = trimmed;
+    if (/^\d{6}$/.test(trimmed)) {
+      queryParam = `${trimmed}, India`;
+    }
+
     const res = await fetch(
       `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
-        q,
+        queryParam,
       )}&format=json&limit=5&countrycodes=in&email=support@quickseva.com`,
       {
         headers: {
@@ -843,24 +930,23 @@ export default function NearbyServices({
       return;
     }
 
+    // If query is a 6-digit pincode, handle as postal code directly without area error
+    if (/^\d{6}$/.test(trimmed)) {
+      setLocationNotFoundMsg("");
+      return;
+    }
+
     setLocationLoading(true);
-    setLocationNotFoundMsg("");
     try {
       const results = await smartSearch(trimmed);
       if (!results || results.length === 0) {
         setLocationResults([]);
-        setLocationNotFoundMsg(
-          "Area not found. Try a nearby landmark, or click the map to set location manually.",
-        );
         return;
       }
       setLocationResults(results);
       setLocationNotFoundMsg("");
     } catch {
       setLocationResults([]);
-      setLocationNotFoundMsg(
-        "Area not found. Try a nearby landmark, or click the map to set location manually.",
-      );
     } finally {
       setLocationLoading(false);
     }
@@ -936,7 +1022,7 @@ export default function NearbyServices({
         setLocationResults([]);
         setLocationNotFoundMsg("");
       }
-    }, 800);
+    }, 300);
     return () => clearTimeout(timer);
   }, [locationQuery, locationMode]);
 
@@ -946,7 +1032,7 @@ export default function NearbyServices({
     el?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [selectedSellerId]);
 
-  const [sellers, setSellers] = useState([]);
+  const [sellers, setSellers] = useState(() => savedSearchState?.sellers || []);
   const [apiLoading, setApiLoading] = useState(false);
   const [apiError, setApiError] = useState("");
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
@@ -954,6 +1040,136 @@ export default function NearbyServices({
   const selectedSeller = useMemo(() => {
     return sellers.find((s) => (s.id || s.sellerId) === selectedSellerId);
   }, [sellers, selectedSellerId]);
+
+  // Save search state cache on every state change
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(
+        "qs_nearby_search_cache",
+        JSON.stringify({
+          locationQuery,
+          buyerPos,
+          searchCenter,
+          search,
+          radiusKm,
+          pincode,
+          locationMode,
+          selectedSellerId,
+          sellers,
+        })
+      );
+    } catch { }
+  }, [locationQuery, buyerPos, searchCenter, search, radiusKm, pincode, locationMode, selectedSellerId, sellers]);
+
+  // Synchronize state changes to URL search parameters (debounced by 400ms)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        let changed = false;
+
+        // Sync category search
+        if (search) {
+          if (next.get("q") !== search) {
+            next.set("q", search);
+            changed = true;
+          }
+        } else if (next.has("q")) {
+          next.delete("q");
+          changed = true;
+        }
+
+        // Sync location text query
+        if (locationQuery) {
+          if (next.get("location") !== locationQuery) {
+            next.set("location", locationQuery);
+            changed = true;
+          }
+        } else if (next.has("location")) {
+          next.delete("location");
+          changed = true;
+        }
+
+        // Sync pincode
+        if (pincode) {
+          if (next.get("pincode") !== pincode) {
+            next.set("pincode", pincode);
+            changed = true;
+          }
+        } else if (next.has("pincode")) {
+          next.delete("pincode");
+          changed = true;
+        }
+
+        // Sync radius
+        const radStr = String(radiusKm);
+        if (next.get("radius") !== radStr) {
+          next.set("radius", radStr);
+          changed = true;
+        }
+
+        // Sync selected seller if present
+        if (selectedSellerId) {
+          const sellerIdStr = String(selectedSellerId);
+          if (next.get("selectedSellerId") !== sellerIdStr) {
+            next.set("selectedSellerId", sellerIdStr);
+            changed = true;
+          }
+        } else if (next.has("selectedSellerId")) {
+          next.delete("selectedSellerId");
+          changed = true;
+        }
+
+        // Sync coordinates (lat/lng)
+        if (searchCenter?.lat && searchCenter?.lng) {
+          const latStr = String(searchCenter.lat);
+          const lngStr = String(searchCenter.lng);
+          if (next.get("lat") !== latStr || next.get("lng") !== lngStr) {
+            next.set("lat", latStr);
+            next.set("lng", lngStr);
+            changed = true;
+          }
+        }
+
+        if (changed) {
+          lastWrittenParamsRef.current = next.toString();
+          return next;
+        }
+        return prev;
+      }, { replace: true });
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [search, locationQuery, pincode, radiusKm, selectedSellerId, searchCenter, setSearchParams]);
+
+  // Sync changes from URL parameters back to React state (e.g. on Back/Forward button click)
+  useEffect(() => {
+    const currentParamsStr = searchParams.toString();
+    if (currentParamsStr === lastWrittenParamsRef.current) {
+      return;
+    }
+    lastWrittenParamsRef.current = currentParamsStr;
+
+    const q = searchParams.get("q") || "";
+    const loc = searchParams.get("location") || "";
+    const pin = searchParams.get("pincode") || "";
+    const rad = Number(searchParams.get("radius") || 5);
+    const selId = searchParams.get("selectedSellerId") ? Number(searchParams.get("selectedSellerId")) : null;
+    const lat = searchParams.get("lat") ? Number(searchParams.get("lat")) : null;
+    const lng = searchParams.get("lng") ? Number(searchParams.get("lng")) : null;
+
+    if (q !== search) setSearch(q);
+    if (loc !== locationQuery) setLocationQuery(loc);
+    if (pin !== pincode) setPincode(pin);
+    if (rad !== radiusKm) setRadiusKm(rad);
+    if (selId !== selectedSellerId) setSelectedSellerId(selId);
+
+    if (lat && lng && (lat !== buyerPos?.lat || lng !== buyerPos?.lng)) {
+      const nextPos = { lat, lng };
+      setBuyerPos(nextPos);
+      setSearchCenter(nextPos);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     try {
@@ -1009,7 +1225,11 @@ export default function NearbyServices({
               uniqueSellersList.push(item);
             }
           });
-          setSellers(uniqueSellersList);
+          if (uniqueSellersList.length > 0) {
+            setSellers(uniqueSellersList);
+          } else {
+            setSellers((prev) => (prev && prev.length > 0 ? prev : []));
+          }
           lastFetchedBoundsRef.current = currentBoundsStr;
         } catch (err) {
           console.error("fetchSellersInView error:", err);
@@ -1069,6 +1289,30 @@ export default function NearbyServices({
     setMapInitialized(true);
     setGeoLoading(true);
     try {
+      // 1. Prioritize URL coordinates first
+      const urlLat = searchParams.get("lat") ? Number(searchParams.get("lat")) : null;
+      const urlLng = searchParams.get("lng") ? Number(searchParams.get("lng")) : null;
+
+      if (urlLat && urlLng) {
+        const pos = { lat: urlLat, lng: urlLng };
+        setBuyerPos(pos);
+        setSearchCenter(pos);
+        map.setView([urlLat, urlLng], 13);
+        await fetchSellersInView(map);
+        return;
+      }
+
+      // 2. Check saved session state next
+      const savedState = getSavedSearchState();
+      if (savedState?.buyerPos && savedState?.searchCenter) {
+        setBuyerPos(savedState.buyerPos);
+        setSearchCenter(savedState.searchCenter);
+        map.setView([savedState.searchCenter.lat, savedState.searchCenter.lng], 13);
+        await fetchSellersInView(map);
+        return;
+      }
+
+      // 3. Fallback to GPS / IP location
       const loc = await getUserLocation();
       setBuyerPos({ lat: loc.lat, lng: loc.lng });
       setSearchCenter({ lat: loc.lat, lng: loc.lng });
@@ -1089,7 +1333,7 @@ export default function NearbyServices({
     } finally {
       setGeoLoading(false);
     }
-  }, [fetchSellersInView, toast]);
+  }, [fetchSellersInView, searchParams, toast]);
 
   const selectedCategory = useMemo(() => {
     const query = search.trim();
@@ -1298,15 +1542,24 @@ export default function NearbyServices({
         ? filteredByRating
         : filteredByRating.filter((s) => {
           const svcs = Array.isArray(s?.services) ? s.services : [];
-          if (!svcs.length) return false;
-          return svcs.some((svc) => {
-            const p = Number(svc?.price || 0);
-            if (filterPrice === "under500") return p > 0 && p < 500;
-            if (filterPrice === "500-1000") return p >= 500 && p <= 1000;
-            if (filterPrice === "1000-2000") return p > 1000 && p <= 2000;
-            if (filterPrice === "2000+") return p > 2000;
-            return true;
-          });
+          if (svcs.length > 0) {
+            return svcs.some((svc) => {
+              const p = Number(svc?.price || 0);
+              if (filterPrice === "under500") return p > 0 && p < 500;
+              if (filterPrice === "500-1000") return p >= 500 && p <= 1000;
+              if (filterPrice === "1000-2000") return p > 1000 && p <= 2000;
+              if (filterPrice === "2000+") return p > 2000;
+              return true;
+            });
+          }
+          // Fallback to seller direct prices (min_price, starting_price, price, visiting_charge)
+          const p = Number(s?.price || s?.min_price || s?.starting_price || s?.visiting_charge || s?.visiting_charge_amount || 0);
+          if (p <= 0) return true; // Keep partner if no price metadata is attached
+          if (filterPrice === "under500") return p < 500;
+          if (filterPrice === "500-1000") return p >= 500 && p <= 1000;
+          if (filterPrice === "1000-2000") return p >= 1000 && p <= 2000;
+          if (filterPrice === "2000+") return p > 2000;
+          return true;
         });
 
     // ── NEW: duration bucket filter ──────────────────────────────────────
@@ -1315,7 +1568,7 @@ export default function NearbyServices({
         ? filteredByPrice
         : filteredByPrice.filter((s) => {
           const svcs = Array.isArray(s?.services) ? s.services : [];
-          if (!svcs.length) return false;
+          if (!svcs.length) return true;
           return svcs.some(
             (svc) => getDurationBucket(svc?.duration) === filterDuration,
           );
@@ -1412,7 +1665,8 @@ export default function NearbyServices({
           setSearchCenter(newPos);
           setMapFlyTrigger((prev) => prev + 1);
           suppressNextLocationSearchRef.current = true;
-          setLocationQuery(r.display_name.split(",")[0] + " - " + val);
+          const cleanLocTitle = r.display_name.split(",").slice(0, 2).join(", ");
+          setLocationQuery(cleanLocTitle.includes(val) ? cleanLocTitle : `${cleanLocTitle} (${val})`);
           setLocationResults([]);
           setLocationNotFoundMsg("");
           setGeoError("");
@@ -1494,7 +1748,8 @@ export default function NearbyServices({
         setSearchCenter(newPos);
         setMapFlyTrigger((prev) => prev + 1);
         suppressNextLocationSearchRef.current = true;
-        setLocationQuery(r.display_name.split(",")[0] + " - " + trimmed);
+        const cleanLocTitle = r.display_name.split(",").slice(0, 2).join(", ");
+        setLocationQuery(cleanLocTitle.includes(trimmed) ? cleanLocTitle : `${cleanLocTitle} (${trimmed})`);
         setLocationResults([]);
         setLocationNotFoundMsg("");
         setGeoError("");
@@ -1781,15 +2036,16 @@ export default function NearbyServices({
                     onFocus={() => setShowServiceDrop(true)}
                     placeholder="Search services (e.g. Plumber, AC Repair, Cleaning...)"
                     className="w-full rounded-xl bg-white border border-slate-200 py-3 pl-11 pr-8 text-[13px] font-normal text-slate-700 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10"
-                    style={{ paddingLeft: "2.75rem" }}
+                    style={{ paddingLeft: "2.75rem", paddingRight: "2.5rem" }}
                   />
                   {search && (
                     <button
                       type="button"
                       onClick={() => setSearch("")}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-655 cursor-pointer"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 z-20 flex items-center justify-center p-1 rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition cursor-pointer"
+                      aria-label="Clear search"
                     >
-                      ✕
+                      <X className="h-4 w-4" />
                     </button>
                   )}
                   {showServiceDrop && filteredServiceSuggestions.length > 0 && (
@@ -1828,8 +2084,12 @@ export default function NearbyServices({
                     <MapPin className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-rose-500 h-4.5 w-4.5" />
                     <input
                       value={locationQuery}
-                      onChange={(e) => setLocationQuery(e.target.value)}
+                      onChange={(e) => {
+                        suppressNextLocationSearchRef.current = false;
+                        setLocationQuery(e.target.value);
+                      }}
                       onFocus={() => {
+                        suppressNextLocationSearchRef.current = false;
                         if (locationQuery.trim().length >= 3) {
                           searchLocation(locationQuery);
                         }
@@ -1837,13 +2097,13 @@ export default function NearbyServices({
                       autoComplete="off"
                       className="w-full rounded-xl bg-white border border-slate-200 py-3 pl-11 pr-8 text-sm font-semibold text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10"
                       placeholder="Area or Landmark"
-                      style={{ paddingLeft: "2.75rem" }}
+                      style={{ paddingLeft: "2.75rem", paddingRight: "2.5rem" }}
                     />
                     {locationQuery && (
                       <button
                         type="button"
                         onClick={clearLocationInput}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-655 cursor-pointer"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 z-20 flex items-center justify-center p-1 rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition cursor-pointer"
                         aria-label="Clear location"
                       >
                         <X className="h-4 w-4" />
@@ -1865,13 +2125,13 @@ export default function NearbyServices({
                       className="w-full rounded-xl bg-white border border-slate-200 py-3 pl-11 pr-8 text-sm font-semibold text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10"
                       placeholder="Pincode"
                       maxLength={6}
-                      style={{ paddingLeft: "2.75rem" }}
+                      style={{ paddingLeft: "2.75rem", paddingRight: "2.5rem" }}
                     />
                     {pincode && (
                       <button
                         type="button"
                         onClick={clearPincodeInput}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-655 cursor-pointer"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 z-20 flex items-center justify-center p-1 rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition cursor-pointer"
                         aria-label="Clear pincode"
                       >
                         <X className="h-4 w-4" />
@@ -2841,11 +3101,10 @@ export default function NearbyServices({
                   setLocationMode("area");
                   setPincodeError("");
                 }}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-                  locationMode === "area"
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${locationMode === "area"
                     ? "bg-white text-blue-600 shadow-sm font-extrabold"
                     : "text-slate-500 hover:text-slate-700"
-                }`}
+                  }`}
               >
                 <MapPin className="h-3.5 w-3.5 text-rose-500" />
                 <span>Area / Landmark</span>
@@ -2856,11 +3115,10 @@ export default function NearbyServices({
                   setLocationMode("pincode");
                   setLocationNotFoundMsg("");
                 }}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-                  locationMode === "pincode"
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${locationMode === "pincode"
                     ? "bg-white text-blue-600 shadow-sm font-extrabold"
                     : "text-slate-500 hover:text-slate-700"
-                }`}
+                  }`}
               >
                 <Hash className="h-3.5 w-3.5 text-indigo-500" />
                 <span>Pincode</span>
@@ -2897,8 +3155,12 @@ export default function NearbyServices({
                     <MapPin className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-rose-500 h-4 w-4" />
                     <input
                       value={locationQuery}
-                      onChange={(e) => setLocationQuery(e.target.value)}
+                      onChange={(e) => {
+                        suppressNextLocationSearchRef.current = false;
+                        setLocationQuery(e.target.value);
+                      }}
                       onFocus={() => {
+                        suppressNextLocationSearchRef.current = false;
                         if (locationQuery.trim().length >= 3) {
                           searchLocation(locationQuery);
                         }

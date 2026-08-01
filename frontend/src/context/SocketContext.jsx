@@ -11,8 +11,8 @@ const SocketContext = createContext({
 
 export const SocketProvider = ({ children }) => {
   const { user } = useAuth();
+  const [socket, setSocket] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
-  const socketRef = useRef(null);
 
   useEffect(() => {
     // Derive socket server URL from API_BASE_URL (remove trailing /api)
@@ -22,7 +22,7 @@ export const SocketProvider = ({ children }) => {
     }
 
     try {
-      const socket = io(socketUrl, {
+      const socketInstance = io(socketUrl, {
         transports: ["polling", "websocket"],
         reconnection: true,
         reconnectionAttempts: Infinity,
@@ -32,27 +32,27 @@ export const SocketProvider = ({ children }) => {
         withCredentials: true,
       });
 
-      socketRef.current = socket;
+      setSocket(socketInstance);
 
-      socket.on("connect", () => {
+      socketInstance.on("connect", () => {
         setIsConnected(true);
         if (user && user.id) {
-          socket.emit("join_user", user.id);
+          socketInstance.emit("join_user", user.id);
         }
       });
 
-      socket.on("disconnect", () => {
+      socketInstance.on("disconnect", () => {
         setIsConnected(false);
       });
 
-      socket.on("connect_error", (err) => {
+      socketInstance.on("connect_error", (err) => {
         console.warn("Socket connection error (falling back smoothly):", err.message);
         setIsConnected(false);
       });
 
       return () => {
-        socket.disconnect();
-        socketRef.current = null;
+        socketInstance.disconnect();
+        setSocket(null);
       };
     } catch (err) {
       console.error("Socket initialization error:", err);
@@ -61,21 +61,21 @@ export const SocketProvider = ({ children }) => {
 
   // Re-join user room whenever user logs in or changes
   useEffect(() => {
-    if (socketRef.current && socketRef.current.connected && user && user.id) {
-      socketRef.current.emit("join_user", user.id);
+    if (socket && socket.connected && user && user.id) {
+      socket.emit("join_user", user.id);
     }
-  }, [user]);
+  }, [user, socket]);
 
   const joinOrderRoom = (orderId) => {
-    if (socketRef.current && orderId) {
-      socketRef.current.emit("join_order", orderId);
+    if (socket && orderId) {
+      socket.emit("join_order", orderId);
     }
   };
 
   return (
     <SocketContext.Provider
       value={{
-        socket: socketRef.current,
+        socket,
         isConnected,
         joinOrderRoom,
       }}

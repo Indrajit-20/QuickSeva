@@ -89,8 +89,8 @@ router.get("/in-view", async (req, res) => {
                u.name AS ownerName,
                c.name AS categoryName,
                c.name AS service,
-               COALESCE(s.latitude, u.lat) AS lat,
-               COALESCE(s.longitude, u.lng) AS lng,
+               CAST(COALESCE(s.latitude, u.lat) AS DECIMAL(10, 7)) AS lat,
+               CAST(COALESCE(s.longitude, u.lng) AS DECIMAL(10, 7)) AS lng,
                s.avg_rating AS rating,
                s.avg_rating,
                s.total_reviews AS reviews,
@@ -104,27 +104,50 @@ router.get("/in-view", async (req, res) => {
                s.is_available,
                s.is_available AS isAvailable,
                u.profile_pic,
-               u.profile_pic AS profilePhotoUrl
+               u.profile_pic AS profilePhotoUrl,
+               MIN(sv.price) AS min_price,
+               JSON_ARRAYAGG(
+                 JSON_OBJECT(
+                   'id', sv.id,
+                   'name', sv.title,
+                   'price', sv.price,
+                   'duration', sv.duration,
+                   'is_instant', sv.is_instant
+                 )
+               ) AS services_json
         FROM sellers s
         JOIN users u ON s.user_id = u.id
         LEFT JOIN categories c ON s.category_id = c.id
+        LEFT JOIN services sv ON sv.seller_id = s.id AND sv.is_active = 1
         GROUP BY s.id
       ) AS sellers_in_view
       WHERE lat BETWEEN ? AND ? AND lng BETWEEN ? AND ?
       LIMIT 200`,
-      [minLat, maxLat, minLng, maxLng]
+      [parseFloat(minLat), parseFloat(maxLat), parseFloat(minLng), parseFloat(maxLng)]
     );
 
-    const parsedRows = rows.map((r) => ({
-      ...r,
-      lat: r.lat !== null && r.lat !== undefined ? parseFloat(r.lat) : null,
-      lng: r.lng !== null && r.lng !== undefined ? parseFloat(r.lng) : null,
-      rating: r.rating !== null && r.rating !== undefined ? parseFloat(r.rating) : 0,
-      avg_rating: r.avg_rating !== null && r.avg_rating !== undefined ? parseFloat(r.avg_rating) : 0,
-      reviews: r.reviews !== null && r.reviews !== undefined ? parseInt(r.reviews) : 0,
-      isPremium: (r.isPremium && r.premiumExpiresAt && new Date(r.premiumExpiresAt) > new Date()) ? true : false,
-      instantService: r.instantService ? true : false,
-    }));
+    const parsedRows = rows.map((r) => {
+      let services = [];
+      try {
+        services = r.services_json ? JSON.parse(r.services_json) : [];
+      } catch {
+        services = [];
+      }
+      services = Array.isArray(services) ? services.filter((sv) => sv && sv.id != null) : [];
+
+      return {
+        ...r,
+        lat: r.lat !== null && r.lat !== undefined ? parseFloat(r.lat) : null,
+        lng: r.lng !== null && r.lng !== undefined ? parseFloat(r.lng) : null,
+        rating: r.rating !== null && r.rating !== undefined ? parseFloat(r.rating) : 0,
+        avg_rating: r.avg_rating !== null && r.avg_rating !== undefined ? parseFloat(r.avg_rating) : 0,
+        reviews: r.reviews !== null && r.reviews !== undefined ? parseInt(r.reviews) : 0,
+        isPremium: (r.isPremium && r.premiumExpiresAt && new Date(r.premiumExpiresAt) > new Date()) ? true : false,
+        instantService: r.instantService ? true : false,
+        min_price: r.min_price ? parseFloat(r.min_price) : 0,
+        services,
+      };
+    });
 
     res.json(parsedRows);
   } catch (err) {

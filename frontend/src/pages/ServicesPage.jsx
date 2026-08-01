@@ -195,6 +195,9 @@ export default function ServicesPage() {
   const [selectedState, setSelectedState] = useState("");
   const [selectedCity, setSelectedCity] = useState("");
 
+  const [filterPrice, setFilterPrice] = useState("all");
+  const [sortBy, setSortBy] = useState("recommended");
+
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
 
@@ -235,6 +238,32 @@ export default function ServicesPage() {
       setIsLoading(false);
     });
   }, [searchParams, selectedState, selectedCity]);
+
+  const filteredSellers = useMemo(() => {
+    let list = [...sellers];
+
+    if (filterPrice !== "all") {
+      list = list.filter((s) => {
+        const p = Number(s.price || s.min_price || 0);
+        if (p <= 0) return true;
+        if (filterPrice === "under500") return p < 500;
+        if (filterPrice === "500-1000") return p >= 500 && p <= 1000;
+        if (filterPrice === "1000-2000") return p >= 1000 && p <= 2000;
+        if (filterPrice === "2000+") return p > 2000;
+        return true;
+      });
+    }
+
+    if (sortBy === "price_low") {
+      list.sort((a, b) => Number(a.price || a.min_price || 0) - Number(b.price || b.min_price || 0));
+    } else if (sortBy === "price_high") {
+      list.sort((a, b) => Number(b.price || b.min_price || 0) - Number(a.price || a.min_price || 0));
+    } else if (sortBy === "rating") {
+      list.sort((a, b) => Number(b.avgRating || 0) - Number(a.avgRating || 0));
+    }
+
+    return list;
+  }, [sellers, filterPrice, sortBy]);
 
   // Click outside search container to close dropdown
   useEffect(() => {
@@ -601,6 +630,37 @@ export default function ServicesPage() {
               </select>
             </div>
 
+            {/* Price Filter */}
+            <div className="flex flex-col gap-1 w-full sm:flex-1 md:w-36">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 text-left">Price Range</label>
+              <select
+                value={filterPrice}
+                onChange={(e) => setFilterPrice(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-xl px-3 py-2 text-sm font-semibold text-slate-750 shadow-sm outline-none transition cursor-pointer min-h-[38px]"
+              >
+                <option value="all">All Prices</option>
+                <option value="under500">Under ₹500</option>
+                <option value="500-1000">₹500 - ₹1,000</option>
+                <option value="1000-2000">₹1,000 - ₹2,000</option>
+                <option value="2000+">₹2,000+</option>
+              </select>
+            </div>
+
+            {/* Sort By Filter */}
+            <div className="flex flex-col gap-1 w-full sm:flex-1 md:w-40">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 text-left">Sort By</label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-xl px-3 py-2 text-sm font-semibold text-slate-750 shadow-sm outline-none transition cursor-pointer min-h-[38px]"
+              >
+                <option value="recommended">Recommended</option>
+                <option value="price_low">Price: Low to High</option>
+                <option value="price_high">Price: High to Low</option>
+                <option value="rating">Highest Rated</option>
+              </select>
+            </div>
+
             {/* Detect Location Button */}
             <div className="flex flex-col gap-1 w-full sm:flex-1 md:w-auto md:mt-5">
               <button
@@ -722,7 +782,7 @@ export default function ServicesPage() {
           /* Seller Cards Grid */
           <div>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {sellers.map((seller) => renderSellerCard(seller))}
+              {filteredSellers.map((seller) => renderSellerCard(seller))}
             </div>
 
             {hasMore && (

@@ -96,7 +96,7 @@ export default function NotificationBell({ className = "", isSeller = false, ali
     }
   }, [user]);
 
-  // Initial load + listener setup
+  // Initial load + listener setup + 5s polling fallback
   useEffect(() => {
     fetchNotifications();
 
@@ -104,9 +104,14 @@ export default function NotificationBell({ className = "", isSeller = false, ali
     window.addEventListener("notifications-updated", handleSync);
     window.addEventListener("leads-read", handleSync);
 
+    const interval = setInterval(() => {
+      fetchNotifications({ silent: true });
+    }, 5000);
+
     return () => {
       window.removeEventListener("notifications-updated", handleSync);
       window.removeEventListener("leads-read", handleSync);
+      clearInterval(interval);
     };
   }, [fetchNotifications]);
 

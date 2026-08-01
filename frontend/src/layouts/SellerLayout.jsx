@@ -14,6 +14,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { useSocket } from "../context/SocketContext";
 import WorkspaceSwitcher from "../components/WorkspaceSwitcher";
 import BottomNavSeller from "../components/BottomNavSeller";
 import NotificationBell from "../components/NotificationBell";
@@ -189,6 +190,7 @@ const playChime = () => {
 export default function SellerLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { user, logout, updateUser } = useAuth();
+  const { socket } = useSocket();
   const navigate = useNavigate();
   const location = useLocation();
   const [pendingOrdersCount, setPendingOrdersCount] = useState(0);
@@ -196,46 +198,44 @@ export default function SellerLayout() {
   const [newOrderNotification, setNewOrderNotification] = useState(null);
 
   // Fetch pending orders count (unvisited only)
-  useEffect(() => {
-    let active = true;
-    const fetchPendingCount = async (isInitial = false) => {
-      try {
-        const res = await sellerOrdersApi.list();
-        const list = res?.data?.orders || res?.orders || [];
-        const pendingList = Array.isArray(list) ? list.filter(o => o.status === "pending") : [];
+  const fetchPendingCount = async (isInitial = false) => {
+    if (location.pathname === "/seller/orders") {
+      localStorage.setItem("seller_orders_last_visited_at", new Date().toISOString());
+      setPendingOrdersCount(0);
+      return;
+    }
 
-        // If seller is currently on orders page, mark as visited
-        if (window.location.pathname === "/seller/orders") {
-          localStorage.setItem("seller_orders_last_visited_at", new Date().toISOString());
-        }
+    try {
+      const res = await sellerOrdersApi.list();
+      const list = res?.data?.orders || res?.orders || [];
+      const pendingList = Array.isArray(list) ? list.filter(o => o.status === "pending") : [];
 
-        const lastVisited = localStorage.getItem("seller_orders_last_visited_at");
-        const unvisitedCount = lastVisited
-          ? pendingList.filter(o => o.created_at && new Date(o.created_at) > new Date(lastVisited)).length
-          : (window.location.pathname === "/seller/orders" ? 0 : pendingList.length);
+      const lastVisited = localStorage.getItem("seller_orders_last_visited_at");
+      const unvisitedCount = lastVisited
+        ? pendingList.filter(o => o.created_at && new Date(o.created_at) > new Date(lastVisited)).length
+        : pendingList.length;
 
-        if (active) {
-          setPendingOrdersCount((prev) => {
-            if (!isInitial && unvisitedCount > prev) {
-              playChime();
-              const latestOrder = pendingList[pendingList.length - 1];
-              setNewOrderNotification({
-                orderNumber: latestOrder?.order_number || `#${latestOrder?.id || 'New'}`,
-                service: latestOrder?.service_title || latestOrder?.service_name || "Service Request",
-                address: latestOrder?.address || "Nearby customer",
-              });
-              setTimeout(() => {
-                setNewOrderNotification(null);
-              }, 6000);
-            }
-            return unvisitedCount;
+      setPendingOrdersCount((prev) => {
+        if (!isInitial && unvisitedCount > prev) {
+          playChime();
+          const latestOrder = pendingList[pendingList.length - 1];
+          setNewOrderNotification({
+            orderNumber: latestOrder?.order_number || `#${latestOrder?.id || 'New'}`,
+            service: latestOrder?.service_title || latestOrder?.service_name || "Service Request",
+            address: latestOrder?.address || "Nearby customer",
           });
+          setTimeout(() => {
+            setNewOrderNotification(null);
+          }, 6000);
         }
-      } catch (err) {
-        console.error("Failed to fetch pending orders count:", err);
-      }
-    };
-    
+        return unvisitedCount;
+      });
+    } catch (err) {
+      console.error("Failed to fetch pending orders count:", err);
+    }
+  };
+
+  useEffect(() => {
     fetchPendingCount(true);
 
     const handleOrdersVisited = () => setPendingOrdersCount(0);
@@ -243,16 +243,31 @@ export default function SellerLayout() {
 
     const interval = setInterval(() => fetchPendingCount(false), 10000);
     return () => {
-      active = false;
       window.removeEventListener("orders-visited", handleOrdersVisited);
       clearInterval(interval);
     };
   }, []);
 
+  // Socket listener for instantaneous real-time order updates
+  useEffect(() => {
+    if (!socket) return;
+    const handleOrderUpdate = () => {
+      fetchPendingCount(false);
+    };
+    socket.on("order_updated", handleOrderUpdate);
+    return () => {
+      socket.off("order_updated", handleOrderUpdate);
+    };
+  }, [socket]);
+
   // Fetch unread leads count & sync with leads-read event
   useEffect(() => {
     let active = true;
     const fetchUnreadLeads = async () => {
+      if (location.pathname === "/seller/dashboard/leads") {
+        if (active) setUnreadLeadsCount(0);
+        return;
+      }
       try {
         const res = await apiClient.get("/seller/leads/unread-count");
         const count = Number(res?.data?.data?.count || 0);
@@ -278,7 +293,7 @@ export default function SellerLayout() {
       window.removeEventListener("notifications-updated", handleSync);
       clearInterval(interval);
     };
-  }, []);
+  }, [location.pathname]);
 
   // Auto-clear badges when seller visits corresponding pages
   useEffect(() => {
