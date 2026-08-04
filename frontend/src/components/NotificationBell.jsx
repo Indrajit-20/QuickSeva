@@ -65,6 +65,9 @@ const getNotificationIcon = (type, title = "") => {
   };
 };
 
+let globalLastFetchTime = 0;
+let globalFetchPromise = null;
+
 export default function NotificationBell({ className = "", isSeller = false, align = "auto" }) {
   const { user } = useAuth();
   const { socket } = useSocket();
@@ -78,24 +81,40 @@ export default function NotificationBell({ className = "", isSeller = false, ali
 
   const containerRef = useRef(null);
 
-  // Fetch notifications & unread count
+  // Fetch notifications & unread count (deduplicated across multiple mounted instances)
   const fetchNotifications = useCallback(async ({ silent = false } = {}) => {
     if (!user) return;
+
+    // Deduplicate calls occurring within 3 seconds when silent polling
+    const now = Date.now();
+    if (silent && now - globalLastFetchTime < 3000) {
+      return;
+    }
+    if (globalFetchPromise) {
+      return globalFetchPromise;
+    }
+
     if (!silent) setLoading(true);
 
-    try {
-      const res = await apiClient.get("/notifications?page=1&limit=25");
-      const data = res?.data?.data || res?.data || {};
-      const list = data.notifications || [];
-      const count = Number(data.unread ?? list.filter((n) => !n.is_read).length);
+    globalFetchPromise = (async () => {
+      try {
+        globalLastFetchTime = Date.now();
+        const res = await apiClient.get("/notifications?page=1&limit=25");
+        const data = res?.data?.data || res?.data || {};
+        const list = data.notifications || [];
+        const count = Number(data.unread ?? list.filter((n) => !n.is_read).length);
 
-      setNotifications(Array.isArray(list) ? list : []);
-      setUnreadCount(count >= 0 ? count : 0);
-    } catch (err) {
-      console.warn("Failed to fetch notifications:", err?.message);
-    } finally {
-      if (!silent) setLoading(false);
-    }
+        setNotifications(Array.isArray(list) ? list : []);
+        setUnreadCount(count >= 0 ? count : 0);
+      } catch (err) {
+        console.warn("Failed to fetch notifications:", err?.message);
+      } finally {
+        globalFetchPromise = null;
+        if (!silent) setLoading(false);
+      }
+    })();
+
+    return globalFetchPromise;
   }, [user]);
 
   // Initial load + listener setup + 5s polling fallback

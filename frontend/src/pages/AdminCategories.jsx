@@ -6,6 +6,11 @@ import {
   ToggleLeft,
   ToggleRight,
   X,
+  UploadCloud,
+  FileSpreadsheet,
+  Download,
+  CheckCircle2,
+  AlertTriangle,
 } from "lucide-react";
 
 const AdminCategories = () => {
@@ -21,6 +26,14 @@ const AdminCategories = () => {
   const [addLoading, setAddLoading] = useState(false);
   const [addError, setAddError] = useState(null);
   const [addSuccess, setAddSuccess] = useState(null);
+
+  // Bulk Import State
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [rawCSVText, setRawCSVText] = useState("");
+  const [parsedRows, setParsedRows] = useState([]);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importResult, setImportResult] = useState(null);
+  const [exportingBookings, setExportingBookings] = useState(false);
 
   const fetchCategories = async () => {
     setLoading(true);
@@ -91,31 +104,157 @@ const AdminCategories = () => {
     }
   };
 
+  // Download Sample CSV Template
+  const handleDownloadSampleCSV = () => {
+    const sampleHeader = "seller_id,category_id,title,price,duration,description\n";
+    const sampleRows =
+      '1,1,"AC Deep Cleaning & Repair",599,"1.5 hours","Full servicing and gas pressure test"\n' +
+      '1,2,"Switchboard & Wiring Repair",299,"45 mins","Includes safety check and socket replacement"\n' +
+      '2,3,"Kitchen Deep Sanitization",899,"2 hours","Complete grease removal and surface polish"';
+    const csvContent = "\uFEFF" + sampleHeader + sampleRows;
+
+    const url = window.URL.createObjectURL(new Blob([csvContent], { type: "text/csv;charset=utf-8;" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "Sample_Services_Import_Template.csv");
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  };
+
+  // Parse CSV text into array of service objects
+  const parseCSVToJSON = (text) => {
+    const lines = text.split(/\r?\n/).filter((l) => l.trim());
+    if (lines.length <= 1) return [];
+
+    const headers = lines[0].split(",").map((h) => h.replace(/^["']|["']$/g, "").trim().toLowerCase());
+    const items = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const rowVals = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || lines[i].split(",");
+      const cleanVals = rowVals.map((v) => v.replace(/^["']|["']$/g, "").trim());
+
+      const obj = {};
+      headers.forEach((h, idx) => {
+        obj[h] = cleanVals[idx] || "";
+      });
+
+      if (obj.title || obj.seller_id) {
+        items.push({
+          seller_id: parseInt(obj.seller_id) || 1,
+          category_id: obj.category_id ? parseInt(obj.category_id) : null,
+          title: obj.title || `Service Item #${i}`,
+          price: parseFloat(obj.price) || 0,
+          duration: obj.duration || "1 hour",
+          description: obj.description || "",
+        });
+      }
+    }
+    return items;
+  };
+
+  // Handle CSV file drop or upload
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target.result;
+      setRawCSVText(content);
+      const parsed = parseCSVToJSON(content);
+      setParsedRows(parsed);
+    };
+    reader.readAsText(file);
+  };
+
+  // Execute Bulk Import API
+  const handleExecuteImport = async () => {
+    const itemsToImport = parsedRows.length > 0 ? parsedRows : parseCSVToJSON(rawCSVText);
+    if (itemsToImport.length === 0) {
+      alert("No valid service rows found in CSV.");
+      return;
+    }
+
+    setImportLoading(true);
+    setImportResult(null);
+    try {
+      const res = await adminService.bulkImportServices(itemsToImport);
+      setImportResult(res.data || res);
+      fetchCategories();
+    } catch (err) {
+      console.error(err);
+      alert(err?.response?.data?.message || "Failed to perform bulk import.");
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const handleExportBookings = async () => {
+    try {
+      setExportingBookings(true);
+      await adminService.exportBookingsCSV();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to export bookings report.");
+    } finally {
+      setExportingBookings(false);
+    }
+  };
+
   const inputClass =
     "w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 text-xs font-semibold shadow-xs";
 
   return (
     <div className="space-y-6 text-left">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-slate-800 tracking-tight">
-            Service Categories
+            Services & Categories
           </h1>
           <p className="text-slate-500 font-semibold text-sm mt-1">
-            Create new service categories, upload icons, or temporarily disable listings.
+            Create categories, bulk import services via CSV, or download booking reports.
           </p>
         </div>
-        <button
-          onClick={() => {
-            setAddError(null);
-            setAddSuccess(null);
-            setShowAddModal(true);
-          }}
-          className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition shadow-xs self-start cursor-pointer"
-        >
-          <PlusCircle size={14} />
-          <span>Add New Category</span>
-        </button>
+
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            type="button"
+            onClick={handleExportBookings}
+            disabled={exportingBookings}
+            className="px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition shadow-xs cursor-pointer disabled:opacity-50"
+          >
+            <FileSpreadsheet size={14} />
+            <span>{exportingBookings ? "Exporting..." : "Export Bookings (.CSV)"}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setRawCSVText("");
+              setParsedRows([]);
+              setImportResult(null);
+              setShowImportModal(true);
+            }}
+            className="px-3.5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition shadow-xs cursor-pointer"
+          >
+            <UploadCloud size={14} />
+            <span>Bulk Import Services</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setAddError(null);
+              setAddSuccess(null);
+              setShowAddModal(true);
+            }}
+            className="px-3.5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition shadow-xs cursor-pointer"
+          >
+            <PlusCircle size={14} />
+            <span>Add Category</span>
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -277,6 +416,157 @@ const AdminCategories = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Bulk Import Services Modal ── */}
+      {showImportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 text-slate-800">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-2xl w-full p-6 space-y-5 shadow-2xl animate-fade-in max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                  <UploadCloud size={18} className="text-indigo-600" />
+                  <span>Bulk Import Services (CSV Upload)</span>
+                </h3>
+                <p className="text-xs font-medium text-slate-500 mt-0.5">
+                  Upload a CSV spreadsheet to add multiple services to QuickSeva in seconds.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowImportModal(false)}
+                className="text-slate-400 hover:text-slate-600 cursor-pointer p-1"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Template Download Prompt */}
+            <div className="flex items-center justify-between bg-indigo-50/80 border border-indigo-100 rounded-xl p-3.5">
+              <div className="flex items-center gap-2.5">
+                <FileSpreadsheet className="h-5 w-5 text-indigo-600 shrink-0" />
+                <div>
+                  <p className="text-xs font-bold text-indigo-950">Need the correct column format?</p>
+                  <p className="text-[11px] font-semibold text-indigo-700">Columns: seller_id, category_id, title, price, duration, description</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleDownloadSampleCSV}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-lg transition active:scale-95 cursor-pointer shrink-0"
+              >
+                <Download size={13} />
+                <span>Download Template</span>
+              </button>
+            </div>
+
+            {/* File Upload / CSV Input */}
+            <div className="space-y-3 text-left">
+              <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider">
+                1. Select CSV File or Paste Data
+              </label>
+              <div className="flex items-center justify-center w-full">
+                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-300 border-dashed rounded-xl cursor-pointer bg-slate-50/50 hover:bg-slate-100/80 transition-all">
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                    <UploadCloud className="w-8 h-8 mb-2 text-indigo-500" />
+                    <p className="mb-1 text-xs font-bold text-slate-700">Click to upload CSV spreadsheet</p>
+                    <p className="text-[10px] text-slate-400">CSV format up to 10MB</p>
+                  </div>
+                  <input type="file" accept=".csv,text/csv" className="hidden" onChange={handleFileUpload} />
+                </label>
+              </div>
+
+              <div>
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                  Or paste CSV rows manually:
+                </span>
+                <textarea
+                  rows="4"
+                  value={rawCSVText}
+                  onChange={(e) => {
+                    setRawCSVText(e.target.value);
+                    setParsedRows(parseCSVToJSON(e.target.value));
+                  }}
+                  placeholder={`seller_id,category_id,title,price,duration,description\n1,1,"AC Deep Cleaning",599,"1.5 hours","Full servicing"`}
+                  className="w-full p-3 font-mono text-[11px] bg-slate-900 text-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 leading-relaxed"
+                />
+              </div>
+            </div>
+
+            {/* Parsed Preview Table */}
+            {parsedRows.length > 0 && (
+              <div className="space-y-2 text-left">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-extrabold text-slate-700">
+                    2. Parsed Preview ({parsedRows.length} services ready to import)
+                  </span>
+                </div>
+                <div className="max-h-40 overflow-y-auto border border-slate-200 rounded-xl text-xs">
+                  <table className="w-full text-left border-collapse">
+                    <thead className="bg-slate-100 text-slate-600 font-bold sticky top-0 border-b border-slate-200">
+                      <tr>
+                        <th className="p-2">#</th>
+                        <th className="p-2">Seller ID</th>
+                        <th className="p-2">Title</th>
+                        <th className="p-2">Price</th>
+                        <th className="p-2">Duration</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-medium">
+                      {parsedRows.map((row, idx) => (
+                        <tr key={idx} className="hover:bg-slate-50">
+                          <td className="p-2 font-mono text-slate-400">{idx + 1}</td>
+                          <td className="p-2 font-bold">{row.seller_id}</td>
+                          <td className="p-2 font-semibold text-slate-900">{row.title}</td>
+                          <td className="p-2 text-emerald-600 font-bold">₹{row.price}</td>
+                          <td className="p-2 text-slate-500">{row.duration}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Result Summary Alert */}
+            {importResult && (
+              <div className={`p-4 rounded-xl border text-xs text-left ${importResult.failedCount === 0 ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-amber-50 border-amber-200 text-amber-900"}`}>
+                <div className="flex items-center gap-2 font-bold mb-1">
+                  {importResult.failedCount === 0 ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <AlertTriangle className="h-4 w-4 text-amber-600" />}
+                  <span>{importResult.message || "Import execution finished."}</span>
+                </div>
+                {importResult.errors && importResult.errors.length > 0 && (
+                  <ul className="list-disc pl-5 mt-2 space-y-1 font-mono text-[11px]">
+                    {importResult.errors.map((err, idx) => (
+                      <li key={idx}>{err}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setShowImportModal(false)}
+                disabled={importLoading}
+                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition cursor-pointer"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteImport}
+                disabled={importLoading || (parsedRows.length === 0 && !rawCSVText.trim())}
+                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition cursor-pointer shadow-sm"
+              >
+                <UploadCloud size={14} />
+                <span>{importLoading ? "Importing Services..." : "Confirm & Import Services"}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

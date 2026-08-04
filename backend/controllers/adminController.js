@@ -298,3 +298,206 @@ exports.toggleCategory = async (req, res) => {
     return errorRes(res, "Failed to update category status");
   }
 };
+
+// ── EXPORT & IMPORT UTILITIES ──
+
+// Helper: Convert objects array to CSV string with UTF-8 BOM for Excel
+const convertToCSV = (headers, rows) => {
+  const escapeCell = (val) => {
+    if (val === null || val === undefined) return '""';
+    const str = String(val).replace(/"/g, '""');
+    return `"${str}"`;
+  };
+
+  const headerRow = headers.map((h) => escapeCell(h.label)).join(",");
+  const dataRows = rows.map((row) =>
+    headers.map((h) => escapeCell(row[h.key])).join(",")
+  );
+
+  return "\uFEFF" + [headerRow, ...dataRows].join("\n");
+};
+
+// Export Users CSV
+exports.exportUsersCSV = async (req, res) => {
+  try {
+    const [users] = await pool.query(
+      `SELECT u.id, u.name, u.email, u.phone, u.role, u.is_active, u.created_at, IFNULL(w.balance, 0.00) AS wallet_balance
+       FROM users u
+       LEFT JOIN wallets w ON u.id = w.user_id
+       ORDER BY u.created_at DESC`
+    );
+
+    const headers = [
+      { label: "User ID", key: "id" },
+      { label: "Full Name", key: "name" },
+      { label: "Email Address", key: "email" },
+      { label: "Phone Number", key: "phone" },
+      { label: "Role", key: "role" },
+      { label: "Account Status", key: "status" },
+      { label: "Wallet Balance (₹)", key: "wallet_balance" },
+      { label: "Joined Date", key: "created_at" },
+    ];
+
+    const formattedRows = users.map((u) => ({
+      ...u,
+      status: u.is_active ? "Active" : "Blocked",
+      wallet_balance: parseFloat(u.wallet_balance).toFixed(2),
+      created_at: new Date(u.created_at).toLocaleString("en-IN"),
+    }));
+
+    const csvData = convertToCSV(headers, formattedRows);
+
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", 'attachment; filename="QuickSeva_Users_Report.csv"');
+    return res.status(200).send(csvData);
+  } catch (err) {
+    console.error("Export users error:", err);
+    return errorRes(res, "Failed to export users report");
+  }
+};
+
+// Export Sellers CSV
+exports.exportSellersCSV = async (req, res) => {
+  try {
+    const [sellers] = await pool.query(
+      `SELECT s.id, s.business_name, u.name AS owner_name, u.email, u.phone,
+              c.name AS category_name, s.avg_rating, s.total_reviews,
+              s.is_verified, s.is_available, s.plan, s.created_at
+       FROM sellers s
+       JOIN users u ON s.user_id = u.id
+       LEFT JOIN categories c ON s.category_id = c.id
+       ORDER BY s.created_at DESC`
+    );
+
+    const headers = [
+      { label: "Seller ID", key: "id" },
+      { label: "Business Name", key: "business_name" },
+      { label: "Owner Name", key: "owner_name" },
+      { label: "Email", key: "email" },
+      { label: "Phone", key: "phone" },
+      { label: "Category", key: "category_name" },
+      { label: "Average Rating", key: "avg_rating" },
+      { label: "Total Reviews", key: "total_reviews" },
+      { label: "Verification Status", key: "is_verified" },
+      { label: "Subscription Plan", key: "plan" },
+      { label: "Joined Date", key: "created_at" },
+    ];
+
+    const formattedRows = sellers.map((s) => ({
+      ...s,
+      category_name: s.category_name || "Uncategorized",
+      avg_rating: parseFloat(s.avg_rating || 0).toFixed(1),
+      is_verified: s.is_verified ? "Verified" : "Pending",
+      plan: s.plan ? s.plan.toUpperCase() : "FREE",
+      created_at: new Date(s.created_at).toLocaleString("en-IN"),
+    }));
+
+    const csvData = convertToCSV(headers, formattedRows);
+
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", 'attachment; filename="QuickSeva_Sellers_Report.csv"');
+    return res.status(200).send(csvData);
+  } catch (err) {
+    console.error("Export sellers error:", err);
+    return errorRes(res, "Failed to export sellers report");
+  }
+};
+
+// Export Bookings CSV
+exports.exportBookingsCSV = async (req, res) => {
+  try {
+    const [orders] = await pool.query(
+      `SELECT o.id, o.order_number, u.name AS customer_name, s.business_name AS seller_name,
+              o.service_name, o.total_amount, o.platform_fee, o.status, o.created_at
+       FROM orders o
+       LEFT JOIN users u ON o.buyer_id = u.id
+       LEFT JOIN sellers s ON o.seller_id = s.id
+       ORDER BY o.created_at DESC`
+    );
+
+    const headers = [
+      { label: "Order ID", key: "id" },
+      { label: "Order Number", key: "order_number" },
+      { label: "Customer Name", key: "customer_name" },
+      { label: "Seller Name", key: "seller_name" },
+      { label: "Service Title", key: "service_name" },
+      { label: "Total Amount (₹)", key: "total_amount" },
+      { label: "Platform Fee (₹)", key: "platform_fee" },
+      { label: "Order Status", key: "status" },
+      { label: "Date & Time", key: "created_at" },
+    ];
+
+    const formattedRows = orders.map((o) => ({
+      ...o,
+      customer_name: o.customer_name || "N/A",
+      seller_name: o.seller_name || "N/A",
+      total_amount: parseFloat(o.total_amount || 0).toFixed(2),
+      platform_fee: parseFloat(o.platform_fee || 0).toFixed(2),
+      status: String(o.status || "").toUpperCase(),
+      created_at: new Date(o.created_at).toLocaleString("en-IN"),
+    }));
+
+    const csvData = convertToCSV(headers, formattedRows);
+
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", 'attachment; filename="QuickSeva_Bookings_Report.csv"');
+    return res.status(200).send(csvData);
+  } catch (err) {
+    console.error("Export bookings error:", err);
+    return errorRes(res, "Failed to export bookings report");
+  }
+};
+
+// Bulk Import Services
+exports.bulkImportServices = async (req, res) => {
+  try {
+    const { items } = req.body;
+    if (!Array.isArray(items) || items.length === 0) {
+      return errorRes(res, "Invalid payload. Array of service items is required.", 400);
+    }
+
+    let successCount = 0;
+    let failedCount = 0;
+    const errors = [];
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const rowNum = i + 1;
+
+      if (!item.title || !item.seller_id || !item.price) {
+        errors.push(`Row ${rowNum}: Title, seller_id, and price are required.`);
+        failedCount++;
+        continue;
+      }
+
+      try {
+        await pool.query(
+          `INSERT INTO services (seller_id, category_id, title, description, price, duration, is_active)
+           VALUES (?, ?, ?, ?, ?, ?, 1)`,
+          [
+            item.seller_id,
+            item.category_id || null,
+            String(item.title).trim(),
+            item.description || "",
+            parseFloat(item.price) || 0,
+            item.duration || "1 hour",
+          ]
+        );
+        successCount++;
+      } catch (err) {
+        errors.push(`Row ${rowNum}: ${err.message}`);
+        failedCount++;
+      }
+    }
+
+    return successRes(res, {
+      total: items.length,
+      successCount,
+      failedCount,
+      errors,
+    }, `Bulk import completed: ${successCount} imported successfully, ${failedCount} failed.`);
+  } catch (err) {
+    console.error("Bulk import services error:", err);
+    return errorRes(res, "Failed to perform bulk import");
+  }
+};

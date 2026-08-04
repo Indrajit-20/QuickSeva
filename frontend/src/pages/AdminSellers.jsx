@@ -12,6 +12,7 @@ import {
   Briefcase,
   Star,
   Download,
+  FileSpreadsheet,
 } from "lucide-react";
 import apiClient from "../api/axiosConfig";
 
@@ -23,6 +24,19 @@ const AdminSellers = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [exporting, setExporting] = useState(false);
+
+  const handleExportCSV = async () => {
+    try {
+      setExporting(true);
+      await adminService.exportSellersCSV();
+    } catch (err) {
+      console.error("Export failed:", err);
+      alert("Failed to download Excel report. Please try again.");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   // Detailed Modal State
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -132,6 +146,16 @@ const AdminSellers = () => {
             Review uploaded certificates, verify business compliance, or suspend accounts.
           </p>
         </div>
+
+        <button
+          type="button"
+          onClick={handleExportCSV}
+          disabled={exporting}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition cursor-pointer disabled:opacity-50"
+        >
+          <FileSpreadsheet className="h-4 w-4" />
+          {exporting ? "Generating Excel..." : "Export Sellers (.CSV)"}
+        </button>
       </div>
 
       {/* Filters & Search */}

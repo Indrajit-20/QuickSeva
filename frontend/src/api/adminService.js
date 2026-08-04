@@ -55,4 +55,33 @@ export const adminService = {
     const res = await apiClient.post("/wallet/admin/credit", data);
     return res.data;
   },
+
+  downloadExport: async (endpoint, defaultFilename) => {
+    const res = await apiClient.get(endpoint, { responseType: "blob" });
+    const url = window.URL.createObjectURL(new Blob([res.data], { type: "text/csv;charset=utf-8;" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", defaultFilename);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  },
+
+  exportUsersCSV: async () => {
+    return adminService.downloadExport("/admin/export/users", "QuickSeva_Users_Report.csv");
+  },
+
+  exportSellersCSV: async () => {
+    return adminService.downloadExport("/admin/export/sellers", "QuickSeva_Sellers_Report.csv");
+  },
+
+  exportBookingsCSV: async () => {
+    return adminService.downloadExport("/admin/export/bookings", "QuickSeva_Bookings_Report.csv");
+  },
+
+  bulkImportServices: async (items) => {
+    const res = await apiClient.post("/admin/import/services", { items });
+    return res.data;
+  },
 };

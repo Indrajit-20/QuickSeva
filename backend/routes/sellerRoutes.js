@@ -80,60 +80,60 @@ router.get("/in-view", async (req, res) => {
     const { pool } = require("../config/db");
 
     // Query sellers within the bounding box with all details required by client layout
-    const [rows] = await pool.query(
-      `SELECT * FROM (
-        SELECT s.id,
-               s.id AS sellerId,
-               s.business_name AS businessName,
-               s.business_name AS name,
-               u.name AS ownerName,
-               c.name AS categoryName,
-               c.name AS service,
-               CAST(COALESCE(s.latitude, u.lat) AS DECIMAL(10, 7)) AS lat,
-               CAST(COALESCE(s.longitude, u.lng) AS DECIMAL(10, 7)) AS lng,
-               s.avg_rating AS rating,
-               s.avg_rating,
-               s.total_reviews AS reviews,
-               s.service_mode AS serviceMode,
-               s.instant_service AS instantService,
-               s.is_premium AS isPremium,
-               s.plan AS plan,
-               s.premium_expires_at AS premiumExpiresAt,
-               s.location_address AS address,
-               u.phone AS phone,
-               s.is_available,
-               s.is_available AS isAvailable,
-               u.profile_pic,
-               u.profile_pic AS profilePhotoUrl,
-               MIN(sv.price) AS min_price,
-               JSON_ARRAYAGG(
-                 JSON_OBJECT(
-                   'id', sv.id,
-                   'name', sv.title,
-                   'price', sv.price,
-                   'duration', sv.duration,
-                   'is_instant', sv.is_instant
-                 )
-               ) AS services_json
-        FROM sellers s
-        JOIN users u ON s.user_id = u.id
-        LEFT JOIN categories c ON s.category_id = c.id
-        LEFT JOIN services sv ON sv.seller_id = s.id AND sv.is_active = 1
-        GROUP BY s.id
-      ) AS sellers_in_view
-      WHERE lat BETWEEN ? AND ? AND lng BETWEEN ? AND ?
-      LIMIT 200`,
+    const [sellers] = await pool.query(
+      `SELECT s.id,
+              s.id AS sellerId,
+              s.business_name AS businessName,
+              s.business_name AS name,
+              u.name AS ownerName,
+              c.name AS categoryName,
+              c.name AS service,
+              CAST(COALESCE(s.latitude, u.lat) AS DECIMAL(10, 7)) AS lat,
+              CAST(COALESCE(s.longitude, u.lng) AS DECIMAL(10, 7)) AS lng,
+              s.avg_rating AS rating,
+              s.avg_rating,
+              s.total_reviews AS reviews,
+              s.service_mode AS serviceMode,
+              s.instant_service AS instantService,
+              s.is_premium AS isPremium,
+              s.plan AS plan,
+              s.premium_expires_at AS premiumExpiresAt,
+              s.location_address AS address,
+              u.phone AS phone,
+              s.is_available,
+              s.is_available AS isAvailable,
+              u.profile_pic,
+              u.profile_pic AS profilePhotoUrl
+       FROM sellers s
+       JOIN users u ON s.user_id = u.id
+       LEFT JOIN categories c ON s.category_id = c.id
+       HAVING lat BETWEEN ? AND ? AND lng BETWEEN ? AND ?
+       LIMIT 200`,
       [parseFloat(minLat), parseFloat(maxLat), parseFloat(minLng), parseFloat(maxLng)]
     );
 
-    const parsedRows = rows.map((r) => {
-      let services = [];
-      try {
-        services = r.services_json ? JSON.parse(r.services_json) : [];
-      } catch {
-        services = [];
-      }
-      services = Array.isArray(services) ? services.filter((sv) => sv && sv.id != null) : [];
+    if (sellers.length === 0) {
+      return res.json([]);
+    }
+
+    const sellerIds = sellers.map((s) => s.id);
+    const [services] = await pool.query(
+      `SELECT seller_id, id, title AS name, price, duration, is_instant
+       FROM services
+       WHERE seller_id IN (?) AND is_active = 1`,
+      [sellerIds]
+    );
+
+    const servicesBySeller = {};
+    services.forEach((sv) => {
+      if (!servicesBySeller[sv.seller_id]) servicesBySeller[sv.seller_id] = [];
+      servicesBySeller[sv.seller_id].push(sv);
+    });
+
+    const parsedRows = sellers.map((r) => {
+      const sellerServices = servicesBySeller[r.id] || [];
+      const prices = sellerServices.map((sv) => parseFloat(sv.price)).filter((p) => !isNaN(p));
+      const min_price = prices.length > 0 ? Math.min(...prices) : 0;
 
       return {
         ...r,
@@ -144,8 +144,8 @@ router.get("/in-view", async (req, res) => {
         reviews: r.reviews !== null && r.reviews !== undefined ? parseInt(r.reviews) : 0,
         isPremium: (r.isPremium && r.premiumExpiresAt && new Date(r.premiumExpiresAt) > new Date()) ? true : false,
         instantService: r.instantService ? true : false,
-        min_price: r.min_price ? parseFloat(r.min_price) : 0,
-        services,
+        min_price,
+        services: sellerServices,
       };
     });
 

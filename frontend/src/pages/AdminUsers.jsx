@@ -8,6 +8,7 @@ import {
   PlusCircle,
   X,
   Wallet,
+  FileSpreadsheet,
 } from "lucide-react";
 
 const AdminUsers = () => {
@@ -18,6 +19,19 @@ const AdminUsers = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [exporting, setExporting] = useState(false);
+
+  const handleExportCSV = async () => {
+    try {
+      setExporting(true);
+      await adminService.exportUsersCSV();
+    } catch (err) {
+      console.error("Export failed:", err);
+      alert("Failed to download Excel report. Please try again.");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   // Wallet Modal State
   const [showWalletModal, setShowWalletModal] = useState(false);
@@ -130,6 +144,16 @@ const AdminUsers = () => {
             Manage roles, view balances, and suspend/reactivate client accounts.
           </p>
         </div>
+
+        <button
+          type="button"
+          onClick={handleExportCSV}
+          disabled={exporting}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition cursor-pointer disabled:opacity-50"
+        >
+          <FileSpreadsheet className="h-4 w-4" />
+          {exporting ? "Generating Excel..." : "Export Users (.CSV)"}
+        </button>
       </div>
 
       {/* Filters & Search */}

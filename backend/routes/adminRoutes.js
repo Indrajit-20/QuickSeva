@@ -10,6 +10,10 @@ const {
   getCategories,
   createCategory,
   toggleCategory,
+  exportUsersCSV,
+  exportSellersCSV,
+  exportBookingsCSV,
+  bulkImportServices,
 } = require("../controllers/adminController");
 
 // Apply admin protection to all routes in this file
@@ -21,6 +25,14 @@ router.get("/stats", getStats);
 // Users and Sellers Management
 router.get("/users", getUsers);
 router.get("/sellers", getSellers);
+
+// Excel / CSV Exports
+router.get("/export/users", exportUsersCSV);
+router.get("/export/sellers", exportSellersCSV);
+router.get("/export/bookings", exportBookingsCSV);
+
+// Bulk Import
+router.post("/import/services", bulkImportServices);
 
 // Disputes
 router.get("/disputes", getDisputes);
