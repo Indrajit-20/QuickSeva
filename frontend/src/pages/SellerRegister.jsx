@@ -32,6 +32,32 @@ const SellerRegister = () => {
   const suppressNextSearchRef = useRef(false);
   const locationSearchRef = useRef(null);
 
+  const searchLocation = async (queryVal) => {
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(queryVal)}&format=json&limit=5&countrycodes=in&addressdetails=1&email=support@quickseva.com`,
+        {
+          headers: {
+            Accept: "application/json",
+            "User-Agent": "QuickSeva/1.0",
+          },
+        }
+      );
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        setLocationResults(data);
+        setLocationNotFoundMsg("");
+      } else {
+        setLocationResults([]);
+        setLocationNotFoundMsg("No matching locations found in India.");
+      }
+    } catch (err) {
+      console.error("Location search failed:", err);
+      setLocationResults([]);
+      setLocationNotFoundMsg("Search failed. Please try again.");
+    }
+  };
+
   useEffect(() => {
     const timer = setTimeout(() => {
       if (suppressNextSearchRef.current) {
@@ -57,33 +83,6 @@ const SellerRegister = () => {
     document.addEventListener("mousedown", handleMouseDown);
     return () => document.removeEventListener("mousedown", handleMouseDown);
   }, []);
-
-  const searchLocation = async (queryVal) => {
-    try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(queryVal)}&format=json&limit=5&countrycodes=in&addressdetails=1&email=support@quickseva.com`,
-        {
-          headers: {
-            Accept: "application/json",
-            "User-Agent": "QuickSeva/1.0",
-          },
-        }
-      );
-      if (!res.ok) throw new Error("Search failed");
-      const data = await res.json();
-      if (data && data.length > 0) {
-        setLocationResults(data);
-        setLocationNotFoundMsg("");
-      } else {
-        setLocationResults([]);
-        setLocationNotFoundMsg("No results found");
-      }
-    } catch (err) {
-      console.error("Location search error:", err);
-      setLocationResults([]);
-      setLocationNotFoundMsg("Search failed");
-    }
-  };
 
   const handleLocationResultClick = (result) => {
     const lat = parseFloat(result.lat);

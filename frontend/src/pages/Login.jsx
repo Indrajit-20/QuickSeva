@@ -20,12 +20,6 @@ const Login = () => {
 
   const digitsOnlyPhone = phone.replace(/\D/g, "");
 
-  // Clear auth errors and load Captcha on mount
-  useEffect(() => {
-    if (clearAuthError) clearAuthError();
-    fetchNewCaptcha();
-  }, []);
-
   const fetchNewCaptcha = async () => {
     setFetchingCaptcha(true);
     setCaptchaAnswer("");
@@ -42,6 +36,12 @@ const Login = () => {
       setFetchingCaptcha(false);
     }
   };
+
+  // Clear auth errors and load Captcha on mount
+  useEffect(() => {
+    if (clearAuthError) clearAuthError();
+    fetchNewCaptcha();
+  }, []);
 
   const validateForm = () => {
     const errors = {};

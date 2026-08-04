@@ -145,6 +145,24 @@ export default function BookingPage() {
     platform_fee_model: "seller",
     platform_fee_percentage: "5.00"
   });
+  const [sellerServices, setSellerServices] = useState([]);
+  const [selectedServiceState, setSelectedServiceState] = useState(selectedService ? { ...selectedService, price_type: "negotiable" } : null);
+  const [confirmedBooking, setConfirmedBooking] = useState(null);
+  const [errors, setErrors] = useState({});
+  const [bookedSlots, setBookedSlots] = useState([]);
+  const [bookingLoading, setBookingLoading] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("online");
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+
+  const [formData, setFormData] = useState({
+    service: selectedService?.name || selectedService?.title || "",
+    date: todayDDMMYYYY(),
+    timeSlot: "",
+    address: "",
+    mobile: user?.phone || "",
+    instructions: "",
+  });
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -159,11 +177,6 @@ export default function BookingPage() {
     };
     fetchSettings();
   }, []);
-  const [sellerServices, setSellerServices] = useState([]);
-  const [selectedServiceState, setSelectedServiceState] = useState(selectedService ? { ...selectedService, price_type: "negotiable" } : null);
-  const [confirmedBooking, setConfirmedBooking] = useState(null);
-  const [errors, setErrors] = useState({});
-  const [bookedSlots, setBookedSlots] = useState([]);
 
   useEffect(() => {
     if (confirmedBooking || submitError) {
@@ -182,21 +195,6 @@ export default function BookingPage() {
       return Math.abs(candidateTime - bookedTime) < 7200000;
     });
   };
-  const [bookingLoading, setBookingLoading] = useState(false);
-  const [submitError, setSubmitError] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("online");
-
-  // Custom Invoice Modal state
-  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
-
-  const [formData, setFormData] = useState({
-    service: selectedService?.name || selectedService?.title || "",
-    date: todayDDMMYYYY(),
-    timeSlot: "",
-    address: "",
-    mobile: user?.phone || "",
-    instructions: "",
-  });
 
   // Load seller and services from backend
   useEffect(() => {

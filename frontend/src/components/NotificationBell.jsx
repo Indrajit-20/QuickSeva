@@ -18,7 +18,9 @@ import { useAuth } from "../context/AuthContext";
 
 const formatTimeAgo = (value) => {
   if (!value) return "Just now";
-  const diff = Date.now() - new Date(value).getTime();
+  const time = new Date(value).getTime();
+  if (isNaN(time)) return "Just now";
+  const diff = Math.max(0, Date.now() - time);
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return "Just now";
   if (mins < 60) return `${mins}m ago`;

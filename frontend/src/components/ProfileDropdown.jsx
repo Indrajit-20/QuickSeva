@@ -129,18 +129,18 @@ export default function ProfileDropdown({ user, onLogout }) {
       <button
         type="button"
         onClick={handlePrimaryToggle}
-        className="flex items-center space-x-2.5 bg-white hover:bg-slate-50 border border-slate-200 shadow-2xs rounded-full pl-2 pr-4 py-1.5 transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20 active:scale-95"
+        className="flex items-center space-x-2 bg-white hover:bg-slate-50 border border-slate-200/90 hover:border-slate-300 shadow-2xs rounded-full p-1 pr-3.5 transition-all duration-200 cursor-pointer focus:outline-none active:scale-95"
         aria-label="Open profile menu"
       >
-        <div className="relative p-0.5 rounded-full bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 shadow-2xs">
+        <div className="relative rounded-full p-[2px] ring-2 ring-blue-500/80 bg-white shadow-2xs">
           {user?.profile_pic ? (
             <img
               src={getImageUrl(user.profile_pic)}
               alt="Profile"
-              className="w-8 h-8 rounded-full object-cover bg-white"
+              className="w-7 h-7 rounded-full object-cover bg-slate-100"
             />
           ) : (
-            <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-black text-xs">
+            <div className="w-7 h-7 rounded-full bg-slate-900 text-white flex items-center justify-center font-black text-xs">
               {initials}
             </div>
           )}
@@ -181,15 +181,15 @@ export default function ProfileDropdown({ user, onLogout }) {
 
                 {/* Profile Overview Card */}
                 <div className="pt-3 flex items-center gap-3.5 text-left">
-                  <div className="p-1 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 shadow-md">
+                  <div className="relative rounded-full p-[2px] ring-2 ring-blue-500/80 bg-white shadow-xs">
                     {user?.profile_pic ? (
                       <img
                         src={getImageUrl(user.profile_pic)}
                         alt="Profile"
-                        className="w-14 h-14 rounded-xl object-cover bg-white"
+                        className="w-13 h-13 rounded-full object-cover bg-slate-100"
                       />
                     ) : (
-                      <div className="w-14 h-14 rounded-xl bg-slate-900 text-white flex items-center justify-center font-black text-xl">
+                      <div className="w-13 h-13 rounded-full bg-slate-900 text-white flex items-center justify-center font-black text-lg">
                         {initials}
                       </div>
                     )}
@@ -203,7 +203,7 @@ export default function ProfileDropdown({ user, onLogout }) {
                       )}
                     </h3>
                     <p className="text-slate-500 text-xs font-semibold truncate mt-0.5">{email || phone}</p>
-                    
+
                     <div className="mt-2 flex items-center gap-2 flex-wrap">
                       <span className="inline-flex items-center gap-1 rounded-lg bg-blue-50 border border-blue-200/80 px-2.5 py-1 text-[11px] font-extrabold text-blue-700">
                         <ClipboardList className="w-3 h-3 text-blue-600" />
@@ -234,7 +234,7 @@ export default function ProfileDropdown({ user, onLogout }) {
                       </span>
                       <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
                     </button>
-                    
+
                     <button
                       type="button"
                       onClick={() => closeAndNav("/seller/services")}
@@ -324,15 +324,15 @@ export default function ProfileDropdown({ user, onLogout }) {
               {/* User Profile Summary */}
               <div className="p-5 border-b border-slate-100">
                 <div className="flex items-center gap-3.5">
-                  <div className="p-1 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 shadow-md">
+                  <div className="relative rounded-full p-[2px] ring-2 ring-blue-500/80 bg-white shadow-xs">
                     {user?.profile_pic ? (
                       <img
                         src={getImageUrl(user.profile_pic)}
                         alt="Profile"
-                        className="w-12 h-12 rounded-xl object-cover bg-white"
+                        className="w-12 h-12 rounded-full object-cover bg-slate-100"
                       />
                     ) : (
-                      <div className="w-12 h-12 rounded-xl bg-slate-900 text-white flex items-center justify-center font-black text-base">
+                      <div className="w-12 h-12 rounded-full bg-slate-900 text-white flex items-center justify-center font-black text-base">
                         {initials}
                       </div>
                     )}

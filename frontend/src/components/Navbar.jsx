@@ -91,7 +91,7 @@ const Navbar = () => {
   const handleHomeClick = (e) => {
     try {
       sessionStorage.removeItem("qs_nearby_search_cache");
-    } catch {}
+    } catch { }
     if (window.location.pathname === "/" && window.location.search) {
       e?.preventDefault?.();
       window.location.href = "/";

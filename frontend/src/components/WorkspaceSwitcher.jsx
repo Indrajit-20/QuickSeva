@@ -35,30 +35,27 @@ const WorkspaceSwitcher = ({ layout = "dropdown", onClose }) => {
         </div>
         <div className="relative flex rounded-2xl bg-slate-100/90 p-1 border border-slate-200/80 shadow-inner">
           <div
-            className={`absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] rounded-xl transition-all duration-300 ease-out shadow-md ${
-              isSellerActive
+            className={`absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] rounded-xl transition-all duration-300 ease-out shadow-md ${isSellerActive
                 ? "translate-x-full bg-gradient-to-r from-indigo-600 to-purple-600"
                 : "translate-x-0 bg-gradient-to-r from-blue-600 to-indigo-600"
-            }`}
+              }`}
           />
-          
+
           <button
             type="button"
             onClick={handleUserClick}
-            className={`relative z-10 flex flex-1 items-center justify-center gap-1.5 py-2 text-xs font-black transition-all duration-200 cursor-pointer ${
-              isUserActive ? "text-white" : "text-slate-600 hover:text-slate-900"
-            }`}
+            className={`relative z-10 flex flex-1 items-center justify-center gap-1.5 py-2 text-xs font-black transition-all duration-200 cursor-pointer ${isUserActive ? "text-white" : "text-slate-600 hover:text-slate-900"
+              }`}
           >
             <User className="w-3.5 h-3.5" />
             <span>Customer</span>
           </button>
-          
+
           <button
             type="button"
             onClick={handleSellerClick}
-            className={`relative z-10 flex flex-1 items-center justify-center gap-1.5 py-2 text-xs font-black transition-all duration-200 cursor-pointer ${
-              isSellerActive ? "text-white" : "text-slate-600 hover:text-slate-900"
-            }`}
+            className={`relative z-10 flex flex-1 items-center justify-center gap-1.5 py-2 text-xs font-black transition-all duration-200 cursor-pointer ${isSellerActive ? "text-white" : "text-slate-600 hover:text-slate-900"
+              }`}
           >
             <Store className="w-3.5 h-3.5" />
             <span>{isSeller ? "Seller" : "Join Partner"}</span>
@@ -80,30 +77,27 @@ const WorkspaceSwitcher = ({ layout = "dropdown", onClose }) => {
       <div className="relative flex flex-1 rounded-2xl bg-slate-200/80 p-1 border border-slate-300/50 max-w-none sm:max-w-[220px]">
         {/* Sliding indicator */}
         <div
-          className={`absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] rounded-xl transition-all duration-300 ease-out shadow-sm ${
-            isSellerActive
+          className={`absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] rounded-xl transition-all duration-300 ease-out shadow-sm ${isSellerActive
               ? "translate-x-full bg-gradient-to-r from-indigo-600 to-purple-600"
               : "translate-x-0 bg-gradient-to-r from-blue-600 to-indigo-600"
-          }`}
+            }`}
         />
-        
+
         <button
           type="button"
           onClick={handleUserClick}
-          className={`relative z-10 flex flex-1 items-center justify-center gap-1.5 py-1.5 px-3 text-xs font-black transition-colors duration-200 cursor-pointer ${
-            isUserActive ? "text-white" : "text-slate-600 hover:text-slate-900"
-          }`}
+          className={`relative z-10 flex flex-1 items-center justify-center gap-1.5 py-1.5 px-3 text-xs font-black transition-colors duration-200 cursor-pointer ${isUserActive ? "text-white" : "text-slate-600 hover:text-slate-900"
+            }`}
         >
           <User className="w-3.5 h-3.5 shrink-0" />
           <span>Customer</span>
         </button>
-        
+
         <button
           type="button"
           onClick={handleSellerClick}
-          className={`relative z-10 flex flex-1 items-center justify-center gap-1.5 py-1.5 px-3 text-xs font-black transition-colors duration-200 cursor-pointer ${
-            isSellerActive ? "text-white" : "text-slate-600 hover:text-slate-900"
-          }`}
+          className={`relative z-10 flex flex-1 items-center justify-center gap-1.5 py-1.5 px-3 text-xs font-black transition-colors duration-200 cursor-pointer ${isSellerActive ? "text-white" : "text-slate-600 hover:text-slate-900"
+            }`}
         >
           <Store className="w-3.5 h-3.5 shrink-0" />
           <span>{isSeller ? "Seller" : "Join"}</span>

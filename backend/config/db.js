@@ -21,7 +21,7 @@ let poolConfig = {
   enableKeepAlive: true,
   keepAliveInitialDelay: 10000, // Send TCP keepalive every 10 seconds
   ssl: isSSLRequired ? { rejectUnauthorized: false } : false,
-  timezone: "+05:30", // IST
+  timezone: "Z", // UTC
 };
 
 // Auto-parse MYSQL_URL / DATABASE_URL if provided by cloud DB host
