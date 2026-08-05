@@ -31,6 +31,11 @@ export default function SellerProfile() {
     address: "",
     profilePictureUrl: "",
     sellerType: "individual",
+    accountType: "individual",
+    slotCapacity: 1,
+    slotDurationMins: 60,
+    workingHoursStart: "09:00",
+    workingHoursEnd: "19:00",
     pincode: "",
   });
 
@@ -93,6 +98,11 @@ export default function SellerProfile() {
             address: seller.location_address || seller.address || "",
             profilePictureUrl: seller.profile_picture_url || "",
             sellerType: seller.seller_type || "individual",
+            accountType: seller.account_type || seller.seller_type || "individual",
+            slotCapacity: seller.slot_capacity || 1,
+            slotDurationMins: seller.slot_duration_mins || 60,
+            workingHoursStart: seller.working_hours_start || "09:00",
+            workingHoursEnd: seller.working_hours_end || "19:00",
             pincode: seller.pincode || "",
           }));
           setWorkImages(seller.work_images || []);
@@ -273,6 +283,11 @@ export default function SellerProfile() {
         lng: profile.lng,
         address: profile.address,
         pincode: profile.pincode,
+        account_type: profile.accountType,
+        slot_capacity: Number(profile.slotCapacity || 1),
+        slot_duration_mins: Number(profile.slotDurationMins || 60),
+        working_hours_start: profile.workingHoursStart,
+        working_hours_end: profile.workingHoursEnd,
       });
 
       updateUser({
@@ -425,21 +440,31 @@ export default function SellerProfile() {
       {!isEditing ? (
         /* READ-ONLY VIEW MODE */
         <div className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-4">
             {/* Quick Metrics */}
-            <div className="rounded-xl border border-slate-200 bg-white p-5 flex flex-col justify-between shadow-sm">
+            <div className="rounded-xl border border-slate-200 bg-white p-4 flex flex-col justify-between shadow-sm">
               <div className="text-slate-500 text-xs font-bold uppercase tracking-wider">Experience</div>
               <div className="mt-2 text-2xl font-black text-slate-800">{profile.experience || 0} Years</div>
-              <div className="text-indigo-600 text-xs font-medium mt-1">Professional background</div>
+              <div className="text-indigo-600 text-xs font-medium mt-1">Professional experience</div>
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-white p-5 flex flex-col justify-between shadow-sm">
-              <div className="text-slate-500 text-xs font-bold uppercase tracking-wider">Service Mode</div>
-              <div className="mt-2 text-2xl font-black text-slate-800 capitalize">{profile.serviceModeLabel || "Online"}</div>
-              <div className="text-indigo-600 text-xs font-medium mt-1">Availability configuration</div>
+            <div className="rounded-xl border border-slate-200 bg-white p-4 flex flex-col justify-between shadow-sm">
+              <div className="text-slate-500 text-xs font-bold uppercase tracking-wider">Account & Capacity</div>
+              <div className="mt-2 text-xl font-black text-slate-800 capitalize">
+                {profile.accountType === "agency" ? `🏢 Agency (${profile.slotCapacity} Slots)` : "👤 Individual"}
+              </div>
+              <div className="text-indigo-600 text-xs font-medium mt-1">Concurrent slot capacity</div>
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-white p-5 flex flex-col justify-between shadow-sm">
+            <div className="rounded-xl border border-slate-200 bg-white p-4 flex flex-col justify-between shadow-sm">
+              <div className="text-slate-500 text-xs font-bold uppercase tracking-wider">Working Hours</div>
+              <div className="mt-2 text-lg font-black text-slate-800">
+                {profile.workingHoursStart || "09:00"} - {profile.workingHoursEnd || "19:00"}
+              </div>
+              <div className="text-indigo-600 text-xs font-medium mt-1">{profile.slotDurationMins || 60}m Slot Duration</div>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-white p-4 flex flex-col justify-between shadow-sm">
               <div className="text-slate-500 text-xs font-bold uppercase tracking-wider">Instant Service</div>
               <div className="mt-2 text-2xl font-black text-slate-800">
                 {profile.instantService ? "⚡ Enabled" : "Disabled"}
@@ -620,6 +645,145 @@ export default function SellerProfile() {
                     {profile.instantService ? "Enabled" : "Disabled"}
                   </span>
                 </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Work Schedule & Team Capacity */}
+          <div className="rounded-xl border border-indigo-200 bg-indigo-50/40 p-4 space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
+                <span>⏱️</span> Work Schedule & Capacity Settings
+              </h3>
+              <span className="rounded-full border border-indigo-200 bg-indigo-100 px-3 py-1 text-[11px] font-bold text-indigo-800">
+                {profile.accountType === "agency" ? `Agency (${profile.slotCapacity} Team Slots)` : "Individual Provider"}
+              </span>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label className={labelClass}>Provider Type & Capacity Model</label>
+                <div className="space-y-2">
+                  {[
+                    { value: "individual", label: "👤 Individual Provider", hint: "Single technician (1 booking per time slot)" },
+                    { value: "agency", label: "🏢 Agency / Business Team", hint: "Multiple technicians (Shared time slot capacity)" },
+                  ].map((opt) => {
+                    const checked = profile.accountType === opt.value;
+                    return (
+                      <label
+                        key={opt.value}
+                        className={`flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-3 transition ${checked
+                          ? "qs-selected-active shadow-sm border-indigo-500 bg-white"
+                          : "border-slate-200 bg-white hover:border-slate-300"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="accountType"
+                          value={opt.value}
+                          checked={checked}
+                          onChange={() =>
+                            setProfile((prev) => ({
+                              ...prev,
+                              accountType: opt.value,
+                              slotCapacity: opt.value === "agency" ? Math.max(prev.slotCapacity, 2) : 1,
+                            }))
+                          }
+                          className="mt-0.5 accent-indigo-600"
+                        />
+                        <div className="min-w-0">
+                          <div className="text-sm font-black text-slate-800">
+                            {opt.label}
+                          </div>
+                          <div className="mt-1 text-xs font-semibold text-slate-500">
+                            {opt.hint}
+                          </div>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                {profile.accountType === "agency" && (
+                  <div>
+                    <label className={labelClass}>Agency Team Capacity (Simultaneous Jobs per Slot)</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="20"
+                      name="slotCapacity"
+                      value={profile.slotCapacity}
+                      onChange={(e) =>
+                        setProfile((prev) => ({
+                          ...prev,
+                          slotCapacity: Math.max(1, parseInt(e.target.value) || 1),
+                        }))
+                      }
+                      className={inputClass}
+                      placeholder="e.g. 5 team members"
+                    />
+                    <p className="text-xs text-slate-500 mt-1 font-medium">
+                      Time slots remain open for customers until {profile.slotCapacity} bookings are placed.
+                    </p>
+                  </div>
+                )}
+
+                <div>
+                  <label className={labelClass}>Time Slot Duration</label>
+                  <select
+                    name="slotDurationMins"
+                    value={profile.slotDurationMins}
+                    onChange={(e) =>
+                      setProfile((prev) => ({
+                        ...prev,
+                        slotDurationMins: Number(e.target.value),
+                      }))
+                    }
+                    className={inputClass}
+                  >
+                    <option value={30}>30 Minutes</option>
+                    <option value={45}>45 Minutes</option>
+                    <option value={60}>60 Minutes (1 Hour)</option>
+                    <option value={90}>90 Minutes (1.5 Hours)</option>
+                    <option value={120}>120 Minutes (2 Hours)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 pt-2 border-t border-indigo-100">
+              <div>
+                <label className={labelClass}>Work Start Time (Daily)</label>
+                <input
+                  type="time"
+                  name="workingHoursStart"
+                  value={profile.workingHoursStart || "09:00"}
+                  onChange={(e) =>
+                    setProfile((prev) => ({
+                      ...prev,
+                      workingHoursStart: e.target.value,
+                    }))
+                  }
+                  className={inputClass}
+                />
+              </div>
+
+              <div>
+                <label className={labelClass}>Work End Time (Daily)</label>
+                <input
+                  type="time"
+                  name="workingHoursEnd"
+                  value={profile.workingHoursEnd || "19:00"}
+                  onChange={(e) =>
+                    setProfile((prev) => ({
+                      ...prev,
+                      workingHoursEnd: e.target.value,
+                    }))
+                  }
+                  className={inputClass}
+                />
               </div>
             </div>
           </div>

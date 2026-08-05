@@ -8,6 +8,25 @@ const bcrypt = require("bcryptjs");
 const { normalizeIndianMobile } = require("../utils/phoneUtils");
 const { verifyWith2Factor } = require("./authController");
 
+// Ensure seller table scheduling and capacity columns exist
+const ensureSellerScheduleColumns = async () => {
+  try {
+    await pool.query("ALTER TABLE sellers ADD COLUMN account_type VARCHAR(50) DEFAULT 'individual'");
+  } catch (e) {}
+  try {
+    await pool.query("ALTER TABLE sellers ADD COLUMN slot_capacity INT DEFAULT 1");
+  } catch (e) {}
+  try {
+    await pool.query("ALTER TABLE sellers ADD COLUMN slot_duration_mins INT DEFAULT 60");
+  } catch (e) {}
+  try {
+    await pool.query("ALTER TABLE sellers ADD COLUMN working_hours_start VARCHAR(10) DEFAULT '09:00'");
+  } catch (e) {}
+  try {
+    await pool.query("ALTER TABLE sellers ADD COLUMN working_hours_end VARCHAR(10) DEFAULT '19:00'");
+  } catch (e) {}
+};
+
 // Create seller profile (buyer becomes seller)
 exports.createSellerProfile = async (req, res) => {
   try {
@@ -40,6 +59,7 @@ exports.createSellerProfile = async (req, res) => {
 // Get own seller profile
 exports.getMySellerProfile = async (req, res) => {
   try {
+    await ensureSellerScheduleColumns();
     let seller = await SellerModel.findByUserId(req.user.id);
     if (!seller) {
       // Auto-create seller profile if it doesn't exist yet (self-healing db state)
@@ -71,6 +91,7 @@ exports.getMySellerProfile = async (req, res) => {
 // Get seller profile by ID (public)
 exports.getSellerById = async (req, res) => {
   try {
+    await ensureSellerScheduleColumns();
     const seller = await SellerModel.findById(req.params.id);
     if (!seller) return errorRes(res, "Seller not found", 404);
 
@@ -106,6 +127,7 @@ exports.getSellerById = async (req, res) => {
 // Update seller profile
 exports.updateSellerProfile = async (req, res) => {
   try {
+    await ensureSellerScheduleColumns();
     if (!req.user?.role || req.user.role !== "seller") {
       return errorRes(res, "Seller access required", 403);
     }
@@ -140,6 +162,11 @@ exports.updateSellerProfile = async (req, res) => {
       pincode,
       seller_type,
       service_mode,
+      account_type,
+      slot_capacity,
+      slot_duration_mins,
+      working_hours_start,
+      working_hours_end,
     } = req.body;
 
     // Keep sellers.phone synchronized with users.phone
@@ -157,6 +184,12 @@ exports.updateSellerProfile = async (req, res) => {
     if (service_mode !== undefined) fields.service_mode = service_mode;
     if (profile_completed !== undefined)
       fields.profile_completed = profile_completed;
+
+    if (account_type !== undefined) fields.account_type = account_type;
+    if (slot_capacity !== undefined) fields.slot_capacity = Number(slot_capacity || 1);
+    if (slot_duration_mins !== undefined) fields.slot_duration_mins = Number(slot_duration_mins || 60);
+    if (working_hours_start !== undefined) fields.working_hours_start = String(working_hours_start).trim();
+    if (working_hours_end !== undefined) fields.working_hours_end = String(working_hours_end).trim();
 
     if (lat !== undefined && lat !== null) {
       fields.latitude = Number(lat);

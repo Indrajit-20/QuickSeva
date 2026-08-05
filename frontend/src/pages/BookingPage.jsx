@@ -184,16 +184,46 @@ export default function BookingPage() {
     }
   }, [confirmedBooking, submitError]);
 
+  const getDynamicTimeSlots = (sellerObj) => {
+    const startStr = sellerObj?.working_hours_start || "08:00";
+    const endStr = sellerObj?.working_hours_end || "20:00";
+    const durationMins = Number(sellerObj?.slot_duration_mins || 60);
+
+    const [startH, startM] = String(startStr).split(":").map(Number);
+    const [endH, endM] = String(endStr).split(":").map(Number);
+
+    const startMinsTotal = (isNaN(startH) ? 8 : startH) * 60 + (isNaN(startM) ? 0 : startM);
+    const endMinsTotal = (isNaN(endH) ? 20 : endH) * 60 + (isNaN(endM) ? 0 : endM);
+
+    const slots = [];
+    for (let current = startMinsTotal; current + durationMins <= endMinsTotal; current += durationMins) {
+      const h = Math.floor(current / 60);
+      const m = current % 60;
+      const ampm = h >= 12 ? "PM" : "AM";
+      const displayH = h % 12 === 0 ? 12 : h % 12;
+      const displayM = String(m).padStart(2, "0");
+      slots.push(`${displayH}:${displayM} ${ampm}`);
+    }
+
+    return slots.length > 0 ? slots : TIME_SLOTS;
+  };
+
   const isSlotBooked = (date, slot) => {
     if (!date || !slot || !bookedSlots.length) return false;
     const candidateTimeStr = buildScheduledAt(date, slot);
     if (!candidateTimeStr) return false;
     const candidateTime = new Date(candidateTimeStr).getTime();
 
-    return bookedSlots.some((bookedTimeStr) => {
+    const durationMins = Number(seller?.slot_duration_mins || 60);
+    const durationMs = durationMins * 60 * 1000;
+    const capacity = Number(seller?.slot_capacity || 1);
+
+    const count = bookedSlots.filter((bookedTimeStr) => {
       const bookedTime = new Date(bookedTimeStr).getTime();
-      return Math.abs(candidateTime - bookedTime) < 7200000;
-    });
+      return Math.abs(candidateTime - bookedTime) < durationMs;
+    }).length;
+
+    return count >= capacity;
   };
 
   // Load seller and services from backend
@@ -758,12 +788,19 @@ export default function BookingPage() {
             </div>
 
             {/* Time Slots Grid */}
-            <div className="space-y-1">
-              <label className="block text-xs font-semibold text-slate-700">
-                Time Slot
-              </label>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-semibold text-slate-700">
+                  Select Time Slot (Arrival Window)
+                </label>
+                {(seller?.account_type === 'agency' || seller?.seller_type === 'agency') && (
+                  <span className="text-[11px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
+                    🏢 Agency ({seller?.slot_capacity || 1} Team Slots)
+                  </span>
+                )}
+              </div>
               <div className={`grid grid-cols-3 sm:grid-cols-6 gap-2 rounded-xl transition ${errors.timeSlot ? "p-1.5 border border-red-300 bg-red-50/40" : ""}`}>
-                {TIME_SLOTS.map((slot) => {
+                {getDynamicTimeSlots(seller).map((slot) => {
                   const active = formData.timeSlot === slot;
                   const disabled = isSlotInPast(formData.date, slot) || isSlotBooked(formData.date, slot);
                   return (
@@ -772,7 +809,7 @@ export default function BookingPage() {
                       type="button"
                       disabled={disabled}
                       onClick={() => updateField("timeSlot", slot)}
-                      className={`rounded-lg border py-1.5 text-xs font-medium transition-all text-center ${
+                      className={`rounded-lg border py-2 px-1 text-xs font-medium transition-all text-center flex flex-col items-center justify-center ${
                         disabled
                           ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed line-through opacity-50"
                           : active
@@ -780,11 +817,14 @@ export default function BookingPage() {
                           : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 cursor-pointer active:scale-95"
                       }`}
                     >
-                      {slot}
+                      <span>{slot}</span>
                     </button>
                   );
                 })}
               </div>
+              <p className="text-[11px] text-slate-500 font-medium italic">
+                ℹ️ The selected time slot represents your provider's arrival window.
+              </p>
               {errors.timeSlot && (
                 <p className="text-xs font-bold text-red-600 flex items-center gap-1.5 mt-1 bg-red-50 border border-red-200 px-2.5 py-1 rounded-lg">
                   <span>⚠</span> {errors.timeSlot}

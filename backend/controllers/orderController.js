@@ -75,31 +75,55 @@ exports.placeOrder = async (req, res) => {
         return errorRes(res, `The seller does not work on ${dayName}s. Please pick another day.`, 400);
       }
 
-      const [conflictingOrders] = await pool.query(
-        `SELECT id, scheduled_at FROM orders 
-         WHERE seller_id = ? 
-           AND status != 'cancelled' 
-           AND ABS(TIMESTAMPDIFF(MINUTE, ?, scheduled_at)) < 120 
-         LIMIT 1`,
-        [seller_id, scheduled_at]
-      );
+      const slotDuration = Number(seller.slot_duration_mins || 60);
+      const capacity = Number(seller.slot_capacity || 1);
+      const isAgency = seller.account_type === "agency" || seller.seller_type === "agency" || capacity > 1;
 
-      if (conflictingOrders && conflictingOrders.length > 0) {
-        const conflictTime = new Date(conflictingOrders[0].scheduled_at);
-        const formattedTime = conflictTime.toLocaleString("en-IN", {
-          timeZone: "Asia/Kolkata",
-          hour12: true,
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        });
-        return errorRes(
-          res,
-          `This slot is unavailable. The seller already has a booking at ${formattedTime}. Please schedule with a gap of at least 2 hours.`,
-          400
+      if (isAgency) {
+        // Multi-capacity check for agency accounts
+        const [existingBookings] = await pool.query(
+          `SELECT COUNT(*) AS count FROM orders 
+           WHERE seller_id = ? 
+             AND status != 'cancelled' 
+             AND ABS(TIMESTAMPDIFF(MINUTE, ?, scheduled_at)) < ?`,
+          [seller_id, scheduled_at, slotDuration]
         );
+        const count = existingBookings?.[0]?.count || 0;
+        if (count >= capacity) {
+          return errorRes(
+            res,
+            `This time slot has reached its maximum team capacity (${capacity} bookings). Please select a different time slot.`,
+            400
+          );
+        }
+      } else {
+        // Individual seller check (capacity = 1)
+        const [conflictingOrders] = await pool.query(
+          `SELECT id, scheduled_at FROM orders 
+           WHERE seller_id = ? 
+             AND status != 'cancelled' 
+             AND ABS(TIMESTAMPDIFF(MINUTE, ?, scheduled_at)) < ? 
+           LIMIT 1`,
+          [seller_id, scheduled_at, slotDuration]
+        );
+
+        if (conflictingOrders && conflictingOrders.length > 0) {
+          const conflictTime = new Date(conflictingOrders[0].scheduled_at);
+          const formattedTime = conflictTime.toLocaleString("en-IN", {
+            timeZone: "Asia/Kolkata",
+            hour12: true,
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+          return errorRes(
+            res,
+            `This slot is unavailable. The seller already has a booking around ${formattedTime}. Please select another available time slot.`,
+            400
+          );
+        }
       }
     }
 
