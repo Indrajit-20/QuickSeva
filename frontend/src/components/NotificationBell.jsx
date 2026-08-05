@@ -18,9 +18,19 @@ import { useAuth } from "../context/AuthContext";
 
 const formatTimeAgo = (value) => {
   if (!value) return "Just now";
-  const time = new Date(value).getTime();
+  let time = new Date(value).getTime();
   if (isNaN(time)) return "Just now";
-  const diff = Math.max(0, Date.now() - time);
+  const now = Date.now();
+  let diff = now - time;
+  if (diff < 0) {
+    const tzOffsetMs = new Date().getTimezoneOffset() * 60000;
+    const adjustedTime = time + tzOffsetMs;
+    if (now - adjustedTime >= 0) {
+      diff = now - adjustedTime;
+    } else {
+      diff = 0;
+    }
+  }
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return "Just now";
   if (mins < 60) return `${mins}m ago`;
@@ -67,6 +77,49 @@ const getNotificationIcon = (type, title = "") => {
 
 let globalLastFetchTime = 0;
 let globalFetchPromise = null;
+let globalCachedData = null;
+
+const fetchNotificationsGlobally = async ({ force = false } = {}) => {
+  const now = Date.now();
+
+  // If force is false and we fetched less than 10s ago, return cached data
+  if (!force && globalCachedData && now - globalLastFetchTime < 10000) {
+    return globalCachedData;
+  }
+
+  // If a network request is already in progress, reuse the exact same promise
+  if (globalFetchPromise) {
+    return globalFetchPromise;
+  }
+
+  globalFetchPromise = (async () => {
+    try {
+      globalLastFetchTime = Date.now();
+      const res = await apiClient.get("/notifications?page=1&limit=25");
+      const data = res?.data?.data || res?.data || {};
+      const list = Array.isArray(data.notifications) ? data.notifications : [];
+      const count = Number(data.unread ?? list.filter((n) => !n.is_read).length);
+
+      globalCachedData = {
+        notifications: list,
+        unreadCount: count >= 0 ? count : 0,
+      };
+
+      // Sync across all mounted instances on the page
+      window.dispatchEvent(
+        new CustomEvent("notifications-data-synced", { detail: globalCachedData })
+      );
+      return globalCachedData;
+    } catch (err) {
+      console.warn("Failed to fetch notifications:", err?.message);
+      return globalCachedData || { notifications: [], unreadCount: 0 };
+    } finally {
+      globalFetchPromise = null;
+    }
+  })();
+
+  return globalFetchPromise;
+};
 
 export default function NotificationBell({ className = "", isSeller = false, align = "auto" }) {
   const { user } = useAuth();
@@ -74,74 +127,77 @@ export default function NotificationBell({ className = "", isSeller = false, ali
   const navigate = useNavigate();
 
   const [isOpen, setIsOpen] = useState(false);
-  const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [notifications, setNotifications] = useState(globalCachedData?.notifications || []);
+  const [unreadCount, setUnreadCount] = useState(globalCachedData?.unreadCount || 0);
+  const [loading, setLoading] = useState(!globalCachedData);
   const [toastAlert, setToastAlert] = useState(null);
 
   const containerRef = useRef(null);
 
-  // Fetch notifications & unread count (deduplicated across multiple mounted instances)
-  const fetchNotifications = useCallback(async ({ silent = false } = {}) => {
+  // Fetch notifications using global deduplicated cache
+  const fetchNotifications = useCallback(async ({ silent = false, force = false } = {}) => {
     if (!user) return;
+    if (!silent && !globalCachedData) setLoading(true);
 
-    // Deduplicate calls occurring within 3 seconds when silent polling
-    const now = Date.now();
-    if (silent && now - globalLastFetchTime < 3000) {
-      return;
-    }
-    if (globalFetchPromise) {
-      return globalFetchPromise;
-    }
-
-    if (!silent) setLoading(true);
-
-    globalFetchPromise = (async () => {
-      try {
-        globalLastFetchTime = Date.now();
-        const res = await apiClient.get("/notifications?page=1&limit=25");
-        const data = res?.data?.data || res?.data || {};
-        const list = data.notifications || [];
-        const count = Number(data.unread ?? list.filter((n) => !n.is_read).length);
-
-        setNotifications(Array.isArray(list) ? list : []);
-        setUnreadCount(count >= 0 ? count : 0);
-      } catch (err) {
-        console.warn("Failed to fetch notifications:", err?.message);
-      } finally {
-        globalFetchPromise = null;
-        if (!silent) setLoading(false);
+    try {
+      const data = await fetchNotificationsGlobally({ force });
+      if (data) {
+        setNotifications(data.notifications || []);
+        setUnreadCount(data.unreadCount || 0);
       }
-    })();
-
-    return globalFetchPromise;
+    } finally {
+      if (!silent) setLoading(false);
+    }
   }, [user]);
 
-  // Initial load + listener setup + 5s polling fallback
+  // Initial load + event sync + 30s fallback polling
   useEffect(() => {
     fetchNotifications();
 
-    const handleSync = () => fetchNotifications({ silent: true });
-    window.addEventListener("notifications-updated", handleSync);
-    window.addEventListener("leads-read", handleSync);
+    const handleSyncedData = (e) => {
+      if (e?.detail) {
+        setNotifications(e.detail.notifications || []);
+        setUnreadCount(e.detail.unreadCount || 0);
+      }
+    };
 
+    const handleForceSync = () => {
+      fetchNotifications({ silent: true, force: true });
+    };
+
+    window.addEventListener("notifications-data-synced", handleSyncedData);
+    window.addEventListener("notifications-updated", handleForceSync);
+    window.addEventListener("leads-read", handleForceSync);
+
+    // Fallback polling every 30s (WebSockets handle real-time)
     const interval = setInterval(() => {
       fetchNotifications({ silent: true });
-    }, 5000);
+    }, 30000);
 
     return () => {
-      window.removeEventListener("notifications-updated", handleSync);
-      window.removeEventListener("leads-read", handleSync);
+      window.removeEventListener("notifications-data-synced", handleSyncedData);
+      window.removeEventListener("notifications-updated", handleForceSync);
+      window.removeEventListener("leads-read", handleForceSync);
       clearInterval(interval);
     };
   }, [fetchNotifications]);
+
+  // Live real-time ticker to update relative timestamp text (e.g. "Just now" -> "1m ago" -> "5m ago")
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (!isOpen) return;
+    const timer = setInterval(() => {
+      setTick((t) => t + 1);
+    }, 10000);
+    return () => clearInterval(timer);
+  }, [isOpen]);
 
   // Listen to Socket real-time events
   useEffect(() => {
     if (!socket || !user) return;
 
     const handleNewNotification = (data) => {
-      fetchNotifications({ silent: true });
+      fetchNotifications({ silent: true, force: true });
       if (data?.title || data?.message) {
         setToastAlert({
           title: data.title || "New Notification",
@@ -152,7 +208,7 @@ export default function NotificationBell({ className = "", isSeller = false, ali
     };
 
     const handleOrderUpdate = (data) => {
-      fetchNotifications({ silent: true });
+      fetchNotifications({ silent: true, force: true });
       const statusText = data?.status ? `Order status: ${data.status.replace("_", " ")}` : "Order updated";
       setToastAlert({
         title: "📦 Order Update",
@@ -162,7 +218,7 @@ export default function NotificationBell({ className = "", isSeller = false, ali
     };
 
     const handleLeadUpdate = (data) => {
-      fetchNotifications({ silent: true });
+      fetchNotifications({ silent: true, force: true });
       if (isSeller) {
         setToastAlert({
           title: "📢 New Lead in your area!",

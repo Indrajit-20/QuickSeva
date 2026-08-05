@@ -30,9 +30,19 @@ const POLL_MS = 30000;
 
 const formatTimeAgo = (value) => {
   if (!value) return "Just now";
-  const time = new Date(value).getTime();
+  let time = new Date(value).getTime();
   if (isNaN(time)) return "Just now";
-  const diff = Math.max(0, Date.now() - time);
+  const now = Date.now();
+  let diff = now - time;
+  if (diff < 0) {
+    const tzOffsetMs = new Date().getTimezoneOffset() * 60000;
+    const adjustedTime = time + tzOffsetMs;
+    if (now - adjustedTime >= 0) {
+      diff = now - adjustedTime;
+    } else {
+      diff = 0;
+    }
+  }
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return "Just now";
   if (mins < 60) return `${mins}m ago`;

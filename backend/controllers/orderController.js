@@ -675,7 +675,7 @@ exports.approveQuotation = async (req, res) => {
       return errorRes(res, "No active quotation to approve", 400);
 
     // Block multiple approvals:
-    if (order.final_payment_status === "paid" || order.completion_otp_code !== null) {
+    if (order.final_payment_status === "paid") {
       return errorRes(res, "Quotation has already been approved", 400);
     }
 
@@ -710,7 +710,7 @@ exports.approveQuotation = async (req, res) => {
     const final_pay_status = (order.payment_method === "online") ? "paid" : "pending";
 
     const completion_otp_code = order.payment_method === "cash"
-      ? Math.floor(1000 + Math.random() * 9000).toString()
+      ? (order.completion_otp_code || Math.floor(1000 + Math.random() * 9000).toString())
       : null;
 
     // Update order totals and statuses
@@ -918,6 +918,8 @@ exports.switchPaymentMethod = async (req, res) => {
     let completion_otp_code = order.completion_otp_code;
     if (payment_method === "cash" && !completion_otp_code) {
       completion_otp_code = Math.floor(1000 + Math.random() * 9000).toString();
+    } else if (payment_method === "online") {
+      completion_otp_code = null;
     }
 
     await pool.query(
