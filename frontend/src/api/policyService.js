@@ -8,6 +8,7 @@ const unwrapSuccessData = (responseData) => {
 // Fetch policy content by its key (public)
 // GET /api/policies/:key
 export const getPolicy = async (key) => {
+  
   const response = await apiClient.get(`/policies/${key}`);
   return unwrapSuccessData(response.data);
 };

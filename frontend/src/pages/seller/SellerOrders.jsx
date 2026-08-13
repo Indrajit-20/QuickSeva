@@ -320,9 +320,9 @@ export default function SellerOrders() {
                     </div>
                     <div className="flex items-center gap-2">
                       {(order.scheduled_at || order.created_at) && (
-                        <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 500 }}>
-                          {new Date(order.scheduled_at || order.created_at).toLocaleDateString("en-IN", {
-                            day: "numeric", month: "short",
+                        <span style={{ fontSize: 11, color: '#475569', fontWeight: 600, background: '#f1f5f9', padding: '3px 8px', borderRadius: 6 }}>
+                          {new Date(typeof (order.scheduled_at || order.created_at) === 'string' ? (order.scheduled_at || order.created_at).replace(' ', 'T') : (order.scheduled_at || order.created_at)).toLocaleString("en-IN", {
+                            day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: true
                           })}
                         </span>
                       )}
@@ -538,6 +538,11 @@ export default function SellerOrders() {
                             {verifyingCompletionPin ? "Verifying…" : "✓ Complete"}
                           </button>
                         </div>
+                        <p className="text-[11px] text-slate-500 mt-2 font-medium">
+                          💡 Ask customer for the 4-digit PIN sent to their WhatsApp after receiving cash payment.
+                          <br />
+                          ग्राहक से नकद भुगतान प्राप्त करने के बाद उनके व्हाट्सएप पर आया 4-अंकीय कोड पूछें।
+                        </p>
                         <button
                           type="button"
                           onClick={() => setCompletingOrderId(null)}

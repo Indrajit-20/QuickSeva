@@ -209,17 +209,22 @@ export default function BookingPage() {
   };
 
   const isSlotBooked = (date, slot) => {
-    if (!date || !slot || !bookedSlots.length) return false;
+    if (!date || !slot || !bookedSlots || !bookedSlots.length) return false;
     const candidateTimeStr = buildScheduledAt(date, slot);
     if (!candidateTimeStr) return false;
-    const candidateTime = new Date(candidateTimeStr).getTime();
+    const candidateTime = new Date(candidateTimeStr.replace(" ", "T")).getTime();
 
     const durationMins = Number(seller?.slot_duration_mins || 60);
     const durationMs = durationMins * 60 * 1000;
     const capacity = Number(seller?.slot_capacity || 1);
 
     const count = bookedSlots.filter((bookedTimeStr) => {
-      const bookedTime = new Date(bookedTimeStr).getTime();
+      if (!bookedTimeStr) return false;
+      let rawStr = String(bookedTimeStr);
+      if (rawStr.includes("Z")) rawStr = rawStr.replace("Z", "");
+      if (rawStr.includes(".000")) rawStr = rawStr.replace(".000", "");
+      const normalizedBooked = rawStr.replace(" ", "T");
+      const bookedTime = new Date(normalizedBooked).getTime();
       return Math.abs(candidateTime - bookedTime) < durationMs;
     }).length;
 
@@ -385,9 +390,14 @@ export default function BookingPage() {
     }
   }, [formData.date, bookedSlots]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitError("");
+    if (user && seller && Number(user.id) === Number(seller.user_id)) {
+      setSubmitError("You cannot book your own service. / आप अपनी खुद की सेवा बुक नहीं कर सकते।");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
     if (seller && (seller.is_available === 0 || seller.is_available === false)) {
       setSubmitError("This service provider is currently offline and not accepting new bookings. Please try again when they come online or choose another partner.");
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -398,14 +408,29 @@ export default function BookingPage() {
       return;
     }
 
-    // Trigger Invoice breakdown modal instead of submitting directly!
-    setShowInvoiceModal(true);
+    try {
+      setBookingLoading(true);
+      const scheduledAtStr = buildScheduledAt(formData.date, formData.timeSlot);
+      await apiClient.post("/orders/validate-slot", {
+        seller_id: seller.id,
+        scheduled_at: scheduledAtStr,
+      });
+      setShowInvoiceModal(true);
+    } catch (err) {
+      console.error("Slot validation error:", err);
+      setSubmitError(err?.response?.data?.message || "Selected slot is unavailable. Please select another time slot.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } finally {
+      setBookingLoading(false);
+    }
   };
 
   const handleCreateBookingDirectly = async () => {
     setBookingLoading(true);
     setSubmitError("");
     try {
+      const scheduledAtStr = buildScheduledAt(formData.date, formData.timeSlot);
+
       const payload = {
         seller_id: seller.id,
         service_id: selectedServiceState?.id || null,
@@ -414,12 +439,13 @@ export default function BookingPage() {
         address: formData.address,
         lat: seller.latitude || seller.lat || null,
         lng: seller.longitude || seller.lng || null,
-        scheduled_at: buildScheduledAt(formData.date, formData.timeSlot),
+        scheduled_at: scheduledAtStr,
         notes: formData.instructions || "",
       };
 
       const res = await apiClient.post("/orders", payload);
       const order = res?.data?.data?.order || res?.data?.order || null;
+      const waUrl = res?.data?.data?.whatsappUrl || res?.data?.whatsappUrl || null;
 
       setConfirmedBooking({
         id: order?.order_number || order?.id || `BK${Date.now()}`,
@@ -427,10 +453,13 @@ export default function BookingPage() {
         date: formData.date,
         timeSlot: formData.timeSlot,
         sellerName: seller.business_name || seller.name,
+        whatsappUrl: waUrl,
       });
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
       console.error(err);
       setSubmitError(err?.response?.data?.message || "Failed to confirm booking.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       setBookingLoading(false);
     }
@@ -444,6 +473,7 @@ export default function BookingPage() {
       if (!isLoaded) {
         setSubmitError("Razorpay SDK failed to load. Please check your internet connection.");
         setBookingLoading(false);
+        window.scrollTo({ top: 0, behavior: "smooth" });
         return;
       }
 
@@ -451,6 +481,7 @@ export default function BookingPage() {
       if (!orderRes || !orderRes.success) {
         setSubmitError(orderRes?.message || "Failed to initiate payment.");
         setBookingLoading(false);
+        window.scrollTo({ top: 0, behavior: "smooth" });
         return;
       }
 
@@ -465,6 +496,7 @@ export default function BookingPage() {
         handler: async function (response) {
           try {
             setBookingLoading(true);
+            setSubmitError("");
             const payload = {
               seller_id: seller.id,
               service_id: selectedServiceState?.id || null,
@@ -481,17 +513,22 @@ export default function BookingPage() {
 
             const res = await apiClient.post("/orders", payload);
             const order = res?.data?.data?.order || res?.data?.order || null;
+            const waUrl = res?.data?.data?.whatsappUrl || res?.data?.whatsappUrl || null;
 
+            setSubmitError(""); // Clear any residual error
             setConfirmedBooking({
               id: order?.order_number || order?.id || `BK${Date.now()}`,
               service: formData.service,
               date: formData.date,
               timeSlot: formData.timeSlot,
               sellerName: seller.business_name || seller.name,
+              whatsappUrl: waUrl,
             });
+            window.scrollTo({ top: 0, behavior: "smooth" });
           } catch (err) {
             console.error("Order placement error:", err);
             setSubmitError(err?.response?.data?.message || "Failed to confirm booking after payment.");
+            window.scrollTo({ top: 0, behavior: "smooth" });
           } finally {
             setBookingLoading(false);
           }
@@ -516,12 +553,14 @@ export default function BookingPage() {
         console.error("Razorpay Payment Failed:", response.error);
         setSubmitError(response?.error?.description || "Payment failed or gateway connection error. Please check internet/DNS.");
         setBookingLoading(false);
+        window.scrollTo({ top: 0, behavior: "smooth" });
       });
       rzp.open();
     } catch (err) {
-      console.error("Razorpay loading error:", err);
-      setSubmitError("Failed to open payment gateway.");
+      console.error("Payment initiation error:", err);
+      setSubmitError(err?.response?.data?.message || "Payment initiation failed. Please try again.");
       setBookingLoading(false);
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
@@ -559,57 +598,91 @@ export default function BookingPage() {
 
   if (confirmedBooking) {
     return (
-      <main className="min-h-screen bg-slate-50 py-8 px-4 flex items-start justify-center">
-        <div className="mx-auto w-full max-w-md bg-white rounded-3xl border border-emerald-200 p-8 text-center shadow-lg relative overflow-hidden mt-2">
-          {/* Prominent Top Confirmation Banner */}
-          <div className="mb-6 rounded-2xl bg-emerald-500 text-white p-4 font-bold text-base flex items-center justify-center gap-2 shadow-md">
-            <span className="text-xl">✅</span>
-            <span>Booking Done / बुकिंग सफलतापूर्वक हो गई!</span>
+      <main className="min-h-[calc(100vh-80px)] bg-slate-50 py-6 pb-32 px-4 flex items-center justify-center">
+        <div className="mx-auto w-full max-w-md bg-white rounded-3xl border border-emerald-200 p-5 sm:p-6 text-center shadow-xl relative overflow-hidden animate-fade-in">
+          {/* Top Gradient Celebration Header */}
+          <div className="mb-4 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 text-white p-4 shadow-md relative overflow-hidden">
+            <div className="relative z-10 flex flex-col items-center gap-1">
+              <div className="h-10 w-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-xl shadow-inner mb-0.5">
+                ✅
+              </div>
+              <h2 className="text-lg font-black tracking-tight leading-tight">
+                🎉 Congratulations! Booking Done!
+              </h2>
+              <p className="text-[11px] font-semibold text-emerald-100">
+                बुकिंग सफलतापूर्वक संपन्न हो गई है!
+              </p>
+            </div>
           </div>
 
-          <div className="text-6xl animate-bounce">🎉</div>
-          <h1 className="mt-3 text-2xl font-black text-slate-900">
-            Booking Confirmed!
-          </h1>
-          <p className="mt-2 text-slate-500 text-sm">Your service request has been sent to the partner.</p>
+          <p className="text-slate-600 text-xs sm:text-sm font-medium leading-relaxed">
+            Your service request has been confirmed and assigned to <strong className="text-slate-900">{confirmedBooking.sellerName}</strong>.
+          </p>
 
-          <div className="mt-6 space-y-3.5 rounded-2xl border border-slate-100 bg-slate-50 p-5 text-left text-sm text-slate-700">
-            <p className="flex justify-between border-b border-slate-200/60 pb-2">
+          {/* Booking Info Card */}
+          <div className="mt-4 space-y-2.5 rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 text-left text-xs sm:text-sm text-slate-700">
+            <div className="flex justify-between items-center border-b border-slate-200/70 pb-2">
               <span className="font-semibold text-slate-500">Booking ID:</span>
-              <span className="font-mono font-bold text-slate-800">{confirmedBooking.id}</span>
-            </p>
-            <p className="flex justify-between border-b border-slate-200/60 pb-2">
+              <span className="font-mono font-black text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 text-xs">
+                {confirmedBooking.id}
+              </span>
+            </div>
+
+            <div className="flex justify-between items-center border-b border-slate-200/70 pb-2">
               <span className="font-semibold text-slate-500">Service:</span>
-              <span className="font-bold text-slate-800">{confirmedBooking.service}</span>
-            </p>
-            <p className="flex justify-between border-b border-slate-200/60 pb-2">
-              <span className="font-semibold text-slate-500">Date:</span>
-              <span className="font-bold text-slate-800">{formatDate(confirmedBooking.date)}</span>
-            </p>
-            <p className="flex justify-between border-b border-slate-200/60 pb-2">
-              <span className="font-semibold text-slate-500">Time Slot:</span>
-              <span className="font-bold text-slate-800">{confirmedBooking.timeSlot}</span>
-            </p>
-            <p className="flex justify-between pt-1">
-              <span className="font-semibold text-slate-500">Provider:</span>
-              <span className="font-bold text-slate-800">{confirmedBooking.sellerName}</span>
-            </p>
+              <span className="font-bold text-slate-900 truncate max-w-[180px]">{confirmedBooking.service}</span>
+            </div>
+
+            <div className="flex justify-between items-center border-b border-slate-200/70 pb-2">
+              <span className="font-semibold text-slate-500">Scheduled Date:</span>
+              <span className="font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 text-xs">
+                {formatDate(confirmedBooking.date)}
+              </span>
+            </div>
+
+            <div className="flex justify-between items-center border-b border-slate-200/70 pb-2">
+              <span className="font-semibold text-slate-500">Arrival Time Slot:</span>
+              <span className="font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 text-xs">
+                {confirmedBooking.timeSlot}
+              </span>
+            </div>
+
+            <div className="flex justify-between items-center border-b border-slate-200/70 pb-2">
+              <span className="font-semibold text-slate-500">Booked On (IST):</span>
+              <span className="font-semibold text-slate-700 text-[11px]">
+                {new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" })} at {new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Kolkata" })}
+              </span>
+            </div>
+
+            <div className="flex justify-between items-center pt-0.5">
+              <span className="font-semibold text-slate-500">Service Provider:</span>
+              <span className="font-extrabold text-slate-900 truncate max-w-[180px]">{confirmedBooking.sellerName}</span>
+            </div>
           </div>
 
-          <div className="mt-8 grid gap-3 sm:grid-cols-2">
+          {/* WhatsApp Notification Alert Badge */}
+          <div className="mt-3.5 w-full flex items-center justify-center gap-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold text-[11px] py-2.5 px-3 shadow-sm text-center">
+            <span className="text-sm">📱</span>
+            <span>Alert sent to Provider via WhatsApp / व्हाट्सएप पर अलर्ट भेज दिया गया है</span>
+          </div>
+
+          {/* Action Buttons - Fully Visible & Elevated */}
+          <div className="mt-5 flex flex-col sm:flex-row gap-2.5">
             <Link
               to="/my-bookings"
-              className="rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-3 text-xs font-bold text-white force-text-white text-center shadow-sm transition active:scale-95 cursor-pointer"
+              className="flex-1 rounded-xl bg-blue-600 hover:bg-blue-700 py-3 px-4 text-xs font-bold text-white text-center shadow-md transition active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
               style={{ color: "#ffffff" }}
             >
-              View My Bookings
+              <span>📋</span>
+              <span>View My Bookings</span>
             </Link>
             <Link
               to="/"
-              className="rounded-xl border border-slate-300 bg-white hover:bg-slate-50 px-5 py-3 text-xs font-bold text-slate-700 text-center active:scale-95 transition cursor-pointer"
+              className="flex-1 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 py-3 px-4 text-xs font-bold text-slate-700 text-center active:scale-95 transition cursor-pointer flex items-center justify-center gap-1.5"
               style={{ color: "#334155" }}
             >
-              Go Home
+              <span>🏠</span>
+              <span>Go to Home</span>
             </Link>
           </div>
         </div>
@@ -621,6 +694,26 @@ export default function BookingPage() {
     <main className="min-h-screen bg-slate-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-3xl">
         <form onSubmit={handleSubmit} className="bg-white rounded-3xl border border-slate-200/90 shadow-md p-6 sm:p-8 space-y-6 text-left relative">
+
+          {/* Own Service Warning Banner */}
+          {user && seller && Number(user.id) === Number(seller.user_id) && (
+            <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-amber-900 font-medium text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+              <div className="flex items-center gap-2.5">
+                <span className="text-xl">⚠️</span>
+                <div>
+                  <p className="font-bold text-amber-900">This is your own service listing</p>
+                  <p className="text-xs text-amber-800">You cannot book services provided by your own seller account.</p>
+                </div>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => navigate("/seller/orders")}
+                className="shrink-0 bg-amber-700 text-white font-bold text-xs px-4 py-2 rounded-xl hover:bg-amber-800 transition"
+              >
+                Go to Seller Dashboard
+              </button>
+            </div>
+          )}
 
           {/* ── 1. Provider & Service Summary Top Header ── */}
           <div className="bg-slate-50/80 rounded-2xl border border-slate-200/80 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">

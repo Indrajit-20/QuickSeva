@@ -26,11 +26,30 @@ const statusClasses = {
 
 const formatDate = (value) => {
   if (!value) return "";
-  return new Intl.DateTimeFormat("en-IN", {
+  let str = String(value).trim();
+  
+  // Strip trailing Z to prevent double UTC (+5:30) offset conversion
+  if (str.endsWith("Z")) {
+    str = str.slice(0, -1);
+  }
+
+  const normalized = str.replace(" ", "T");
+  const dateObj = new Date(normalized);
+  if (isNaN(dateObj.getTime())) return String(value);
+  
+  const formattedDate = new Intl.DateTimeFormat("en-IN", {
     day: "numeric",
     month: "long",
     year: "numeric",
-  }).format(new Date(value));
+  }).format(dateObj);
+
+  const formattedTime = dateObj.toLocaleTimeString("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+
+  return `${formattedDate} at ${formattedTime}`;
 };
 
 export default function MyBookings() {
@@ -436,15 +455,24 @@ export default function MyBookings() {
                         </p>
 
                         <div className="mt-4 space-y-2 border-t border-slate-100 pt-4">
-                          <p className="flex items-center text-sm text-slate-600">
-                            <svg className="h-4 w-4 text-slate-400 mr-2.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <p className="flex items-center text-sm text-slate-700">
+                            <svg className="h-4 w-4 text-blue-600 mr-2.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
-                            <span className="font-semibold text-slate-500">Date &amp; Time:</span>
-                            <span className="ml-1.5 text-slate-850 font-semibold">
+                            <span className="font-bold text-slate-600">Scheduled Visit:</span>
+                            <span className="ml-1.5 text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
                               {formatDate(booking.scheduled_at || booking.created_at)}
                             </span>
                           </p>
+
+                          {booking.created_at && (
+                            <p className="flex items-center text-xs text-slate-500 pl-6">
+                              <span className="font-medium text-slate-400">Booked On:</span>
+                              <span className="ml-1.5 font-semibold text-slate-600">
+                                {formatDate(booking.created_at)}
+                              </span>
+                            </p>
+                          )}
 
                           <p className="flex items-start text-sm text-slate-600">
                             <svg className="h-4 w-4 text-slate-400 mr-2.5 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -559,12 +587,28 @@ export default function MyBookings() {
                             </p>
                             {/* Completion PIN Display for Cash Orders in Progress */}
                             {booking.status === "in_progress" && booking.payment_method === "cash" && booking.completion_otp_code && (
-                              <div className="mt-3.5 p-3.5 rounded-2xl border border-emerald-250 bg-emerald-50 text-center shadow-sm">
-                                <span className="block text-[10px] font-bold text-emerald-700 uppercase tracking-widest">Share this Completion PIN with Technician / काम पूरा होने का कोड</span>
-                                <span className="block text-2xl font-black text-emerald-755 mt-1.5 tracking-widest">{booking.completion_otp_code}</span>
-                                <span className="block text-[10px] text-emerald-600 mt-1.5 font-semibold leading-normal">
-                                  Share this ONLY after the service is done and you have paid the technician ₹{Number(Math.max(0, parseFloat(booking.service_charge_amount || 0) + parseFloat(booking.parts_cost_amount || 0) - parseFloat(booking.discount_amount || 0))).toLocaleString("en-IN")} in cash.
-                                </span>
+                              <div className="mt-3.5 p-4 rounded-2xl border border-emerald-300 bg-emerald-50 shadow-sm text-left">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[11px] font-extrabold text-emerald-800 uppercase tracking-wider">Cash Payment PIN / कैश भुगतान कोड</span>
+                                  <span className="px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-900 text-[10px] font-bold">Cash Mode</span>
+                                </div>
+                                <div className="my-2 p-3 bg-white rounded-xl border border-emerald-200 text-center shadow-inner">
+                                  <span className="block text-3xl font-black text-emerald-700 tracking-widest font-mono">{booking.completion_otp_code}</span>
+                                </div>
+                                <div className="rounded-xl bg-amber-50 border border-amber-200 p-2.5 text-xs text-amber-900 font-medium space-y-1">
+                                  <p className="font-bold flex items-center gap-1 text-amber-900">
+                                    <span>⚠️</span> SECURITY WARNING / सुरक्षा चेतावनी:
+                                  </p>
+                                  <p className="text-[11px] text-amber-800 leading-snug">
+                                    Share this PIN with the technician ONLY AFTER work is 100% finished and cash payment (₹{Number(Math.max(0, parseFloat(booking.service_charge_amount || 0) + parseFloat(booking.parts_cost_amount || 0) - parseFloat(booking.discount_amount || 0))).toLocaleString("en-IN")}) is given.
+                                    <br />
+                                    काम पूरा होने और नकद भुगतान करने से पहले यह PIN किसी को न दें।
+                                  </p>
+                                </div>
+                                <div className="mt-2.5 px-3 py-2 bg-emerald-100/80 border border-emerald-300/80 rounded-xl flex items-center justify-center gap-2 text-emerald-900 font-bold text-xs">
+                                  <span className="text-sm">📱</span>
+                                  <span>PIN Automatically Sent via WhatsApp / व्हाट्सएप पर PIN स्वतः भेज दिया गया है</span>
+                                </div>
                               </div>
                             )}
 

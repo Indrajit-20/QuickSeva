@@ -501,3 +501,64 @@ exports.bulkImportServices = async (req, res) => {
     return errorRes(res, "Failed to perform bulk import");
   }
 };
+
+// Bulk WhatsApp Broadcasting to Sellers or Buyers
+exports.sendBulkWhatsApp = async (req, res) => {
+  try {
+    const { targetGroup, customPhoneNumbers, messageTemplate, delayMs } = req.body;
+
+    if (!messageTemplate || !messageTemplate.trim()) {
+      return errorRes(res, "Message template is required", 400);
+    }
+
+    let recipients = [];
+
+    if (targetGroup === "sellers") {
+      const [rows] = await pool.query(
+        `SELECT DISTINCT s.phone, s.business_name AS name FROM sellers s WHERE s.phone IS NOT NULL AND s.phone != ''`
+      );
+      recipients = rows;
+    } else if (targetGroup === "buyers") {
+      const [rows] = await pool.query(
+        `SELECT DISTINCT u.phone, u.name FROM users u WHERE u.phone IS NOT NULL AND u.phone != '' AND u.role = 'user'`
+      );
+      recipients = rows;
+    } else if (targetGroup === "all") {
+      const [rows] = await pool.query(
+        `SELECT DISTINCT u.phone, u.name FROM users u WHERE u.phone IS NOT NULL AND u.phone != ''`
+      );
+      recipients = rows;
+    } else if (Array.isArray(customPhoneNumbers) && customPhoneNumbers.length > 0) {
+      recipients = customPhoneNumbers.map(p => ({ phone: p, name: "Valued Customer" }));
+    } else {
+      return errorRes(res, "Invalid target group or empty phone list", 400);
+    }
+
+    if (recipients.length === 0) {
+      return errorRes(res, "No valid recipients found with registered phone numbers", 400);
+    }
+
+    const { sendBulkWhatsAppMessages } = require("../services/whatsappService");
+
+    // Execute bulk broadcast in background so HTTP response is returned immediately
+    sendBulkWhatsAppMessages({
+      recipients,
+      messageTemplate,
+      delayMs: delayMs || 2000,
+    }).then(result => {
+      console.log(`[Bulk WhatsApp] Completed broadcast to ${result.total} recipients (${result.sentCount} sent, ${result.failedCount} failed)`);
+    }).catch(err => {
+      console.error("[Bulk WhatsApp] Broadcast error:", err);
+    });
+
+    return successRes(res, {
+      totalRecipients: recipients.length,
+      targetGroup,
+      status: "processing_in_background",
+      estimatedDurationSeconds: Math.ceil((recipients.length * (delayMs || 2000)) / 1000),
+    }, `Bulk WhatsApp broadcast initiated for ${recipients.length} recipients`);
+  } catch (err) {
+    console.error("Bulk WhatsApp error:", err);
+    return errorRes(res, "Failed to initiate bulk WhatsApp broadcast");
+  }
+};

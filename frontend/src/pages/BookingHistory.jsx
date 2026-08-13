@@ -4,11 +4,23 @@ import { buyerOrdersApi } from "../api/orderApi";
 
 const formatDate = (value) => {
   if (!value) return "";
-  return new Intl.DateTimeFormat("en-IN", {
+  const normalized = typeof value === "string" ? value.replace(" ", "T") : value;
+  const dateObj = new Date(normalized);
+  if (isNaN(dateObj.getTime())) return String(value);
+
+  const formattedDate = new Intl.DateTimeFormat("en-IN", {
     day: "numeric",
     month: "long",
     year: "numeric",
-  }).format(new Date(value));
+  }).format(dateObj);
+
+  const formattedTime = dateObj.toLocaleTimeString("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+
+  return `${formattedDate} at ${formattedTime}`;
 };
 
 export default function BookingHistory() {

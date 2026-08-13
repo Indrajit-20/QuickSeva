@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const {
   placeOrder,
+  validateSlot,
   getMyOrders,
   getSellerOrders,
   getOrderById,
@@ -20,6 +21,7 @@ const {
 const { protect, sellerOnly } = require("../middleware/authMiddleware");
 
 router.post("/", protect, placeOrder);
+router.post("/validate-slot", validateSlot);
 router.get("/my", protect, getMyOrders);
 router.get("/seller", protect, sellerOnly, getSellerOrders);
 router.get("/:id", protect, getOrderById);

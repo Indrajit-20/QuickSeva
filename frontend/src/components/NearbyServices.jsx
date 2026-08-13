@@ -1,5 +1,5 @@
 // QuickSeva - Map Performance Feature
-import { Component, useEffect, useMemo, useRef, useState, useCallback } from "react";
+import React, { Component, useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { API_BASE_URL } from "../config/api";
 import { useNearbyLocation } from "../hooks/useNearbyLocation";
@@ -2875,188 +2875,178 @@ export default function NearbyServices({
                     ? "Online/On-site"
                     : "";
 
+            const showAdInline = (idx + 1) % 3 === 0;
+
             return (
-              <div
-                key={sId}
-                id={`seller-card-${sId}`}
-                onClick={() => handlePremiumSellerClick(seller)}
-                style={{ padding: "0.75rem 0.875rem", animationDelay: `${Math.min(idx * 50, 400)}ms` }}
-                className={`qs-card group cursor-pointer w-full relative flex items-center justify-between gap-3 rounded-xl border transition hover:shadow-md ${isSelected ? "qs-card-active shadow-md border-blue-500/30" : "bg-white border-slate-100"
-                  }`}
-              >
-                {/* Close Button if Selected */}
-                {isSelected && (
+              <React.Fragment key={`seller-wrapper-${sId}`}>
+                <div
+                  id={`seller-card-${sId}`}
+                  onClick={() => handlePremiumSellerClick(seller)}
+                  style={{ padding: "0.75rem 0.875rem", animationDelay: `${Math.min(idx * 50, 400)}ms` }}
+                  className={`qs-card group cursor-pointer w-full relative flex items-center justify-between gap-3 rounded-xl border transition hover:shadow-md ${isSelected ? "qs-card-active shadow-md border-blue-500/30" : "bg-white border-slate-100"
+                    }`}
+                >
+                  {/* Close Button if Selected */}
+                  {isSelected && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedSellerId(null);
+                        if (mapRef.current) {
+                          mapRef.current.closePopup();
+                        }
+                      }}
+                      className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 hover:bg-red-500 hover:text-white text-slate-500 transition shadow-sm border border-slate-200"
+                      title="Deselect"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+
+                  {/* Left Side: Avatar & Info Column (Clicking here view details) */}
+                  <div
+                    onClick={(e) => handleViewDetailsClick(seller, e)}
+                    className="flex items-center gap-3.5 min-w-0 flex-1 hover:opacity-90 transition-opacity"
+                  >
+                    {/* Rounded-Square Avatar */}
+                    <div className="relative h-12 w-12 flex-shrink-0">
+                      {(seller.profilePhotoUrl || seller.profile_pic) ? (
+                        <img
+                          src={getImageUrl(seller.profilePhotoUrl || seller.profile_pic)}
+                          alt={sellerDisplayName}
+                          className="h-12 w-12 rounded-xl object-cover border border-slate-100 shadow-2xs"
+                        />
+                      ) : (
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl font-extrabold text-lg bg-blue-50 text-blue-600 border border-blue-100/50 shadow-2xs">
+                          {sellerDisplayName?.[0]?.toUpperCase() || "?"}
+                        </div>
+                      )}
+                      {/* Availability Dot */}
+                      <span
+                        className={`absolute -bottom-0.5 -right-0.5 block h-3 w-3 rounded-full border-2 border-white shadow-xs ${isAvailable ? "bg-[#1E8E5A]" : "bg-[#e53935]"
+                          }`}
+                        title={isAvailable ? "Available" : "Unavailable"}
+                      />
+                    </div>
+
+                    {/* Text Details Column */}
+                    <div className="min-w-0 flex-1 flex flex-col gap-0.5 sm:gap-1">
+                      {/* Name & Verified Badge in ONE single line */}
+                      <div className="flex items-center gap-1.5 min-w-0 w-full">
+                        <h4 className="text-[13.5px] sm:text-sm font-extrabold text-slate-800 tracking-tight leading-snug truncate min-w-0 flex-1">
+                          {sellerDisplayName}
+                        </h4>
+                        {isPremium && (
+                          <BadgeCheck className="h-4 w-4 text-amber-500 fill-amber-500/10 shrink-0" title="Premium Partner" />
+                        )}
+                      </div>
+
+                      {/* Subtitle / Service & Mode */}
+                      <div className="text-[11px] sm:text-xs font-medium text-slate-500 flex items-center gap-1.5 min-w-0 truncate">
+                        <span className="font-semibold text-slate-700 truncate min-w-0">{seller.service}</span>
+                        {serviceModeLabel && (
+                          <>
+                            <span className="text-slate-300 font-normal shrink-0">•</span>
+                            <span className="text-slate-500 truncate shrink-0">{serviceModeLabel}</span>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Badges & Distance Pill Row */}
+                      <div className="flex items-center gap-1.5 flex-wrap mt-0.5 text-[10px] sm:text-[11px]">
+                        {/* Rating */}
+                        <span className="inline-flex items-center gap-0.5 font-black text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200/60">
+                          <Star className="h-3 w-3 fill-emerald-600 text-emerald-600 shrink-0" />
+                          <span>{Number(seller?.rating || 0).toFixed(1)}</span>
+                        </span>
+
+                        {/* Distance Pill */}
+                        <span className="inline-flex items-center gap-0.5 font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-md border border-blue-200/60">
+                          <MapPin className="h-3 w-3 text-blue-600 shrink-0" />
+                          <span>{distanceLabel} km</span>
+                        </span>
+
+                        {/* Fast Response */}
+                        {packageRank >= 2 && (
+                          <span className="inline-flex items-center gap-0.5 font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-md border border-amber-200/60">
+                            <Zap className="h-3 w-3 text-amber-500 fill-amber-500 shrink-0" />
+                            <span className="hidden xs:inline">Fast Response</span>
+                          </span>
+                        )}
+
+                        {/* Instant Service */}
+                        {seller?.instantService && (
+                          <span className="inline-flex items-center gap-0.5 font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200/60">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse mr-0.5" />
+                            <span>Instant</span>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Side: Chevron click to view profile */}
                   <button
                     type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedSellerId(null);
-                      if (mapRef.current) {
-                        mapRef.current.closePopup();
-                      }
-                    }}
-                    className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 hover:bg-red-500 hover:text-white text-slate-500 transition shadow-sm border border-slate-200"
-                    title="Deselect"
+                    onClick={(e) => handleViewDetailsClick(seller, e)}
+                    className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-slate-50 text-slate-400 hover:text-slate-650 transition-colors shrink-0 cursor-pointer"
+                    title="View Details"
                   >
-                    <X className="h-3 w-3" />
+                    <ChevronRight className="h-5 w-5 shrink-0" />
                   </button>
-                )}
-
-                {/* Left Side: Avatar & Info Column (Clicking here view details) */}
-                <div
-                  onClick={(e) => handleViewDetailsClick(seller, e)}
-                  className="flex items-center gap-3.5 min-w-0 flex-1 hover:opacity-90 transition-opacity"
-                >
-                  {/* Rounded-Square Avatar */}
-                  <div className="relative h-12 w-12 flex-shrink-0">
-                    {(seller.profilePhotoUrl || seller.profile_pic) ? (
-                      <img
-                        src={getImageUrl(seller.profilePhotoUrl || seller.profile_pic)}
-                        alt={sellerDisplayName}
-                        className="h-12 w-12 rounded-xl object-cover border border-slate-100 shadow-2xs"
-                      />
-                    ) : (
-                      <div className="flex h-12 w-12 items-center justify-center rounded-xl font-extrabold text-lg bg-blue-50 text-blue-600 border border-blue-100/50 shadow-2xs">
-                        {sellerDisplayName?.[0]?.toUpperCase() || "?"}
-                      </div>
-                    )}
-                    {/* Availability Dot */}
-                    <span
-                      className={`absolute -bottom-0.5 -right-0.5 block h-3 w-3 rounded-full border-2 border-white shadow-xs ${isAvailable ? "bg-[#1E8E5A]" : "bg-[#e53935]"
-                        }`}
-                      title={isAvailable ? "Available" : "Unavailable"}
-                    />
-                  </div>
-
-                  {/* Text Details Column */}
-                  <div className="min-w-0 flex-1 flex flex-col gap-0.5 sm:gap-1">
-                    {/* Name & Verified Badge in ONE single line */}
-                    <div className="flex items-center gap-1.5 min-w-0 w-full">
-                      <h4 className="text-[13.5px] sm:text-sm font-extrabold text-slate-800 tracking-tight leading-snug truncate min-w-0 flex-1">
-                        {sellerDisplayName}
-                      </h4>
-                      {isPremium && (
-                        <BadgeCheck className="h-4 w-4 text-amber-500 fill-amber-500/10 shrink-0" title="Premium Partner" />
-                      )}
-                    </div>
-
-                    {/* Subtitle / Service & Mode */}
-                    <div className="text-[11px] sm:text-xs font-medium text-slate-500 flex items-center gap-1.5 min-w-0 truncate">
-                      <span className="font-semibold text-slate-700 truncate min-w-0">{seller.service}</span>
-                      {serviceModeLabel && (
-                        <>
-                          <span className="text-slate-300 font-normal shrink-0">•</span>
-                          <span className="text-slate-500 truncate shrink-0">{serviceModeLabel}</span>
-                        </>
-                      )}
-                    </div>
-
-                    {/* Badges & Distance Pill Row */}
-                    <div className="flex items-center gap-1.5 flex-wrap mt-0.5 text-[10px] sm:text-[11px]">
-                      {/* Rating */}
-                      <span className="inline-flex items-center gap-0.5 font-black text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200/60">
-                        <Star className="h-3 w-3 fill-emerald-600 text-emerald-600 shrink-0" />
-                        <span>{Number(seller?.rating || 0).toFixed(1)}</span>
-                      </span>
-
-                      {/* Distance Pill */}
-                      <span className="inline-flex items-center gap-0.5 font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-md border border-blue-200/60">
-                        <MapPin className="h-3 w-3 text-blue-600 shrink-0" />
-                        <span>{distanceLabel} km</span>
-                      </span>
-
-                      {/* Fast Response */}
-                      {packageRank >= 2 && (
-                        <span className="inline-flex items-center gap-0.5 font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-md border border-amber-200/60">
-                          <Zap className="h-3 w-3 text-amber-500 fill-amber-500 shrink-0" />
-                          <span className="hidden xs:inline">Fast Response</span>
-                        </span>
-                      )}
-
-                      {/* Instant Service */}
-                      {seller?.instantService && (
-                        <span className="inline-flex items-center gap-0.5 font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200/60">
-                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse mr-0.5" />
-                          <span>Instant</span>
-                        </span>
-                      )}
-                    </div>
-                  </div>
                 </div>
 
-                {/* Right Side: Chevron click to view profile */}
-                <button
-                  type="button"
-                  onClick={(e) => handleViewDetailsClick(seller, e)}
-                  className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-slate-50 text-slate-400 hover:text-slate-650 transition-colors shrink-0 cursor-pointer"
-                  title="View Details"
-                >
-                  <ChevronRight className="h-5 w-5 shrink-0" />
-                </button>
-              </div>
+                {/* Inline Sponsored Ad Card */}
+                {showAdInline && (
+                  <div key={`inline-ad-${idx}`} className="my-1.5 w-full col-span-full">
+                    <div className="bg-gradient-to-r from-amber-50/90 via-amber-100/40 to-slate-50 border border-amber-200/80 rounded-xl p-3.5 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 transition-all hover:border-amber-300">
+                      <div className="flex items-start gap-3 text-left">
+                        <div className="h-9 w-9 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-600 font-bold shrink-0 mt-0.5 text-base">
+                          📣
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="inline-block px-2 py-0.5 rounded bg-amber-500 text-white text-[9px] font-black uppercase tracking-wider">
+                              Sponsored Slot
+                            </span>
+                            <span className="text-[10px] font-bold text-amber-700 bg-amber-100/60 px-1.5 py-0.2 rounded">
+                              Coming Soon
+                            </span>
+                          </div>
+                          <h5 className="text-[13.5px] sm:text-sm font-extrabold text-slate-800 mt-1 leading-snug">
+                            Want to grow your local service business?
+                          </h5>
+                          <p className="text-[11px] sm:text-xs text-slate-600 mt-0.5 leading-normal">
+                            Advertise your services here and get up to 5x more customer bookings in your area.
+                          </p>
+                        </div>
+                      </div>
+                      <a
+                        href="/advertise"
+                        onClick={(e) => { e.preventDefault(); alert("Advertise features coming soon!"); }}
+                        className="px-4 py-2 text-xs font-bold rounded-xl bg-slate-900 hover:bg-amber-600 text-white transition-all whitespace-nowrap cursor-pointer shrink-0 self-stretch sm:self-auto text-center shadow-2xs"
+                      >
+                        Advertise with Us
+                      </a>
+                    </div>
+                  </div>
+                )}
+              </React.Fragment>
             );
           })}
 
-          {/* Show More Trigger & Seller Ads Placeholder */}
-          {nearby.length > 0 && (
-            <>
-              {/* Show More Trigger */}
-              {nearby.length > visibleCount && (
-                <div className="mt-4 w-full flex justify-center col-span-full">
-                  <button
-                    type="button"
-                    onClick={() => setVisibleCount((prev) => prev + 5)}
-                    className="btn qs-seller-card-btn w-full py-3 text-xs font-bold rounded-xl text-center cursor-pointer"
-                  >
-                    Show More Services / और दिखाएं ↓
-                  </button>
-                </div>
-              )}
-
-              {/* Seller Advertisement container */}
-              {showMap ? (
-                /* Mobile vertical scroll ad card */
-                <div className="qs-featured-ad-card w-full text-center flex flex-col justify-between lg:hidden">
-                  <div>
-                    <span className="qs-tag qs-tag-amber text-[9px] uppercase tracking-wider mb-2 font-bold">Sponsored Slot</span>
-                    <h5 className="text-[15px] font-bold text-slate-800 mt-2.5">Advertise Here</h5>
-                    <p className="text-[12px] text-slate-500 mt-2 leading-relaxed">
-                      Boost your visibility and reach thousands of customers in your local area.
-                    </p>
-                  </div>
-                  <a
-                    href="/advertise"
-                    onClick={(e) => { e.preventDefault(); alert("Advertise features coming soon!"); }}
-                    className="btn qs-seller-card-btn py-2 text-xs font-bold rounded-xl mt-4 block"
-                  >
-                    Join as Partner
-                  </a>
-                </div>
-              ) : null}
-
-              {/* Desktop list ad banner or Grid layout ad banner */}
-              <div className={`mt-8 ${showMap
-                ? "hidden lg:block w-full mt-7"
-                : "w-full col-span-full mt-10"
-                }`}>
-                <div className="qs-featured-ad-banner text-center flex flex-col sm:flex-row items-center justify-between gap-4">
-                  <div className="text-left">
-                    <span className="qs-tag qs-tag-amber text-[9px] uppercase tracking-wider font-bold">Featured Slot</span>
-                    <h5 className="text-base font-bold text-slate-800 mt-1.5">Want to grow your local service business?</h5>
-                    <p className="text-[13px] text-slate-500 mt-1">
-                      Advertise your services here and get up to 5x more customer bookings.
-                    </p>
-                  </div>
-                  <a
-                    href="/advertise"
-                    onClick={(e) => { e.preventDefault(); alert("Advertise features coming soon!"); }}
-                    className="btn qs-seller-card-btn px-6 py-2.5 text-xs font-bold rounded-xl whitespace-nowrap"
-                  >
-                    Advertise with Us
-                  </a>
-                </div>
-              </div>
-            </>
+          {/* Show More Trigger */}
+          {nearby.length > 0 && nearby.length > visibleCount && (
+            <div className="mt-4 w-full flex justify-center col-span-full">
+              <button
+                type="button"
+                onClick={() => setVisibleCount((prev) => prev + 5)}
+                className="btn qs-seller-card-btn w-full py-3 text-xs font-bold rounded-xl text-center cursor-pointer"
+              >
+                Show More Services / और दिखाएं ↓
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -3102,8 +3092,8 @@ export default function NearbyServices({
                   setPincodeError("");
                 }}
                 className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${locationMode === "area"
-                    ? "bg-white text-blue-600 shadow-sm font-extrabold"
-                    : "text-slate-500 hover:text-slate-700"
+                  ? "bg-white text-blue-600 shadow-sm font-extrabold"
+                  : "text-slate-500 hover:text-slate-700"
                   }`}
               >
                 <MapPin className="h-3.5 w-3.5 text-rose-500" />
@@ -3116,8 +3106,8 @@ export default function NearbyServices({
                   setLocationNotFoundMsg("");
                 }}
                 className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${locationMode === "pincode"
-                    ? "bg-white text-blue-600 shadow-sm font-extrabold"
-                    : "text-slate-500 hover:text-slate-700"
+                  ? "bg-white text-blue-600 shadow-sm font-extrabold"
+                  : "text-slate-500 hover:text-slate-700"
                   }`}
               >
                 <Hash className="h-3.5 w-3.5 text-indigo-500" />

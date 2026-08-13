@@ -3,7 +3,7 @@ const UserModel = require("../models/userModel");
 const WalletModel = require("../models/walletModel");
 
 const { pool } = require("../config/db");
-const { successRes, errorRes, paginate } = require("../utils/helpers");
+const { successRes, errorRes, paginate, maskPhoneNumber, maskEmail } = require("../utils/helpers");
 const bcrypt = require("bcryptjs");
 const { normalizeIndianMobile } = require("../utils/phoneUtils");
 const { verifyWith2Factor } = require("./authController");
@@ -88,7 +88,7 @@ exports.getMySellerProfile = async (req, res) => {
   }
 };
 
-// Get seller profile by ID (public)
+// Get seller profile by ID (public, with privacy scoping)
 exports.getSellerById = async (req, res) => {
   try {
     await ensureSellerScheduleColumns();
@@ -106,15 +106,56 @@ exports.getSellerById = async (req, res) => {
 
     // Fetch active booked slots
     const [bookings] = await pool.query(
-      "SELECT scheduled_at FROM orders WHERE seller_id = ? AND status != 'cancelled' AND scheduled_at >= NOW()",
+      "SELECT DATE_FORMAT(scheduled_at, '%Y-%m-%d %H:%i:%s') AS formatted_slot, scheduled_at FROM orders WHERE seller_id = ? AND status != 'cancelled' AND scheduled_at >= NOW()",
       [seller.id]
     );
 
+    // Check if requester is authorized to view full unmasked PII contact info
+    let isAuthorized = false;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      try {
+        const { verifyToken } = require("../utils/jwtUtils");
+        const token = authHeader.split(" ")[1];
+        const decoded = verifyToken(token);
+        if (decoded && decoded.id) {
+          const reqUserId = Number(decoded.id);
+          if (reqUserId === Number(seller.user_id) || decoded.role === "admin") {
+            isAuthorized = true;
+          } else {
+            // Check if user has an active or past booking with this seller
+            const [orderRows] = await pool.query(
+              "SELECT id FROM orders WHERE seller_id = ? AND buyer_id = ? LIMIT 1",
+              [seller.id, reqUserId]
+            );
+            if (orderRows && orderRows.length > 0) {
+              isAuthorized = true;
+            }
+          }
+        }
+      } catch (e) {
+        // Token verification failed or expired
+      }
+    }
+
+    const sanitizedSeller = { ...seller };
+    if (!isAuthorized) {
+      delete sanitizedSeller.email;
+      delete sanitizedSeller.documents;
+      delete sanitizedSeller.gst_number;
+      if (sanitizedSeller.phone) {
+        sanitizedSeller.phone = maskPhoneNumber(sanitizedSeller.phone);
+      }
+      if (sanitizedSeller.user_phone) {
+        sanitizedSeller.user_phone = maskPhoneNumber(sanitizedSeller.user_phone);
+      }
+    }
+
     const sellerWithBalanceStatus = {
-      ...seller,
+      ...sanitizedSeller,
       hasSufficientBalance: balance >= 1.00,
       work_images: images || [],
-      booked_slots: bookings.map((b) => b.scheduled_at) || [],
+      booked_slots: bookings.map((b) => b.formatted_slot || b.scheduled_at) || [],
     };
 
     return successRes(res, { seller: sellerWithBalanceStatus });

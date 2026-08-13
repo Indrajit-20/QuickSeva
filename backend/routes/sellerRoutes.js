@@ -98,8 +98,6 @@ router.get("/in-view", async (req, res) => {
               s.is_premium AS isPremium,
               s.plan AS plan,
               s.premium_expires_at AS premiumExpiresAt,
-              s.location_address AS address,
-              u.phone AS phone,
               s.is_available,
               s.is_available AS isAvailable,
               u.profile_pic,

@@ -14,6 +14,7 @@ const {
   exportSellersCSV,
   exportBookingsCSV,
   bulkImportServices,
+  sendBulkWhatsApp,
 } = require("../controllers/adminController");
 
 // Apply admin protection to all routes in this file
@@ -31,8 +32,9 @@ router.get("/export/users", exportUsersCSV);
 router.get("/export/sellers", exportSellersCSV);
 router.get("/export/bookings", exportBookingsCSV);
 
-// Bulk Import
+// Bulk Import & WhatsApp Broadcasts
 router.post("/import/services", bulkImportServices);
+router.post("/whatsapp/send-bulk", sendBulkWhatsApp);
 
 // Disputes
 router.get("/disputes", getDisputes);

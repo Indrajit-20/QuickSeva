@@ -48,6 +48,24 @@ const otpExpiresAt = () => {
   return d;
 };
 
+// Data masking helpers for security & privacy
+const maskPhoneNumber = (phone) => {
+  if (!phone) return "";
+  const str = String(phone).trim();
+  if (str.length <= 4) return "****";
+  return str.slice(0, 3) + "*****" + str.slice(-3);
+};
+
+const maskEmail = (email) => {
+  if (!email) return "";
+  const parts = String(email).trim().split("@");
+  if (parts.length !== 2) return "*****";
+  const name = parts[0];
+  const domain = parts[1];
+  const maskedName = name.length > 2 ? name[0] + "***" + name.slice(-1) : name[0] + "***";
+  return `${maskedName}@${domain}`;
+};
+
 module.exports = {
   generateOrderNumber,
   getDistanceKm,
@@ -56,4 +74,7 @@ module.exports = {
   errorRes,
   generateOTP,
   otpExpiresAt,
+  maskPhoneNumber,
+  maskEmail,
 };
+

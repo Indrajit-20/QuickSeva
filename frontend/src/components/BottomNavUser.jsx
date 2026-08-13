@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { MapPin, CalendarCheck, User, Globe } from "lucide-react";
+import { MapPin, CalendarCheck, User, Globe, Building2 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import apiClient from "../api/axiosConfig";
 
 const guestItems = [
   { label: "Nearby", path: "/", icon: MapPin },
   { label: "All India", path: "/services", icon: Globe },
+  { label: "Site Work", path: "/contractor-hub", icon: Building2 },
   { label: "Bookings", path: "/my-bookings", icon: CalendarCheck },
   { label: "Login", path: "/login", icon: User },
 ];
@@ -14,6 +15,7 @@ const guestItems = [
 const userItems = [
   { label: "Nearby", path: "/", icon: MapPin },
   { label: "All India", path: "/services", icon: Globe },
+  { label: "Site Work", path: "/contractor-hub", icon: Building2 },
   { label: "Bookings", path: "/my-bookings", icon: CalendarCheck },
   { label: "Me", path: "/profile", icon: User },
 ];
@@ -112,4 +114,3 @@ export default function BottomNavUser() {
     </nav>
   );
 }
-

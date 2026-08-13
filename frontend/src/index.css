@@ -72,12 +72,18 @@
   --qs-font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
 
   /* Font sizes — minimal and clean */
-  --qs-text-xs: 0.6875rem;   /* 11px */
-  --qs-text-sm: 0.75rem;     /* 12px */
-  --qs-text-base: 0.8125rem; /* 13px */
-  --qs-text-md: 0.875rem;    /* 14px */
-  --qs-text-lg: 1rem;        /* 16px */
-  --qs-text-xl: 1.125rem;    /* 18px */
+  --qs-text-xs: 0.6875rem;
+  /* 11px */
+  --qs-text-sm: 0.75rem;
+  /* 12px */
+  --qs-text-base: 0.8125rem;
+  /* 13px */
+  --qs-text-md: 0.875rem;
+  /* 14px */
+  --qs-text-lg: 1rem;
+  /* 16px */
+  --qs-text-xl: 1.125rem;
+  /* 18px */
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -119,7 +125,12 @@ body,
     padding-bottom: 60px;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: var(--qs-font-display);
     color: var(--qs-text);
     line-height: 1.25;
@@ -127,40 +138,47 @@ body,
   }
 
   h1:not([class*="text-"]) {
-    font-size: 1.25rem;    /* 20px default */
+    font-size: 1.25rem;
+    /* 20px default */
     font-weight: 700;
     letter-spacing: -0.02em;
   }
 
   h2:not([class*="text-"]) {
-    font-size: 1.125rem;   /* 18px default */
+    font-size: 1.125rem;
+    /* 18px default */
     font-weight: 600;
     letter-spacing: -0.015em;
   }
 
   h3:not([class*="text-"]) {
-    font-size: 1rem;       /* 16px default */
+    font-size: 1rem;
+    /* 16px default */
     font-weight: 600;
   }
 
   h4:not([class*="text-"]) {
-    font-size: 0.875rem;   /* 14px default */
+    font-size: 0.875rem;
+    /* 14px default */
     font-weight: 600;
   }
 
   h5:not([class*="text-"]) {
-    font-size: 0.8125rem;  /* 13px default */
+    font-size: 0.8125rem;
+    /* 13px default */
     font-weight: 500;
   }
 
   h6:not([class*="text-"]) {
-    font-size: 0.75rem;    /* 12px default */
+    font-size: 0.75rem;
+    /* 12px default */
     font-weight: 500;
     letter-spacing: 0.02em;
   }
 
   p:not([class*="text-"]) {
-    font-size: 0.875rem;   /* 14px default */
+    font-size: 0.875rem;
+    /* 14px default */
     color: var(--qs-muted);
     line-height: 1.5;
     margin: 0;
@@ -168,7 +186,8 @@ body,
 
   small,
   .text-micro {
-    font-size: 0.75rem;    /* 12px */
+    font-size: 0.75rem;
+    /* 12px */
     line-height: 1.5;
     color: var(--qs-muted);
   }
@@ -351,7 +370,8 @@ svg {
   padding: 0.625rem 1.25rem;
   border-radius: var(--qs-radius-sm);
   font-family: var(--qs-font-body);
-  font-size: 0.8125rem;  /* 13px — compact professional */
+  font-size: 0.8125rem;
+  /* 13px — compact professional */
   font-weight: 500;
   line-height: 1.25;
   letter-spacing: -0.003em;
@@ -469,7 +489,8 @@ svg {
 
 .form-label {
   display: block;
-  font-size: 0.75rem;     /* 12px — clean minimal label */
+  font-size: 0.75rem;
+  /* 12px — clean minimal label */
   font-weight: 500;
   color: var(--qs-text-md);
   letter-spacing: 0.01em;
@@ -488,7 +509,8 @@ svg {
   background: var(--qs-surface);
   color: var(--qs-text);
   font-family: var(--qs-font-body);
-  font-size: 0.8125rem;   /* 13px */
+  font-size: 0.8125rem;
+  /* 13px */
   font-weight: 400;
   line-height: 1.5;
   transition: var(--qs-transition);
@@ -552,7 +574,8 @@ textarea {
   border-radius: var(--qs-radius-sm);
   padding: 0.6rem 0.875rem;
   font-family: var(--qs-font-body);
-  font-size: 0.8125rem;  /* 13px — consistent with body */
+  font-size: 0.8125rem;
+  /* 13px — consistent with body */
   font-weight: 400;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
   outline: none;

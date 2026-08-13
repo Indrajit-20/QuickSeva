@@ -114,7 +114,7 @@ exports.getPublicStats = async (req, res) => {
 exports.getRecentActivities = async (req, res) => {
   try {
     const [rows] = await pool.query(`
-      SELECT u.id, u.name, u.role, u.city, u.created_at, s.business_name, c.name AS category_name
+      SELECT u.name, u.role, u.city, u.created_at, s.business_name, c.name AS category_name
       FROM users u
       LEFT JOIN sellers s ON u.id = s.user_id
       LEFT JOIN categories c ON s.category_id = c.id
@@ -123,7 +123,23 @@ exports.getRecentActivities = async (req, res) => {
       LIMIT 10
     `);
 
-    return successRes(res, { activities: rows });
+    const sanitizedActivities = rows.map((r) => {
+      let displayName = "A user";
+      if (r.name) {
+        const parts = r.name.trim().split(" ");
+        if (parts.length > 1) {
+          displayName = `${parts[0]} ${parts[parts.length - 1][0]}.`;
+        } else {
+          displayName = parts[0];
+        }
+      }
+      return {
+        ...r,
+        name: displayName,
+      };
+    });
+
+    return successRes(res, { activities: sanitizedActivities });
   } catch (err) {
     console.error("Recent activities error:", err);
     return successRes(res, { activities: [] });

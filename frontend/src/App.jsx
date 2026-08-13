@@ -55,7 +55,13 @@ import SellerWallet from "./pages/seller/SellerWallet";
 import SellerLeads from "./pages/seller/SellerLeads";
 import SellerPublicProfile from "./pages/SellerPublicProfile";
 
-// Backward-compatibility: kept empty. SellerRoute/AdminRoute/UserRoute are the source of truth.
+import ContractorRoute from "./components/ContractorRoute";
+import ContractorLayout from "./layouts/ContractorLayout";
+import ContractorFeed from "./pages/ContractorFeed";
+import ContractorPostDetail from "./pages/ContractorPostDetail";
+import CreateContractorPost from "./pages/contractor/CreateContractorPost";
+import ContractorDashboard from "./pages/contractor/ContractorDashboard";
+import ContractorRegister from "./pages/ContractorRegister";
 function SellerProtectedRoute() {
   // Kept for backward-compatibility; the source of truth is SellerRoute.
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -104,11 +110,12 @@ function AppRoutes() {
     location.pathname.startsWith("/seller/orders") ||
     location.pathname.startsWith("/seller/packages") ||
     location.pathname.startsWith("/seller/wallet");
+  const isContractorWorkspaceRoute = location.pathname.startsWith("/contractor/") || location.pathname === "/contractor";
   const userRole = user?.role || null;
 
   return (
     <>
-      {!isAdminRoute && !isSellerRoute && <Navbar />}
+      {!isAdminRoute && !isSellerRoute && !isContractorWorkspaceRoute && <Navbar />}
 
       <Routes>
         {/* Guest or Customer routes */}
@@ -136,6 +143,24 @@ function AppRoutes() {
           <Route path="/booking-history" element={<BookingHistory />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/become-seller" element={<BecomeSeller />} />
+        </Route>
+
+        {/* Contractor Hub Public Routes */}
+        <Route path="/contractor-hub" element={<ContractorFeed />} />
+        <Route path="/work-site-requirements" element={<ContractorFeed />} />
+        <Route path="/contractor-posts/:id" element={<ContractorPostDetail />} />
+        <Route path="/contractor-register" element={<ContractorRegister />} />
+        <Route path="/become-contractor" element={<ContractorRegister />} />
+
+        {/* Contractor Protected Dashboard */}
+        <Route element={<ContractorRoute />}>
+          <Route path="/contractor" element={<ContractorLayout />}>
+            <Route index element={<Navigate to="/contractor/dashboard" replace />} />
+            <Route path="dashboard" element={<ContractorDashboard />} />
+            <Route path="create-post" element={<CreateContractorPost />} />
+            <Route path="quotes" element={<ContractorDashboard />} />
+            <Route path="posts" element={<ContractorDashboard />} />
+          </Route>
         </Route>
 
         {/* Seller (seller only) */}
@@ -191,8 +216,8 @@ function AppRoutes() {
         <Route path="*" element={<NotFound />} />
       </Routes>
 
-      {!isAdminRoute && !isSellerRoute && <Footer />}
-      {!isAdminRoute && !isSellerRoute && <BottomNavUser />}
+      {!isAdminRoute && !isSellerRoute && !isContractorWorkspaceRoute && <Footer />}
+      {!isAdminRoute && !isSellerRoute && !isContractorWorkspaceRoute && <BottomNavUser />}
     </>
   );
 }

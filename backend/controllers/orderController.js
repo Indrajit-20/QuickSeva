@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const OrderModel = require("../models/orderModel");
 const SellerModel = require("../models/sellerModel");
+const UserModel = require("../models/userModel");
 const { pool } = require("../config/db");
 const {
   successRes,
@@ -9,6 +10,15 @@ const {
   generateOrderNumber,
 } = require("../utils/helpers");
 const { emitToUser, emitToOrder } = require("../utils/socketService");
+const {
+  sendCashCompletionPinWhatsApp,
+  sendStartPinWhatsApp,
+  sendNewBookingAlertWhatsApp,
+  sendBookingCreatedBuyerWhatsApp,
+  sendBookingAcceptedWhatsApp,
+  sendBookingCompletedWhatsApp,
+  sendBookingCancelledWhatsApp,
+} = require("../services/whatsappService");
 
 // Helper to get system settings dynamically
 async function getSystemSetting(key, defaultValue = "") {
@@ -21,6 +31,141 @@ async function getSystemSetting(key, defaultValue = "") {
     return defaultValue;
   }
 }
+
+// Helper to validate slot availability and seller constraints
+async function validateBookingSlot(seller_id, user_id, scheduled_at) {
+  const seller = await SellerModel.findById(seller_id);
+  if (!seller) {
+    return { valid: false, message: "Seller not found", status: 404 };
+  }
+
+  // Prevent self-booking (Seller cannot book their own service)
+  if (user_id && Number(seller.user_id) === Number(user_id)) {
+    return {
+      valid: false,
+      message: "You cannot book your own service. / आप अपनी खुद की सेवा बुक नहीं कर सकते।",
+      status: 400,
+    };
+  }
+
+  if (!seller.is_available) {
+    return {
+      valid: false,
+      message: "This service provider is currently offline and not accepting new bookings.",
+      status: 400,
+    };
+  }
+
+  if (scheduled_at) {
+    const dateString = scheduled_at.split(" ")[0]; // "YYYY-MM-DD"
+    const scheduledDate = new Date(scheduled_at.replace(" ", "T"));
+    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const dayName = dayNames[scheduledDate.getDay()];
+
+    let availableDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    if (seller.available_days) {
+      availableDays = typeof seller.available_days === "string" ? JSON.parse(seller.available_days) : seller.available_days;
+    }
+
+    let unavailableDates = [];
+    if (seller.unavailable_dates) {
+      unavailableDates = typeof seller.unavailable_dates === "string" ? JSON.parse(seller.unavailable_dates) : seller.unavailable_dates;
+    }
+
+    if (unavailableDates.includes(dateString)) {
+      return {
+        valid: false,
+        message: `The seller is on leave on ${dateString}. Please select another date.`,
+        status: 400,
+      };
+    }
+
+    if (!availableDays.includes(dayName)) {
+      return {
+        valid: false,
+        message: `The seller does not work on ${dayName}s. Please pick another day.`,
+        status: 400,
+      };
+    }
+
+    const slotDuration = Number(seller.slot_duration_mins || 60);
+    const capacity = Number(seller.slot_capacity || 1);
+    const isAgency = seller.account_type === "agency" || seller.seller_type === "agency" || capacity > 1;
+
+    if (isAgency) {
+      // Multi-capacity check for agency accounts
+      const [existingBookings] = await pool.query(
+        `SELECT COUNT(*) AS count FROM orders 
+         WHERE seller_id = ? 
+           AND status != 'cancelled' 
+           AND ABS(TIMESTAMPDIFF(MINUTE, ?, scheduled_at)) < ?`,
+        [seller_id, scheduled_at, slotDuration]
+      );
+      const count = existingBookings?.[0]?.count || 0;
+      if (count >= capacity) {
+        return {
+          valid: false,
+          message: `This time slot has reached its maximum team capacity (${capacity} bookings). Please select a different time slot.`,
+          status: 400,
+        };
+      }
+    } else {
+      // Individual seller check (capacity = 1)
+      const [conflictingOrders] = await pool.query(
+        `SELECT id, scheduled_at, DATE_FORMAT(scheduled_at, '%d %b %Y, %h:%i %p') AS formattedTime FROM orders 
+         WHERE seller_id = ? 
+           AND status != 'cancelled' 
+           AND ABS(TIMESTAMPDIFF(MINUTE, ?, scheduled_at)) < ? 
+         LIMIT 1`,
+        [seller_id, scheduled_at, slotDuration]
+      );
+
+      if (conflictingOrders && conflictingOrders.length > 0) {
+        const formattedTime = conflictingOrders[0].formattedTime || "this time";
+        return {
+          valid: false,
+          message: `This slot is unavailable. The seller already has a booking around ${formattedTime}. Please select another available time slot.`,
+          status: 400,
+        };
+      }
+    }
+  }
+
+  return { valid: true, seller };
+}
+
+// Check slot validation endpoint
+exports.validateSlot = async (req, res) => {
+  try {
+    const { seller_id, scheduled_at } = req.body;
+    if (!seller_id) return errorRes(res, "Seller ID is required", 400);
+
+    let userId = req.user?.id;
+    if (!userId) {
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith("Bearer ")) {
+        try {
+          const { verifyToken } = require("../utils/jwtUtils");
+          const token = authHeader.split(" ")[1];
+          const decoded = verifyToken(token);
+          if (decoded && decoded.id) userId = decoded.id;
+        } catch (e) {
+          // ignore invalid token for optional slot check
+        }
+      }
+    }
+
+    const validation = await validateBookingSlot(seller_id, userId, scheduled_at);
+    if (!validation.valid) {
+      return errorRes(res, validation.message, validation.status || 400);
+    }
+
+    return successRes(res, { available: true, message: "Slot is available" });
+  } catch (err) {
+    console.error("validateSlot error:", err);
+    return errorRes(res, "Failed to validate slot availability", 500);
+  }
+};
 
 // Place a new order (Stage 1: Visiting Charge Payment)
 exports.placeOrder = async (req, res) => {
@@ -43,96 +188,22 @@ exports.placeOrder = async (req, res) => {
       return errorRes(res, "Wallet payments are not supported for bookings", 400);
     }
 
-    const seller = await SellerModel.findById(seller_id);
-    if (!seller) return errorRes(res, "Seller not found", 404);
-    if (!seller.is_available) {
-      return errorRes(res, "This service provider is currently offline and not accepting new bookings.", 400);
+    const validation = await validateBookingSlot(seller_id, req.user?.id, scheduled_at);
+    if (!validation.valid) {
+      return errorRes(res, validation.message, validation.status || 400);
     }
+    const seller = validation.seller;
 
-    // Validate seller leave dates and weekly off-days
-    if (scheduled_at) {
-      const scheduledDate = new Date(scheduled_at);
-      const dateString = scheduledDate.toISOString().split("T")[0];
-
-      const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-      const dayName = dayNames[scheduledDate.getDay()];
-
-      let availableDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-      if (seller.available_days) {
-        availableDays = typeof seller.available_days === "string" ? JSON.parse(seller.available_days) : seller.available_days;
-      }
-
-      let unavailableDates = [];
-      if (seller.unavailable_dates) {
-        unavailableDates = typeof seller.unavailable_dates === "string" ? JSON.parse(seller.unavailable_dates) : seller.unavailable_dates;
-      }
-
-      if (unavailableDates.includes(dateString)) {
-        return errorRes(res, `The seller is on leave on ${dateString}. Please select another date.`, 400);
-      }
-
-      if (!availableDays.includes(dayName)) {
-        return errorRes(res, `The seller does not work on ${dayName}s. Please pick another day.`, 400);
-      }
-
-      const slotDuration = Number(seller.slot_duration_mins || 60);
-      const capacity = Number(seller.slot_capacity || 1);
-      const isAgency = seller.account_type === "agency" || seller.seller_type === "agency" || capacity > 1;
-
-      if (isAgency) {
-        // Multi-capacity check for agency accounts
-        const [existingBookings] = await pool.query(
-          `SELECT COUNT(*) AS count FROM orders 
-           WHERE seller_id = ? 
-             AND status != 'cancelled' 
-             AND ABS(TIMESTAMPDIFF(MINUTE, ?, scheduled_at)) < ?`,
-          [seller_id, scheduled_at, slotDuration]
-        );
-        const count = existingBookings?.[0]?.count || 0;
-        if (count >= capacity) {
-          return errorRes(
-            res,
-            `This time slot has reached its maximum team capacity (${capacity} bookings). Please select a different time slot.`,
-            400
-          );
-        }
-      } else {
-        // Individual seller check (capacity = 1)
-        const [conflictingOrders] = await pool.query(
-          `SELECT id, scheduled_at FROM orders 
-           WHERE seller_id = ? 
-             AND status != 'cancelled' 
-             AND ABS(TIMESTAMPDIFF(MINUTE, ?, scheduled_at)) < ? 
-           LIMIT 1`,
-          [seller_id, scheduled_at, slotDuration]
-        );
-
-        if (conflictingOrders && conflictingOrders.length > 0) {
-          const conflictTime = new Date(conflictingOrders[0].scheduled_at);
-          const formattedTime = conflictTime.toLocaleString("en-IN", {
-            timeZone: "Asia/Kolkata",
-            hour12: true,
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          });
-          return errorRes(
-            res,
-            `This slot is unavailable. The seller already has a booking around ${formattedTime}. Please select another available time slot.`,
-            400
-          );
-        }
+    // Safely check service if service_id is provided
+    let service = null;
+    let visiting_charge = 100.00;
+    if (service_id) {
+      const [serviceRows] = await pool.query("SELECT * FROM services WHERE id = ?", [service_id]);
+      if (serviceRows && serviceRows.length > 0) {
+        service = serviceRows[0];
+        visiting_charge = parseFloat(service.visiting_charge || 0);
       }
     }
-
-    const [serviceRows] = await pool.query("SELECT * FROM services WHERE id = ?", [service_id]);
-    if (serviceRows.length === 0) return errorRes(res, "Service not found", 404);
-    const service = serviceRows[0];
-
-    // Enforce a minimum visiting charge of ₹100 to cover provider's travel costs
-    let visiting_charge = parseFloat(service.visiting_charge || 0);
     if (visiting_charge < 100.00) {
       visiting_charge = 100.00;
     }
@@ -151,9 +222,9 @@ exports.placeOrder = async (req, res) => {
     // Calculate how much the customer pays in Stage 1
     const total_stage_1 = feeModel === "buyer" ? (visiting_charge + visiting_platform_fee) : visiting_charge;
 
-    // Stage 1 (Visiting Charge) is always paid online upfront during booking
+    // Stage 1 (Visiting Charge) is paid online or tracked upfront during booking
     const isVisitingPaid = !!razorpay_payment_id;
-    if (total_stage_1 > 0 || isVisitingPaid) {
+    if (isVisitingPaid) {
       if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature) {
         return errorRes(res, "Visiting charge payment online verification details are required", 400);
       }
@@ -166,6 +237,7 @@ exports.placeOrder = async (req, res) => {
           .digest("hex");
         
         if (expectedSignature !== razorpay_signature) {
+          console.error("Razorpay signature mismatch:", { expectedSignature, razorpay_signature });
           return errorRes(res, "Payment signature verification failed", 400);
         }
       }
@@ -177,10 +249,10 @@ exports.placeOrder = async (req, res) => {
       order_number,
       buyer_id: req.user.id,
       seller_id,
-      service_id,
+      service_id: service ? service.id : (service_id || null),
       total_amount: total_stage_1.toFixed(2),
       platform_fee: visiting_platform_fee.toFixed(2),
-      payment_method,
+      payment_method: payment_method || "online",
       address,
       lat,
       lng,
@@ -197,43 +269,94 @@ exports.placeOrder = async (req, res) => {
       await OrderModel.updateStatus(orderId, "accepted");
     }
 
-    // Create notification for seller
-    const sellerUser = await pool.query(
-      `SELECT user_id FROM sellers WHERE id = ?`,
-      [seller_id],
-    );
-    await pool.query(
-      `INSERT INTO notifications (user_id, title, message, type, ref_id)
-       VALUES (?, ?, ?, 'order', ?)`,
-      [
-        sellerUser[0][0].user_id,
-        "New Order Booked!",
-        `New order #${order_number} booked. Visiting charge paid.`,
-        orderId,
-      ],
-    );
+    // Create notification for seller safely
+    let sellerUserId = null;
+    try {
+      const [sellerRows] = await pool.query(
+        `SELECT user_id FROM sellers WHERE id = ?`,
+        [seller_id],
+      );
+      if (sellerRows && sellerRows.length > 0 && sellerRows[0].user_id) {
+        sellerUserId = sellerRows[0].user_id;
+        await pool.query(
+          `INSERT INTO notifications (user_id, title, message, type, ref_id)
+           VALUES (?, ?, ?, 'order', ?)`,
+          [
+            sellerUserId,
+            "New Order Booked!",
+            `New order #${order_number} booked. Visiting charge paid.`,
+            orderId,
+          ],
+        );
+      }
+    } catch (notifErr) {
+      console.error("Seller notification insertion error:", notifErr);
+    }
+
+    // Dispatch WhatsApp New Booking Alert to Seller & Confirmation to Buyer asynchronously in background
+    setImmediate(async () => {
+      try {
+        const buyerUser = await UserModel.findById(req.user.id);
+        const buyerPhone = req.user?.phone || buyerUser?.phone;
+
+        // 1. Send Alert to Seller
+        const sellerPhone = seller?.phone || seller?.user_phone;
+        await sendNewBookingAlertWhatsApp({
+          sellerPhone: sellerPhone,
+          sellerName: seller?.name || seller?.business_name,
+          buyerName: req.user?.name || buyerUser?.name || "Customer",
+          serviceTitle: service?.title || "Service Booking",
+          orderNumber: order_number,
+          scheduledAt: scheduled_at,
+        });
+
+        // 2. Send Confirmation to Buyer (with 1s delay to prevent WebSocket collision if phones are identical)
+        if (buyerPhone) {
+          await new Promise(r => setTimeout(r, 1200));
+          await sendBookingCreatedBuyerWhatsApp({
+            buyerPhone: buyerPhone,
+            buyerName: req.user?.name || buyerUser?.name || "Customer",
+            sellerName: seller.name || seller.business_name,
+            serviceTitle: service?.title || "Service Booking",
+            orderNumber: order_number,
+            scheduledAt: scheduled_at,
+          });
+        }
+      } catch (waErr) {
+        console.error("WhatsApp notification dispatch error:", waErr);
+      }
+    });
 
     const order = await OrderModel.findById(orderId);
-    if (sellerUser[0]?.[0]?.user_id) {
-      emitToUser(sellerUser[0][0].user_id, "order_updated", { orderId, order, event: "order_created", status: "accepted" });
-      emitToUser(sellerUser[0][0].user_id, "new_notification", {
-        title: "New Order Booked!",
-        message: `New order #${order_number} booked. Visiting charge paid.`,
-        type: "order",
-        ref_id: orderId,
-      });
+
+    // Socket events safely
+    try {
+      if (sellerUserId) {
+        emitToUser(sellerUserId, "order_updated", { orderId, order, event: "order_created", status: "accepted" });
+        emitToUser(sellerUserId, "new_notification", {
+          title: "New Order Booked!",
+          message: `New order #${order_number} booked. Visiting charge paid.`,
+          type: "order",
+          ref_id: orderId,
+        });
+      }
+      if (req.user?.id) {
+        emitToUser(req.user.id, "order_updated", { orderId, order, event: "order_created", status: "accepted" });
+        emitToUser(req.user.id, "new_notification", {
+          title: "Order Placed Successfully",
+          message: `Your booking #${order_number} has been confirmed.`,
+          type: "order",
+          ref_id: orderId,
+        });
+      }
+    } catch (socketErr) {
+      console.error("Socket notification error:", socketErr);
     }
-    emitToUser(req.user.id, "order_updated", { orderId, order, event: "order_created", status: "accepted" });
-    emitToUser(req.user.id, "new_notification", {
-      title: "Order Placed Successfully",
-      message: `Your booking #${order_number} has been confirmed.`,
-      type: "order",
-      ref_id: orderId,
-    });
-    return successRes(res, { order }, "Order placed successfully", 201);
+
+    return successRes(res, { order, whatsappUrl }, "Order placed successfully", 201);
   } catch (err) {
-    console.error("Place order error:", err.message);
-    return errorRes(res, "Failed to place order");
+    console.error("Place order error:", err);
+    return errorRes(res, err?.message || "Failed to place order", 500);
   }
 };
 
@@ -333,6 +456,19 @@ exports.acceptOrder = async (req, res) => {
     emitToUser(req.user.id, "order_updated", { orderId: order.id, status: "accepted" });
     emitToOrder(order.id, "order_updated", { orderId: order.id, status: "accepted" });
 
+    // Dispatch WhatsApp Acceptance notification to Buyer
+    const buyerUser = await UserModel.findById(order.buyer_id);
+    if (buyerUser) {
+      sendBookingAcceptedWhatsApp({
+        buyerPhone: buyerUser.phone,
+        buyerName: buyerUser.name,
+        sellerName: seller.business_name || seller.name,
+        sellerPhone: seller.phone || seller.user_phone,
+        serviceTitle: order.service_title || "Service",
+        orderNumber: order.order_number || order.id,
+      }).catch(err => console.error("WhatsApp error:", err));
+    }
+
     return successRes(res, null, "Order accepted");
   } catch (err) {
     return errorRes(res, "Failed to accept order");
@@ -357,6 +493,18 @@ exports.startOrder = async (req, res) => {
     emitToUser(order.buyer_id, "order_updated", { orderId: order.id, status: "in_progress" });
     emitToUser(req.user.id, "order_updated", { orderId: order.id, status: "in_progress" });
     emitToOrder(order.id, "order_updated", { orderId: order.id, status: "in_progress" });
+
+    // Dispatch WhatsApp Notification to Buyer
+    const buyerUser = await UserModel.findById(order.buyer_id);
+    if (buyerUser && buyerUser.phone) {
+      sendStartPinWhatsApp({
+        buyerPhone: buyerUser.phone,
+        buyerName: buyerUser.name,
+        orderNumber: order.order_number || order.id,
+        pin: order.start_otp_code || "N/A",
+        serviceTitle: order.service_title || "Service",
+      }).catch(err => console.error("WhatsApp start notification error:", err));
+    }
 
     return successRes(res, null, "Order started");
   } catch (err) {
@@ -416,6 +564,18 @@ exports.completeOrder = async (req, res) => {
     });
     emitToUser(req.user.id, "order_updated", { orderId: order.id, status: "completed" });
     emitToOrder(order.id, "order_updated", { orderId: order.id, status: "completed" });
+
+    // Dispatch WhatsApp Completion notification to Buyer
+    const buyerUser = await UserModel.findById(order.buyer_id);
+    if (buyerUser) {
+      sendBookingCompletedWhatsApp({
+        buyerPhone: buyerUser.phone,
+        buyerName: buyerUser.name,
+        serviceTitle: order.service_title || "Service",
+        orderNumber: order.order_number || order.id,
+        amount: order.total_amount || 0,
+      }).catch(err => console.error("WhatsApp error:", err));
+    }
 
     return successRes(res, null, "Order completed");
   } catch (err) {
@@ -577,6 +737,70 @@ exports.cancelOrder = async (req, res) => {
     }
     emitToOrder(order.id, "order_updated", { orderId: order.id, status: "cancelled" });
 
+    // Dispatch WhatsApp Cancellation notifications to Buyer and Seller
+    try {
+      const buyerUser = await UserModel.findById(order.buyer_id);
+      const sellerInfo = await SellerModel.findById(order.seller_id);
+
+      const refundText = refundAmount > 0 
+        ? `₹${refundAmount.toFixed(2)} refund initiated via Razorpay (5-7 business days).`
+        : null;
+
+      if (isBuyer) {
+        // 1. Notify Seller on WhatsApp
+        const sellerPhone = sellerInfo?.phone || sellerInfo?.user_phone;
+        if (sellerPhone) {
+          sendBookingCancelledWhatsApp({
+            recipientPhone: sellerPhone,
+            recipientName: sellerInfo.name || sellerInfo.business_name,
+            orderNumber: order.order_number || order.id,
+            cancelledBy: "Customer",
+            reason: displayReason,
+            refundInfo: null,
+          }).catch(err => console.error("WhatsApp seller cancel error:", err));
+        }
+
+        // 2. Notify Buyer on WhatsApp
+        if (buyerUser && buyerUser.phone) {
+          sendBookingCancelledWhatsApp({
+            recipientPhone: buyerUser.phone,
+            recipientName: buyerUser.name,
+            orderNumber: order.order_number || order.id,
+            cancelledBy: "You (Customer)",
+            reason: displayReason,
+            refundInfo: refundText,
+          }).catch(err => console.error("WhatsApp buyer cancel error:", err));
+        }
+      } else if (isSeller) {
+        // 1. Notify Buyer on WhatsApp
+        if (buyerUser && buyerUser.phone) {
+          sendBookingCancelledWhatsApp({
+            recipientPhone: buyerUser.phone,
+            recipientName: buyerUser.name,
+            orderNumber: order.order_number || order.id,
+            cancelledBy: sellerInfo?.name || sellerInfo?.business_name || "Service Provider",
+            reason: displayReason,
+            refundInfo: refundText,
+          }).catch(err => console.error("WhatsApp buyer cancel error:", err));
+        }
+
+        // 2. Notify Seller on WhatsApp
+        const sellerPhone = sellerInfo?.phone || sellerInfo?.user_phone;
+        if (sellerPhone) {
+          sendBookingCancelledWhatsApp({
+            recipientPhone: sellerPhone,
+            recipientName: sellerInfo.name || sellerInfo.business_name,
+            orderNumber: order.order_number || order.id,
+            cancelledBy: "You (Service Provider)",
+            reason: displayReason,
+            refundInfo: null,
+          }).catch(err => console.error("WhatsApp seller cancel error:", err));
+        }
+      }
+    } catch (waErr) {
+      console.error("WhatsApp cancel notification error:", waErr);
+    }
+
     return successRes(res, null, "Order cancelled");
   } catch (err) {
     console.error("Cancel order error:", err);
@@ -653,6 +877,22 @@ exports.submitQuotation = async (req, res) => {
         order.id
       ]
     );
+
+    // Send Start PIN automatically via WhatsApp to Buyer
+    try {
+      const buyerUser = await UserModel.findById(order.buyer_id);
+      if (buyerUser && buyerUser.phone) {
+        sendStartPinWhatsApp({
+          buyerPhone: buyerUser.phone,
+          buyerName: buyerUser.name,
+          orderNumber: order.order_number || order.id,
+          pin: start_otp_code,
+          serviceTitle: "Service Order",
+        }).catch((err) => console.error("WhatsApp start PIN error:", err));
+      }
+    } catch (waErr) {
+      console.error("Failed to send WhatsApp start PIN:", waErr);
+    }
 
     emitToUser(order.buyer_id, "order_updated", { orderId: order.id, status: "quoted" });
     emitToUser(req.user.id, "order_updated", { orderId: order.id, status: "quoted" });
@@ -752,6 +992,20 @@ exports.approveQuotation = async (req, res) => {
       emitToUser(sellerUser[0][0].user_id, "order_updated", { orderId: order.id, status: "in_progress", final_payment_status: final_pay_status });
     }
     emitToOrder(order.id, "order_updated", { orderId: order.id, status: "in_progress", final_payment_status: final_pay_status });
+
+    // If Cash Payment PIN was generated, send it via WhatsApp with Security Warning!
+    if (completion_otp_code) {
+      const buyerUser = await UserModel.findById(order.buyer_id);
+      if (buyerUser) {
+        sendCashCompletionPinWhatsApp({
+          buyerPhone: buyerUser.phone,
+          buyerName: buyerUser.name,
+          orderNumber: order.order_number || order.id,
+          pin: completion_otp_code,
+          amount: (order.total_amount || 0).toString(),
+        }).catch(err => console.error("WhatsApp error:", err));
+      }
+    }
 
     return successRes(res, null, "Quotation approved and paid");
   } catch (err) {
@@ -885,6 +1139,18 @@ exports.switchToCash = async (req, res) => {
         order.id
       ]
     );
+
+    // Dispatch WhatsApp Cash Completion PIN with Security Warning to Buyer
+    const buyerUser = await UserModel.findById(order.buyer_id);
+    if (buyerUser) {
+      sendCashCompletionPinWhatsApp({
+        buyerPhone: buyerUser.phone,
+        buyerName: buyerUser.name,
+        orderNumber: order.order_number || order.id,
+        pin: completion_otp_code,
+        amount: (order.total_amount || 0).toString(),
+      }).catch(err => console.error("WhatsApp error:", err));
+    }
 
     return successRes(res, { completion_otp_code }, "Switched to Cash payment successfully");
   } catch (err) {

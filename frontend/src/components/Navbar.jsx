@@ -23,7 +23,7 @@ const getInitials = (name) => {
   return (parts[0][0] + parts[1][0]).toUpperCase();
 };
 
-import { Search, MapPin, Globe, CalendarCheck, Wrench, LayoutDashboard } from "lucide-react";
+import { Search, MapPin, Globe, CalendarCheck, Wrench, LayoutDashboard, Building2 } from "lucide-react";
 import SearchOverlay from "./SearchOverlay";
 
 import NotificationBell from "./NotificationBell";
@@ -130,6 +130,15 @@ const Navbar = () => {
             >
               <MapPin className="h-3.5 w-3.5 text-rose-500 shrink-0" />
               <span>Nearby Map</span>
+            </Link>
+
+            <Link
+              to="/contractor-hub"
+              onClick={() => window.scrollTo({ top: 0, behavior: "instant" })}
+              className="flex items-center gap-1.5 text-sm font-bold text-amber-800 bg-amber-50 px-3 py-1 rounded-full border border-amber-200 transition-colors duration-200 hover:bg-amber-100"
+            >
+              <Building2 className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+              <span>Contractors & Site Work</span>
             </Link>
 
             <Link
@@ -295,6 +304,18 @@ const Navbar = () => {
             >
               <MapPin className="h-4 w-4 text-rose-500 shrink-0" />
               <span>Nearby Map (GPS)</span>
+            </Link>
+
+            <Link
+              to="/contractor-hub"
+              onClick={() => {
+                setIsMenuOpen(false);
+                window.scrollTo({ top: 0, behavior: "instant" });
+              }}
+              className="flex items-center gap-2 rounded-lg px-3 py-2 font-bold text-amber-800 bg-amber-50 border border-amber-200 transition-colors"
+            >
+              <Building2 className="h-4 w-4 text-amber-600 shrink-0" />
+              <span>Contractors & Site Work</span>
             </Link>
 
             <Link

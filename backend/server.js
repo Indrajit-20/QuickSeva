@@ -29,6 +29,7 @@ const leadRoutes = require("./routes/leadRoutes");
 const policyRoutes = require("./routes/policyRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
+const contractorRoutes = require("./routes/contractorRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -123,6 +124,7 @@ app.use("/api", leadChargeRoutes);
 app.use("/api", leadRoutes);
 app.use("/api/policies", policyRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/contractor", contractorRoutes);
 
 // ── Error Handling ────────────────────────────────────────────────────────────
 app.use(notFound);
@@ -136,6 +138,8 @@ const { startAvailabilitySafetyCheck } = require("./services/availabilitySafetyC
 const server = http.createServer(app);
 initSocket(server);
 
+const { initWhatsAppWebClient } = require("./services/whatsappService");
+
 server.listen(PORT, () => {
   logger.info(`🚀 QuickSeva API running on http://localhost:${PORT}`);
   logger.info(`📋 Health check: http://localhost:${PORT}/api/health`);
@@ -143,6 +147,12 @@ server.listen(PORT, () => {
   
   // Start the background safety check
   startAvailabilitySafetyCheck();
+
+  // Initialize WhatsApp Web Engine for automated notifications asynchronously (prevents boot delay)
+  setTimeout(() => {
+    initWhatsAppWebClient();
+  }, 1000);
 });
 
 module.exports = app;
+

@@ -112,7 +112,7 @@ function defaultServicesForSeller(seller) {
 export default function SellerPublicProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [selectedService, setSelectedService] = useState(null);
   const [bookingError, setBookingError] = useState("");
   const [distanceLabel, setDistanceLabel] = useState("");
@@ -362,6 +362,10 @@ export default function SellerPublicProfile() {
   };
 
   const handleBook = () => {
+    if (user && seller && Number(user.id) === Number(seller.user_id)) {
+      setBookingError("This is your own profile. You cannot book your own service. / यह आपका अपना प्रोफ़ाइल है। आप अपनी सेवा बुक नहीं कर सकते।");
+      return;
+    }
     if (seller && (seller.is_available === 0 || seller.is_available === false)) {
       setBookingError("This provider is currently offline and not accepting new bookings. Please try again when they come online.");
       return;
