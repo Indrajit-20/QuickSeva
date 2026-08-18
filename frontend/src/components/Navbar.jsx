@@ -105,77 +105,80 @@ const Navbar = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-14">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2" onClick={handleHomeClick}>
+          <Link to="/" className="flex items-center gap-2 shrink-0" onClick={handleHomeClick}>
             <span className="text-xl sm:text-2xl font-bold text-[#0284c7] tracking-tight"
               style={{ fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif" }}>
               QuickSeva
             </span>
           </Link>
 
-          <div className="hidden max-w-[260px] items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-500 sm:flex">
-            <MapPin className="h-3.5 w-3.5 text-rose-500 shrink-0" />
-            <span className="truncate font-semibold">
-              {loading ? "Locating..." : address || "Allow location"}
-            </span>
-          </div>
-
-
-
-          {/* Desktop Menu */}
-          <div className="hidden md:flex items-center space-x-6">
+          {/* Desktop Nav Links — icon-only on md, icon+text on lg */}
+          <div className="hidden md:flex items-center gap-1 lg:gap-1.5">
             <Link
               to="/"
               onClick={handleHomeClick}
-              className="flex items-center gap-1.5 text-sm font-medium text-slate-700 transition-colors duration-200 hover:text-[#0284c7]"
+              title="Nearby Map"
+              className="flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-lg text-[13px] font-medium text-slate-600 transition-all duration-200 hover:text-[#0284c7] hover:bg-sky-50/60"
             >
-              <MapPin className="h-3.5 w-3.5 text-rose-500 shrink-0" />
-              <span>Nearby Map</span>
+              <MapPin className="h-4 w-4 text-rose-500 shrink-0" />
+              <span className="hidden lg:inline">Nearby</span>
             </Link>
 
             <Link
               to="/contractor-hub"
               onClick={() => window.scrollTo({ top: 0, behavior: "instant" })}
-              className="flex items-center gap-1.5 text-sm font-bold text-amber-800 bg-amber-50 px-3 py-1 rounded-full border border-amber-200 transition-colors duration-200 hover:bg-amber-100"
+              title="Contractors & Site Work"
+              className="flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-lg text-[13px] font-medium text-slate-600 transition-all duration-200 hover:text-amber-700 hover:bg-amber-50/60"
             >
-              <Building2 className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-              <span>Contractors & Site Work</span>
+              <Building2 className="h-4 w-4 text-amber-600 shrink-0" />
+              <span className="hidden lg:inline">Site Work</span>
             </Link>
 
             <Link
               to="/services"
               onClick={() => window.scrollTo({ top: 0, behavior: "instant" })}
-              className="flex items-center gap-1.5 text-sm font-medium text-slate-700 transition-colors duration-200 hover:text-[#0284c7]"
+              title="All India Services"
+              className="flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-lg text-[13px] font-medium text-slate-600 transition-all duration-200 hover:text-[#0284c7] hover:bg-sky-50/60"
             >
-              <Globe className="h-3.5 w-3.5 text-blue-600 shrink-0" />
-              <span>All India Services</span>
+              <Globe className="h-4 w-4 text-blue-600 shrink-0" />
+              <span className="hidden lg:inline">All India</span>
             </Link>
 
             {isAuthenticated && activeRole === "seller" ? (
               <>
                 <Link
                   to="/seller/services"
-                  className="flex items-center gap-1.5 text-sm font-medium text-slate-700 transition-colors duration-200 hover:text-[#0284c7]"
+                  title="My Services"
+                  className="flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-lg text-[13px] font-medium text-slate-600 transition-all duration-200 hover:text-amber-700 hover:bg-amber-50/60"
                 >
-                  <Wrench className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-                  <span>My Services</span>
+                  <Wrench className="h-4 w-4 text-amber-500 shrink-0" />
+                  <span className="hidden lg:inline">Services</span>
                 </Link>
                 <Link
                   to="/seller/dashboard"
-                  className="flex items-center gap-1.5 text-sm font-medium text-slate-700 transition-colors duration-200 hover:text-[#0284c7]"
+                  title="Seller Dashboard"
+                  className="flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-lg text-[13px] font-medium text-slate-600 transition-all duration-200 hover:text-indigo-600 hover:bg-indigo-50/60"
                 >
-                  <LayoutDashboard className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
-                  <span>Dashboard</span>
+                  <LayoutDashboard className="h-4 w-4 text-indigo-600 shrink-0" />
+                  <span className="hidden lg:inline">Dashboard</span>
                 </Link>
               </>
             ) : isAuthenticated && (
               <Link
                 to="/my-bookings"
-                className="flex items-center gap-1.5 text-sm font-medium text-slate-700 transition-colors duration-200 hover:text-[#0284c7]"
+                title="My Bookings"
+                className="flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-lg text-[13px] font-medium text-slate-600 transition-all duration-200 hover:text-emerald-600 hover:bg-emerald-50/60"
               >
-                <CalendarCheck className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
-                <span>My Bookings</span>
+                <CalendarCheck className="h-4 w-4 text-emerald-600 shrink-0" />
+                <span className="hidden lg:inline">Bookings</span>
               </Link>
             )}
+          </div>
+
+          {/* Desktop Right — Separator + User badge + Bell + Profile */}
+          <div className="hidden md:flex items-center gap-2 shrink-0">
+            {/* Subtle vertical separator */}
+            <div className="w-px h-6 bg-slate-200 mx-1" />
 
             {user && (
               <div style={{
@@ -200,7 +203,7 @@ const Navbar = () => {
                   background: activeRole === "seller" ? "#0284c7" : "#0F6E56",
                   display: "inline-block"
                 }} />
-                <span className="hidden sm:inline">
+                <span>
                   {activeRole === "seller" ? "Seller" : "User"}
                 </span>
               </div>
@@ -214,7 +217,7 @@ const Navbar = () => {
               <>
                 <Link
                   to="/login"
-                  className="font-semibold text-[#1a1a1a] transition-colors duration-300 hover:text-[#4f46e5]"
+                  className="px-3 py-1.5 text-[13px] font-semibold text-slate-700 rounded-lg hover:text-[#0284c7] hover:bg-slate-50 transition-colors duration-200"
                 >
                   Login
                 </Link>
@@ -225,12 +228,10 @@ const Navbar = () => {
                 >
                   <button
                     type="button"
-                    className="list-none cursor-pointer"
+                    className="list-none cursor-pointer px-3 py-1.5 text-[13px] font-semibold text-slate-700 rounded-lg hover:text-[#4f46e5] hover:bg-slate-50 transition-colors duration-200"
                     onClick={() => setIsPartnerOpen(true)}
                   >
-                    <span className="font-semibold text-[#1a1a1a] transition-colors duration-300 hover:text-[#4f46e5]">
-                      Become a partner
-                    </span>
+                    Become a partner
                   </button>
 
                   {isPartnerOpen && (
@@ -292,7 +293,6 @@ const Navbar = () => {
         {/* Mobile Menu */}
         {isMenuOpen && (
           <div className="md:hidden py-4 space-y-3 animate-fade-in-down">
-
 
             <Link
               to="/"

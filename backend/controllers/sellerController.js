@@ -33,7 +33,10 @@ exports.createSellerProfile = async (req, res) => {
     const { business_name, category_id, bio, experience_yrs } = req.body;
 
     const existing = await SellerModel.findByUserId(req.user.id);
-    if (existing) return errorRes(res, "Seller profile already exists", 400);
+    if (existing) {
+      await UserModel.update(req.user.id, { role: "seller" });
+      return successRes(res, { seller: existing, alreadyExisted: true }, "Seller profile already exists", 200);
+    }
 
     // Update user role to seller
     await UserModel.update(req.user.id, { role: "seller" });

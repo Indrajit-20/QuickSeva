@@ -124,8 +124,11 @@ export const AuthProvider = ({ children }) => {
   // Do NOT bootstrap from localStorage.userRole or localStorage.user (stale/cross-tab).
   const [user, setUser] = useState(null);
 
+  const checkIsSeller = (u) => Boolean(u?.role === "seller" || u?.has_seller_profile || u?.seller_id);
+  const checkIsContractor = (u) => Boolean(u?.role === "contractor" || u?.is_verified_contractor === 1 || u?.trade_specialization || u?.has_contractor_profile);
+
   useEffect(() => {
-    setIsSeller(user?.role === "seller");
+    setIsSeller(checkIsSeller(user));
   }, [user]);
 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -155,7 +158,7 @@ export const AuthProvider = ({ children }) => {
           );
         }
 
-        const isUserSeller = data.user?.role === "seller";
+        const isUserSeller = checkIsSeller(data?.user);
         setIsSeller(isUserSeller);
 
         const savedRole = localStorage.getItem("activeRole");
@@ -276,14 +279,15 @@ export const AuthProvider = ({ children }) => {
     if (userData?.role) localStorage.setItem("userRole", userData.role);
     setUser(userData);
     setIsAuthenticated(true);
-    setIsSeller(userData?.role === "seller");
+    setIsSeller(checkIsSeller(userData));
     setActiveRole(userData?.role || "user");
     localStorage.setItem("activeRole", userData?.role || "user");
   };
 
   // New function
   const switchRole = (role) => {
-    if (role === "seller" && !isSeller) {
+    const userIsSeller = isSeller || checkIsSeller(user);
+    if (role === "seller" && !userIsSeller) {
       navigate("/become-seller");
       return;
     }
@@ -298,11 +302,11 @@ export const AuthProvider = ({ children }) => {
       const { data } = await getMe();
       if (data?.user) {
         setUser(data.user);
-        setIsSeller(data.user.role === "seller");
+        setIsSeller(checkIsSeller(data.user));
         if (data.user.role) {
           localStorage.setItem("userRole", data.user.role);
         }
-        if (data.user.role === "seller" && data.user.premium_expires_at) {
+        if ((data.user.role === "seller" || data.user.has_seller_profile) && data.user.premium_expires_at) {
           localStorage.setItem(
             "sellerPremium",
             JSON.stringify({
@@ -357,6 +361,7 @@ export const AuthProvider = ({ children }) => {
     isLoading,
     authError,
     isSeller,
+    isContractor: checkIsContractor(user),
     activeRole,
 
     // Methods

@@ -8,7 +8,6 @@ import {
   MapPin,
   Navigation,
   Star,
-  Phone,
   CheckCircle2,
   X,
   ChevronRight,
@@ -470,14 +469,6 @@ export default function ServicesPage() {
             <MapPin className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
             <span className="line-clamp-2">{seller.address || "Local Service Area"}</span>
           </p>
-
-          {/* Phone if available */}
-          {isPremium && seller.phone ? (
-            <p className="mt-2 flex items-center gap-1.5 text-xs font-bold text-emerald-600">
-              <Phone className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-              <span>{seller.phone}</span>
-            </p>
-          ) : null}
         </div>
       </article>
     );

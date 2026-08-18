@@ -22,7 +22,7 @@ const UserModel = {
   // Find by ID
   findById: async (id) => {
     const [rows] = await pool.query(
-      `SELECT id, name, email, phone, role, profile_pic, address, city, state, pincode, lat, lng, gender, dob, is_verified, is_active, created_at
+      `SELECT id, name, email, phone, role, profile_pic, address, city, state, pincode, lat, lng, gender, dob, is_verified, is_active, company_name, trade_specialization, is_verified_contractor, created_at
        FROM users WHERE id = ?`,
       [id],
     );

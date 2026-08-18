@@ -20,7 +20,7 @@ const ContractorController = {
         });
 
         const updatedUser = await UserModel.findById(userId);
-        return successRes(res, "Successfully registered as a Contractor", { user: updatedUser });
+        return successRes(res, { user: updatedUser }, "Successfully registered as a Contractor");
       } else {
         // Guest user registering new Contractor account directly
         if (!name || !phone || !password) {
@@ -56,7 +56,7 @@ const ContractorController = {
         });
 
         const newUser = await UserModel.findById(newUserId);
-        return successRes(res, "Successfully registered as a Contractor", { user: newUser, token }, 201);
+        return successRes(res, { user: newUser, token }, "Successfully registered as a Contractor", 201);
       }
     } catch (err) {
       console.error("registerContractor error:", err);
@@ -92,6 +92,17 @@ const ContractorController = {
       }
 
       let contractorId = req.user ? req.user.id : null;
+      if (!contractorId && contact_phone) {
+        try {
+          const { pool } = require("../config/db");
+          const [uRows] = await pool.query("SELECT id FROM users WHERE phone = ?", [contact_phone]);
+          if (uRows.length > 0) {
+            contractorId = uRows[0].id;
+          }
+        } catch (e) {
+          console.error("Phone lookup failed:", e);
+        }
+      }
 
       // If user is logged in, use their company name if not provided
       const postData = {
@@ -118,7 +129,7 @@ const ContractorController = {
 
       const postId = await ContractorModel.createPost(postData, parsedReqs);
 
-      return successRes(res, "Work site post created successfully", { postId }, 201);
+      return successRes(res, { postId }, "Work site post created successfully", 201);
     } catch (err) {
       console.error("createPost error:", err);
       return errorRes(res, err.message || "Failed to create post", 500);
@@ -140,7 +151,7 @@ const ContractorController = {
         offset,
       });
 
-      return successRes(res, "Contractor posts fetched successfully", { posts });
+      return successRes(res, { posts }, "Contractor posts fetched successfully");
     } catch (err) {
       console.error("getPublicPosts error:", err);
       return errorRes(res, "Failed to fetch contractor posts", 500);
@@ -157,7 +168,7 @@ const ContractorController = {
         return errorRes(res, "Contractor post not found", 404);
       }
 
-      return successRes(res, "Post details fetched successfully", { post });
+      return successRes(res, { post }, "Post details fetched successfully");
     } catch (err) {
       console.error("getPostById error:", err);
       return errorRes(res, "Failed to fetch post details", 500);
@@ -182,7 +193,7 @@ const ContractorController = {
         notes,
       });
 
-      return successRes(res, "Callback request sent to contractor successfully", { quoteId }, 201);
+      return successRes(res, { quoteId }, "Callback request sent to contractor successfully", 201);
     } catch (err) {
       console.error("createQuoteRequest error:", err);
       return errorRes(res, "Failed to send quote request", 500);
@@ -207,7 +218,7 @@ const ContractorController = {
         notes,
       });
 
-      return successRes(res, "Application sent to contractor successfully", { appId }, 201);
+      return successRes(res, { appId }, "Application sent to contractor successfully", 201);
     } catch (err) {
       console.error("createApplication error:", err);
       return errorRes(res, "Failed to submit application", 500);
@@ -218,8 +229,9 @@ const ContractorController = {
   getMyPosts: async (req, res) => {
     try {
       const contractorId = req.user.id;
-      const posts = await ContractorModel.getPostsByContractor(contractorId);
-      return successRes(res, "Your site posts fetched successfully", { posts });
+      const userPhone = req.user.phone;
+      const posts = await ContractorModel.getPostsByContractor(contractorId, userPhone);
+      return successRes(res, { posts }, "Your site posts fetched successfully");
     } catch (err) {
       console.error("getMyPosts error:", err);
       return errorRes(res, "Failed to fetch your posts", 500);
@@ -242,10 +254,28 @@ const ContractorController = {
         return errorRes(res, "Post not found or unauthorized", 404);
       }
 
-      return successRes(res, `Post status updated to ${status}`);
+      return successRes(res, null, `Post status updated to ${status}`);
     } catch (err) {
       console.error("updatePostStatus error:", err);
       return errorRes(res, "Failed to update post status", 500);
+    }
+  },
+
+  // Delete Contractor Post
+  deletePost: async (req, res) => {
+    try {
+      const contractorId = req.user.id;
+      const { id } = req.params;
+
+      const deleted = await ContractorModel.deletePost(id, contractorId);
+      if (!deleted) {
+        return errorRes(res, "Post not found or unauthorized", 404);
+      }
+
+      return successRes(res, null, "Work site requirement deleted successfully");
+    } catch (err) {
+      console.error("deletePost error:", err);
+      return errorRes(res, "Failed to delete post", 500);
     }
   },
 
@@ -254,7 +284,7 @@ const ContractorController = {
     try {
       const { id } = req.params;
       const applications = await ContractorModel.getApplicationsForPost(id);
-      return successRes(res, "Applications fetched successfully", { applications });
+      return successRes(res, { applications }, "Applications fetched successfully");
     } catch (err) {
       console.error("getPostApplications error:", err);
       return errorRes(res, "Failed to fetch applications", 500);
@@ -266,7 +296,7 @@ const ContractorController = {
     try {
       const contractorId = req.user.id;
       const quoteRequests = await ContractorModel.getQuoteRequestsForContractor(contractorId);
-      return successRes(res, "Quote requests fetched successfully", { quoteRequests });
+      return successRes(res, { quoteRequests }, "Quote requests fetched successfully");
     } catch (err) {
       console.error("getQuoteRequests error:", err);
       return errorRes(res, "Failed to fetch quote requests", 500);
@@ -287,7 +317,7 @@ const ContractorController = {
         offset,
       });
 
-      return successRes(res, "Contractors fetched successfully", { contractors });
+      return successRes(res, { contractors }, "Contractors fetched successfully");
     } catch (err) {
       console.error("getContractorsDirectory error:", err);
       return errorRes(res, "Failed to fetch contractors", 500);

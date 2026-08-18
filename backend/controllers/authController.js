@@ -241,12 +241,18 @@ exports.login = async (req, res) => {
 
     const token = generateToken({ id: user.id, role: user.role });
 
-    // Get seller profile if role is seller
+    // Get seller profile if it exists
+    const seller = await SellerModel.findByUserId(user.id);
+    const has_seller_profile = Boolean(seller);
+    if (has_seller_profile && user.role !== "seller" && user.role !== "admin") {
+      await UserModel.update(user.id, { role: "seller" });
+      user.role = "seller";
+    }
+
     let sellerProfile = null;
     let profile_completed = null;
     let services_count = 0;
-    if (user.role === "seller") {
-      const seller = await SellerModel.findByUserId(user.id);
+    if (user.role === "seller" || has_seller_profile) {
       sellerProfile = seller;
       profile_completed = seller?.profile_completed ?? 0;
       const [serviceRows] = await pool.query(
@@ -259,9 +265,19 @@ exports.login = async (req, res) => {
     const { password: _, ...userData } = user;
 
     const sellerUserPayload =
-      user.role === "seller" && profile_completed !== null
-        ? { ...userData, profile_completed, services_count }
-        : userData;
+      (user.role === "seller" || has_seller_profile) && profile_completed !== null
+        ? {
+            ...userData,
+            has_seller_profile: true,
+            seller_id: seller?.id || null,
+            profile_completed,
+            services_count,
+            is_premium: seller?.is_premium ?? 0,
+            plan: seller?.plan ?? null,
+            premium_expires_at: seller?.premium_expires_at ?? null,
+            is_available: seller?.is_available ?? 0,
+          }
+        : { ...userData, has_seller_profile: false };
 
     sendTokenCookie(res, token);
 
@@ -284,9 +300,28 @@ exports.getMe = async (req, res) => {
     }
 
     const user = await UserModel.findById(req.user.id);
+    if (!user) return errorRes(res, "User not found", 404);
 
-    if (user?.role === "seller") {
-      const seller = await SellerModel.findByUserId(user.id);
+    const seller = await SellerModel.findByUserId(user.id);
+    const has_seller_profile = Boolean(seller);
+
+    if (has_seller_profile && user.role !== "seller" && user.role !== "admin") {
+      await UserModel.update(user.id, { role: "seller" });
+      user.role = "seller";
+    }
+
+    const has_contractor_profile = Boolean(
+      user?.role === "contractor" ||
+      user?.is_verified_contractor === 1 ||
+      user?.trade_specialization
+    );
+
+    const userPayload = {
+      ...user,
+      has_contractor_profile,
+    };
+
+    if (user?.role === "seller" || has_seller_profile) {
       const [serviceRows] = await pool.query(
         "SELECT COUNT(*) AS count FROM services WHERE seller_id = ? AND is_active = 1",
         [seller?.id || 0]
@@ -294,7 +329,9 @@ exports.getMe = async (req, res) => {
       const services_count = serviceRows[0]?.count || 0;
       return successRes(res, {
         user: {
-          ...user,
+          ...userPayload,
+          has_seller_profile: true,
+          seller_id: seller?.id || null,
           profile_completed: seller?.profile_completed ?? 0,
           services_count,
           is_premium: seller?.is_premium ?? 0,
@@ -305,7 +342,7 @@ exports.getMe = async (req, res) => {
       });
     }
 
-    return successRes(res, { user });
+    return successRes(res, { user: { ...userPayload, has_seller_profile: false } });
   } catch (err) {
     return errorRes(res, "Failed to fetch profile");
   }
@@ -431,11 +468,17 @@ exports.verifyOTP = async (req, res) => {
 
       const { password: _, ...userData } = user;
 
+      const seller = await SellerModel.findByUserId(user.id);
+      const has_seller_profile = Boolean(seller);
+      if (has_seller_profile && user.role !== "seller" && user.role !== "admin") {
+        await UserModel.update(user.id, { role: "seller" });
+        user.role = "seller";
+      }
+
       let profile_completed = 0;
       let services_count = 0;
       let is_available = 0;
-      if (user.role === "seller") {
-        const seller = await SellerModel.findByUserId(user.id);
+      if (user.role === "seller" || has_seller_profile) {
         profile_completed = seller?.profile_completed ?? 0;
         const [serviceRows] = await pool.query(
           "SELECT COUNT(*) AS count FROM services WHERE seller_id = ? AND is_active = 1",
@@ -455,7 +498,9 @@ exports.verifyOTP = async (req, res) => {
             id: userData.id,
             name: userData.name,
             phone: userData.phone,
-            role: userData.role,
+            role: user.role,
+            has_seller_profile,
+            seller_id: seller?.id || null,
             profile_completed,
             services_count,
             is_available,

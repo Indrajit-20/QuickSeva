@@ -216,14 +216,25 @@ const ContractorModel = {
   },
 
   // Get posts created by a contractor
-  getPostsByContractor: async (contractorId) => {
+  getPostsByContractor: async (contractorId, userPhone = "") => {
+    if (contractorId && userPhone) {
+      try {
+        await pool.query(
+          `UPDATE contractor_posts SET contractor_id = ? WHERE contractor_id IS NULL AND (contact_phone = ? OR whatsapp_phone = ?)`,
+          [contractorId, userPhone, userPhone]
+        );
+      } catch (e) {
+        console.error("Failed to auto-claim contractor posts:", e);
+      }
+    }
+
     const [rows] = await pool.query(
       `SELECT p.*, 
         (SELECT COUNT(*) FROM contractor_applications a WHERE a.post_id = p.id) AS applications_count
        FROM contractor_posts p
-       WHERE p.contractor_id = ?
+       WHERE p.contractor_id = ? OR (p.contractor_id IS NULL AND (p.contact_phone = ? OR p.whatsapp_phone = ?))
        ORDER BY p.created_at DESC`,
-      [contractorId]
+      [contractorId, userPhone || "", userPhone || ""]
     );
 
     return rows.map((row) => ({
@@ -239,6 +250,27 @@ const ContractorModel = {
       [status, postId, contractorId]
     );
     return res.affectedRows > 0;
+  },
+
+  // Delete contractor post permanently
+  deletePost: async (postId, contractorId) => {
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      await conn.query(`DELETE FROM contractor_post_requirements WHERE post_id = ?`, [postId]);
+      await conn.query(`DELETE FROM contractor_applications WHERE post_id = ?`, [postId]);
+      const [res] = await conn.query(
+        `DELETE FROM contractor_posts WHERE id = ? AND contractor_id = ?`,
+        [postId, contractorId]
+      );
+      await conn.commit();
+      return res.affectedRows > 0;
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
   },
 
   // Get applicants for a post

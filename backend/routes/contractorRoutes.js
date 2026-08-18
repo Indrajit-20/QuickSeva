@@ -51,8 +51,8 @@ router.post("/quote-request", ContractorController.createQuoteRequest);
 // Agency / Worker application to contractor site post
 router.post("/applications", ContractorController.createApplication);
 
-// Create post (Guest or Logged-in Contractor)
-router.post("/posts", optionalProtect, ContractorController.createPost);
+// Create post (Authenticated Contractor)
+router.post("/posts", protect, ContractorController.createPost);
 
 // Register / Upgrade user role to Contractor (Supports Guest registration or Logged-in Upgrade)
 router.post("/register", optionalProtect, ContractorController.registerContractor);
@@ -65,6 +65,9 @@ router.get("/my-posts", protect, ContractorController.getMyPosts);
 
 // Update post status (active / closed)
 router.patch("/posts/:id/status", protect, ContractorController.updatePostStatus);
+
+// Delete contractor post
+router.delete("/posts/:id", protect, ContractorController.deletePost);
 
 // Get applications for a contractor's post
 router.get("/posts/:id/applications", protect, ContractorController.getPostApplications);

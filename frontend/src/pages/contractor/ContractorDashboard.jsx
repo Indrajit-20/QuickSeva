@@ -1,25 +1,42 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Building2,
   Calendar,
   CheckCircle2,
   Clock,
+  ExternalLink,
+  Eye,
   MessageSquare,
   Phone,
   PlusCircle,
+  Share2,
+  Trash2,
   Users,
   MessageCircle,
   XCircle,
 } from "lucide-react";
-import { getMyPosts, getMyQuoteRequests, updatePostStatus, getPostApplications } from "../../api/contractorApi";
+import {
+  getMyPosts,
+  getMyQuoteRequests,
+  updatePostStatus,
+  getPostApplications,
+  deleteContractorPost,
+} from "../../api/contractorApi";
 import { useAuth } from "../../context/AuthContext";
 
 export default function ContractorDashboard() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
 
-  const [activeTab, setActiveTab] = useState("quotes"); // "quotes" | "posts"
+  // Determine active tab from URL path
+  const getTabFromPath = (pathname) => {
+    if (pathname.includes("/posts")) return "posts";
+    return "quotes";
+  };
+
+  const [activeTab, setActiveTab] = useState(() => getTabFromPath(location.pathname));
   const [posts, setPosts] = useState([]);
   const [quoteRequests, setQuoteRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -30,8 +47,9 @@ export default function ContractorDashboard() {
   const [loadingApps, setLoadingApps] = useState(false);
 
   useEffect(() => {
+    setActiveTab(getTabFromPath(location.pathname));
     fetchDashboardData();
-  }, []);
+  }, [location.pathname]);
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -56,6 +74,22 @@ export default function ContractorDashboard() {
       fetchDashboardData();
     } catch (err) {
       alert("Failed to update status");
+    }
+  };
+
+  const handleDeletePost = async (postId, title) => {
+    if (!window.confirm(`Are you sure you want to delete post "${title}"?\nThis action cannot be undone.`)) {
+      return;
+    }
+    try {
+      const res = await deleteContractorPost(postId);
+      if (res?.success) {
+        alert("Post deleted successfully.");
+        fetchDashboardData();
+      }
+    } catch (err) {
+      console.error("Failed to delete post:", err);
+      alert(err?.response?.data?.message || "Failed to delete post");
     }
   };
 
@@ -100,7 +134,13 @@ export default function ContractorDashboard() {
 
       {/* Metrics Overview Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-md flex items-center gap-4">
+        <button
+          type="button"
+          onClick={() => navigate("/contractor/posts")}
+          className={`bg-white rounded-3xl p-5 border shadow-sm hover:shadow-md transition text-left flex items-center gap-4 cursor-pointer ${
+            activeTab === "posts" ? "border-amber-500 ring-2 ring-amber-500/20" : "border-slate-200/80"
+          }`}
+        >
           <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center font-black text-xl shrink-0">
             <Building2 size={24} />
           </div>
@@ -108,9 +148,15 @@ export default function ContractorDashboard() {
             <div className="text-2xl font-black text-slate-900">{totalActive}</div>
             <div className="text-xs font-bold text-slate-500">Active Site Listings</div>
           </div>
-        </div>
+        </button>
 
-        <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-md flex items-center gap-4">
+        <button
+          type="button"
+          onClick={() => navigate("/contractor/quotes")}
+          className={`bg-white rounded-3xl p-5 border shadow-sm hover:shadow-md transition text-left flex items-center gap-4 cursor-pointer ${
+            activeTab === "quotes" ? "border-amber-500 ring-2 ring-amber-500/20" : "border-slate-200/80"
+          }`}
+        >
           <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-black text-xl shrink-0">
             <MessageSquare size={24} />
           </div>
@@ -118,25 +164,29 @@ export default function ContractorDashboard() {
             <div className="text-2xl font-black text-slate-900">{quoteRequests.length}</div>
             <div className="text-xs font-bold text-slate-500">Customer Quote Leads</div>
           </div>
-        </div>
+        </button>
 
-        <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-md flex items-center gap-4">
+        <button
+          type="button"
+          onClick={() => navigate("/contractor/posts")}
+          className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md transition text-left flex items-center gap-4 cursor-pointer"
+        >
           <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-black text-xl shrink-0">
             <Users size={24} />
           </div>
           <div>
             <div className="text-2xl font-black text-slate-900">{totalApps}</div>
-            <div className="text-xs font-bold text-slate-500">Agency / Worker Applicants</div>
+            <div className="text-xs font-bold text-slate-500">Worker Applicants</div>
           </div>
-        </div>
+        </button>
       </div>
 
       {/* Tabs Switcher */}
       <div className="flex items-center gap-2 border-b border-slate-200 mb-6">
         <button
-          onClick={() => setActiveTab("quotes")}
+          onClick={() => navigate("/contractor/quotes")}
           className={`pb-3 px-4 font-black text-sm transition-all relative ${
-            activeTab === "quotes" ? "text-amber-600" : "text-slate-500 hover:text-slate-800"
+            activeTab === "quotes" ? "text-amber-600 font-extrabold" : "text-slate-500 hover:text-slate-800 font-medium"
           }`}
         >
           <span>Customer Leads ({quoteRequests.length})</span>
@@ -146,9 +196,9 @@ export default function ContractorDashboard() {
         </button>
 
         <button
-          onClick={() => setActiveTab("posts")}
+          onClick={() => navigate("/contractor/posts")}
           className={`pb-3 px-4 font-black text-sm transition-all relative ${
-            activeTab === "posts" ? "text-amber-600" : "text-slate-500 hover:text-slate-800"
+            activeTab === "posts" ? "text-amber-600 font-extrabold" : "text-slate-500 hover:text-slate-800 font-medium"
           }`}
         >
           <span>My Site Requirements ({posts.length})</span>
@@ -243,10 +293,10 @@ export default function ContractorDashboard() {
             <div className="space-y-4">
               {posts.map((post) => (
                 <div key={post.id} className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1.5">
                       <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${
-                        post.status === "active" ? "bg-emerald-100 text-emerald-800" : "bg-slate-200 text-slate-700"
+                        post.status === "active" ? "bg-emerald-100 text-emerald-800 border border-emerald-200" : "bg-slate-200 text-slate-700 border border-slate-300"
                       }`}>
                         {post.status}
                       </span>
@@ -254,28 +304,53 @@ export default function ContractorDashboard() {
                         {post.start_date} to {post.end_date}
                       </span>
                     </div>
-                    <h3 className="font-extrabold text-slate-900 text-base">{post.title}</h3>
+                    <h3 className="font-extrabold text-slate-900 text-base mb-1">{post.title}</h3>
                     <p className="text-xs text-slate-500 font-semibold">📍 {post.site_address}, {post.city}</p>
                   </div>
 
-                  <div className="flex items-center gap-2 w-full md:w-auto">
+                  <div className="flex flex-wrap items-center gap-2 w-full md:w-auto shrink-0">
+                    {/* View Public Listing */}
                     <button
+                      type="button"
+                      onClick={() => navigate(`/contractor-posts/${post.id}`)}
+                      className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition"
+                      title="View public post"
+                    >
+                      <Eye size={14} />
+                      <span className="hidden sm:inline">View Public</span>
+                    </button>
+
+                    {/* View Applicants */}
+                    <button
+                      type="button"
                       onClick={() => handleViewApps(post)}
-                      className="flex-1 md:flex-none px-4 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5"
+                      className="px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-black rounded-xl flex items-center justify-center gap-1.5 transition"
                     >
                       <Users size={14} />
                       <span>Applicants ({post.applications_count || 0})</span>
                     </button>
 
+                    {/* Toggle Status */}
                     <button
+                      type="button"
                       onClick={() => handleTogglePostStatus(post.id, post.status)}
-                      className={`px-4 py-2 text-xs font-bold rounded-xl border transition ${
+                      className={`px-3.5 py-2 text-xs font-bold rounded-xl border transition ${
                         post.status === "active"
-                          ? "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100"
-                          : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                          ? "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"
+                          : "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100 font-black"
                       }`}
                     >
                       {post.status === "active" ? "Mark Closed" : "Re-open Post"}
+                    </button>
+
+                    {/* Delete Post */}
+                    <button
+                      type="button"
+                      onClick={() => handleDeletePost(post.id, post.title)}
+                      className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-xl transition"
+                      title="Delete post"
+                    >
+                      <Trash2 size={16} />
                     </button>
                   </div>
                 </div>

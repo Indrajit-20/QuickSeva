@@ -45,6 +45,11 @@ export const updatePostStatus = async (id, status) => {
   return res.data;
 };
 
+export const deleteContractorPost = async (id) => {
+  const res = await axiosInstance.delete(`/contractor/posts/${id}`);
+  return res.data;
+};
+
 export const getPostApplications = async (id) => {
   const res = await axiosInstance.get(`/contractor/posts/${id}/applications`);
   return res.data;

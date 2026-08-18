@@ -13,12 +13,22 @@ export default function ContractorRegister() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
-  // If guest visits this page, redirect them to standard Login/Register with return redirect
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      navigate("/login?redirect=/become-contractor", { replace: true });
+    if (user?.company_name && !companyName) setCompanyName(user.company_name);
+    if (user?.trade_specialization) setTradeSpecialization(user.trade_specialization);
+  }, [user]);
+
+  // If guest visits this page, redirect them to standard Login/Register
+  // If user is already a contractor, redirect straight to dashboard
+  useEffect(() => {
+    if (!isLoading) {
+      if (!isAuthenticated) {
+        navigate("/login?redirect=/become-contractor", { replace: true });
+      } else if (user?.is_verified_contractor === 1 || user?.trade_specialization || user?.has_contractor_profile || user?.role === "contractor") {
+        navigate("/contractor/dashboard", { replace: true });
+      }
     }
-  }, [isLoading, isAuthenticated, navigate]);
+  }, [isLoading, isAuthenticated, user, navigate]);
 
   const tradeOptions = [
     "Painting Contractor",

@@ -20,10 +20,24 @@ function formatWhatsAppPhone(phone) {
   if (!phone) return null;
   const digits = String(phone).replace(/[^0-9]/g, '');
   if (!digits) return null;
+
+  // 1. If 10 digits (standard Indian mobile e.g. 8160977394)
   if (digits.length === 10) return `91${digits}`;
+
+  // 2. If 11 digits starting with 0 (e.g. 08160977394)
   if (digits.length === 11 && digits.startsWith('0')) return `91${digits.slice(1)}`;
-  if (digits.startsWith('91') && digits.length === 12) return digits;
-  if (digits.length > 10 && !digits.startsWith('91')) return digits;
+
+  // 3. If 12 digits starting with 91 (e.g. 918160977394)
+  if (digits.length === 12 && digits.startsWith('91')) return digits;
+
+  // 4. Robust extraction for numbers with invalid/duplicate country code prefixes (e.g. 9918160977394 or 9191...)
+  if (digits.length > 10) {
+    const last10 = digits.slice(-10);
+    if (/^[6-9]\d{9}$/.test(last10)) {
+      return `91${last10}`;
+    }
+  }
+
   return digits;
 }
 
@@ -199,15 +213,15 @@ function initWhatsAppWebClient() {
 /**
  * Wait for client to be ready (up to maxWaitMs)
  */
-async function waitUntilReady(maxWaitMs = 1500) {
-  if (isReady) return true;
-  if (!client) return false;
+async function waitUntilReady(maxWaitMs = 10000) {
+  if (isReady || (global.whatsappWebClient && global.whatsappWebClient.isReady)) return true;
+  if (!client && !global.whatsappWebClient) return false;
   const start = Date.now();
   while (Date.now() - start < maxWaitMs) {
-    if (isReady) return true;
-    await new Promise(resolve => setTimeout(resolve, 300));
+    if (isReady || (global.whatsappWebClient && global.whatsappWebClient.isReady)) return true;
+    await new Promise(resolve => setTimeout(resolve, 400));
   }
-  return isReady;
+  return isReady || (global.whatsappWebClient && global.whatsappWebClient.isReady);
 }
 
 /**

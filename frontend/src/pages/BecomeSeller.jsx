@@ -7,8 +7,14 @@ import { scrollToFirstError } from "../utils/scrollUtils";
 
 export default function BecomeSeller() {
   const navigate = useNavigate();
-  const { user, refreshAuth } = useAuth();
+  const { user, isSeller, switchRole, refreshAuth } = useAuth();
   const formRef = useRef(null);
+
+  React.useEffect(() => {
+    if (isSeller || user?.has_seller_profile || user?.role === "seller" || user?.seller_id) {
+      switchRole("seller");
+    }
+  }, [isSeller, user, switchRole]);
 
   const [formData, setFormData] = useState({
     businessName: "",
@@ -109,20 +115,30 @@ export default function BecomeSeller() {
             lat: formData.location.lat,
             lng: formData.location.lng,
             pincode: formData.location.pincode
-          });
+          }).catch(() => {});
         }
 
         // Refresh auth state to detect new seller role
         await refreshAuth();
-        navigate("/seller/dashboard", { replace: true });
+        switchRole("seller");
       } else {
-        setApiError(resp?.data?.message || "Failed to upgrade profile");
+        const msg = resp?.data?.message || "";
+        if (msg.includes("already exists") || resp?.data?.alreadyExisted) {
+          await refreshAuth();
+          switchRole("seller");
+          return;
+        }
+        setApiError(msg || "Failed to upgrade profile");
         formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       }
     } catch (err) {
-      setApiError(
-        err?.response?.data?.message || err?.message || "Failed to upgrade profile"
-      );
+      const msg = err?.response?.data?.message || err?.message || "";
+      if (msg.includes("already exists")) {
+        await refreshAuth();
+        switchRole("seller");
+        return;
+      }
+      setApiError(msg || "Failed to upgrade profile");
       formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     } finally {
       setIsLoading(false);

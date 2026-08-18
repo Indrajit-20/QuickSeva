@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Building2,
   Calendar,
@@ -19,8 +19,19 @@ import { useAuth } from "../context/AuthContext";
 
 export default function ContractorFeed() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState("contractors"); // "contractors" | "job_board"
+
+  const getInitialTab = () => {
+    const params = new URLSearchParams(location.search);
+    const tabParam = params.get("tab");
+    if (tabParam === "job_board" || location.pathname === "/work-site-requirements") {
+      return "job_board";
+    }
+    return "job_board"; // Default to Work Site Requirements feed so published posts are immediately visible!
+  };
+
+  const [activeTab, setActiveTab] = useState(getInitialTab); // "job_board" | "contractors"
 
   // Contractors Directory state
   const [contractors, setContractors] = useState([]);
@@ -140,9 +151,10 @@ export default function ContractorFeed() {
         search: searchQuery,
       });
       const fetched = res?.data?.contractors || [];
-      setContractors(fetched.length > 0 ? fetched : fallbackContractors);
+      setContractors(fetched);
     } catch (err) {
-      setContractors(fallbackContractors);
+      console.error("Failed to fetch contractors directory:", err);
+      setContractors([]);
     } finally {
       setLoadingContractors(false);
     }
@@ -157,9 +169,10 @@ export default function ContractorFeed() {
         search: searchQuery,
       });
       const fetched = res?.data?.posts || [];
-      setPosts(fetched.length > 0 ? fetched : fallbackPosts);
+      setPosts(fetched);
     } catch (err) {
-      setPosts(fallbackPosts);
+      console.error("Failed to fetch contractor posts:", err);
+      setPosts([]);
     } finally {
       setLoadingPosts(false);
     }
@@ -376,101 +389,133 @@ export default function ContractorFeed() {
                 <p className="text-xs font-bold text-slate-400">Loading Work Site Requirements...</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {posts.map((post) => (
-                  <div
-                    key={post.id}
-                    className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs hover:shadow-md transition flex flex-col justify-between"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-extrabold uppercase">
-                          {post.post_type === "supply_workers" ? "Manpower Available" : "Labor Needed"}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {posts.map((post) => {
+                  const isSupply = post.post_type === "supply_workers";
+                  const accentColor = isSupply ? "border-l-sky-500" : "border-l-amber-500";
+
+                  // Format dates nicely
+                  const formatShortDate = (dateStr) => {
+                    if (!dateStr) return "";
+                    try {
+                      const d = new Date(dateStr);
+                      return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+                    } catch { return dateStr; }
+                  };
+
+                  const startFormatted = formatShortDate(post.start_date);
+                  const endFormatted = formatShortDate(post.end_date);
+
+                  // Simplified location
+                  const locationLine = [post.pincode, post.city].filter(Boolean).join(" · ") || post.site_address || "India";
+
+                  return (
+                    <div
+                      key={post.id}
+                      className={`bg-white rounded-2xl border border-slate-200/80 border-l-4 ${accentColor} shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex flex-col overflow-hidden`}
+                    >
+                      {/* Card Header */}
+                      <div className="px-5 pt-4 pb-3 flex items-center justify-between gap-3">
+                        <span className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wide ${
+                          isSupply
+                            ? "bg-sky-50 text-sky-800 border border-sky-200"
+                            : "bg-amber-50 text-amber-800 border border-amber-200"
+                        }`}>
+                          {isSupply ? "Manpower Available" : "Labor Needed"}
                         </span>
-                        <div className="flex items-center gap-1 text-[11px] font-bold text-slate-500">
+                        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 bg-slate-50 px-2.5 py-1 rounded-lg">
                           <Calendar size={12} className="text-slate-400" />
-                          <span>{post.start_date} to {post.end_date}</span>
+                          <span>{startFormatted} — {endFormatted}</span>
                         </div>
                       </div>
 
-                      <h3 className="text-base font-black text-slate-900 leading-snug mb-1">
-                        {post.title}
-                      </h3>
-                      <p className="text-xs font-bold text-slate-500 mb-3 flex items-center gap-1">
-                        <MapPin size={12} className="text-amber-600" />
-                        <span>{post.site_address}, {post.city}</span>
-                      </p>
+                      {/* Card Body */}
+                      <div className="px-5 pb-4 flex-1 space-y-3">
+                        {/* Title */}
+                        <h3 className="text-sm sm:text-base font-extrabold text-slate-900 leading-snug line-clamp-2">
+                          {post.title}
+                        </h3>
 
-                      {/* Labor Requirements */}
-                      <div className="mb-3 space-y-1.5">
-                        <h4 className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Required Workforce</h4>
-                        <div className="flex flex-wrap gap-1.5">
-                          {post.requirements && post.requirements.length > 0 ? (
-                            post.requirements.map((req, idx) => (
-                              <div
-                                key={idx}
-                                className="px-2.5 py-1 bg-slate-900 text-white rounded-lg text-xs font-bold flex items-center gap-1.5"
-                              >
-                                <span className="text-amber-400 font-black">{req.quantity}x</span>
-                                <span>{req.role_title}</span>
-                                <span className="text-slate-400">@ ₹{req.wage_amount}/{req.wage_type === "per_day" ? "day" : req.wage_type}</span>
-                              </div>
-                            ))
-                          ) : (
-                            <span className="text-xs font-semibold text-slate-500">Contact contractor for roles</span>
-                          )}
+                        {/* Location */}
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
+                          <MapPin size={13} className="text-amber-600 shrink-0" />
+                          <span className="truncate">{locationLine}</span>
                         </div>
-                      </div>
 
-                      {/* Amenities Provided */}
-                      {post.amenities && post.amenities.length > 0 && (
-                        <div className="mb-4">
-                          <div className="flex flex-wrap gap-1">
+                        {/* Workforce Requirements */}
+                        <div className="space-y-2">
+                          <h4 className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">
+                            Required Workforce
+                          </h4>
+                          <div className="flex flex-wrap gap-2">
+                            {post.requirements && post.requirements.length > 0 ? (
+                              post.requirements.map((req, idx) => (
+                                <div
+                                  key={idx}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 hover:bg-slate-100 transition"
+                                >
+                                  <span className="w-5 h-5 rounded-md bg-amber-500 text-white flex items-center justify-center text-[10px] font-black shrink-0">
+                                    {req.quantity}x
+                                  </span>
+                                  <span className="font-extrabold">{req.role_title}</span>
+                                  <span className="text-slate-400 font-medium">@</span>
+                                  <span className="text-amber-700 font-extrabold">₹{Number(req.wage_amount).toLocaleString("en-IN")}/day</span>
+                                </div>
+                              ))
+                            ) : (
+                              <span className="text-xs font-semibold text-slate-400 italic">Contact for role details</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Perks */}
+                        {post.amenities && post.amenities.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 pt-1">
                             {post.amenities.map((item, idx) => (
                               <span
                                 key={idx}
-                                className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-bold flex items-center gap-1"
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-semibold border border-emerald-200/60"
                               >
-                                <CheckCircle2 size={11} className="text-emerald-600" />
-                                <span>{item}</span>
+                                <CheckCircle2 size={10} className="text-emerald-500" />
+                                {item}
                               </span>
                             ))}
                           </div>
-                        </div>
-                      )}
+                        )}
+                      </div>
+
+                      {/* Card Footer — Action Buttons */}
+                      <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/50 flex items-center gap-2">
+                        <a
+                          href={`https://wa.me/91${post.whatsapp_phone || post.contact_phone}?text=${encodeURIComponent(
+                            `Hi, I saw your site post on QuickSeva: "${post.title}" in ${post.city}. I have workers available.`
+                          )}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition active:scale-95 shadow-sm"
+                        >
+                          <MessageCircle size={14} />
+                          <span>WhatsApp</span>
+                        </a>
+
+                        <a
+                          href={`tel:${post.contact_phone}`}
+                          className="py-2.5 px-4 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition active:scale-95"
+                        >
+                          <Phone size={14} />
+                          <span>Call</span>
+                        </a>
+
+                        <button
+                          onClick={() => navigate(`/contractor-posts/${post.id}`)}
+                          className="py-2.5 px-3.5 bg-white hover:bg-amber-50 text-slate-800 text-xs font-bold rounded-xl border border-slate-200 hover:border-amber-300 transition active:scale-95"
+                        >
+                          Details
+                        </button>
+                      </div>
                     </div>
-
-                    {/* Bottom Actions */}
-                    <div className="pt-3 border-t border-slate-100 flex items-center gap-2">
-                      <a
-                        href={`https://wa.me/91${post.whatsapp_phone || post.contact_phone}?text=${encodeURIComponent(
-                          `Hi, I saw your site post on QuickSeva: "${post.title}" in ${post.city}. I have workers available.`
-                        )}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition active:scale-95 shadow-xs"
-                      >
-                        <MessageCircle size={14} />
-                        <span>WhatsApp</span>
-                      </a>
-
-                      <a
-                        href={`tel:${post.contact_phone}`}
-                        className="py-2 px-3.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition active:scale-95"
-                      >
-                        <Phone size={14} />
-                        <span>Call</span>
-                      </a>
-
-                      <button
-                        onClick={() => navigate(`/contractor-posts/${post.id}`)}
-                        className="py-2 px-3 bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-bold rounded-xl transition active:scale-95"
-                      >
-                        Details
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

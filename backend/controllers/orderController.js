@@ -18,6 +18,7 @@ const {
   sendBookingAcceptedWhatsApp,
   sendBookingCompletedWhatsApp,
   sendBookingCancelledWhatsApp,
+  generateWhatsAppUrl,
 } = require("../services/whatsappService");
 
 // Helper to get system settings dynamically
@@ -244,6 +245,8 @@ exports.placeOrder = async (req, res) => {
     }
 
     const order_number = generateOrderNumber();
+    const sellerPhone = seller?.phone || seller?.user_phone;
+    const whatsappUrl = sellerPhone ? generateWhatsAppUrl(sellerPhone, `Hi, I placed booking #${order_number} on QuickSeva!`) : null;
 
     const orderId = await OrderModel.create({
       order_number,
@@ -295,35 +298,50 @@ exports.placeOrder = async (req, res) => {
 
     // Dispatch WhatsApp New Booking Alert to Seller & Confirmation to Buyer asynchronously in background
     setImmediate(async () => {
-      try {
-        const buyerUser = await UserModel.findById(req.user.id);
-        const buyerPhone = req.user?.phone || buyerUser?.phone;
+      const buyerUser = await UserModel.findById(req.user.id).catch(() => null);
+      const buyerPhone = req.user?.phone || buyerUser?.phone;
+      const buyerName = req.user?.name || buyerUser?.name || "Customer";
+      const sellerName = seller?.name || seller?.business_name || "Service Provider";
+      const sellerPhone = seller?.phone || seller?.user_phone;
+      const serviceTitle = service?.title || "Service Booking";
 
-        // 1. Send Alert to Seller
-        const sellerPhone = seller?.phone || seller?.user_phone;
-        await sendNewBookingAlertWhatsApp({
-          sellerPhone: sellerPhone,
-          sellerName: seller?.name || seller?.business_name,
-          buyerName: req.user?.name || buyerUser?.name || "Customer",
-          serviceTitle: service?.title || "Service Booking",
-          orderNumber: order_number,
-          scheduledAt: scheduled_at,
-        });
-
-        // 2. Send Confirmation to Buyer (with 1s delay to prevent WebSocket collision if phones are identical)
-        if (buyerPhone) {
-          await new Promise(r => setTimeout(r, 1200));
-          await sendBookingCreatedBuyerWhatsApp({
-            buyerPhone: buyerPhone,
-            buyerName: req.user?.name || buyerUser?.name || "Customer",
-            sellerName: seller.name || seller.business_name,
-            serviceTitle: service?.title || "Service Booking",
+      // 1. Send Alert to Seller independently
+      if (sellerPhone) {
+        try {
+          console.log(`📱 [WhatsApp Dispatch] Sending new booking alert to seller: ${sellerPhone}`);
+          await sendNewBookingAlertWhatsApp({
+            sellerPhone: sellerPhone,
+            sellerName: sellerName,
+            buyerName: buyerName,
+            serviceTitle: serviceTitle,
             orderNumber: order_number,
             scheduledAt: scheduled_at,
           });
+        } catch (sellerWaErr) {
+          console.error("⚠️ [WhatsApp Dispatch] Seller notification error (non-fatal):", sellerWaErr.message);
         }
-      } catch (waErr) {
-        console.error("WhatsApp notification dispatch error:", waErr);
+      } else {
+        console.warn("⚠️ [WhatsApp Dispatch] Seller phone number not available for alert");
+      }
+
+      // 2. Send Confirmation to Buyer independently
+      if (buyerPhone) {
+        try {
+          console.log(`📱 [WhatsApp Dispatch] Sending booking confirmation to buyer: ${buyerPhone}`);
+          await new Promise(r => setTimeout(r, 1000));
+          await sendBookingCreatedBuyerWhatsApp({
+            buyerPhone: buyerPhone,
+            buyerName: buyerName,
+            sellerName: sellerName,
+            serviceTitle: serviceTitle,
+            orderNumber: order_number,
+            scheduledAt: scheduled_at,
+          });
+        } catch (buyerWaErr) {
+          console.error("❌ [WhatsApp Dispatch] Buyer notification error:", buyerWaErr.message);
+        }
+      } else {
+        console.warn(`⚠️ [WhatsApp Dispatch] Buyer phone number missing for user ID #${req.user.id}. Cannot send WhatsApp confirmation.`);
       }
     });
 
@@ -457,16 +475,21 @@ exports.acceptOrder = async (req, res) => {
     emitToOrder(order.id, "order_updated", { orderId: order.id, status: "accepted" });
 
     // Dispatch WhatsApp Acceptance notification to Buyer
-    const buyerUser = await UserModel.findById(order.buyer_id);
-    if (buyerUser) {
-      sendBookingAcceptedWhatsApp({
-        buyerPhone: buyerUser.phone,
-        buyerName: buyerUser.name,
-        sellerName: seller.business_name || seller.name,
-        sellerPhone: seller.phone || seller.user_phone,
-        serviceTitle: order.service_title || "Service",
-        orderNumber: order.order_number || order.id,
-      }).catch(err => console.error("WhatsApp error:", err));
+    try {
+      const buyerUser = await UserModel.findById(order.buyer_id).catch(() => null);
+      if (buyerUser && buyerUser.phone) {
+        console.log(`📱 [WhatsApp Dispatch] Sending booking acceptance to buyer: ${buyerUser.phone}`);
+        await sendBookingAcceptedWhatsApp({
+          buyerPhone: buyerUser.phone,
+          buyerName: buyerUser.name || "Customer",
+          sellerName: seller?.business_name || seller?.name || "Service Provider",
+          sellerPhone: seller?.phone || seller?.user_phone || "N/A",
+          serviceTitle: order.service_title || "Service",
+          orderNumber: order.order_number || order.id,
+        });
+      }
+    } catch (waErr) {
+      console.error("⚠️ [WhatsApp Dispatch] Booking acceptance error:", waErr.message);
     }
 
     return successRes(res, null, "Order accepted");
@@ -495,15 +518,20 @@ exports.startOrder = async (req, res) => {
     emitToOrder(order.id, "order_updated", { orderId: order.id, status: "in_progress" });
 
     // Dispatch WhatsApp Notification to Buyer
-    const buyerUser = await UserModel.findById(order.buyer_id);
-    if (buyerUser && buyerUser.phone) {
-      sendStartPinWhatsApp({
-        buyerPhone: buyerUser.phone,
-        buyerName: buyerUser.name,
-        orderNumber: order.order_number || order.id,
-        pin: order.start_otp_code || "N/A",
-        serviceTitle: order.service_title || "Service",
-      }).catch(err => console.error("WhatsApp start notification error:", err));
+    try {
+      const buyerUser = await UserModel.findById(order.buyer_id).catch(() => null);
+      if (buyerUser && buyerUser.phone) {
+        console.log(`📱 [WhatsApp Dispatch] Sending start PIN to buyer: ${buyerUser.phone}`);
+        await sendStartPinWhatsApp({
+          buyerPhone: buyerUser.phone,
+          buyerName: buyerUser.name || "Customer",
+          orderNumber: order.order_number || order.id,
+          pin: order.start_otp_code || "N/A",
+          serviceTitle: order.service_title || "Service",
+        });
+      }
+    } catch (waErr) {
+      console.error("⚠️ [WhatsApp Dispatch] Start PIN error:", waErr.message);
     }
 
     return successRes(res, null, "Order started");
@@ -566,15 +594,20 @@ exports.completeOrder = async (req, res) => {
     emitToOrder(order.id, "order_updated", { orderId: order.id, status: "completed" });
 
     // Dispatch WhatsApp Completion notification to Buyer
-    const buyerUser = await UserModel.findById(order.buyer_id);
-    if (buyerUser) {
-      sendBookingCompletedWhatsApp({
-        buyerPhone: buyerUser.phone,
-        buyerName: buyerUser.name,
-        serviceTitle: order.service_title || "Service",
-        orderNumber: order.order_number || order.id,
-        amount: order.total_amount || 0,
-      }).catch(err => console.error("WhatsApp error:", err));
+    try {
+      const buyerUser = await UserModel.findById(order.buyer_id).catch(() => null);
+      if (buyerUser && buyerUser.phone) {
+        console.log(`📱 [WhatsApp Dispatch] Sending completion alert to buyer: ${buyerUser.phone}`);
+        await sendBookingCompletedWhatsApp({
+          buyerPhone: buyerUser.phone,
+          buyerName: buyerUser.name || "Customer",
+          serviceTitle: order.service_title || "Service",
+          orderNumber: order.order_number || order.id,
+          amount: order.total_amount || 0,
+        });
+      }
+    } catch (waErr) {
+      console.error("⚠️ [WhatsApp Dispatch] Completion alert error:", waErr.message);
     }
 
     return successRes(res, null, "Order completed");
@@ -739,66 +772,91 @@ exports.cancelOrder = async (req, res) => {
 
     // Dispatch WhatsApp Cancellation notifications to Buyer and Seller
     try {
-      const buyerUser = await UserModel.findById(order.buyer_id);
-      const sellerInfo = await SellerModel.findById(order.seller_id);
+      const buyerUser = await UserModel.findById(order.buyer_id).catch(() => null);
+      const sellerInfo = await SellerModel.findById(order.seller_id).catch(() => null);
 
       const refundText = refundAmount > 0 
         ? `₹${refundAmount.toFixed(2)} refund initiated via Razorpay (5-7 business days).`
         : null;
 
-      if (isBuyer) {
-        // 1. Notify Seller on WhatsApp
-        const sellerPhone = sellerInfo?.phone || sellerInfo?.user_phone;
-        if (sellerPhone) {
-          sendBookingCancelledWhatsApp({
-            recipientPhone: sellerPhone,
-            recipientName: sellerInfo.name || sellerInfo.business_name,
-            orderNumber: order.order_number || order.id,
-            cancelledBy: "Customer",
-            reason: displayReason,
-            refundInfo: null,
-          }).catch(err => console.error("WhatsApp seller cancel error:", err));
-        }
+      const buyerPhone = buyerUser?.phone;
+      const buyerName = buyerUser?.name || "Customer";
+      const sellerPhone = sellerInfo?.phone || sellerInfo?.user_phone;
+      const sellerName = sellerInfo?.name || sellerInfo?.business_name || "Service Provider";
 
-        // 2. Notify Buyer on WhatsApp
-        if (buyerUser && buyerUser.phone) {
-          sendBookingCancelledWhatsApp({
-            recipientPhone: buyerUser.phone,
-            recipientName: buyerUser.name,
-            orderNumber: order.order_number || order.id,
-            cancelledBy: "You (Customer)",
-            reason: displayReason,
-            refundInfo: refundText,
-          }).catch(err => console.error("WhatsApp buyer cancel error:", err));
-        }
-      } else if (isSeller) {
+      if (isBuyer) {
         // 1. Notify Buyer on WhatsApp
-        if (buyerUser && buyerUser.phone) {
-          sendBookingCancelledWhatsApp({
-            recipientPhone: buyerUser.phone,
-            recipientName: buyerUser.name,
-            orderNumber: order.order_number || order.id,
-            cancelledBy: sellerInfo?.name || sellerInfo?.business_name || "Service Provider",
-            reason: displayReason,
-            refundInfo: refundText,
-          }).catch(err => console.error("WhatsApp buyer cancel error:", err));
+        if (buyerPhone) {
+          try {
+            console.log(`📱 [WhatsApp Dispatch] Sending cancellation confirmation to buyer: ${buyerPhone}`);
+            await sendBookingCancelledWhatsApp({
+              recipientPhone: buyerPhone,
+              recipientName: buyerName,
+              orderNumber: order.order_number || order.id,
+              cancelledBy: "You (Customer)",
+              reason: displayReason,
+              refundInfo: refundText,
+            });
+          } catch (buyerCancelErr) {
+            console.error("❌ [WhatsApp Dispatch] Buyer cancel notification error:", buyerCancelErr.message);
+          }
+        } else {
+          console.warn(`⚠️ [WhatsApp Dispatch] Buyer phone missing for cancel notification (User ID #${order.buyer_id})`);
         }
 
         // 2. Notify Seller on WhatsApp
-        const sellerPhone = sellerInfo?.phone || sellerInfo?.user_phone;
         if (sellerPhone) {
-          sendBookingCancelledWhatsApp({
-            recipientPhone: sellerPhone,
-            recipientName: sellerInfo.name || sellerInfo.business_name,
-            orderNumber: order.order_number || order.id,
-            cancelledBy: "You (Service Provider)",
-            reason: displayReason,
-            refundInfo: null,
-          }).catch(err => console.error("WhatsApp seller cancel error:", err));
+          try {
+            console.log(`📱 [WhatsApp Dispatch] Sending cancellation alert to seller: ${sellerPhone}`);
+            await sendBookingCancelledWhatsApp({
+              recipientPhone: sellerPhone,
+              recipientName: sellerName,
+              orderNumber: order.order_number || order.id,
+              cancelledBy: "Customer",
+              reason: displayReason,
+              refundInfo: null,
+            });
+          } catch (sellerCancelErr) {
+            console.error("⚠️ [WhatsApp Dispatch] Seller cancel notification error (non-fatal):", sellerCancelErr.message);
+          }
+        }
+      } else if (isSeller) {
+        // 1. Notify Buyer on WhatsApp
+        if (buyerPhone) {
+          try {
+            console.log(`📱 [WhatsApp Dispatch] Sending provider-cancellation to buyer: ${buyerPhone}`);
+            await sendBookingCancelledWhatsApp({
+              recipientPhone: buyerPhone,
+              recipientName: buyerName,
+              orderNumber: order.order_number || order.id,
+              cancelledBy: sellerName,
+              reason: displayReason,
+              refundInfo: refundText,
+            });
+          } catch (buyerCancelErr) {
+            console.error("❌ [WhatsApp Dispatch] Buyer cancel notification error:", buyerCancelErr.message);
+          }
+        }
+
+        // 2. Notify Seller on WhatsApp
+        if (sellerPhone) {
+          try {
+            console.log(`📱 [WhatsApp Dispatch] Sending cancellation confirmation to seller: ${sellerPhone}`);
+            await sendBookingCancelledWhatsApp({
+              recipientPhone: sellerPhone,
+              recipientName: sellerName,
+              orderNumber: order.order_number || order.id,
+              cancelledBy: "You (Service Provider)",
+              reason: displayReason,
+              refundInfo: null,
+            });
+          } catch (sellerCancelErr) {
+            console.error("⚠️ [WhatsApp Dispatch] Seller cancel notification error (non-fatal):", sellerCancelErr.message);
+          }
         }
       }
     } catch (waErr) {
-      console.error("WhatsApp cancel notification error:", waErr);
+      console.error("WhatsApp cancel notification dispatch error:", waErr);
     }
 
     return successRes(res, null, "Order cancelled");
@@ -880,18 +938,19 @@ exports.submitQuotation = async (req, res) => {
 
     // Send Start PIN automatically via WhatsApp to Buyer
     try {
-      const buyerUser = await UserModel.findById(order.buyer_id);
+      const buyerUser = await UserModel.findById(order.buyer_id).catch(() => null);
       if (buyerUser && buyerUser.phone) {
-        sendStartPinWhatsApp({
+        console.log(`📱 [WhatsApp Dispatch] Sending start PIN to buyer: ${buyerUser.phone}`);
+        await sendStartPinWhatsApp({
           buyerPhone: buyerUser.phone,
-          buyerName: buyerUser.name,
+          buyerName: buyerUser.name || "Customer",
           orderNumber: order.order_number || order.id,
           pin: start_otp_code,
           serviceTitle: "Service Order",
-        }).catch((err) => console.error("WhatsApp start PIN error:", err));
+        });
       }
     } catch (waErr) {
-      console.error("Failed to send WhatsApp start PIN:", waErr);
+      console.error("⚠️ [WhatsApp Dispatch] Start PIN error:", waErr.message);
     }
 
     emitToUser(order.buyer_id, "order_updated", { orderId: order.id, status: "quoted" });
@@ -995,15 +1054,20 @@ exports.approveQuotation = async (req, res) => {
 
     // If Cash Payment PIN was generated, send it via WhatsApp with Security Warning!
     if (completion_otp_code) {
-      const buyerUser = await UserModel.findById(order.buyer_id);
-      if (buyerUser) {
-        sendCashCompletionPinWhatsApp({
-          buyerPhone: buyerUser.phone,
-          buyerName: buyerUser.name,
-          orderNumber: order.order_number || order.id,
-          pin: completion_otp_code,
-          amount: (order.total_amount || 0).toString(),
-        }).catch(err => console.error("WhatsApp error:", err));
+      try {
+        const buyerUser = await UserModel.findById(order.buyer_id).catch(() => null);
+        if (buyerUser && buyerUser.phone) {
+          console.log(`📱 [WhatsApp Dispatch] Sending cash completion PIN to buyer: ${buyerUser.phone}`);
+          await sendCashCompletionPinWhatsApp({
+            buyerPhone: buyerUser.phone,
+            buyerName: buyerUser.name || "Customer",
+            orderNumber: order.order_number || order.id,
+            pin: completion_otp_code,
+            amount: (order.total_amount || 0).toString(),
+          });
+        }
+      } catch (waErr) {
+        console.error("⚠️ [WhatsApp Dispatch] Cash completion PIN error:", waErr.message);
       }
     }
 
@@ -1141,15 +1205,20 @@ exports.switchToCash = async (req, res) => {
     );
 
     // Dispatch WhatsApp Cash Completion PIN with Security Warning to Buyer
-    const buyerUser = await UserModel.findById(order.buyer_id);
-    if (buyerUser) {
-      sendCashCompletionPinWhatsApp({
-        buyerPhone: buyerUser.phone,
-        buyerName: buyerUser.name,
-        orderNumber: order.order_number || order.id,
-        pin: completion_otp_code,
-        amount: (order.total_amount || 0).toString(),
-      }).catch(err => console.error("WhatsApp error:", err));
+    try {
+      const buyerUser = await UserModel.findById(order.buyer_id).catch(() => null);
+      if (buyerUser && buyerUser.phone) {
+        console.log(`📱 [WhatsApp Dispatch] Sending switch-to-cash PIN to buyer: ${buyerUser.phone}`);
+        await sendCashCompletionPinWhatsApp({
+          buyerPhone: buyerUser.phone,
+          buyerName: buyerUser.name || "Customer",
+          orderNumber: order.order_number || order.id,
+          pin: completion_otp_code,
+          amount: (order.total_amount || 0).toString(),
+        });
+      }
+    } catch (waErr) {
+      console.error("⚠️ [WhatsApp Dispatch] Switch to cash PIN error:", waErr.message);
     }
 
     return successRes(res, { completion_otp_code }, "Switched to Cash payment successfully");

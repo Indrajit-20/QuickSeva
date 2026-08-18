@@ -20,7 +20,7 @@ const navItems = [
   { label: "Post Site Requirement", path: "/contractor/create-post", icon: PlusCircle },
   { label: "Customer Leads", path: "/contractor/quotes", icon: MessageSquare },
   { label: "My Site Listings", path: "/contractor/posts", icon: Building2 },
-  { label: "Public Contractor Hub", path: "/contractor-hub", icon: Globe },
+  { label: "Public Contractor Hub", path: "/contractor-hub", icon: Globe, isExternal: true },
 ];
 
 const getInitial = (name) => (name?.trim()?.[0] || "C").toUpperCase();
@@ -59,14 +59,23 @@ function ContractorSidebar({ user, onLogout, onNavigate, onClose }) {
               key={item.path}
               to={item.path}
               onClick={onNavigate}
-              className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all ${
-                active
-                  ? "bg-amber-50 text-amber-700 font-bold border-l-4 border-amber-600 shadow-sm"
+              className={`flex items-center justify-between rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all ${
+                item.isExternal
+                  ? "mt-4 bg-slate-100 text-slate-700 hover:bg-amber-100 hover:text-amber-900 border border-slate-200"
+                  : active
+                  ? "bg-amber-50 text-amber-700 font-bold border-l-4 border-amber-600 shadow-xs"
                   : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
               }`}
             >
-              <Icon size={18} className={active ? "text-amber-600" : "text-slate-400"} />
-              <span>{item.label}</span>
+              <div className="flex items-center gap-3">
+                <Icon size={18} className={active ? "text-amber-600" : item.isExternal ? "text-amber-600" : "text-slate-400"} />
+                <span>{item.label}</span>
+              </div>
+              {item.isExternal && (
+                <span className="text-[10px] font-black uppercase px-2 py-0.5 bg-white text-amber-700 rounded-md border border-amber-200 shadow-2xs">
+                  Public ↗
+                </span>
+              )}
             </NavLink>
           );
         })}

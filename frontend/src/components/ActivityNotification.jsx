@@ -151,7 +151,7 @@ const ActivityNotification = () => {
 
   return (
     <div
-      className={`fixed bottom-20 left-4 sm:bottom-auto sm:top-24 sm:left-6 z-50 bg-white/95 backdrop-blur-md border border-slate-100 rounded-2xl p-2.5 pr-6 sm:p-3 sm:pr-7 shadow-xl flex items-center gap-2.5 sm:gap-3 max-w-[280px] sm:max-w-xs transition-all duration-500 ease-out transform ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 sm:-translate-y-4 pointer-events-none"
+      className={`fixed bottom-24 left-4 sm:bottom-auto sm:top-24 sm:left-6 z-50 bg-white/95 backdrop-blur-md border border-slate-100 rounded-2xl p-2.5 pr-6 sm:p-3 sm:pr-7 shadow-xl flex items-center gap-2.5 sm:gap-3 max-w-[280px] sm:max-w-xs transition-all duration-500 ease-out transform ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 sm:-translate-y-4 pointer-events-none"
         }`}
       style={{
         boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)"

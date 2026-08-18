@@ -8,7 +8,18 @@ const WorkspaceSwitcher = ({ layout = "dropdown", onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const isContractor = user?.role === "contractor" || user?.is_verified_contractor === 1 || Boolean(user?.trade_specialization);
+  const userHasSellerProfile =
+    isSeller ||
+    user?.role === "seller" ||
+    Boolean(user?.has_seller_profile) ||
+    Boolean(user?.seller_id);
+
+  const userHasContractorProfile =
+    user?.role === "contractor" ||
+    user?.is_verified_contractor === 1 ||
+    Boolean(user?.trade_specialization) ||
+    Boolean(user?.has_contractor_profile);
+
   const isContractorActive = location.pathname.startsWith("/contractor");
   const isSellerActive = activeRole === "seller" && !isContractorActive;
   const isUserActive = !isSellerActive && !isContractorActive;
@@ -20,7 +31,7 @@ const WorkspaceSwitcher = ({ layout = "dropdown", onClose }) => {
 
   const handleSellerClick = () => {
     onClose?.();
-    if (!isSeller) {
+    if (!userHasSellerProfile) {
       navigate("/become-seller");
     } else if (!isSellerActive) {
       switchRole("seller");
@@ -29,7 +40,7 @@ const WorkspaceSwitcher = ({ layout = "dropdown", onClose }) => {
 
   const handleContractorClick = () => {
     onClose?.();
-    if (!isContractor) {
+    if (!userHasContractorProfile) {
       navigate("/contractor-register");
     } else {
       navigate("/contractor/dashboard");
@@ -65,7 +76,7 @@ const WorkspaceSwitcher = ({ layout = "dropdown", onClose }) => {
             }`}
           >
             <Store className="w-3 h-3" />
-            <span>{isSeller ? "Seller" : "Join"}</span>
+            <span>{userHasSellerProfile ? "Seller" : "Join"}</span>
           </button>
 
           <button
@@ -76,7 +87,7 @@ const WorkspaceSwitcher = ({ layout = "dropdown", onClose }) => {
             }`}
           >
             <Building2 className="w-3 h-3" />
-            <span>{isContractor ? "Contractor" : "Join"}</span>
+            <span>{userHasContractorProfile ? "Contractor" : "Join"}</span>
           </button>
         </div>
       </div>
@@ -112,7 +123,7 @@ const WorkspaceSwitcher = ({ layout = "dropdown", onClose }) => {
           }`}
         >
           <Store className="w-3 h-3 shrink-0" />
-          <span>{isSeller ? "Seller" : "Join"}</span>
+          <span>{userHasSellerProfile ? "Seller" : "Join"}</span>
         </button>
 
         <button
@@ -123,7 +134,7 @@ const WorkspaceSwitcher = ({ layout = "dropdown", onClose }) => {
           }`}
         >
           <Building2 className="w-3 h-3 shrink-0" />
-          <span>{isContractor ? "Contractor" : "Join"}</span>
+          <span>{userHasContractorProfile ? "Contractor" : "Join"}</span>
         </button>
       </div>
     </div>

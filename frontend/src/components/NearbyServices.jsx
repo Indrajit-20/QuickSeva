@@ -1753,6 +1753,10 @@ export default function NearbyServices({
         setLocationResults([]);
         setLocationNotFoundMsg("");
         setGeoError("");
+        if (typeof document !== "undefined" && document.activeElement && typeof document.activeElement.blur === "function") {
+          document.activeElement.blur();
+        }
+        setShowLocationDrawer(false);
         setTimeout(scrollToResults, 100);
       } else {
         suppressNextLocationSearchRef.current = false;
@@ -3215,11 +3219,13 @@ export default function NearbyServices({
                       setPincode(val);
                       setPincodeError("");
                       if (val.length === 6) {
+                        e.target.blur();
                         handlePincodeSearch(val);
                       }
                     }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && pincode.trim().length === 6) {
+                        e.target.blur();
                         handlePincodeSearch(pincode);
                         setShowLocationDrawer(false);
                       }
@@ -3271,6 +3277,8 @@ export default function NearbyServices({
                   step={1}
                   value={radiusKm}
                   onChange={(e) => setRadiusKm(parseInt(e.target.value || "5", 10))}
+                  onMouseUp={() => setShowLocationDrawer(false)}
+                  onTouchEnd={() => setShowLocationDrawer(false)}
                   className="qs-range flex-1"
                   style={{
                     background: `linear-gradient(to right, var(--qs-primary, #2563eb) 0%, var(--qs-primary, #2563eb) ${((radiusKm - 1) / 49) * 100}%, #e2e8f0 ${((radiusKm - 1) / 49) * 100}%, #e2e8f0 100%)`,

@@ -1930,21 +1930,35 @@ img.qs-avatar {
 .bottom-nav-bar {
   position: fixed;
   bottom: 0;
-  left: 0;
-  right: 0;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 1000 !important;
   display: flex;
   align-items: stretch;
   justify-content: space-around;
-  height: 52px;
-  background: rgba(255, 255, 255, 0.96);
-  backdrop-filter: blur(18px) saturate(180%);
-  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  height: 54px;
+  width: 100%;
+  max-width: 500px;
+  background: rgba(255, 255, 255, 0.97);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-top: 1px solid rgba(226, 232, 240, 0.8);
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05), 0 -1px 4px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.06), 0 -1px 4px rgba(0, 0, 0, 0.02);
   padding: 0 4px;
   padding-bottom: env(safe-area-inset-bottom, 0px);
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.3s ease;
+}
+
+@media (min-width: 640px) {
+  .bottom-nav-bar {
+    bottom: 12px;
+    height: 56px;
+    max-width: 460px;
+    border-radius: 9999px;
+    border: 1px solid rgba(203, 213, 225, 0.8);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.04);
+    padding: 0 10px;
+  }
 }
 
 .bottom-nav-spacer {
@@ -2050,26 +2064,29 @@ img.qs-avatar {
 }
 
 .bottom-nav-bar--user {
-  left: 0;
-  right: 0;
+  left: 50%;
+  transform: translateX(-50%);
   width: 100%;
-  max-width: none;
-  bottom: 0;
-  border-radius: 0;
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05), 0 -1px 4px rgba(0, 0, 0, 0.02);
-  justify-content: center;
-  gap: 24px;
-  transform: none;
+  max-width: 500px;
+  justify-content: space-around;
+  gap: 0;
   border-top: 1px solid rgba(226, 232, 240, 0.7);
 }
 
+@media (min-width: 640px) {
+  .bottom-nav-bar--user {
+    max-width: 460px;
+  }
+}
+
 .bottom-nav-bar--user .bottom-nav-item {
-  flex: none;
-  width: 80px;
+  flex: 1;
+  width: auto;
+  min-width: 0;
 }
 
 .bottom-nav-bar--hidden {
-  transform: translateY(100%);
+  transform: translate(-50%, 120%) !important;
   pointer-events: none;
 }
 

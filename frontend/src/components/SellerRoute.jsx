@@ -18,7 +18,8 @@ export default function SellerRoute() {
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
-  if (user?.role !== "seller") return <Navigate to="/unauthorized" replace />;
+  const isSeller = user?.role === "seller" || Boolean(user?.has_seller_profile) || Boolean(user?.seller_id);
+  if (!isSeller) return <Navigate to="/unauthorized" replace />;
 
   const profileCompleted = Number(user?.profile_completed ?? 0);
   if (profileCompleted === 0 && location.pathname !== "/seller/profile") {

@@ -20,8 +20,15 @@ export default function ContractorRoute() {
     return <Navigate to="/login" replace />;
   }
 
-  // Allow users with role 'contractor', 'seller', or 'admin'
-  if (user?.role !== "contractor" && user?.role !== "seller" && user?.role !== "admin") {
+  const isContractor =
+    user?.role === "contractor" ||
+    user?.role === "seller" ||
+    user?.role === "admin" ||
+    user?.is_verified_contractor === 1 ||
+    Boolean(user?.trade_specialization) ||
+    Boolean(user?.has_contractor_profile);
+
+  if (!isContractor) {
     return <Navigate to="/contractor-register" replace />;
   }
 
