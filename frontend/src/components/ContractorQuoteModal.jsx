@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { X, Send, Phone, User, MapPin, Briefcase, CheckCircle2 } from "lucide-react";
+import { X, Send, Phone, User, MapPin, Briefcase, CheckCircle2, MessageCircle } from "lucide-react";
 import { createQuoteRequest } from "../api/contractorApi";
 
 export default function ContractorQuoteModal({ contractor, isOpen, onClose }) {
@@ -13,6 +13,7 @@ export default function ContractorQuoteModal({ contractor, isOpen, onClose }) {
 
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [submittedLead, setSubmittedLead] = useState(null);
   const [error, setError] = useState(null);
 
   if (!isOpen || !contractor) return null;
@@ -28,7 +29,7 @@ export default function ContractorQuoteModal({ contractor, isOpen, onClose }) {
     setError(null);
 
     try {
-      await createQuoteRequest({
+      const res = await createQuoteRequest({
         contractor_id: contractor.id,
         customer_name: formData.customer_name,
         customer_phone: formData.customer_phone,
@@ -37,6 +38,7 @@ export default function ContractorQuoteModal({ contractor, isOpen, onClose }) {
         notes: formData.notes,
       });
 
+      setSubmittedLead(res?.data || null);
       setSuccess(true);
     } catch (err) {
       setError(err?.response?.data?.message || "Failed to submit quote request. Please try again.");
@@ -58,29 +60,42 @@ export default function ContractorQuoteModal({ contractor, isOpen, onClose }) {
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition active:scale-95"
+            className="w-8 h-8 rounded-full bg-slate-900 border border-slate-700 hover:bg-rose-600 flex items-center justify-center text-white transition active:scale-95 shadow-md"
+            title="Close"
           >
-            <X size={18} />
+            <X size={18} strokeWidth={2.5} />
           </button>
         </div>
 
         {/* Content */}
         <div className="p-6">
           {success ? (
-            <div className="text-center py-6">
-              <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">
-                <CheckCircle2 size={36} />
+            <div className="text-center py-4 space-y-4">
+              <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto animate-bounce">
+                <CheckCircle2 size={32} />
               </div>
-              <h4 className="text-xl font-black text-slate-900 mb-2">Request Sent!</h4>
-              <p className="text-sm text-slate-600 mb-6 leading-relaxed">
-                Contractor <span className="font-bold text-slate-900">{contractor.company_name || contractor.name}</span> has received your details and will call you back shortly.
-              </p>
-              <button
-                onClick={onClose}
-                className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-2xl transition active:scale-98 shadow-md"
-              >
-                Close
-              </button>
+
+              <div>
+                <h4 className="text-lg font-black text-slate-900 mb-1">Quote Request Sent! 🎉</h4>
+                <p className="text-xs text-slate-600 leading-relaxed max-w-xs mx-auto">
+                  Lead registered for <span className="font-bold text-slate-900">{contractor.company_name || contractor.name}</span>. QuickSeva has captured your request.
+                </p>
+                {submittedLead?.quoteId && (
+                  <span className="inline-block mt-2 px-3 py-1 bg-amber-50 text-amber-800 text-[11px] font-black rounded-lg border border-amber-200">
+                    Lead Reference: #{submittedLead.quoteId}
+                  </span>
+                )}
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs rounded-xl shadow-md transition cursor-pointer active:scale-95"
+                >
+                  Done & Close
+                </button>
+              </div>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">

@@ -562,3 +562,266 @@ exports.sendBulkWhatsApp = async (req, res) => {
     return errorRes(res, "Failed to initiate bulk WhatsApp broadcast");
   }
 };
+
+// Get Contractor Verification Requests Queue
+exports.getContractorVerifications = async (req, res) => {
+  try {
+    const { status = "pending" } = req.query;
+    let sql = `
+      SELECT id, name, company_name, phone, email, city, state, trade_specialization, is_verified_contractor,
+             gstin, pan_number, license_number, verification_doc_url, verification_status, verification_notes, created_at
+      FROM users
+      WHERE (role = 'contractor' OR is_verified_contractor = 1 OR trade_specialization IS NOT NULL)
+    `;
+    const params = [];
+    if (status && status !== "all") {
+      sql += ` AND verification_status = ?`;
+      params.push(status);
+    }
+    sql += ` ORDER BY created_at DESC`;
+
+    const [rows] = await pool.query(sql, params);
+    return successRes(res, { verifications: rows }, "Contractor verifications fetched successfully");
+  } catch (err) {
+    console.error("getContractorVerifications error:", err);
+    return errorRes(res, "Failed to fetch contractor verifications", 500);
+  }
+};
+
+// Review Contractor Verification (Approve / Reject)
+exports.reviewContractorVerification = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { action, notes } = req.body; // action: 'approve' or 'reject'
+
+    if (!["approve", "reject"].includes(action)) {
+      return errorRes(res, "Action must be 'approve' or 'reject'", 400);
+    }
+
+    const isVerified = action === "approve" ? 1 : 0;
+    const verificationStatus = action === "approve" ? "verified" : "rejected";
+
+    const [resDb] = await pool.query(
+      `UPDATE users
+       SET is_verified_contractor = ?,
+           verification_status = ?,
+           verification_notes = ?
+       WHERE id = ?`,
+      [isVerified, verificationStatus, notes || null, id]
+    );
+
+    if (resDb.affectedRows === 0) {
+      return errorRes(res, "Contractor not found", 404);
+    }
+
+    return successRes(res, null, `Contractor verification ${verificationStatus} successfully`);
+  } catch (err) {
+    console.error("reviewContractorVerification error:", err);
+    return errorRes(res, "Failed to update contractor verification status", 500);
+  }
+};
+
+// Get All Contractor Site Posts for Admin Moderation
+exports.getAdminContractorPosts = async (req, res) => {
+  try {
+    const { status, search } = req.query;
+
+    let sql = `
+      SELECT p.*, 
+             u.name AS contractor_user_name,
+             u.phone AS contractor_user_phone,
+             u.profile_pic AS contractor_profile_pic,
+             (SELECT COUNT(*) FROM contractor_applications app WHERE app.post_id = p.id) AS applications_count
+      FROM contractor_posts p
+      LEFT JOIN users u ON p.contractor_id = u.id
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (status === "active") {
+      sql += ` AND p.status = 'active'`;
+    } else if (status === "closed") {
+      sql += ` AND p.status = 'closed'`;
+    } else if (status === "featured") {
+      sql += ` AND p.is_featured = 1`;
+    }
+
+    if (search) {
+      sql += ` AND (p.title LIKE ? OR p.city LIKE ? OR p.contact_name LIKE ? OR u.name LIKE ?)`;
+      const term = `%${search}%`;
+      params.push(term, term, term, term);
+    }
+
+    sql += ` ORDER BY p.is_featured DESC, p.created_at DESC`;
+
+    const [posts] = await pool.query(sql, params);
+
+    // Attach requirements line items to each post
+    for (let post of posts) {
+      const [reqs] = await pool.query(
+        `SELECT * FROM contractor_post_requirements WHERE post_id = ?`,
+        [post.id]
+      );
+      post.requirements = reqs;
+    }
+
+    return successRes(res, { posts }, "Admin contractor posts fetched successfully");
+  } catch (err) {
+    console.error("getAdminContractorPosts error:", err);
+    return errorRes(res, "Failed to fetch contractor site posts", 500);
+  }
+};
+
+// Update Contractor Post Status (Feature, Unfeature, Close, Reopen, Delete)
+exports.updateAdminContractorPostStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { action } = req.body; // 'toggle_featured', 'close', 'reopen', 'delete'
+
+    const [[post]] = await pool.query(`SELECT * FROM contractor_posts WHERE id = ?`, [id]);
+    if (!post) {
+      return errorRes(res, "Site requirement post not found", 404);
+    }
+
+    if (action === "toggle_featured") {
+      const newFeatured = post.is_featured ? 0 : 1;
+      await pool.query(`UPDATE contractor_posts SET is_featured = ? WHERE id = ?`, [newFeatured, id]);
+      return successRes(res, { is_featured: newFeatured }, `Site post ${newFeatured ? "featured" : "unfeatured"} successfully`);
+    } else if (action === "close") {
+      await pool.query(`UPDATE contractor_posts SET status = 'closed' WHERE id = ?`, [id]);
+      return successRes(res, null, "Site post marked as closed");
+    } else if (action === "reopen") {
+      await pool.query(`UPDATE contractor_posts SET status = 'active' WHERE id = ?`, [id]);
+      return successRes(res, null, "Site post re-opened successfully");
+    } else if (action === "delete") {
+      await pool.query(`DELETE FROM contractor_posts WHERE id = ?`, [id]);
+      return successRes(res, null, "Site post deleted successfully");
+    } else {
+      return errorRes(res, "Invalid action", 400);
+    }
+  } catch (err) {
+    console.error("updateAdminContractorPostStatus error:", err);
+    return errorRes(res, "Failed to update contractor post status", 500);
+  }
+};
+
+// Get All Client Quote Requests for Admin Oversight
+exports.getAdminQuoteRequests = async (req, res) => {
+  try {
+    const { status, search } = req.query;
+
+    let sql = `
+      SELECT q.*, 
+             u.name AS contractor_name,
+             u.company_name AS contractor_company_name,
+             u.phone AS contractor_phone,
+             u.trade_specialization AS contractor_trade
+      FROM contractor_quote_requests q
+      LEFT JOIN users u ON q.contractor_id = u.id
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (status && status !== "all") {
+      sql += ` AND q.status = ?`;
+      params.push(status);
+    }
+
+    if (search) {
+      sql += ` AND (q.customer_name LIKE ? OR q.customer_phone LIKE ? OR q.city LIKE ? OR u.name LIKE ?)`;
+      const term = `%${search}%`;
+      params.push(term, term, term, term);
+    }
+
+    sql += ` ORDER BY q.created_at DESC`;
+
+    const [requests] = await pool.query(sql, params);
+    return successRes(res, { requests }, "Admin quote requests fetched successfully");
+  } catch (err) {
+    console.error("getAdminQuoteRequests error:", err);
+    return errorRes(res, "Failed to fetch client quote requests", 500);
+  }
+};
+
+// Update Client Quote Request Status
+exports.updateAdminQuoteRequestStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body; // 'pending', 'contacted', 'completed', 'cancelled'
+
+    if (!["pending", "contacted", "completed", "cancelled"].includes(status)) {
+      return errorRes(res, "Invalid status choice", 400);
+    }
+
+    const [resDb] = await pool.query(
+      `UPDATE contractor_quote_requests SET status = ? WHERE id = ?`,
+      [status, id]
+    );
+
+    if (resDb.affectedRows === 0) {
+      return errorRes(res, "Quote request not found", 404);
+    }
+
+    return successRes(res, null, `Quote request status updated to ${status}`);
+  } catch (err) {
+    console.error("updateAdminQuoteRequestStatus error:", err);
+    return errorRes(res, "Failed to update quote request status", 500);
+  }
+};
+
+// Get Contractor Analytics & Leaderboard for Admin
+exports.getAdminContractorAnalytics = async (req, res) => {
+  try {
+    const [[totalContractors]] = await pool.query(
+      `SELECT COUNT(*) AS count FROM users WHERE role = 'contractor'`
+    );
+    const [[verifiedContractors]] = await pool.query(
+      `SELECT COUNT(*) AS count FROM users WHERE role = 'contractor' AND (verification_status = 'verified' OR is_verified_contractor = 1)`
+    );
+    const [[pendingContractors]] = await pool.query(
+      `SELECT COUNT(*) AS count FROM users WHERE role = 'contractor' AND verification_status = 'pending'`
+    );
+    const [[totalPosts]] = await pool.query(
+      `SELECT COUNT(*) AS count FROM contractor_posts`
+    );
+    const [[totalApplications]] = await pool.query(
+      `SELECT COUNT(*) AS count FROM contractor_applications`
+    );
+    const [[totalQuoteRequests]] = await pool.query(
+      `SELECT COUNT(*) AS count FROM contractor_quote_requests`
+    );
+
+    // Leaderboard query ranking top contractors
+    const [leaderboard] = await pool.query(`
+      SELECT u.id, u.name, u.company_name, u.phone, u.trade_specialization, u.city,
+             u.is_verified_contractor, u.verification_status,
+             (SELECT COUNT(*) FROM contractor_posts p WHERE p.contractor_id = u.id) AS posts_count,
+             (SELECT COUNT(*) FROM contractor_applications app 
+              JOIN contractor_posts p ON app.post_id = p.id 
+              WHERE p.contractor_id = u.id) AS total_applications_received,
+             (SELECT COUNT(*) FROM contractor_quote_requests q WHERE q.contractor_id = u.id) AS quote_leads_received
+      FROM users u
+      WHERE u.role = 'contractor'
+      ORDER BY total_applications_received DESC, posts_count DESC, u.created_at DESC
+      LIMIT 20
+    `);
+
+    return successRes(res, {
+      stats: {
+        totalContractors: totalContractors.count,
+        verifiedContractors: verifiedContractors.count,
+        pendingContractors: pendingContractors.count,
+        totalPosts: totalPosts.count,
+        totalApplications: totalApplications.count,
+        totalQuoteRequests: totalQuoteRequests.count,
+        complianceRate: totalContractors.count > 0 
+          ? Math.round((verifiedContractors.count / totalContractors.count) * 100) 
+          : 0,
+      },
+      leaderboard,
+    }, "Contractor analytics and leaderboard fetched successfully");
+  } catch (err) {
+    console.error("getAdminContractorAnalytics error:", err);
+    return errorRes(res, "Failed to fetch contractor analytics", 500);
+  }
+};

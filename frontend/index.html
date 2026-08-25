@@ -13,10 +13,37 @@
   <!-- Razorpay SDK preloaded for instant payment modal opening -->
   <script src="https://checkout.razorpay.com/v1/checkout.js" async></script>
   <title>QuickSeva — Professional Local Service Platform</title>
+
+  <!-- CRITICAL: App Shell inline styles — renders instantly before JS downloads -->
+  <style>
+    #qs-shell { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; background:#f8fafc; font-family:'Inter',system-ui,sans-serif; gap:20px; }
+    #qs-shell-logo { display:flex; align-items:center; gap:8px; animation: qs-s-pulse 2s ease-in-out infinite; }
+    #qs-shell-logo svg { display:block; }
+    #qs-shell-name { font-size:20px; font-weight:800; color:#1e293b; letter-spacing:-0.5px; }
+    #qs-shell-name span { color:#6366f1; }
+    #qs-shell-track { position:relative; width:180px; height:3px; background:rgba(99,102,241,0.12); border-radius:99px; overflow:hidden; }
+    #qs-shell-dash { position:absolute; top:0; height:3px; width:60%; border-radius:99px; background:linear-gradient(90deg,transparent,#6366f1,#3b82f6,#6366f1,transparent); animation:qs-s-dash 1.4s cubic-bezier(.4,0,.2,1) infinite; }
+    #qs-shell-msg { font-size:11px; font-weight:700; color:#94a3b8; letter-spacing:.1em; text-transform:uppercase; }
+    @keyframes qs-s-dash { 0%{left:-60%;opacity:0} 10%{opacity:1} 80%{opacity:1} 100%{left:110%;opacity:0} }
+    @keyframes qs-s-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.75;transform:scale(.97)} }
+  </style>
 </head>
 
 <body>
-  <div id="root"></div>
+  <div id="root">
+    <!-- App Shell: Visible instantly while React JS bundle downloads on slow networks -->
+    <div id="qs-shell">
+      <div id="qs-shell-logo">
+        <svg width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="30" height="30" rx="8" fill="#6366f1"/>
+          <path d="M8 15.5L13 20.5L22 10" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div id="qs-shell-name">Quick<span>Seva</span></div>
+      </div>
+      <div id="qs-shell-track"><div id="qs-shell-dash"></div></div>
+      <div id="qs-shell-msg">Loading...</div>
+    </div>
+  </div>
   <script type="module" src="/src/main.jsx"></script>
 </body>
 

@@ -159,7 +159,7 @@ const AdminLogin = () => {
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 sm:p-8 border border-slate-200 text-slate-850">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-slate-800 mb-2">Admin Login</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-2">Admin Login</h1>
           <p className="text-slate-500 font-semibold text-sm">Manage QuickSeva Platform</p>
         </div>
 

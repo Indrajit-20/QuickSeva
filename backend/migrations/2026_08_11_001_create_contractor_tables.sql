@@ -9,6 +9,14 @@ ALTER TABLE users ADD COLUMN company_name VARCHAR(255) NULL AFTER name;
 ALTER TABLE users ADD COLUMN trade_specialization VARCHAR(150) NULL AFTER company_name;
 ALTER TABLE users ADD COLUMN is_verified_contractor TINYINT(1) DEFAULT 0 AFTER is_verified;
 
+-- Add contractor verification & document fields to users table
+ALTER TABLE users ADD COLUMN gstin VARCHAR(20) NULL;
+ALTER TABLE users ADD COLUMN pan_number VARCHAR(20) NULL;
+ALTER TABLE users ADD COLUMN license_number VARCHAR(100) NULL;
+ALTER TABLE users ADD COLUMN verification_doc_url VARCHAR(255) NULL;
+ALTER TABLE users ADD COLUMN verification_status ENUM('unverified', 'pending', 'verified', 'rejected') DEFAULT 'unverified';
+ALTER TABLE users ADD COLUMN verification_notes TEXT NULL;
+
 -- 2. Contractor Site Posts (Labor Demand & Labor Supply)
 CREATE TABLE IF NOT EXISTS contractor_posts (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -75,4 +83,14 @@ CREATE TABLE IF NOT EXISTS contractor_applications (
   status ENUM('pending', 'contacted', 'hired', 'rejected') DEFAULT 'pending',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_contractor_app_post FOREIGN KEY (post_id) REFERENCES contractor_posts(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 6. Contractor Work Portfolio Images
+CREATE TABLE IF NOT EXISTS contractor_work_images (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  contractor_id INT NOT NULL,
+  image_url VARCHAR(255) NOT NULL,
+  title VARCHAR(255) NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_contractor_work_user FOREIGN KEY (contractor_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

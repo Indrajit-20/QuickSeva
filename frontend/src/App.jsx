@@ -16,8 +16,10 @@ import AdminLogin from "./pages/AdminLogin";
 import AdminLayout from "./layouts/AdminLayout";
 import AdminUsers from "./pages/AdminUsers";
 import AdminSellers from "./pages/AdminSellers";
+import AdminContractors from "./pages/AdminContractors";
 import AdminDisputes from "./pages/AdminDisputes";
 import AdminCategories from "./pages/AdminCategories";
+import AdminPolicies from "./pages/AdminPolicies";
 import AdminPlaceholder from "./pages/AdminPlaceholder";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
@@ -43,6 +45,7 @@ import ProfilePage from "./pages/ProfilePage";
 import NotFound from "./pages/NotFound";
 import PrivacyPolicy from "./pages/SitePrivacy";
 import TermsOfService from "./pages/TermsOfService";
+import RefundPolicy from "./pages/RefundPolicy";
 import { cleanupExpiredPremium } from "./utils/premium";
 import Unauthorized from "./pages/Unauthorized";
 import SellerLayout from "./layouts/SellerLayout";
@@ -61,7 +64,9 @@ import ContractorFeed from "./pages/ContractorFeed";
 import ContractorPostDetail from "./pages/ContractorPostDetail";
 import CreateContractorPost from "./pages/contractor/CreateContractorPost";
 import ContractorDashboard from "./pages/contractor/ContractorDashboard";
+import ContractorProfile from "./pages/contractor/ContractorProfile";
 import ContractorRegister from "./pages/ContractorRegister";
+import ContractorPublicProfile from "./pages/ContractorPublicProfile";
 function SellerProtectedRoute() {
   // Kept for backward-compatibility; the source of truth is SellerRoute.
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -125,6 +130,7 @@ function AppRoutes() {
           <Route path="/seller/:id" element={<SellerPublicProfile />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/terms-of-service" element={<TermsOfService />} />
+          <Route path="/refund-policy" element={<RefundPolicy />} />
         </Route>
 
         {/* Guest-only auth routes */}
@@ -148,6 +154,8 @@ function AppRoutes() {
         {/* Contractor Hub Public Routes */}
         <Route path="/contractor-hub" element={<ContractorFeed />} />
         <Route path="/work-site-requirements" element={<ContractorFeed />} />
+        <Route path="/contractors/:id" element={<ContractorPublicProfile />} />
+        <Route path="/contractor-profile/:id" element={<ContractorPublicProfile />} />
         <Route path="/contractor-posts/:id" element={<ContractorPostDetail />} />
         <Route path="/contractor-register" element={<ContractorRegister />} />
         <Route path="/become-contractor" element={<ContractorRegister />} />
@@ -157,7 +165,9 @@ function AppRoutes() {
           <Route path="/contractor" element={<ContractorLayout />}>
             <Route index element={<Navigate to="/contractor/dashboard" replace />} />
             <Route path="dashboard" element={<ContractorDashboard />} />
+            <Route path="profile" element={<ContractorProfile />} />
             <Route path="create-post" element={<CreateContractorPost />} />
+            <Route path="edit-post/:id" element={<CreateContractorPost />} />
             <Route path="quotes" element={<ContractorDashboard />} />
             <Route path="posts" element={<ContractorDashboard />} />
           </Route>
@@ -192,6 +202,7 @@ function AppRoutes() {
             <Route path="dashboard" element={<AdminDashboard />} />
             <Route path="users" element={<AdminUsers />} />
             <Route path="sellers" element={<AdminSellers />} />
+            <Route path="contractors" element={<AdminContractors />} />
             <Route path="disputes" element={<AdminDisputes />} />
             <Route path="categories" element={<AdminCategories />} />
             {/* Placeholders */}
@@ -206,7 +217,7 @@ function AppRoutes() {
             <Route path="reports" element={<AdminPlaceholder />} />
             <Route path="locations" element={<AdminPlaceholder />} />
             <Route path="coupons" element={<AdminPlaceholder />} />
-            <Route path="policies" element={<AdminDashboard />} />
+            <Route path="policies" element={<AdminPolicies />} />
             <Route path="settings" element={<AdminPlaceholder />} />
             <Route path="security" element={<AdminPlaceholder />} />
             <Route path="marketing" element={<AdminPlaceholder />} />

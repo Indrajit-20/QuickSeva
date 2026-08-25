@@ -15,3 +15,8 @@ ON DUPLICATE KEY UPDATE title=VALUES(title), content=VALUES(content);
 INSERT INTO policies (`key`, title, content) VALUES
 ('terms_of_service', 'Terms of Service', '<h1>Terms of Service</h1><p>Welcome to QuickSeva. By accessing or using our services, you agree to be bound by these terms. If you disagree with any part of the terms, you may not access our services.</p><p>We reserve the right to revise or update these terms at any time. Your continued use of the website after changes are posted constitutes acceptance of those changes.</p>')
 ON DUPLICATE KEY UPDATE title=VALUES(title), content=VALUES(content);
+
+INSERT INTO policies (`key`, title, content) VALUES
+('refund_policy', 'Refund & Cancellation Policy', '<h1>Refund & Cancellation Policy</h1><p>Welcome to QuickSeva. We aim to provide transparent and fair guidelines regarding service booking cancellations, wallet topups, and refund processing.</p><p>Customers may cancel pending bookings prior to provider confirmation for a full wallet refund. Lead charges and platform service fees are subject to verification by our support team.</p>')
+ON DUPLICATE KEY UPDATE title=VALUES(title), content=VALUES(content);
+

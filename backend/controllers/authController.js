@@ -9,7 +9,7 @@ const socketService = require("../utils/socketService");
 const sendTokenCookie = (res, token) => {
   res.cookie("authToken", token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: false, // Must be false for HTTP testing on VPS (without SSL/HTTPS)
     sameSite: "lax", // 'lax' is generally more compatible for local development cross-origin setups than 'strict'
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });

@@ -65,10 +65,10 @@ export default function LocationErrorModal({ isOpen, onClose, onRetry }) {
           {/* Close button */}
           <button
             onClick={onClose}
-            className="absolute right-4 top-4 rounded-full p-1.5 text-slate-400 hover:bg-slate-50 hover:text-slate-650 transition-colors cursor-pointer"
+            className="absolute right-4 top-4 rounded-full p-1.5 bg-slate-100 border border-slate-200 text-slate-700 hover:bg-rose-600 hover:text-white transition cursor-pointer active:scale-95 shadow-2xs"
             title="Close"
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4 stroke-[2.5]" />
           </button>
 
           {/* Modal Content */}

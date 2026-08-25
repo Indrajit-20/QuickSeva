@@ -1,8 +1,9 @@
 import React, { useMemo, useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useNearbyLocation } from "../hooks/useNearbyLocation";
 import ProfileDropdown from "./ProfileDropdown";
+import WorkspaceSwitcher from "./WorkspaceSwitcher";
 
 const ALL_SERVICES = [
   "Cleaning",
@@ -23,7 +24,22 @@ const getInitials = (name) => {
   return (parts[0][0] + parts[1][0]).toUpperCase();
 };
 
-import { Search, MapPin, Globe, CalendarCheck, Wrench, LayoutDashboard, Building2 } from "lucide-react";
+import {
+  Search,
+  MapPin,
+  Globe,
+  CalendarCheck,
+  Wrench,
+  LayoutDashboard,
+  Building2,
+  X,
+  ChevronRight,
+  LogIn,
+  UserPlus,
+  Briefcase,
+  LogOut,
+  User,
+} from "lucide-react";
 import SearchOverlay from "./SearchOverlay";
 
 import NotificationBell from "./NotificationBell";
@@ -51,6 +67,8 @@ const Navbar = () => {
   const [isPartnerOpen, setIsPartnerOpen] = useState(false);
   const [isSearchOverlayOpen, setIsSearchOverlayOpen] = useState(false);
   const partnerRef = useRef(null);
+  const navRef = useRef(null);
+  const location = useLocation();
   const { user, isAuthenticated, logout, activeRole } = useAuth();
   const { address, loading } = useNearbyLocation();
 
@@ -66,6 +84,27 @@ const Navbar = () => {
     setIsMenuOpen(false);
     setIsPartnerOpen(false);
   };
+
+  // Automatically close mobile menu on route changes (e.g. clicking bottom nav)
+  useEffect(() => {
+    setIsMenuOpen(false);
+  }, [location.pathname]);
+
+  // Close mobile menu on outside click or touch
+  useEffect(() => {
+    if (!isMenuOpen) return;
+    const handleOutsideClick = (e) => {
+      if (navRef.current && !navRef.current.contains(e.target)) {
+        setIsMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("touchstart", handleOutsideClick);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("touchstart", handleOutsideClick);
+    };
+  }, [isMenuOpen]);
 
   useEffect(() => {
     const onDocMouseDown = (e) => {
@@ -101,7 +140,16 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-[#e5e7eb] bg-white shadow-sm">
+    <>
+      {/* Semi-transparent Backdrop Overlay when Mobile Menu is Open */}
+      {isMenuOpen && (
+        <div
+          className="fixed inset-0 top-14 bg-slate-900/40 backdrop-blur-xs z-40 md:hidden animate-fade-in cursor-pointer"
+          onClick={() => setIsMenuOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+      <nav ref={navRef} className="sticky top-0 z-50 border-b border-[#e5e7eb] bg-white shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-14">
           {/* Logo */}
@@ -292,116 +340,186 @@ const Navbar = () => {
 
         {/* Mobile Menu */}
         {isMenuOpen && (
-          <div className="md:hidden py-4 space-y-3 animate-fade-in-down">
-
-            <Link
-              to="/"
-              onClick={(e) => {
-                setIsMenuOpen(false);
-                handleHomeClick(e);
-              }}
-              className="flex items-center gap-2 rounded-lg px-3 py-2 font-semibold text-[#1a1a1a] transition-colors hover:bg-[#f8f9fb] hover:text-[#4f46e5]"
-            >
-              <MapPin className="h-4 w-4 text-rose-500 shrink-0" />
-              <span>Nearby Map (GPS)</span>
-            </Link>
-
-            <Link
-              to="/contractor-hub"
-              onClick={() => {
-                setIsMenuOpen(false);
-                window.scrollTo({ top: 0, behavior: "instant" });
-              }}
-              className="flex items-center gap-2 rounded-lg px-3 py-2 font-bold text-amber-800 bg-amber-50 border border-amber-200 transition-colors"
-            >
-              <Building2 className="h-4 w-4 text-amber-600 shrink-0" />
-              <span>Contractors & Site Work</span>
-            </Link>
-
-            <Link
-              to="/services"
-              onClick={() => {
-                setIsMenuOpen(false);
-                window.scrollTo({ top: 0, behavior: "instant" });
-              }}
-              className="flex items-center gap-2 rounded-lg px-3 py-2 font-semibold text-[#1a1a1a] transition-colors hover:bg-[#f8f9fb] hover:text-[#4f46e5]"
-            >
-              <Globe className="h-4 w-4 text-blue-600 shrink-0" />
-              <span>All India Services (City Search)</span>
-            </Link>
-
-            {isAuthenticated && activeRole === "seller" ? (
-              <>
-                <Link
-                  to="/seller/services"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="block rounded-lg px-3 py-2 font-semibold text-[#1a1a1a] transition-colors hover:bg-[#f8f9fb] hover:text-[#4f46e5]"
-                >
-                  My Services
-                </Link>
-                <Link
-                  to="/seller/dashboard"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="block rounded-lg px-3 py-2 font-semibold text-[#1a1a1a] transition-colors hover:bg-[#f8f9fb] hover:text-[#4f46e5]"
-                >
-                  Dashboard
-                </Link>
-              </>
-            ) : isAuthenticated && (
-              <Link
-                to="/my-bookings"
-                onClick={() => setIsMenuOpen(false)}
-                className="block rounded-lg px-3 py-2 font-semibold text-[#1a1a1a] transition-colors hover:bg-[#f8f9fb] hover:text-[#4f46e5]"
-              >
-                My Bookings
-              </Link>
-            )}
-
-            {user ? (
-              <div className="space-y-3 pt-2">
-                <div className="flex justify-center">
-                  <ProfileDropdown user={user} onLogout={handleLogout} />
-                </div>
+          <div className="md:hidden border-t border-slate-100 bg-white px-2 py-4 space-y-4 shadow-xl animate-fade-in">
+            {/* Primary Navigation Links */}
+            <div className="space-y-1">
+              <div className="px-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                Explore Services
               </div>
-            ) : (
-              <>
-                <Link
-                  to="/login"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="block rounded-lg px-3 py-2 font-semibold text-[#1a1a1a] transition-colors hover:bg-[#f8f9fb] hover:text-[#4f46e5]"
-                >
-                  Login
-                </Link>
-                <div className="rounded-xl border border-[#e5e7eb] bg-white p-3">
-                  <div className="mb-1 font-semibold text-[#1a1a1a]">
-                    Become a partner
+
+              <Link
+                to="/"
+                onClick={(e) => {
+                  setIsMenuOpen(false);
+                  handleHomeClick(e);
+                }}
+                className="flex items-center justify-between rounded-xl px-3 py-2.5 font-semibold text-slate-700 hover:bg-sky-50 hover:text-[#0284c7] transition"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50 text-rose-500">
+                    <MapPin className="h-4 w-4" />
                   </div>
-                  <div className="mb-2 text-xs leading-relaxed text-[#6b7280]">
-                    Seller registration and onboarding form.
-                  </div>
-                  <Link
-                    to="/seller-register"
-                    onClick={() => setIsMenuOpen(false)}
-                    className="btn-partner-register"
-                  >
-                    Register as Seller
-                  </Link>
+                  <span>Nearby Map (GPS)</span>
                 </div>
+                <ChevronRight className="h-4 w-4 text-slate-300" />
+              </Link>
+
+              <Link
+                to="/contractor-hub"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  window.scrollTo({ top: 0, behavior: "instant" });
+                }}
+                className="flex items-center justify-between rounded-xl px-3 py-2.5 font-bold text-amber-900 bg-amber-50/80 border border-amber-200/70 hover:bg-amber-100/60 transition"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500 text-white">
+                    <Building2 className="h-4 w-4" />
+                  </div>
+                  <span>Contractors &amp; Site Work</span>
+                </div>
+                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-amber-200/80 text-amber-900">
+                  Site Work
+                </span>
+              </Link>
+
+              <Link
+                to="/services"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  window.scrollTo({ top: 0, behavior: "instant" });
+                }}
+                className="flex items-center justify-between rounded-xl px-3 py-2.5 font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                    <Globe className="h-4 w-4" />
+                  </div>
+                  <span>All India Services (City Search)</span>
+                </div>
+                <ChevronRight className="h-4 w-4 text-slate-300" />
+              </Link>
+
+              {isAuthenticated && activeRole === "seller" ? (
+                <>
+                  <Link
+                    to="/seller/services"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center justify-between rounded-xl px-3 py-2.5 font-semibold text-slate-700 hover:bg-amber-50 hover:text-amber-700 transition"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
+                        <Wrench className="h-4 w-4" />
+                      </div>
+                      <span>My Services</span>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-slate-300" />
+                  </Link>
+                  <Link
+                    to="/seller/dashboard"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center justify-between rounded-xl px-3 py-2.5 font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
+                        <LayoutDashboard className="h-4 w-4" />
+                      </div>
+                      <span>Dashboard</span>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-slate-300" />
+                  </Link>
+                </>
+              ) : isAuthenticated && (
                 <Link
-                  to="/register"
+                  to="/my-bookings"
                   onClick={() => setIsMenuOpen(false)}
-                  className="block btn btn-primary w-full text-center"
+                  className="flex items-center justify-between rounded-xl px-3 py-2.5 font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-600 transition"
                 >
-                  Register
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+                      <CalendarCheck className="h-4 w-4" />
+                    </div>
+                    <span>My Bookings</span>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-slate-300" />
                 </Link>
-              </>
-            )}
+              )}
+            </div>
+
+            {/* Account & Login Section */}
+            <div className="pt-2 border-t border-slate-100 space-y-2.5">
+              {user ? (
+                <div className="bg-slate-50 rounded-2xl p-3.5 border border-slate-200/80 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-[#0284c7] to-indigo-600 font-bold text-white shadow-sm">
+                      {getInitials(user.name)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-bold text-slate-800 text-sm truncate">{user.name}</h4>
+                      <p className="text-xs text-slate-500 truncate">{user.email || user.phone}</p>
+                    </div>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize ${activeRole === "seller" ? "bg-sky-100 text-sky-800" : "bg-emerald-100 text-emerald-800"}`}>
+                      {activeRole || "User"}
+                    </span>
+                  </div>
+
+                  {/* Role / Workspace Switcher */}
+                  <WorkspaceSwitcher onClose={() => setIsMenuOpen(false)} />
+
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border border-red-200 bg-red-50 text-red-600 font-bold text-sm hover:bg-red-100 transition cursor-pointer"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    <span>Log Out</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  <div className="px-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    Account &amp; Access
+                  </div>
+
+                  {/* Prominent, Clearly Visible Log In Button */}
+                  <Link
+                    to="/login"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl bg-[#0284c7] hover:bg-sky-700 text-white font-bold text-base shadow-md shadow-sky-500/20 active:scale-[0.98] transition cursor-pointer"
+                  >
+                    <LogIn className="h-5 w-5" />
+                    <span>Log In</span>
+                  </Link>
+
+                  {/* Clean Side-by-Side Action Buttons */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <Link
+                      to="/register"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-sm shadow-sm transition"
+                    >
+                      <UserPlus className="h-4 w-4 text-slate-500" />
+                      <span>Register</span>
+                    </Link>
+
+                    <Link
+                      to="/seller-register"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl border border-amber-300/80 bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 text-amber-900 font-bold text-sm shadow-sm transition"
+                    >
+                      <Briefcase className="h-4 w-4 text-amber-600" />
+                      <span>Become Partner</span>
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
       <SearchOverlay isOpen={isSearchOverlayOpen} onClose={() => setIsSearchOverlayOpen(false)} />
     </nav>
-  );
+  </>
+);
 };
 
 export default Navbar;

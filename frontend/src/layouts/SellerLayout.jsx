@@ -70,8 +70,8 @@ function SellerNavLink({ item, onClick, pendingOrdersCount = 0, unreadLeadsCount
 
 function SellerSidebar({ user, onLogout, onNavigate, pendingOrdersCount = 0, unreadLeadsCount = 0, onToggleAvailability, onClose }) {
   return (
-    <div className="flex h-full flex-col border-r border-[#e5e7eb] bg-white px-4 py-4 pb-24 text-[#1a1a1a]">
-      <div className="mb-4 flex flex-col gap-2">
+    <div className="flex h-full flex-col overflow-y-auto no-scrollbar border-r border-slate-200 bg-white px-4 py-4 text-slate-800">
+      <div className="mb-4 flex flex-col gap-2 shrink-0">
         <div className="flex items-center justify-between">
           <div>
             <div className="text-2xl font-black tracking-normal text-[#1a1a1a]">
@@ -115,7 +115,7 @@ function SellerSidebar({ user, onLogout, onNavigate, pendingOrdersCount = 0, unr
         )}
       </div>
 
-      <nav className="flex-1 space-y-1 overflow-y-auto no-scrollbar">
+      <nav className="flex-1 min-h-0 space-y-1 overflow-y-auto no-scrollbar py-2">
         {navItems.map((item) => (
           <SellerNavLink
             key={item.path}
@@ -127,35 +127,52 @@ function SellerSidebar({ user, onLogout, onNavigate, pendingOrdersCount = 0, unr
         ))}
       </nav>
 
-      <div className="border-t border-[#e5e7eb] pt-2.5 mt-2.5">
-        <div className="mb-2.5 flex items-center gap-3 rounded-lg border border-[#e5e7eb] bg-[#f8f9fb] p-2.5">
-          {user?.profile_pic ? (
-            <img
-              src={getImageUrl(user.profile_pic)}
-              alt="Profile"
-              className="h-9 w-9 shrink-0 rounded-full object-cover border border-[#e5e7eb]"
-            />
-          ) : (
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0284c7] text-sm font-bold text-white">
-              {getInitial(user?.name)}
-            </div>
-          )}
-          <div className="min-w-0">
-            <div className="truncate text-sm font-bold text-[#1a1a1a]">
-              {user?.name || "Seller"}
-            </div>
-            <div className="truncate text-xs text-[#6b7280]">
-              {user?.email || user?.phone || "QuickSeva partner"}
-            </div>
-          </div>
-        </div>
-        <WorkspaceSwitcher layout="sidebar" />
+      <div className="mt-auto shrink-0 border-t border-slate-200/90 pt-3 pb-8 lg:pb-0">
         <button
           type="button"
-          onClick={onLogout}
-          className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#e53935]/30 bg-[#e53935]/10 px-3 py-2 text-sm font-semibold text-[#e53935] transition hover:-translate-y-0.5 hover:bg-[#e53935]/15 hover:shadow-[0_10px_22px_-14px_#e53935]"
+          onClick={() => {
+            navigate("/seller/profile");
+            if (onNavigate) onNavigate();
+          }}
+          className="mb-3 flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-left hover:bg-blue-50 hover:border-blue-200 transition cursor-pointer group"
         >
-          <LogOut size={17} />
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-sm font-black text-white shadow-sm overflow-hidden border border-blue-400/30">
+            {user?.profile_pic ? (
+              <img
+                src={getImageUrl(user.profile_pic)}
+                alt={user?.name || "Profile"}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.style.display = "none";
+                }}
+              />
+            ) : null}
+            {(!user?.profile_pic || user?.profile_pic.includes("undefined")) && (
+              <span>{getInitial(user?.name)}</span>
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-sm font-bold text-slate-900 group-hover:text-blue-700">
+              {user?.business_name || user?.name || "Seller"}
+            </div>
+            <div className="truncate text-xs text-slate-500 font-medium">
+              {user?.phone || user?.email || "Edit Seller Profile →"}
+            </div>
+          </div>
+        </button>
+
+        <WorkspaceSwitcher layout="sidebar" onClose={onNavigate} />
+
+        <button
+          type="button"
+          onClick={() => {
+            if (onLogout) onLogout();
+            if (onNavigate) onNavigate();
+          }}
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-xs font-bold text-rose-600 transition hover:bg-rose-100 cursor-pointer shadow-xs active:scale-98"
+        >
+          <LogOut size={16} />
           Logout
         </button>
       </div>

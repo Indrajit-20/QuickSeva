@@ -109,6 +109,14 @@ export const logoutUser = async () => {
   return unwrapSuccessData(response.data);
 };
 
+export const updateUserProfile = async (profileData) => {
+  const isFormData = profileData instanceof FormData;
+  const response = await apiClient.put("/users/profile", profileData, {
+    headers: isFormData ? { "Content-Type": "multipart/form-data" } : {},
+  });
+  return unwrapSuccessData(response.data);
+};
+
 // ========================================
 // Error normalization helper
 // ========================================

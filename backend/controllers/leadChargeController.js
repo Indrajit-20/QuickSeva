@@ -1,6 +1,7 @@
 const { successRes, errorRes } = require("../utils/helpers");
 const { chargeSellerForLead } = require("../services/leadChargeService");
 const LeadChargeModel = require("../models/leadChargeModel");
+const { pool } = require("../config/db");
 
 exports.chargeLead = async (req, res) => {
   try {
@@ -19,7 +20,13 @@ exports.chargeLead = async (req, res) => {
       source,
     );
 
-    return successRes(res, { charged }, "Lead charge processed");
+    const [sellerRows] = await pool.query(
+      "SELECT phone FROM sellers WHERE id = ?",
+      [sellerId]
+    );
+    const phone = sellerRows.length > 0 ? sellerRows[0].phone : null;
+
+    return successRes(res, { charged, phone }, "Lead charge processed");
   } catch (err) {
     if (String(err?.message || "").includes("Insufficient wallet balance")) {
       return errorRes(res, "This service provider is temporarily unable to receive new leads.", 400);
@@ -44,7 +51,18 @@ exports.checkLeadCharge = async (req, res) => {
       service_id: serviceId,
     });
 
-    return successRes(res, { exists: !!existing }, "Lead check processed");
+    let phone = null;
+    if (existing) {
+      const [sellerRows] = await pool.query(
+        "SELECT phone FROM sellers WHERE id = ?",
+        [sellerId]
+      );
+      if (sellerRows.length > 0) {
+        phone = sellerRows[0].phone;
+      }
+    }
+
+    return successRes(res, { exists: !!existing, phone }, "Lead check processed");
   } catch (err) {
     console.error("checkLeadCharge error:", err);
     return errorRes(res, "Failed to check lead status");

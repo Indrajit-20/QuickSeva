@@ -8,8 +8,10 @@ const bcrypt = require("bcryptjs");
 const { normalizeIndianMobile } = require("../utils/phoneUtils");
 const { verifyWith2Factor } = require("./authController");
 
+let columnsEnsured = false;
 // Ensure seller table scheduling and capacity columns exist
 const ensureSellerScheduleColumns = async () => {
+  if (columnsEnsured) return;
   try {
     await pool.query("ALTER TABLE sellers ADD COLUMN account_type VARCHAR(50) DEFAULT 'individual'");
   } catch (e) {}
@@ -25,6 +27,7 @@ const ensureSellerScheduleColumns = async () => {
   try {
     await pool.query("ALTER TABLE sellers ADD COLUMN working_hours_end VARCHAR(10) DEFAULT '19:00'");
   } catch (e) {}
+  columnsEnsured = true;
 };
 
 // Create seller profile (buyer becomes seller)
@@ -133,6 +136,15 @@ exports.getSellerById = async (req, res) => {
             );
             if (orderRows && orderRows.length > 0) {
               isAuthorized = true;
+            } else {
+              // Check if user has purchased lead/viewed contact for this seller
+              const [leadRows] = await pool.query(
+                "SELECT id FROM lead_charges WHERE seller_id = ? AND buyer_id = ? LIMIT 1",
+                [seller.id, reqUserId]
+              );
+              if (leadRows && leadRows.length > 0) {
+                isAuthorized = true;
+              }
             }
           }
         }
@@ -541,7 +553,7 @@ exports.registerSeller = async (req, res) => {
 
     res.cookie("authToken", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: false, // Must be false for HTTP testing on VPS (without SSL/HTTPS)
       sameSite: "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });

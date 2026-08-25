@@ -15,6 +15,13 @@ const {
   exportBookingsCSV,
   bulkImportServices,
   sendBulkWhatsApp,
+  getContractorVerifications,
+  reviewContractorVerification,
+  getAdminContractorPosts,
+  updateAdminContractorPostStatus,
+  getAdminQuoteRequests,
+  updateAdminQuoteRequestStatus,
+  getAdminContractorAnalytics,
 } = require("../controllers/adminController");
 
 // Apply admin protection to all routes in this file
@@ -26,6 +33,15 @@ router.get("/stats", getStats);
 // Users and Sellers Management
 router.get("/users", getUsers);
 router.get("/sellers", getSellers);
+
+// Contractor Verifications & Posts Moderation Management
+router.get("/contractor-verifications", getContractorVerifications);
+router.patch("/contractor-verifications/:id", reviewContractorVerification);
+router.get("/contractor-posts", getAdminContractorPosts);
+router.patch("/contractor-posts/:id/status", updateAdminContractorPostStatus);
+router.get("/quote-requests", getAdminQuoteRequests);
+router.patch("/quote-requests/:id/status", updateAdminQuoteRequestStatus);
+router.get("/contractor-analytics", getAdminContractorAnalytics);
 
 // Excel / CSV Exports
 router.get("/export/users", exportUsersCSV);

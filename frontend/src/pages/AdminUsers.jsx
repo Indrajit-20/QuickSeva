@@ -303,9 +303,10 @@ const AdminUsers = () => {
               </h3>
               <button
                 onClick={() => setShowWalletModal(false)}
-                className="text-slate-400 hover:text-slate-600 cursor-pointer p-1"
+                className="h-7 w-7 rounded-full bg-slate-900 border border-slate-700 hover:bg-rose-600 text-white flex items-center justify-center transition cursor-pointer shadow-sm active:scale-95"
+                title="Close"
               >
-                <X size={16} />
+                <X size={14} strokeWidth={2.5} />
               </button>
             </div>
 

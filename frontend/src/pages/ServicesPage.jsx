@@ -120,9 +120,9 @@ function getDistanceKm(lat1, lng1, lat2, lng2) {
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos((nLat1 * Math.PI) / 180) *
-      Math.cos((nLat2 * Math.PI) / 180) *
-      Math.sin(dLng / 2) *
-      Math.sin(dLng / 2);
+    Math.cos((nLat2 * Math.PI) / 180) *
+    Math.sin(dLng / 2) *
+    Math.sin(dLng / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
@@ -144,18 +144,18 @@ const fetchSellersByKeyword = async (keyword, category, state = "", city = "", p
     }
     if (state) params.state = state;
     if (city) params.city = city;
-    
+
     const res = await apiClient.get("/services/search", { params });
     const services = res?.data?.data?.services || res?.data?.services || [];
     const sellerMap = new Map();
     services.forEach((svc) => {
       const sid = svc.seller_id;
       if (!sid || sellerMap.has(sid)) return;
-      
+
       const cityVal = svc.city || "";
       const stateVal = svc.state || "";
       const formattedAddress = svc.address || (cityVal ? `${cityVal}${stateVal ? `, ${stateVal}` : ""}` : "");
-      
+
       sellerMap.set(sid, {
         id: sid,
         name: svc.business_name || svc.seller_business_name || svc.seller_name || "Seller",
@@ -376,9 +376,9 @@ export default function ServicesPage() {
     const nextPage = page + 1;
     const qParam = searchParams.get("q") || "";
     const catParam = searchParams.get("category") || "";
-    
+
     const res = await fetchSellersByKeyword(qParam, catParam, selectedState, selectedCity, nextPage);
-    
+
     setSellers((prev) => {
       const existingIds = new Set(prev.map((s) => s.id));
       const filteredNew = res.sellers.filter((s) => !existingIds.has(s.id));
@@ -403,7 +403,7 @@ export default function ServicesPage() {
   const renderSellerCard = (seller) => {
     const serviceType = seller?.service || "";
     const isPremium = Boolean(seller?.isPremium);
-    
+
     // Calculate distance with seller coords fallback
     const sellerCoords = getSellerCoords(seller);
     const distanceKm = userLocation
@@ -537,9 +537,8 @@ export default function ServicesPage() {
                       key={`${opt.type}-${opt.label}-${idx}`}
                       onClick={() => handleSelectOption(opt)}
                       onMouseEnter={() => setSelectedIndex(idx)}
-                      className={`flex items-center justify-between px-4 py-3 cursor-pointer transition-colors ${
-                        isSelected ? "bg-blue-50 text-blue-700" : "hover:bg-slate-50 text-slate-700"
-                      }`}
+                      className={`flex items-center justify-between px-4 py-3 cursor-pointer transition-colors ${isSelected ? "bg-blue-50 text-blue-700" : "hover:bg-slate-50 text-slate-700"
+                        }`}
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="shrink-0 p-2 rounded-lg bg-slate-100/80">
@@ -559,44 +558,63 @@ export default function ServicesPage() {
           )}
         </div>
 
-        {/* Location Selector Bar */}
-        <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-              <SlidersHorizontal className="w-5 h-5" />
-            </div>
-            <div className="text-left">
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-slate-800">Pan-India & City Directory</h3>
-                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200">
-                  All India
-                </span>
+        {/* Location Selector Bar — Compact Mobile Layout */}
+        <div className="bg-white p-3.5 sm:p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="flex h-8 w-8 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                <SlidersHorizontal className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
-              <p className="text-xs text-slate-500 font-medium mt-0.5">
-                Browse sellers across Gujarat & India by State & City (or tap 📍 Nearby for GPS map search)
-              </p>
+              <div className="text-left min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <h3 className="text-xs sm:text-sm font-bold text-slate-800 truncate">Directory Filter</h3>
+                  <span className="text-[10px] sm:text-xs font-extrabold uppercase px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                    All India
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 font-medium hidden sm:block">
+                  Browse sellers across Gujarat & India by State & City or use GPS map search
+                </p>
+              </div>
             </div>
+
+            {/* Compact Detect GPS Button Header Right */}
+            <button
+              type="button"
+              onClick={detectLocation}
+              disabled={isLocating}
+              className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold text-[11px] sm:text-xs px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-xl transition cursor-pointer flex items-center gap-1 shadow-2xs active:scale-95 disabled:opacity-60 shrink-0"
+              title="Detect GPS location for distance calculation"
+            >
+              {isLocating ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <Navigation className="w-3 h-3 fill-emerald-600 text-emerald-600" />
+              )}
+              <span>GPS</span>
+            </button>
           </div>
-          
-          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-            {/* Country (Locked to India) */}
-            <div className="flex flex-col gap-1 w-full sm:flex-1 md:w-32">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 text-left">Country</label>
-              <div className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 flex items-center gap-1.5 shadow-sm min-h-[38px]">
+
+          {/* 2-Column Grid Filter Inputs on Mobile */}
+          <div className="grid grid-cols-2 md:flex md:flex-wrap items-center gap-2">
+            {/* Country (Hidden on Mobile, Inline Desktop) */}
+            <div className="hidden md:flex flex-col gap-0.5 w-28">
+              <label className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-400 text-left">Country</label>
+              <div className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-700 flex items-center gap-1 min-h-[34px]">
                 <span>🇮🇳</span> India
               </div>
             </div>
 
             {/* State select */}
-            <div className="flex flex-col gap-1 w-full sm:flex-1 md:w-44">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 text-left">State</label>
+            <div className="flex flex-col gap-0.5 w-full md:w-40">
+              <label className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-400 text-left">State</label>
               <select
                 value={selectedState}
                 onChange={(e) => {
                   setSelectedState(e.target.value);
                   setSelectedCity("");
                 }}
-                className="w-full bg-slate-50 border border-slate-200 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-xl px-3 py-2 text-sm font-semibold text-slate-750 shadow-sm outline-none transition cursor-pointer min-h-[38px]"
+                className="w-full bg-slate-50 border border-slate-200 hover:border-blue-400 focus:border-blue-500 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-800 shadow-2xs outline-none transition cursor-pointer min-h-[34px]"
               >
                 <option value="">All States</option>
                 {Object.keys(INDIAN_STATES_AND_CITIES).map((st) => (
@@ -606,13 +624,13 @@ export default function ServicesPage() {
             </div>
 
             {/* City select */}
-            <div className="flex flex-col gap-1 w-full sm:flex-1 md:w-44">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 text-left">City</label>
+            <div className="flex flex-col gap-0.5 w-full md:w-40">
+              <label className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-400 text-left">City</label>
               <select
                 value={selectedCity}
                 onChange={(e) => setSelectedCity(e.target.value)}
                 disabled={!selectedState}
-                className="w-full bg-slate-50 border border-slate-200 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-xl px-3 py-2 text-sm font-semibold text-slate-750 shadow-sm outline-none transition cursor-pointer disabled:opacity-50 disabled:bg-slate-100 disabled:cursor-not-allowed min-h-[38px]"
+                className="w-full bg-slate-50 border border-slate-200 hover:border-blue-400 focus:border-blue-500 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-800 shadow-2xs outline-none transition cursor-pointer disabled:opacity-50 disabled:bg-slate-100 disabled:cursor-not-allowed min-h-[34px]"
               >
                 <option value="">All Cities</option>
                 {selectedState && INDIAN_STATES_AND_CITIES[selectedState]?.map((ct) => (
@@ -622,12 +640,12 @@ export default function ServicesPage() {
             </div>
 
             {/* Price Filter */}
-            <div className="flex flex-col gap-1 w-full sm:flex-1 md:w-36">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 text-left">Price Range</label>
+            <div className="flex flex-col gap-0.5 w-full md:w-36">
+              <label className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-400 text-left">Price</label>
               <select
                 value={filterPrice}
                 onChange={(e) => setFilterPrice(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-xl px-3 py-2 text-sm font-semibold text-slate-750 shadow-sm outline-none transition cursor-pointer min-h-[38px]"
+                className="w-full bg-slate-50 border border-slate-200 hover:border-blue-400 focus:border-blue-500 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-800 shadow-2xs outline-none transition cursor-pointer min-h-[34px]"
               >
                 <option value="all">All Prices</option>
                 <option value="under500">Under ₹500</option>
@@ -638,55 +656,35 @@ export default function ServicesPage() {
             </div>
 
             {/* Sort By Filter */}
-            <div className="flex flex-col gap-1 w-full sm:flex-1 md:w-40">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 text-left">Sort By</label>
+            <div className="flex flex-col gap-0.5 w-full md:w-36">
+              <label className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-400 text-left">Sort By</label>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-xl px-3 py-2 text-sm font-semibold text-slate-750 shadow-sm outline-none transition cursor-pointer min-h-[38px]"
+                className="w-full bg-slate-50 border border-slate-200 hover:border-blue-400 focus:border-blue-500 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-800 shadow-2xs outline-none transition cursor-pointer min-h-[34px]"
               >
                 <option value="recommended">Recommended</option>
-                <option value="price_low">Price: Low to High</option>
-                <option value="price_high">Price: High to Low</option>
+                <option value="price_low">Price: Low → High</option>
+                <option value="price_high">Price: High → Low</option>
                 <option value="rating">Highest Rated</option>
               </select>
             </div>
 
-            {/* Detect Location Button */}
-            <div className="flex flex-col gap-1 w-full sm:flex-1 md:w-auto md:mt-5">
+            {/* Reset Filter Button */}
+            {(selectedState || selectedCity || query || category) && (
               <button
                 type="button"
-                onClick={detectLocation}
-                disabled={isLocating}
-                className="w-full md:w-auto bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold text-xs px-3.5 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-60"
-                title="Detect GPS location for distance calculation"
+                onClick={() => {
+                  setSelectedState("");
+                  setSelectedCity("");
+                  setQuery("");
+                  navigate("/services");
+                }}
+                className="col-span-2 md:col-span-1 text-xs font-bold text-rose-600 hover:text-rose-700 transition cursor-pointer px-2.5 py-1.5 hover:bg-rose-50 rounded-lg flex items-center justify-center gap-1 shrink-0"
               >
-                {isLocating ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <Navigation className="w-3.5 h-3.5 fill-emerald-600 text-emerald-600" />
-                )}
-                <span>Detect GPS</span>
+                <RotateCcw className="w-3 h-3" />
+                <span>Reset Filters</span>
               </button>
-            </div>
-
-            {/* Reset Filter Option */}
-            {(selectedState || selectedCity || query || category) && (
-              <div className="flex flex-col gap-1 w-full sm:flex-1 md:w-auto md:mt-5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedState("");
-                    setSelectedCity("");
-                    setQuery("");
-                    navigate("/services");
-                  }}
-                  className="text-xs font-bold text-red-600 hover:text-red-700 transition cursor-pointer h-fit px-3 py-2 hover:bg-red-50 rounded-xl flex items-center justify-center gap-1"
-                >
-                  <RotateCcw className="w-3 h-3" />
-                  <span>Reset</span>
-                </button>
-              </div>
             )}
           </div>
         </div>
@@ -709,8 +707,8 @@ export default function ServicesPage() {
               {category
                 ? `Providers in '${filteredCategory?.title || category}'`
                 : query
-                ? `Results for '${query}'`
-                : "All Active Service Providers"}
+                  ? `Results for '${query}'`
+                  : "All Active Service Providers"}
             </h2>
           </div>
 

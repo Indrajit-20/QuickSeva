@@ -759,10 +759,10 @@ export default function SellerPackages() {
                 type="button"
                 onClick={closeInvoice}
                 disabled={invoicePrinting}
-                className="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-50 border border-slate-200 text-slate-500 active:scale-90 transition"
+                className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-900 border border-slate-700 hover:bg-rose-600 text-white active:scale-90 transition cursor-pointer shadow-sm"
                 aria-label="Close invoice"
               >
-                <X size={16} />
+                <X size={16} strokeWidth={2.5} />
               </button>
             </div>
 
@@ -873,10 +873,10 @@ export default function SellerPackages() {
                 type="button"
                 onClick={closeConfirmation}
                 disabled={processing}
-                className="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-50 border border-slate-200 text-slate-500 active:scale-90 transition"
+                className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-900 border border-slate-700 hover:bg-rose-600 text-white active:scale-90 transition cursor-pointer shadow-sm"
                 aria-label="Close confirmation"
               >
-                <X size={16} />
+                <X size={16} strokeWidth={2.5} />
               </button>
             </div>
 

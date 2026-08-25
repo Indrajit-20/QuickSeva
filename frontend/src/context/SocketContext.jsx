@@ -50,7 +50,24 @@ export const SocketProvider = ({ children }) => {
         setIsConnected(false);
       });
 
+      // Handle Back-Forward Cache (bfcache) gracefully
+      const handlePageHide = (e) => {
+        if (e.persisted && socketInstance) {
+          socketInstance.disconnect();
+        }
+      };
+      const handlePageShow = (e) => {
+        if (socketInstance) {
+          socketInstance.connect();
+        }
+      };
+
+      window.addEventListener("pagehide", handlePageHide);
+      window.addEventListener("pageshow", handlePageShow);
+
       return () => {
+        window.removeEventListener("pagehide", handlePageHide);
+        window.removeEventListener("pageshow", handlePageShow);
         socketInstance.disconnect();
         setSocket(null);
       };

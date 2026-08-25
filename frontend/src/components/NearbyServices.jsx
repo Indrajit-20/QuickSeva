@@ -3081,9 +3081,10 @@ export default function NearbyServices({
               <button
                 type="button"
                 onClick={() => setShowLocationDrawer(false)}
-                className="h-6 w-6 flex items-center justify-center rounded-full bg-slate-100 hover:bg-red-500 hover:text-white text-slate-500 transition cursor-pointer"
+                className="h-8 w-8 flex items-center justify-center rounded-full bg-slate-900 hover:bg-rose-600 text-white transition cursor-pointer shadow-md active:scale-95 shrink-0"
+                aria-label="Close location drawer"
               >
-                <X className="h-4 w-4" />
+                <X className="h-4.5 w-4.5 text-white stroke-[3]" />
               </button>
             </div>
 

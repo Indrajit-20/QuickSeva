@@ -238,6 +238,16 @@ async function run() {
       ]
     );
 
+    await pool.query(
+      "INSERT INTO policies (`key`, title, content, updated_by) VALUES (?, ?, ?, ?)",
+      [
+        "refund_policy",
+        "Refund & Cancellation Policy",
+        "<h1>Refund & Cancellation Policy</h1><p>Welcome to QuickSeva. We aim to provide transparent and fair guidelines regarding service booking cancellations, wallet topups, and refund processing.</p><p>Customers may cancel pending bookings prior to provider confirmation for a full wallet refund. Lead charges and platform service fees are subject to verification by our support team.</p>",
+        adminId
+      ]
+    );
+
     // 9. Seed Admin User in users table
     console.log("Seeding admin user in users table...");
     const [adminUserRes] = await pool.query(

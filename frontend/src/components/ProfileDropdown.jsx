@@ -215,7 +215,9 @@ export default function ProfileDropdown({ user, onLogout }) {
               </div>
 
               {/* Workspace Switcher */}
-              <WorkspaceSwitcher layout="dropdown" onClose={() => setOpen(false)} />
+              <div className="px-5 py-3 border-y border-slate-100 bg-slate-50/50">
+                <WorkspaceSwitcher onClose={() => setOpen(false)} />
+              </div>
 
               {/* Navigation Action Buttons */}
               <div className="px-5 mt-4 space-y-2.5">
@@ -365,7 +367,9 @@ export default function ProfileDropdown({ user, onLogout }) {
               </div>
 
               {/* Workspace Selector Segment */}
-              <WorkspaceSwitcher layout="dropdown" onClose={() => setOpen(false)} />
+              <div className="px-4 py-3 border-y border-slate-100 bg-slate-50/50">
+                <WorkspaceSwitcher onClose={() => setOpen(false)} />
+              </div>
 
               {/* Links & Logout Actions */}
               <div className="p-4 space-y-2.5">

@@ -21,6 +21,8 @@ import {
 import apiClient from "../api/axiosConfig";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
+import { getUserLocation } from "../utils/getLocation";
+import SellerProfileSkeleton from "../components/SellerProfileSkeleton";
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -250,39 +252,39 @@ export default function SellerPublicProfile() {
 
     if (isOnlineCapable) {
       setDistanceLabel("🌐 Works Across India");
-      return undefined;
+      return;
     }
 
     if (
       !seller ||
       typeof seller.lat !== "number" ||
-      typeof seller.lng !== "number" ||
-      !navigator.geolocation
+      typeof seller.lng !== "number"
     ) {
-      return undefined;
+      return;
     }
 
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const km = getDistanceKm(
-          pos.coords.latitude,
-          pos.coords.longitude,
-          seller.lat,
-          seller.lng,
-        );
-        setDistanceLabel(`${km.toFixed(1)} km away`);
-      },
-      () => { },
-      { enableHighAccuracy: true, timeout: 10000 },
-    );
-
-    return undefined;
-  }, [seller]);
+    getUserLocation()
+      .then((loc) => {
+        if (loc && typeof loc.lat === "number" && typeof loc.lng === "number") {
+          const km = getDistanceKm(
+            loc.lat,
+            loc.lng,
+            seller.lat,
+            seller.lng,
+          );
+          setDistanceLabel(`${km.toFixed(1)} km away`);
+        }
+      })
+      .catch(() => {});
+  }, [seller?.lat, seller?.lng, seller?.serviceMode]);
 
   // Check if lead has already been charged whenever selectedService, seller or auth status changes.
   // This ensures that refreshing the page retains access if already paid.
+  const firstServiceId = services[0]?.id;
+  const selectedServiceId = selectedService?.id;
+
   useEffect(() => {
-    if (!selectedService || !seller?.id || !isAuthenticated) {
+    if (!seller?.id || !isAuthenticated) {
       setShowContact(false);
       return;
     }
@@ -290,16 +292,23 @@ export default function SellerPublicProfile() {
     let active = true;
     (async () => {
       try {
+        const targetServiceId = selectedServiceId || firstServiceId;
+        if (!targetServiceId) return;
+
         const res = await apiClient.get(`/leads/check`, {
           params: {
             sellerId: seller.id,
-            serviceId: selectedService.id,
+            serviceId: targetServiceId,
           },
         });
         if (active) {
           if (res?.data?.data?.exists || res?.data?.exists) {
             setShowContact(true);
             setContactError("");
+            const unmaskedPhone = res?.data?.data?.phone || res?.data?.phone;
+            if (unmaskedPhone) {
+              setSeller((prev) => (prev?.phone === unmaskedPhone ? prev : { ...prev, phone: unmaskedPhone }));
+            }
           } else {
             setShowContact(false);
           }
@@ -314,17 +323,10 @@ export default function SellerPublicProfile() {
     return () => {
       active = false;
     };
-  }, [selectedService, seller, isAuthenticated]);
+  }, [selectedServiceId, seller?.id, isAuthenticated, firstServiceId]);
 
   if (sellerLoading) {
-    return (
-      <main className="min-h-screen flex flex-col items-center justify-center bg-slate-50 text-slate-800 px-4 py-10">
-        <div className="mx-auto max-w-sm w-full rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-xl flex flex-col items-center gap-4">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-100 border-t-indigo-600" />
-          <h1 className="text-sm font-bold text-slate-600">Loading seller profile…</h1>
-        </div>
-      </main>
-    );
+    return <SellerProfileSkeleton />;
   }
 
   if (!seller) {
@@ -383,8 +385,9 @@ export default function SellerPublicProfile() {
       setContactError("Login is required to view contact details.");
       return;
     }
-    if (!selectedService) {
-      setContactError("Select a service first.");
+    const targetService = selectedService || services[0];
+    if (!targetService) {
+      setContactError("No service available for this seller.");
       return;
     }
     if (!seller?.id) {
@@ -398,16 +401,24 @@ export default function SellerPublicProfile() {
     try {
       const res = await apiClient.post("/leads/charge", {
         sellerId: seller.id,
-        serviceId: selectedService.id,
+        serviceId: targetService.id,
         source: "contact_view",
       });
 
-      if (res?.data?.charged) {
-        setShowContact(true);
+      const unmaskedPhone = res?.data?.data?.phone || res?.data?.phone;
+      if (unmaskedPhone) {
+        setSeller((prev) => ({ ...prev, phone: unmaskedPhone }));
       } else {
-        // Already charged for this buyer->seller->service; still reveal
-        setShowContact(true);
+        const sellerRes = await apiClient.get(`/sellers/${seller.id}`);
+        const rawSeller = sellerRes?.data?.data?.seller || sellerRes?.data?.seller;
+        if (rawSeller?.phone) {
+          setSeller((prev) => ({ ...prev, phone: rawSeller.phone }));
+        }
       }
+      if (!selectedService) {
+        setSelectedService(targetService);
+      }
+      setShowContact(true);
     } catch (err) {
       setContactError(
         err?.response?.data?.message || "Failed to reveal contact.",
@@ -418,148 +429,152 @@ export default function SellerPublicProfile() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-8 text-slate-800">
-      <div className="mx-auto max-w-6xl space-y-5">
+    <main className="min-h-screen bg-slate-50 px-3 py-4 sm:px-4 sm:py-8 text-slate-800">
+      <div className="mx-auto max-w-6xl space-y-4">
         <button
           type="button"
           onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 transition shadow-sm"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition shadow-sm"
         >
-          <ArrowLeft size={16} />
+          <ArrowLeft size={14} />
           Back
         </button>
 
-        <section className="grid gap-5 lg:grid-cols-[1fr_380px]">
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm text-center flex flex-col items-center">
-            {/* Centered Profile Avatar */}
-            {seller.profile_picture_url || seller.profile_pic ? (
-              <img
-                src={getImageUrl(seller.profile_picture_url || seller.profile_pic)}
-                alt="Profile"
-                className="h-24 w-24 rounded-full border-4 border-indigo-500/10 object-cover shadow-xl cursor-pointer hover:scale-105 transition duration-200"
-                onClick={() => {
-                  const pic = seller.profile_picture_url || seller.profile_pic;
-                  if (pic) {
-                    setLightboxImages([pic]);
-                    setLightboxIndex(0);
-                  }
-                }}
-              />
-            ) : (
-              <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 text-3xl font-semibold text-white force-text-white shadow-xl">
-                {avatarLetter}
+        {/* ── COMPACT MOBILE PROFILE HEADER ── */}
+        <section className="grid gap-4 lg:grid-cols-[1fr_360px]">
+          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+            {/* Horizontal avatar + info strip */}
+            <div className="flex items-center gap-3 p-4 border-b border-slate-100">
+              {/* Avatar */}
+              <div className="shrink-0">
+                {seller.profile_picture_url || seller.profile_pic ? (
+                  <img
+                    src={getImageUrl(seller.profile_picture_url || seller.profile_pic)}
+                    alt="Profile"
+                    className="h-16 w-16 rounded-xl border-2 border-indigo-500/10 object-cover shadow-md cursor-pointer hover:scale-105 transition duration-200"
+                    onClick={() => {
+                      const pic = seller.profile_picture_url || seller.profile_pic;
+                      if (pic) { setLightboxImages([pic]); setLightboxIndex(0); }
+                    }}
+                  />
+                ) : (
+                  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 text-2xl font-bold text-white force-text-white shadow-md">
+                    {avatarLetter}
+                  </div>
+                )}
               </div>
-            )}
 
-            {/* Center-aligned Name and Category */}
-            <h1 className="mt-4 text-2xl font-bold tracking-tight text-slate-800 flex items-center gap-2 justify-center">
-              {seller.name}
-            </h1>
-
-            <div className="mt-2 flex flex-wrap gap-2 justify-center items-center">
-              {seller.is_available === 0 || seller.is_available === false ? (
-                <span className="rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-bold text-amber-800 flex items-center gap-1">
-                  <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-                  🔴 Offline (Scheduled Only)
-                </span>
-              ) : (
-                <span className="rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-800 flex items-center gap-1">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                  🟢 Live &amp; Available
-                </span>
-              )}
-              <span className="rounded-full border border-purple-200 bg-purple-50 px-3 py-1 text-xs font-semibold text-purple-700">
-                {seller.service || "Service Provider"}
-              </span>
-              {seller.experience_yrs !== undefined && (
-                <span className="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
-                  {seller.experience_yrs} Years Experience
-                </span>
-              )}
-              {seller.seller_type && (
-                <span className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700 capitalize">
-                  {seller.seller_type === "agency" ? "Contractor / Agency" : seller.seller_type}
-                </span>
-              )}
+              {/* Name + status + service side-by-side */}
+              <div className="flex-1 min-w-0">
+                <h1 className="text-base sm:text-lg font-bold tracking-tight text-slate-900 leading-tight">
+                  {seller.name}
+                </h1>
+                <div className="mt-1 flex flex-wrap gap-1.5 items-center">
+                  {seller.is_available === 0 || seller.is_available === false ? (
+                    <span className="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs font-bold text-amber-800 flex items-center gap-1">
+                      <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+                      Offline
+                    </span>
+                  ) : (
+                    <span className="rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-800 flex items-center gap-1">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      Live &amp; Available
+                    </span>
+                  )}
+                  <span className="rounded-full border border-purple-200 bg-purple-50 px-2 py-0.5 text-xs font-semibold text-purple-700">
+                    {seller.service || "Service Provider"}
+                  </span>
+                  {seller.experience_yrs !== undefined && (
+                    <span className="rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+                      {seller.experience_yrs} yrs exp
+                    </span>
+                  )}
+                  {seller.seller_type && (
+                    <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-xs font-semibold text-indigo-700 capitalize">
+                      {seller.seller_type === "agency" ? "Agency" : seller.seller_type}
+                    </span>
+                  )}
+                </div>
+                {distanceLabel && (
+                  <p className="mt-1 text-xs font-semibold text-indigo-500">{distanceLabel}</p>
+                )}
+              </div>
             </div>
 
-            <p className="mt-3 text-sm font-semibold text-indigo-600">
-              {distanceLabel || "Distance will appear after location access"}
-            </p>
-
-            {/* Address and Phone Grid */}
-            <div className="mt-6 w-full grid gap-3 sm:grid-cols-2 text-left">
-              <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
-                <MapPin size={18} className="mt-0.5 text-[#0284c7] shrink-0" />
-                <span className="text-sm font-semibold text-slate-700">
-                  {seller.address || "Address not available"}
+            {/* Slim address + phone info strip */}
+            <div className="grid grid-cols-2 divide-x divide-slate-100 border-b border-slate-100">
+              <div className="flex items-center gap-2 px-3 py-2.5">
+                <MapPin size={14} className="text-sky-500 shrink-0" />
+                <span className="text-xs font-semibold text-slate-600 line-clamp-2 leading-tight">
+                  {seller.address || "Address N/A"}
                 </span>
               </div>
-              <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
-                <Phone size={18} className="mt-0.5 text-[#0284c7] shrink-0" />
-                <span className="text-sm font-semibold text-slate-700">
-                  {showContact ? seller.phone || "Phone not available" : "**********"}
+              <div className="flex items-center gap-2 px-3 py-2.5">
+                <Phone size={14} className="text-sky-500 shrink-0" />
+                <span className="text-[11px] font-semibold text-slate-600 truncate">
+                  {showContact ? (seller.phone || "N/A") : (seller.phone || "710*****166")}
                 </span>
               </div>
             </div>
 
             {/* About Me Section */}
             {seller.bio && (
-              <div className="mt-6 w-full text-left border-t border-slate-100 pt-6">
-                <h3 className="text-lg font-bold text-slate-800 mb-2">About Me</h3>
-                <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap">
+              <div className="px-4 py-2.5 border-t border-slate-100">
+                <h3 className="text-[11px] sm:text-xs font-bold text-slate-900 uppercase tracking-wide mb-1">About Me</h3>
+                <p className="text-slate-600 text-xs leading-relaxed whitespace-pre-wrap">
                   {seller.bio}
                 </p>
               </div>
             )}
           </div>
 
-          <aside className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm h-fit">
-            <h2 className="text-lg font-bold text-slate-800">Contact / Action</h2>
-            <div className="mt-4 space-y-3">
+          {/* ── CONTACT / ACTION CARD ── */}
+          <aside className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm h-fit">
+            <h2 className="text-[11px] sm:text-xs font-bold text-slate-900 uppercase tracking-wide mb-2.5">Contact / Action</h2>
+            <div className="space-y-2.5">
               <button
                 type="button"
                 onClick={handleBook}
                 disabled={Boolean(seller && (seller.is_available === 0 || seller.is_available === false))}
-                className={`w-full rounded-xl px-4 py-3 text-base font-bold transition duration-150 border-0 ${
+                className={`w-full rounded-xl px-4 py-2.5 text-sm font-bold transition duration-150 border-0 ${
                   seller && (seller.is_available === 0 || seller.is_available === false)
                     ? "bg-slate-200 text-slate-500 cursor-not-allowed border border-slate-300 shadow-none opacity-85"
-                    : "bg-indigo-600 hover:bg-indigo-700 text-white force-text-white shadow-lg shadow-indigo-100/20 active:scale-[0.98] cursor-pointer"
+                    : "bg-indigo-600 hover:bg-indigo-700 text-white force-text-white shadow-md active:scale-[0.98] cursor-pointer"
                 }`}
               >
                 {seller && (seller.is_available === 0 || seller.is_available === false)
-                  ? "🚫 Partner Offline — Cannot Book"
+                  ? "🚫 Partner Offline"
                   : "Book This Service"}
               </button>
               {bookingError && (
-                <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
+                <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700">
                   {bookingError}
                 </p>
               )}
 
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+              <div className="grid grid-cols-2 gap-2 lg:grid-cols-1">
                 {showContact ? (
                   <>
                     <a
                       href={`tel:${seller.phone || ""}`}
-                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 font-semibold text-emerald-700 hover:bg-emerald-100/50 transition cursor-pointer shadow-sm hover:shadow active:scale-[0.98]"
+                      className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100/50 transition cursor-pointer shadow-sm active:scale-[0.98]"
                     >
-                      <Phone size={17} />
+                      <Phone size={15} />
                       Call Now
                     </a>
                     <a
                       href={whatsappHref}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-3 font-semibold text-green-700 hover:bg-green-100/50 transition cursor-pointer shadow-sm hover:shadow active:scale-[0.98]"
+                      className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-green-200 bg-green-50 px-3 py-2.5 text-xs font-semibold text-green-700 hover:bg-green-100/50 transition cursor-pointer shadow-sm active:scale-[0.98]"
                     >
-                      <MessageCircle size={17} />
+                      <MessageCircle size={15} />
                       WhatsApp
                     </a>
                   </>
                 ) : seller?.hasSufficientBalance === false ? (
-                  <div className="w-full text-center rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold text-slate-600 text-sm">
-                    Contact details will be visible after booking.
+                  <div className="col-span-2 w-full text-center rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 font-bold text-slate-600 text-xs">
+                    Contact visible after booking.
                   </div>
                 ) : (
                   <button
@@ -572,17 +587,17 @@ export default function SellerPublicProfile() {
                       chargeAndRevealContact();
                     }}
                     disabled={contactLoading}
-                    className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white force-text-white px-4 py-3.5 text-base font-extrabold shadow-md transition disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer active:scale-[0.98]"
+                    className="col-span-2 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white force-text-white px-4 py-2.5 text-sm font-extrabold shadow-md transition disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer active:scale-[0.98]"
                     style={{ color: '#ffffff', backgroundColor: '#059669' }}
                   >
-                    <Phone size={18} className="text-white" />
+                    <Phone size={16} className="text-white" />
                     {contactLoading ? "Connecting…" : "View Contact"}
                   </button>
                 )}
               </div>
 
               {contactError && (
-                <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
+                <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700">
                   {contactError}
                 </p>
               )}
@@ -590,17 +605,17 @@ export default function SellerPublicProfile() {
           </aside>
         </section>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <h2 className="text-xl font-bold text-slate-800">Services Offered</h2>
+        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="mb-2.5 flex items-center justify-between gap-2">
+            <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wide">Services Offered</h2>
             {selectedService && (
-              <span className="rounded-full border border-purple-200 bg-purple-50 px-3 py-1 text-xs font-semibold text-purple-700">
-                Selected: {selectedService.name}
+              <span className="rounded-full border border-purple-200 bg-purple-50 px-2.5 py-0.5 text-xs font-semibold text-purple-700 truncate max-w-[160px]">
+                ✓ {selectedService.name}
               </span>
             )}
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-3 md:grid-cols-2">
             {services.map((service) => {
               const active = selectedService?.id === service.id;
               return (
@@ -608,56 +623,56 @@ export default function SellerPublicProfile() {
                   key={service.id}
                   type="button"
                   onClick={() => handleSelectService(service)}
-                  className={`rounded-2xl border-2 p-4 text-left transition duration-200 ${active
+                  className={`rounded-xl border-2 p-3 text-left transition duration-200 ${active
                     ? "qs-selected-active shadow-md"
                     : "border-slate-200 bg-white hover:border-[var(--qs-primary)]/30 shadow-sm"
                     }`}
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h3 className="text-base font-bold text-slate-800">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm font-bold text-slate-800 truncate">
                         {service.name}
                       </h3>
-                      <div className="flex flex-wrap gap-1.5 mt-1">
-                        <span className="text-[10px] font-bold text-sky-700 bg-sky-50 px-2 py-0.5 rounded border border-sky-200">
-                          Starts from / शुरुआत: ₹{Number(service.price || 0).toLocaleString("en-IN")}
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        <span className="text-xs font-bold text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded border border-sky-200">
+                          From ₹{Number(service.price || 0).toLocaleString("en-IN")}
                         </span>
-                        <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200/50">
-                          Onsite Quote / जांच के बाद
+                        <span className="text-xs font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/50">
+                          Onsite Quote
                         </span>
                         {service.sub_service_name && (
-                          <span className="text-[10px] bg-purple-50 border border-purple-200 text-purple-700 font-bold px-2 py-0.5 rounded-full">
+                          <span className="text-xs bg-purple-50 border border-purple-200 text-purple-700 font-bold px-1.5 py-0.5 rounded-full">
                             🎯 {service.sub_service_name}
                           </span>
                         )}
                       </div>
-                      <p className="mt-2 text-sm font-medium text-slate-600">
+                      <p className="mt-1.5 text-xs font-medium text-slate-500 line-clamp-2">
                         {service.description}
                       </p>
                     </div>
                     <div
-                      className={`mt-1 h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition duration-150 ${active
+                      className={`mt-0.5 h-4 w-4 rounded-full border-2 flex items-center justify-center shrink-0 transition duration-150 ${active
                         ? "qs-selected-dot border-[#0284c7]"
                         : "border-slate-300 bg-white"
                         }`}
                     >
                       {active && (
-                        <div className="h-2 w-2 rounded-full bg-white force-text-white" />
+                        <div className="h-1.5 w-1.5 rounded-full bg-white force-text-white" />
                       )}
                     </div>
                   </div>
 
-                  <div className="mt-4 grid gap-2 text-sm font-bold text-slate-600 sm:grid-cols-3">
+                  <div className="mt-2.5 flex flex-wrap gap-x-3 gap-y-1 text-xs font-semibold text-slate-500">
                     <span className="inline-flex items-center gap-1 text-emerald-600">
-                      <IndianRupee size={15} />
-                      <span>Visit Fee: ₹{Math.max(100, Number(service.visiting_charge || 100)).toLocaleString("en-IN")}</span>
+                      <IndianRupee size={12} />
+                      Visit: ₹{Math.max(100, Number(service.visiting_charge || 100)).toLocaleString("en-IN")}
                     </span>
-                    <span className="inline-flex items-center gap-1 text-slate-500">
-                      <Clock size={15} />
+                    <span className="inline-flex items-center gap-1">
+                      <Clock size={12} />
                       {service.duration}
                     </span>
-                    <span className="inline-flex items-center gap-1 text-slate-500">
-                      <CalendarDays size={15} />
+                    <span className="inline-flex items-center gap-1">
+                      <CalendarDays size={12} />
                       {service.availability.join(", ")}
                     </span>
                   </div>

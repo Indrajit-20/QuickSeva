@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
   ArrowRight,
@@ -23,8 +23,9 @@ import {
   Trash2,
   User,
   Users,
+  ShieldCheck,
 } from "lucide-react";
-import { createContractorPost } from "../../api/contractorApi";
+import { createContractorPost, getContractorPostById, updateContractorPost } from "../../api/contractorApi";
 import { useAuth } from "../../context/AuthContext";
 
 const PRESET_ROLES = [
@@ -85,10 +86,13 @@ const calculateShiftHours = (startTimeStr, endTimeStr) => {
 
 export default function CreateContractorPost() {
   const navigate = useNavigate();
+  const { id } = useParams();
+  const isEditMode = !!id;
   const { user } = useAuth();
 
   const [activeStep, setActiveStep] = useState(1); // 1: Workforce, 2: Location & Shift, 3: Amenities & Contact
   const [isTitleManuallyEdited, setIsTitleManuallyEdited] = useState(false);
+  const [loadingPost, setLoadingPost] = useState(false);
 
   // Time picker state for custom shift
   const [startTime, setStartTime] = useState("09:00");
@@ -108,7 +112,7 @@ export default function CreateContractorPost() {
     contact_phone: user?.phone || "",
     whatsapp_phone: user?.phone || "",
     site_address: "",
-    city: "Pune",
+    city: "",
     state: "Maharashtra",
     pincode: "",
     work_hours: "8 Hours (9:00 AM - 5:00 PM)",
@@ -133,10 +137,67 @@ export default function CreateContractorPost() {
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const [showPostSuccessModal, setShowPostSuccessModal] = useState(false);
+
+  // Fetch post details if in edit mode
+  useEffect(() => {
+    if (isEditMode) {
+      fetchExistingPost(id);
+    }
+  }, [id]);
+
+  const fetchExistingPost = async (postId) => {
+    setLoadingPost(true);
+    try {
+      const res = await getContractorPostById(postId);
+      const post = res?.data?.post;
+      if (post) {
+        setFormData({
+          post_type: post.post_type || "demand_workers",
+          title: post.title || "",
+          company_name: post.company_name || user?.company_name || "",
+          contact_name: post.contact_name || user?.name || user?.contact_person || "",
+          contact_phone: post.contact_phone || user?.phone || "",
+          whatsapp_phone: post.whatsapp_phone || user?.phone || "",
+          site_address: post.site_address || "",
+          city: post.city || "",
+          state: post.state || "Maharashtra",
+          pincode: post.pincode || "",
+          work_hours: post.work_hours || "8 Hours (9:00 AM - 5:00 PM)",
+          start_date: post.start_date ? post.start_date.split("T")[0] : "",
+          end_date: post.end_date ? post.end_date.split("T")[0] : "",
+          description: post.description || "",
+        });
+
+        if (Array.isArray(post.requirements) && post.requirements.length > 0) {
+          setRequirements(
+            post.requirements.map((r) => ({
+              role_title: r.role_title || "",
+              quantity: r.quantity || 1,
+              wage_amount: r.wage_amount || 0,
+              wage_type: r.wage_type || "per_day",
+              skills_required: r.skills_required || "",
+            }))
+          );
+        }
+
+        if (Array.isArray(post.amenities)) {
+          setSelectedAmenities(post.amenities);
+        }
+
+        setIsTitleManuallyEdited(true);
+      }
+    } catch (err) {
+      console.error("Failed to load post for editing:", err);
+      setError("Failed to load existing post details for editing.");
+    } finally {
+      setLoadingPost(false);
+    }
+  };
 
   // Auto-fill user profile info
   useEffect(() => {
-    if (user) {
+    if (user && !isEditMode) {
       setFormData((prev) => ({
         ...prev,
         company_name: prev.company_name || user.company_name || "",
@@ -145,7 +206,7 @@ export default function CreateContractorPost() {
         whatsapp_phone: prev.whatsapp_phone || user.phone || "",
       }));
     }
-  }, [user]);
+  }, [user, isEditMode]);
 
   // Update work_hours whenever custom time picker changes
   useEffect(() => {
@@ -331,7 +392,7 @@ export default function CreateContractorPost() {
     setError(null);
 
     try {
-      const fullDescription = `Work Shift / Timings: ${formData.work_hours}\n${formData.description || ""}`.trim();
+      const fullDescription = formData.description || "";
       const payload = {
         ...formData,
         description: fullDescription,
@@ -339,13 +400,18 @@ export default function CreateContractorPost() {
         requirements,
       };
 
-      const res = await createContractorPost(payload);
-      if (res?.success) {
-        alert("Work Site Requirement Posted Successfully!");
+      if (isEditMode) {
+        await updateContractorPost(id, payload);
+        alert("Work site requirement updated successfully!");
         navigate("/contractor/posts");
+      } else {
+        const res = await createContractorPost(payload);
+        if (res?.success) {
+          setShowPostSuccessModal(true);
+        }
       }
     } catch (err) {
-      setError(err?.response?.data?.message || "Failed to create post. Please check required fields.");
+      setError(err?.response?.data?.message || "Failed to save requirement post. Please check required fields.");
     } finally {
       setSubmitting(false);
     }
@@ -360,11 +426,13 @@ export default function CreateContractorPost() {
             <Building2 size={18} />
           </div>
           <div>
-            <h1 className="text-lg sm:text-xl font-black text-slate-900 leading-tight">
-              Post Work Site Requirement
+            <h1 className="text-base sm:text-lg font-bold text-slate-900 leading-tight">
+              {isEditMode ? "Edit Work Site Requirement" : "Post Work Site Requirement"}
             </h1>
             <p className="text-[11px] font-semibold text-slate-500 hidden sm:block">
-              Fill in worker trades, location & timing details below
+              {isEditMode
+                ? "Update worker trades, daily wages, location & shift details"
+                : "Fill in worker trades, location & timing details below"}
             </p>
           </div>
         </div>
@@ -372,7 +440,7 @@ export default function CreateContractorPost() {
         <button
           type="button"
           onClick={() => navigate("/contractor/posts")}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition cursor-pointer"
         >
           <ArrowLeft size={14} />
           <span>My Listings</span>
@@ -380,56 +448,59 @@ export default function CreateContractorPost() {
       </div>
 
       {/* Modern Compact 3-Step Bar */}
-      <div className="bg-slate-200/70 p-1 rounded-2xl mb-5 flex items-center justify-between gap-1 shadow-inner">
+      <div className="bg-slate-200/70 p-1 rounded-xl sm:rounded-2xl mb-4 flex items-center justify-between gap-1 shadow-inner">
         <button
           type="button"
           onClick={() => setActiveStep(1)}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-xs font-black transition-all ${
+          className={`flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-1.5 sm:py-2 px-1.5 sm:px-2 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-black transition-all cursor-pointer ${
             activeStep === 1
               ? "bg-amber-600 text-white shadow-sm"
               : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
           }`}
         >
-          <span className={`w-5 h-5 rounded-lg flex items-center justify-center text-[11px] font-black ${
+          <span className={`w-4 h-4 sm:w-5 sm:h-5 rounded flex items-center justify-center text-[10px] sm:text-[11px] font-black shrink-0 ${
             activeStep === 1 ? "bg-white/20 text-white" : "bg-slate-300 text-slate-700"
           }`}>
             1
           </span>
-          <span className="truncate">Workforce Needs</span>
+          <span className="hidden sm:inline truncate">Workforce Needs</span>
+          <span className="sm:hidden truncate">Workers</span>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveStep(2)}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-xs font-black transition-all ${
+          className={`flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-1.5 sm:py-2 px-1.5 sm:px-2 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-black transition-all cursor-pointer ${
             activeStep === 2
               ? "bg-amber-600 text-white shadow-sm"
               : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
           }`}
         >
-          <span className={`w-5 h-5 rounded-lg flex items-center justify-center text-[11px] font-black ${
+          <span className={`w-4 h-4 sm:w-5 sm:h-5 rounded flex items-center justify-center text-[10px] sm:text-[11px] font-black shrink-0 ${
             activeStep === 2 ? "bg-white/20 text-white" : "bg-slate-300 text-slate-700"
           }`}>
             2
           </span>
-          <span className="truncate">Location & Shift</span>
+          <span className="hidden sm:inline truncate">Location & Shift</span>
+          <span className="sm:hidden truncate">Location</span>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveStep(3)}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-xs font-black transition-all ${
+          className={`flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-1.5 sm:py-2 px-1.5 sm:px-2 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-black transition-all cursor-pointer ${
             activeStep === 3
               ? "bg-amber-600 text-white shadow-sm"
               : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
           }`}
         >
-          <span className={`w-5 h-5 rounded-lg flex items-center justify-center text-[11px] font-black ${
+          <span className={`w-4 h-4 sm:w-5 sm:h-5 rounded flex items-center justify-center text-[10px] sm:text-[11px] font-black shrink-0 ${
             activeStep === 3 ? "bg-white/20 text-white" : "bg-slate-300 text-slate-700"
           }`}>
             3
           </span>
-          <span className="truncate">Contact & Perks</span>
+          <span className="hidden sm:inline truncate">Contact & Perks</span>
+          <span className="sm:hidden truncate">Terms</span>
         </button>
       </div>
 
@@ -443,13 +514,13 @@ export default function CreateContractorPost() {
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* STEP 1: WORKFORCE NEEDS */}
         {activeStep === 1 && (
-          <div className="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-sm space-y-4">
+          <div className="bg-white rounded-2xl p-3.5 sm:p-5 border border-slate-200/90 shadow-sm space-y-3.5 sm:space-y-4">
             {/* Auto Title */}
             <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-white rounded-2xl p-4 border border-amber-200/80 space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-[11px] font-black text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
-                  <Sparkles size={14} className="text-amber-600" />
-                  <span>Auto-Generated Requirement Title</span>
+                <label className="text-[10px] font-bold text-amber-900 uppercase tracking-wide flex items-center gap-1.5">
+                  <Sparkles size={13} className="text-amber-600" />
+                  <span>{isTitleManuallyEdited ? "Custom Requirement Title" : "Auto-Generated Requirement Title"}</span>
                 </label>
                 {isTitleManuallyEdited && (
                   <button
@@ -458,7 +529,7 @@ export default function CreateContractorPost() {
                     className="flex items-center gap-1 text-[10px] font-bold text-amber-700 hover:text-amber-900 bg-amber-100 px-2 py-0.5 rounded-md transition"
                   >
                     <RefreshCw size={11} />
-                    <span>Auto-Suggest</span>
+                    <span>Reset to Auto-Suggest</span>
                   </button>
                 )}
               </div>
@@ -466,31 +537,33 @@ export default function CreateContractorPost() {
               <input
                 type="text"
                 required
-                placeholder="e.g. Need 5 Painters in Pune"
+                placeholder="e.g. Need 5 Painters"
                 value={formData.title}
                 onChange={(e) => {
-                  setFormData({ ...formData, title: e.target.value });
-                  setIsTitleManuallyEdited(true);
+                  const val = e.target.value;
+                  setFormData({ ...formData, title: val });
+                  if (val.trim() === "") {
+                    setIsTitleManuallyEdited(false);
+                  } else {
+                    setIsTitleManuallyEdited(true);
+                  }
                 }}
                 className="w-full px-3.5 py-2.5 bg-white border border-amber-300 rounded-xl text-xs sm:text-sm font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
               />
+              <p className="text-[10px] text-slate-500 font-semibold">
+                {isTitleManuallyEdited
+                  ? "✓ Custom title locked. Click 'Reset to Auto-Suggest' to revert to auto-generated title."
+                  : "💡 Title updates automatically as you select trades & location. Type above to use a custom title."}
+              </p>
             </div>
 
             {/* Trades & Counts List */}
             <div className="space-y-3">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                  <Users size={16} className="text-amber-600" />
+              <div className="border-b border-slate-100 pb-1.5">
+                <h2 className="text-[11px] sm:text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
+                  <Users size={14} className="text-amber-600" />
                   <span>Labor Requirements</span>
                 </h2>
-                <button
-                  type="button"
-                  onClick={handleAddReq}
-                  className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 text-xs font-bold rounded-xl flex items-center gap-1 transition"
-                >
-                  <Plus size={13} />
-                  <span>Add Role</span>
-                </button>
               </div>
 
               {requirements.map((req, index) => (
@@ -571,6 +644,16 @@ export default function CreateContractorPost() {
                   </div>
                 </div>
               ))}
+
+              {/* Add Role Button directly below labor price & requirements */}
+              <button
+                type="button"
+                onClick={handleAddReq}
+                className="w-full py-2.5 px-4 bg-amber-50 hover:bg-amber-100/90 text-amber-800 border border-dashed border-amber-300 text-xs font-black rounded-2xl flex items-center justify-center gap-2 transition hover:shadow-xs active:scale-98"
+              >
+                <PlusCircle size={16} className="text-amber-600" />
+                <span>+ Add Another Role / Trade</span>
+              </button>
             </div>
 
             {/* Next Button */}
@@ -594,22 +677,22 @@ export default function CreateContractorPost() {
 
         {/* STEP 2: LOCATION & SHIFT TIMINGS */}
         {activeStep === 2 && (
-          <div className="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-sm space-y-4">
-            {/* Work Site Location (Clean Search & Auto-Fill - NO quick select pills) */}
-            <div className="space-y-3 pb-3 border-b border-slate-100">
-              <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                <MapPin size={16} className="text-amber-600" />
+          <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-sm space-y-4">
+            {/* Work Site Location */}
+            <div className="space-y-2 pb-2.5 border-b border-slate-100">
+              <h2 className="text-[11px] sm:text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
+                <MapPin size={13} className="text-amber-600" />
                 <span>Work Site Location</span>
               </h2>
 
               <div className="relative">
                 <label className="block text-[11px] font-extrabold text-slate-700 mb-1 flex items-center justify-between">
                   <span>Search Area / Landmark</span>
-                  <span className="text-[10px] text-amber-600 font-bold">Auto-fills City & Pincode</span>
+                  <span className="text-[9px] text-amber-600 font-bold">Auto-fills City &amp; Pincode</span>
                 </label>
                 <div className="flex items-center rounded-xl border border-slate-200 bg-slate-50 overflow-hidden focus-within:bg-white focus-within:border-amber-600 focus-within:ring-2 focus-within:ring-amber-600/10 transition">
                   <div className="pl-3 pr-1 text-amber-600 flex items-center justify-center shrink-0">
-                    <Search size={15} />
+                    <Search size={14} />
                   </div>
                   <input
                     type="text"
@@ -619,17 +702,17 @@ export default function CreateContractorPost() {
                     onFocus={() => {
                       if (locationSuggestions.length > 0) setShowLocationDropdown(true);
                     }}
-                    className="w-full py-2.5 pr-3 bg-transparent text-xs font-semibold text-slate-900 outline-none"
+                    className="w-full py-2 pr-3 bg-transparent text-xs font-semibold text-slate-900 outline-none"
                   />
                   {isSearchingLocation && (
                     <div className="pr-3 flex items-center shrink-0">
-                      <div className="w-4 h-4 border-2 border-amber-600 border-t-transparent rounded-full animate-spin" />
+                      <div className="w-3.5 h-3.5 border-2 border-amber-600 border-t-transparent rounded-full animate-spin" />
                     </div>
                   )}
                 </div>
 
                 {showLocationDropdown && locationSuggestions.length > 0 && (
-                  <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden max-h-48 overflow-y-auto">
+                  <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden max-h-40 overflow-y-auto">
                     {locationSuggestions.map((item, idx) => (
                       <button
                         type="button"
@@ -637,11 +720,11 @@ export default function CreateContractorPost() {
                         onClick={() => selectLocationSuggestion(item)}
                         className="w-full px-3 py-2 text-left border-b border-slate-100 hover:bg-amber-50 transition flex items-start gap-2 text-xs"
                       >
-                        <MapPin size={14} className="text-amber-600 shrink-0 mt-0.5" />
+                        <MapPin size={13} className="text-amber-600 shrink-0 mt-0.5" />
                         <div>
-                          <div className="font-bold text-slate-900 leading-tight">{item.display_name}</div>
-                          <div className="text-[10px] text-slate-500 mt-0.5">
-                            City: {item.address?.city || item.address?.town || "Pune"} | Pincode: {item.address?.postcode || "N/A"}
+                          <div className="font-bold text-slate-900 leading-tight text-[11px]">{item.display_name}</div>
+                          <div className="text-[9px] text-slate-500 mt-0.5">
+                            City: {item.address?.city || item.address?.town || item.address?.village || item.address?.state_district || "N/A"} | Pincode: {item.address?.postcode || "N/A"}
                           </div>
                         </div>
                       </button>
@@ -650,29 +733,30 @@ export default function CreateContractorPost() {
                 )}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="sm:col-span-2">
-                  <label className="block text-[11px] font-extrabold text-slate-700 mb-1">Full Site Address / Landmark *</label>
-                  <div className="flex items-center rounded-xl border border-slate-200 bg-slate-50 overflow-hidden focus-within:bg-white focus-within:border-amber-600 focus-within:ring-2 focus-within:ring-amber-600/10 transition">
-                    <div className="pl-3 pr-1 text-slate-400 flex items-center justify-center shrink-0">
-                      <MapPin size={15} />
-                    </div>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Plot No 42, Near Datta Mandir, Baner Main Road"
-                      value={formData.site_address}
-                      onChange={(e) => setFormData({ ...formData, site_address: e.target.value })}
-                      className="w-full py-2 pr-3 bg-transparent text-xs font-semibold text-slate-900 outline-none"
-                    />
+              {/* Full address + City/Pincode in 2-col grid */}
+              <div>
+                <label className="block text-[11px] font-extrabold text-slate-700 mb-1">Full Site Address / Landmark *</label>
+                <div className="flex items-center rounded-xl border border-slate-200 bg-slate-50 overflow-hidden focus-within:bg-white focus-within:border-amber-600 focus-within:ring-2 focus-within:ring-amber-600/10 transition">
+                  <div className="pl-3 pr-1 text-slate-400 flex items-center justify-center shrink-0">
+                    <MapPin size={14} />
                   </div>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Plot No 42, Near Datta Mandir, Baner Main Road"
+                    value={formData.site_address}
+                    onChange={(e) => setFormData({ ...formData, site_address: e.target.value })}
+                    className="w-full py-2 pr-3 bg-transparent text-xs font-semibold text-slate-900 outline-none"
+                  />
                 </div>
+              </div>
 
+              <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-[11px] font-extrabold text-slate-700 mb-1 flex items-center gap-1.5">
+                  <label className="block text-[11px] font-extrabold text-slate-700 mb-1 flex items-center gap-1">
                     <span>City / Town *</span>
                     {autoFilledFields.city && formData.city && (
-                      <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-md animate-pulse">Auto-filled ✓</span>
+                      <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 py-0.5 rounded animate-pulse">✓ Auto</span>
                     )}
                   </label>
                   <input
@@ -693,16 +777,15 @@ export default function CreateContractorPost() {
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-extrabold text-slate-700 mb-1 flex items-center gap-1.5">
+                  <label className="block text-[11px] font-extrabold text-slate-700 mb-1 flex items-center gap-1">
                     <span>Pincode *</span>
                     {pincodeLoading && (
-                      <span className="flex items-center gap-1 text-[9px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-md">
-                        <span className="w-2.5 h-2.5 border-2 border-amber-600 border-t-transparent rounded-full animate-spin" />
-                        Fetching...
+                      <span className="flex items-center gap-0.5 text-[9px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1 py-0.5 rounded">
+                        <span className="w-2 h-2 border-2 border-amber-600 border-t-transparent rounded-full animate-spin" />
                       </span>
                     )}
                     {!pincodeLoading && autoFilledFields.pincode && formData.pincode && (
-                      <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-md animate-pulse">Auto-filled ✓</span>
+                      <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 py-0.5 rounded animate-pulse">✓ Auto</span>
                     )}
                   </label>
                   <input
@@ -724,24 +807,24 @@ export default function CreateContractorPost() {
               </div>
             </div>
 
-            {/* Shift Timings with Presets + Interactive Start/End Time Picker */}
-            <div className="space-y-3 pb-3 border-b border-slate-100">
+            {/* Shift Timings */}
+            <div className="space-y-2 pb-2.5 border-b border-slate-100">
               <div className="flex items-center justify-between">
-                <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                  <Clock size={16} className="text-amber-600" />
-                  <span>Shift Hours & Timings *</span>
+                <h2 className="text-[11px] sm:text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
+                  <Clock size={13} className="text-amber-600" />
+                  <span>Shift Hours &amp; Timings *</span>
                 </h2>
                 <button
                   type="button"
                   onClick={() => setUseCustomTimePicker(!useCustomTimePicker)}
-                  className="text-[11px] font-bold text-amber-700 hover:text-amber-900 underline"
+                  className="text-[10px] font-bold text-amber-700 hover:text-amber-900 underline"
                 >
-                  {useCustomTimePicker ? "Use Shift Presets" : "Use Custom Time Picker"}
+                  {useCustomTimePicker ? "Use Presets" : "Use Custom Time Picker"}
                 </button>
               </div>
 
               {!useCustomTimePicker ? (
-                <div className="flex flex-wrap gap-2">
+                <div className="grid grid-cols-2 gap-1.5">
                   {SHIFT_TIMING_PRESETS.map((preset) => {
                     const selected = formData.work_hours === preset;
                     return (
@@ -749,13 +832,13 @@ export default function CreateContractorPost() {
                         type="button"
                         key={preset}
                         onClick={() => setFormData({ ...formData, work_hours: preset })}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition ${
+                        className={`px-2.5 py-1.5 rounded-xl text-[10px] font-bold border transition text-left ${
                           selected
                             ? "bg-amber-50 text-amber-900 border-amber-300 font-black shadow-2xs"
                             : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
                         }`}
                       >
-                        {selected && <Check size={13} className="inline mr-1 text-amber-600" />}
+                        {selected && <Check size={11} className="inline mr-1 text-amber-600" />}
                         <span>{preset}</span>
                       </button>
                     );
@@ -763,9 +846,9 @@ export default function CreateContractorPost() {
                 </div>
               ) : (
                 <div className="bg-amber-50/60 p-3 rounded-2xl border border-amber-200 space-y-2">
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="block text-[11px] font-extrabold text-amber-900 mb-1">Shift Start Time</label>
+                      <label className="block text-[11px] font-extrabold text-amber-900 mb-1">Shift Start</label>
                       <input
                         type="time"
                         value={startTime}
@@ -774,7 +857,7 @@ export default function CreateContractorPost() {
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-extrabold text-amber-900 mb-1">Shift End Time</label>
+                      <label className="block text-[11px] font-extrabold text-amber-900 mb-1">Shift End</label>
                       <input
                         type="time"
                         value={endTime}
@@ -783,21 +866,21 @@ export default function CreateContractorPost() {
                       />
                     </div>
                   </div>
-                  <div className="text-xs font-black text-amber-800">
-                    Calculated Shift: <span className="underline">{formData.work_hours}</span>
+                  <div className="text-[10px] font-black text-amber-800">
+                    Shift: <span className="underline">{formData.work_hours}</span>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Work Start & End Dates */}
-            <div className="space-y-3">
-              <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                <Calendar size={16} className="text-amber-600" />
+            {/* Work Duration Dates — side by side on mobile */}
+            <div className="space-y-2">
+              <h2 className="text-[11px] sm:text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
+                <Calendar size={13} className="text-amber-600" />
                 <span>Work Duration Dates</span>
               </h2>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block text-[11px] font-extrabold text-slate-700 mb-1">Start Date *</label>
                   <input
@@ -805,7 +888,7 @@ export default function CreateContractorPost() {
                     required
                     value={formData.start_date}
                     onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:border-amber-600 outline-none transition"
+                    className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:border-amber-600 outline-none transition"
                   />
                 </div>
                 <div>
@@ -815,20 +898,20 @@ export default function CreateContractorPost() {
                     required
                     value={formData.end_date}
                     onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:border-amber-600 outline-none transition"
+                    className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:border-amber-600 outline-none transition"
                   />
                 </div>
               </div>
             </div>
 
             {/* Buttons */}
-            <div className="flex items-center gap-3 pt-2">
+            <div className="flex items-center gap-2 pt-1">
               <button
                 type="button"
                 onClick={() => setActiveStep(1)}
-                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl transition"
+                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-[10px] rounded-xl transition"
               >
-                Back to Step 1
+                ← Back
               </button>
 
               <button
@@ -841,10 +924,10 @@ export default function CreateContractorPost() {
                   setError(null);
                   setActiveStep(3);
                 }}
-                className="flex-1 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-black text-xs sm:text-sm rounded-xl shadow-md transition flex items-center justify-center gap-2 active:scale-98"
+                className="flex-1 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-black text-xs rounded-xl shadow-md transition flex items-center justify-center gap-1.5 active:scale-98"
               >
-                <span>Continue to Step 3: Contact & Perks</span>
-                <ArrowRight size={16} />
+                <span>Continue to Step 3: Contact &amp; Perks</span>
+                <ArrowRight size={14} />
               </button>
             </div>
           </div>
@@ -852,15 +935,15 @@ export default function CreateContractorPost() {
 
         {/* STEP 3: AMENITIES & CONTACT */}
         {activeStep === 3 && (
-          <div className="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-sm space-y-4">
-            {/* Amenities Provided */}
-            <div className="space-y-3 pb-3 border-b border-slate-100">
-              <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                <CheckCircle2 size={16} className="text-amber-600" />
-                <span>Amenities & Facilities Provided</span>
+          <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-sm space-y-4">
+            {/* Amenities — compact wrap grid */}
+            <div className="space-y-2 pb-2.5 border-b border-slate-100">
+              <h2 className="text-[11px] sm:text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
+                <CheckCircle2 size={13} className="text-amber-600" />
+                <span>Amenities &amp; Facilities Provided</span>
               </h2>
 
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 {PRESET_AMENITIES.map((perk) => {
                   const selected = selectedAmenities.includes(perk);
                   return (
@@ -868,13 +951,13 @@ export default function CreateContractorPost() {
                       type="button"
                       key={perk}
                       onClick={() => toggleAmenity(perk)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-extrabold border transition active:scale-95 flex items-center gap-1.5 ${
+                      className={`px-2.5 py-1 rounded-xl text-[10px] font-extrabold border transition active:scale-95 flex items-center gap-1 ${
                         selected
                           ? "bg-emerald-50 text-emerald-800 border-emerald-300 shadow-2xs"
                           : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
                       }`}
                     >
-                      <CheckCircle2 size={13} className={selected ? "text-emerald-600" : "text-slate-300"} />
+                      <CheckCircle2 size={11} className={selected ? "text-emerald-600" : "text-slate-300"} />
                       <span>{perk}</span>
                     </button>
                   );
@@ -882,19 +965,19 @@ export default function CreateContractorPost() {
               </div>
             </div>
 
-            {/* Contact Info (Auto-Filled) */}
-            <div className="space-y-3 pb-3 border-b border-slate-100">
-              <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                <User size={16} className="text-amber-600" />
+            {/* Contact Info — 2-col grid on mobile */}
+            <div className="space-y-2 pb-2.5 border-b border-slate-100">
+              <h2 className="text-[11px] sm:text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
+                <User size={13} className="text-amber-600" />
                 <span>Contact Details (Auto-Filled)</span>
               </h2>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block text-[11px] font-extrabold text-slate-700 mb-1">Company / Firm Name</label>
                   <input
                     type="text"
-                    placeholder="e.g. Anil Construction / Apex Interiors"
+                    placeholder="e.g. Anil Construction"
                     value={formData.company_name}
                     onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:border-amber-600 outline-none transition"
@@ -902,11 +985,11 @@ export default function CreateContractorPost() {
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-extrabold text-slate-700 mb-1">Contact Person Name *</label>
+                  <label className="block text-[11px] font-extrabold text-slate-700 mb-1">Contact Person *</label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Contractor Anil Kumar"
+                    placeholder="e.g. Anil Kumar"
                     value={formData.contact_name}
                     onChange={(e) => setFormData({ ...formData, contact_name: e.target.value })}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:border-amber-600 outline-none transition"
@@ -939,8 +1022,8 @@ export default function CreateContractorPost() {
             </div>
 
             {/* Additional Notes */}
-            <div className="space-y-2">
-              <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider">Site Notes (Optional)</h2>
+            <div className="space-y-1.5">
+              <h2 className="text-[10px] font-black text-slate-900 uppercase tracking-wider">Site Notes (Optional)</h2>
               <textarea
                 rows={2}
                 placeholder="Safety instructions or site rules..."
@@ -951,26 +1034,26 @@ export default function CreateContractorPost() {
             </div>
 
             {/* Actions */}
-            <div className="flex items-center gap-3 pt-2">
+            <div className="flex items-center gap-2 pt-1">
               <button
                 type="button"
                 onClick={() => setActiveStep(2)}
-                className="px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl transition"
+                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-[10px] rounded-xl transition"
               >
-                Back to Step 2
+                ← Back
               </button>
 
               <button
                 type="submit"
                 disabled={submitting}
-                className="flex-1 py-3 bg-amber-600 hover:bg-amber-700 text-white font-black text-xs sm:text-sm rounded-xl shadow-lg shadow-amber-600/20 transition flex items-center justify-center gap-2 active:scale-98 disabled:opacity-50"
+                className="flex-1 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-black text-xs rounded-xl shadow-lg shadow-amber-600/20 transition flex items-center justify-center gap-1.5 active:scale-98 disabled:opacity-50"
               >
                 {submitting ? (
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <>
-                    <Send size={16} />
-                    <span>Publish Work Site Requirement</span>
+                    <Send size={14} />
+                    <span>{isEditMode ? "Save & Update" : "Publish Work Site Requirement"}</span>
                   </>
                 )}
               </button>
@@ -978,6 +1061,76 @@ export default function CreateContractorPost() {
           </div>
         )}
       </form>
+
+      {/* ── Post Success & Become Contractor Prompt Modal ── */}
+      {showPostSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-100 text-center relative overflow-hidden">
+            {/* Decorative bar */}
+            <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600" />
+
+            <div className="w-14 h-14 bg-amber-100 text-amber-600 rounded-3xl flex items-center justify-center mx-auto mb-4 font-black shadow-inner">
+              <Sparkles size={28} />
+            </div>
+
+            <h2 className="text-xl font-black text-slate-900 tracking-tight mb-1.5">
+              Requirement Published! 🎉
+            </h2>
+
+            <p className="text-xs font-semibold text-slate-600 leading-relaxed mb-5">
+              Your labor requirement is now live on <span className="font-bold text-slate-900">Contractor Hub</span> for agencies and workers.
+            </p>
+
+            {user?.role !== "contractor" ? (
+              <div className="bg-amber-50/90 rounded-2xl p-4 border border-amber-200/80 text-left mb-5 space-y-2">
+                <div className="flex items-center gap-2 text-amber-950 font-extrabold text-xs">
+                  <ShieldCheck size={16} className="text-amber-600 shrink-0" />
+                  <span>Want to post more & get direct client leads?</span>
+                </div>
+                <p className="text-[11px] font-medium text-slate-700 leading-relaxed">
+                  Register as a <span className="font-bold text-slate-900">Verified Contractor</span> to show your business profile in the <span className="font-bold text-slate-900">Hire Contractors</span> directory and receive direct customer quote requests!
+                </p>
+                <div className="pt-2 flex flex-col gap-2">
+                  <button
+                    type="button"
+                    onClick={() => navigate("/become-contractor")}
+                    className="w-full py-3 px-4 bg-amber-600 hover:bg-amber-700 text-white font-black text-xs rounded-xl shadow-md shadow-amber-600/20 transition flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
+                  >
+                    <Users size={15} />
+                    <span>Become a Contractor Now</span>
+                    <ArrowRight size={15} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate("/contractor-hub")}
+                    className="w-full py-2.5 px-4 bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs rounded-xl border border-slate-200 transition cursor-pointer"
+                  >
+                    View My Post on Contractor Hub
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => navigate("/contractor-hub")}
+                  className="w-full py-3 px-4 bg-amber-600 hover:bg-amber-700 text-white font-black text-xs rounded-xl shadow-md shadow-amber-600/20 transition flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
+                >
+                  <Building2 size={16} />
+                  <span>Go to Contractor Hub</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate("/contractor/dashboard")}
+                  className="w-full py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition cursor-pointer"
+                >
+                  Go to Contractor Dashboard
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

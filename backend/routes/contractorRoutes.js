@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const ContractorController = require("../controllers/contractorController");
 const { protect } = require("../middleware/authMiddleware");
+const { uploadWork, uploadDocuments } = require("../middleware/uploadMiddleware");
 
 // Optional auth middleware: Attaches user details if valid token passed, but NEVER blocks guest requests if token is invalid/expired
 const optionalProtect = async (req, res, next) => {
@@ -45,6 +46,9 @@ router.get("/posts/:id", ContractorController.getPostById);
 // Public Contractors Directory (for Customers to find Contractors)
 router.get("/directory", ContractorController.getContractorsDirectory);
 
+// Public Contractor Profile
+router.get("/public/:id", ContractorController.getPublicProfile);
+
 // Customer -> Contractor quote request / callback
 router.post("/quote-request", ContractorController.createQuoteRequest);
 
@@ -63,6 +67,9 @@ router.post("/register", optionalProtect, ContractorController.registerContracto
 // Get contractor's own posts
 router.get("/my-posts", protect, ContractorController.getMyPosts);
 
+// Update contractor post details
+router.put("/posts/:id", protect, ContractorController.updatePost);
+
 // Update post status (active / closed)
 router.patch("/posts/:id/status", protect, ContractorController.updatePostStatus);
 
@@ -72,7 +79,21 @@ router.delete("/posts/:id", protect, ContractorController.deletePost);
 // Get applications for a contractor's post
 router.get("/posts/:id/applications", protect, ContractorController.getPostApplications);
 
+// Update application status (pending, contacted, hired, rejected)
+router.patch("/applications/:id/status", protect, ContractorController.updateApplicationStatus);
+
+// Contractor Verification Submission (GST, PAN, License, Doc)
+router.post("/verify", protect, uploadDocuments.single("document"), ContractorController.submitVerification);
+
 // Get customer quote requests for contractor dashboard
 router.get("/my-quote-requests", protect, ContractorController.getQuoteRequests);
+
+// Update customer quote request status
+router.patch("/my-quote-requests/:id/status", protect, ContractorController.updateQuoteStatus);
+
+// Work Portfolio Images Management
+router.post("/work-images", protect, uploadWork.array("images", 10), ContractorController.uploadWorkImages);
+router.delete("/work-images/:id", protect, ContractorController.deleteWorkImage);
+router.get("/my-work-images", protect, ContractorController.getMyWorkImages);
 
 module.exports = router;

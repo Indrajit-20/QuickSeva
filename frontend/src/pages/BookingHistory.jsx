@@ -56,18 +56,18 @@ export default function BookingHistory() {
       <div className="mx-auto max-w-4xl">
         <div className="mb-6">
           <p className="text-sm font-bold text-indigo-600">QuickSeva</p>
-          <h1 className="text-4xl font-black text-slate-900">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900">
             Booking History
           </h1>
         </div>
 
         {loading ? (
           <div className="rounded-2xl bg-white p-10 text-center shadow-sm">
-            <h2 className="text-2xl font-black text-slate-900">Loading…</h2>
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900">Loading…</h2>
           </div>
         ) : historyBookings.length === 0 ? (
           <div className="rounded-2xl bg-white p-10 text-center shadow-sm">
-            <h2 className="text-2xl font-black text-slate-900">
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900">
               No completed bookings
             </h2>
             <p className="mt-2 text-slate-600">

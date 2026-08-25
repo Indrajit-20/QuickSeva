@@ -1,4 +1,4 @@
-// QuickSeva - Map Performance Feature
+let cachedUserLocation = null;
 
 /**
  * Retrieves the user's location.
@@ -6,25 +6,36 @@
  * @returns {Promise<{lat: number, lng: number, city: string, source: 'gps' | 'ip' | 'default'}>}
  */
 export function getUserLocation() {
+  if (cachedUserLocation) {
+    return Promise.resolve(cachedUserLocation);
+  }
   return new Promise((resolve) => {
     if (!navigator.geolocation) {
-      getIpFallback().then(resolve);
+      getIpFallback().then((res) => {
+        cachedUserLocation = res;
+        resolve(res);
+      });
       return;
     }
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        resolve({
+        const res = {
           lat: position.coords.latitude,
           lng: position.coords.longitude,
           city: "", // Not available from GPS directly
           source: "gps",
-        });
+        };
+        cachedUserLocation = res;
+        resolve(res);
       },
       (error) => {
-        getIpFallback().then(resolve);
+        getIpFallback().then((res) => {
+          cachedUserLocation = res;
+          resolve(res);
+        });
       },
-      { enableHighAccuracy: true, timeout: 5000 }
+      { enableHighAccuracy: false, timeout: 4000 }
     );
   });
 }

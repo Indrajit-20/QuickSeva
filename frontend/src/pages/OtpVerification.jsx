@@ -368,7 +368,7 @@ const OtpVerification = () => {
       <div className="w-full max-w-md">
         <div className="bg-white rounded-2xl shadow-lg p-8 space-y-6">
           <div className="text-center space-y-2">
-            <h1 className="text-3xl font-bold text-gray-900">Verify OTP</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Verify OTP</h1>
             <p className="text-gray-600">
               {phoneNumber
                 ? `We sent a 6-digit code to ${phoneNumber}`

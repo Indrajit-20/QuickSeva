@@ -156,7 +156,7 @@ export default function BecomeSeller() {
         className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 sm:p-8 border border-slate-200 text-slate-850"
       >
         <div className="text-center mb-6 text-slate-850">
-          <h1 className="text-3xl font-bold text-slate-800 mb-2">
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-2">
             Register as a Seller
           </h1>
           <p className="text-slate-500 text-sm font-semibold">
@@ -177,11 +177,11 @@ export default function BecomeSeller() {
           {/* Read-only User Details */}
           <div className="grid grid-cols-2 gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
             <div>
-              <span className="block text-[10px] text-slate-400 uppercase font-bold tracking-wider">Owner Name</span>
+              <span className="block text-xs text-slate-400 uppercase font-bold tracking-wider">Owner Name</span>
               <span className="text-slate-800 text-sm font-bold mt-0.5 block">{user?.name}</span>
             </div>
             <div>
-              <span className="block text-[10px] text-slate-400 uppercase font-bold tracking-wider">Phone</span>
+              <span className="block text-xs text-slate-400 uppercase font-bold tracking-wider">Phone</span>
               <span className="text-slate-800 text-sm font-bold mt-0.5 block">{user?.phone}</span>
             </div>
           </div>

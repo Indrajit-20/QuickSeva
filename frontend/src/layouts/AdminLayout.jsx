@@ -24,6 +24,7 @@ import {
   ChevronDown,
   ChevronRight,
   ShieldCheck,
+  HardHat,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
@@ -35,6 +36,7 @@ const AdminLayout = () => {
   const [expandedMenus, setExpandedMenus] = useState({
     users: false,
     sellers: false,
+    contractors: false,
     services: false,
   });
 
@@ -58,13 +60,15 @@ const AdminLayout = () => {
   // Keep submenus expanded if active item is inside them
   useEffect(() => {
     const path = location.pathname;
-    const search = location.search;
 
     if (path.includes("/admin/users")) {
       setExpandedMenus((prev) => ({ ...prev, users: true }));
     }
     if (path.includes("/admin/sellers")) {
       setExpandedMenus((prev) => ({ ...prev, sellers: true }));
+    }
+    if (path.includes("/admin/contractors")) {
+      setExpandedMenus((prev) => ({ ...prev, contractors: true }));
     }
     if (path.includes("/admin/categories") || path.includes("/admin/services")) {
       setExpandedMenus((prev) => ({ ...prev, services: true }));
@@ -98,6 +102,18 @@ const AdminLayout = () => {
         { label: "Pending Verification", path: "/admin/sellers?tab=pending" },
         { label: "Verified Sellers", path: "/admin/sellers?tab=verified" },
         { label: "Suspended Sellers", path: "/admin/sellers?tab=suspended" },
+      ],
+    },
+    {
+      type: "submenu",
+      label: "Contractors Hub",
+      id: "contractors",
+      icon: HardHat,
+      items: [
+        { label: "Verification Queue", path: "/admin/contractors?tab=verifications" },
+        { label: "Site Posts Moderation", path: "/admin/contractors?tab=posts" },
+        { label: "Client Quote Logs", path: "/admin/contractors?tab=quotes" },
+        { label: "Analytics & Leaderboard", path: "/admin/contractors?tab=analytics" },
       ],
     },
     {
@@ -332,7 +348,7 @@ const AdminLayout = () => {
 
       {/* Mobile Drawer */}
       {isMobileOpen && (
-        <div className="fixed inset-0 z-50 flex lg:hidden bg-slate-900/40 backdrop-blur-xs">
+        <div className="fixed inset-0 z-[1200] flex lg:hidden bg-slate-900/40 backdrop-blur-xs">
           <div className="w-64 h-full animate-slide-in">
             {renderSidebarContent()}
           </div>

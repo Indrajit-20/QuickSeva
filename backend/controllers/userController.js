@@ -15,10 +15,17 @@ exports.getProfile = async (req, res) => {
 // Update profile
 exports.updateProfile = async (req, res) => {
   try {
-    const { name, email, address, city, state, pincode, lat, lng, gender, dob } = req.body;
+    const { name, email, address, city, state, pincode, lat, lng, gender, dob, company_name, trade_specialization, bio } = req.body;
     const fields = {};
 
-    if (name)    fields.name    = name;
+    if (name)                 fields.name                 = name;
+    if (company_name !== undefined) fields.company_name    = company_name;
+    if (trade_specialization !== undefined) {
+      fields.trade_specialization = Array.isArray(trade_specialization)
+        ? trade_specialization.join(", ")
+        : trade_specialization;
+    }
+    if (bio !== undefined)     fields.bio                 = bio;
     if (email) {
       const existingEmail = await UserModel.findByEmail(email);
       if (existingEmail && existingEmail.id !== req.user.id) {
