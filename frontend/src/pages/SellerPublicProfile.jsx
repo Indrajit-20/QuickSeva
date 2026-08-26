@@ -58,6 +58,17 @@ function normalizePhone(phone) {
   return String(phone || "").replace(/\D/g, "");
 }
 
+function maskPhone(phone) {
+  if (!phone) return "710*****166";
+  const str = String(phone).trim();
+  if (str.includes("*")) return str;
+  const digits = str.replace(/\D/g, "");
+  if (digits.length >= 10) {
+    return `${digits.slice(0, 3)}*****${digits.slice(-2)}`;
+  }
+  return "710*****166";
+}
+
 function MiniMap({ lat, lng }) {
   if (typeof lat !== "number" || typeof lng !== "number") return null;
 
@@ -512,7 +523,7 @@ export default function SellerPublicProfile() {
               <div className="flex items-center gap-2 px-3 py-2.5">
                 <Phone size={14} className="text-sky-500 shrink-0" />
                 <span className="text-[11px] font-semibold text-slate-600 truncate">
-                  {showContact ? (seller.phone || "N/A") : (seller.phone || "710*****166")}
+                  {showContact ? (seller.phone || "N/A") : maskPhone(seller.phone)}
                 </span>
               </div>
             </div>
