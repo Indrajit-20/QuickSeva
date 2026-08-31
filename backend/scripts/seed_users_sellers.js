@@ -115,26 +115,8 @@ async function run() {
       console.error("Failed to alter wallet_transactions.source:", err.message);
     }
 
-    // 6. Clean database tables
-    console.log("Cleaning database tables...");
-    await pool.query("SET FOREIGN_KEY_CHECKS = 0");
-    await pool.query("TRUNCATE TABLE reviews");
-    await pool.query("TRUNCATE TABLE services");
-    await pool.query("TRUNCATE TABLE seller_work_images");
-    await pool.query("TRUNCATE TABLE sellers");
-    await pool.query("TRUNCATE TABLE seller_categories");
-    await pool.query("TRUNCATE TABLE wallets");
-    await pool.query("TRUNCATE TABLE wallet_transactions");
-    await pool.query("TRUNCATE TABLE orders");
-    await pool.query("TRUNCATE TABLE lead_charges");
-    await pool.query("TRUNCATE TABLE notifications");
-    await pool.query("TRUNCATE TABLE otp_verifications");
-    await pool.query("TRUNCATE TABLE users");
-    await pool.query("TRUNCATE TABLE sub_services");
-    await pool.query("TRUNCATE TABLE categories");
-    await pool.query("TRUNCATE TABLE policies");
-    await pool.query("TRUNCATE TABLE admins");
-    await pool.query("SET FOREIGN_KEY_CHECKS = 1");
+    // 6. Ensure database tables exist safely without wiping real data
+    console.log("Ensuring database tables and categories exist safely...");
 
     // 7. Seed categories to match frontend SERVICE_FILTERS exactly
     console.log("Seeding categories...");
@@ -333,8 +315,10 @@ async function run() {
       const lat = Number((area.lat + seededOffset(index + 200, "lat")).toFixed(6));
       const lng = Number((area.lng + seededOffset(index + 200, "lng")).toFixed(6));
       const phone = "8000000" + String(index).padStart(3, '0');
+      const email = `buyer${index}@quickseva.com`;
 
-      const [userRes] = await pool.query(
+      const [existing] = await pool.query("SELECT id FROM users WHERE phone = ? OR email = ?", [phone, email]);
+      if (existing.length > 0) continue;
         `INSERT INTO users (name, email, phone, gender, dob, password, role, address, city, state, pincode, lat, lng, is_verified, is_active)
          VALUES (?, ?, ?, ?, ?, ?, 'buyer', ?, 'Ahmedabad', 'Gujarat', '380001', ?, ?, 1, 1)`,
         [
@@ -394,6 +378,10 @@ async function run() {
       const rating = Number((4.3 + (index % 7) * 0.1).toFixed(1));
       const reviews = 50 + ((index * 37) % 250);
       const phone = "9000000" + String(index).padStart(3, '0');
+      const email = `seller${index}@quickseva.com`;
+
+      const [existing] = await pool.query("SELECT id FROM users WHERE phone = ? OR email = ?", [phone, email]);
+      if (existing.length > 0) continue;
 
       // Create User
       const [userRes] = await pool.query(

@@ -21,7 +21,7 @@ exports.chargeLead = async (req, res) => {
     );
 
     const [sellerRows] = await pool.query(
-      "SELECT phone FROM sellers WHERE id = ?",
+      "SELECT COALESCE(NULLIF(s.phone, ''), u.phone) AS phone FROM sellers s JOIN users u ON s.user_id = u.id WHERE s.id = ?",
       [sellerId]
     );
     const phone = sellerRows.length > 0 ? sellerRows[0].phone : null;
@@ -37,10 +37,10 @@ exports.chargeLead = async (req, res) => {
 
 exports.checkLeadCharge = async (req, res) => {
   try {
-    const { sellerId, serviceId } = req.query;
+    const { sellerId } = req.query;
 
-    if (!sellerId || !serviceId) {
-      return errorRes(res, "sellerId and serviceId are required", 400);
+    if (!sellerId) {
+      return errorRes(res, "sellerId is required", 400);
     }
 
     const buyerId = req.user.id;
@@ -48,13 +48,12 @@ exports.checkLeadCharge = async (req, res) => {
     const existing = await LeadChargeModel.existsFor({
       buyer_id: buyerId,
       seller_id: sellerId,
-      service_id: serviceId,
     });
 
     let phone = null;
     if (existing) {
       const [sellerRows] = await pool.query(
-        "SELECT phone FROM sellers WHERE id = ?",
+        "SELECT COALESCE(NULLIF(s.phone, ''), u.phone) AS phone FROM sellers s JOIN users u ON s.user_id = u.id WHERE s.id = ?",
         [sellerId]
       );
       if (sellerRows.length > 0) {

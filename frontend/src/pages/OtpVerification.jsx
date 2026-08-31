@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { API_BASE_URL } from "../config/api";
-
+import { useAuth } from "../context/AuthContext";
 
 const isValidOTP = (otp) => /^\d{6}$/.test(otp);
 
@@ -22,6 +22,7 @@ const pad2 = (n) => String(n).padStart(2, "0");
 const OtpVerification = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { authenticateSession } = useAuth();
 
   const inputsRef = useRef([]);
 
@@ -340,8 +341,14 @@ const OtpVerification = () => {
 
       // Success: token + user stored
       const token = responseData?.data?.token || responseData?.token;
+      const userData = responseData?.data?.user || responseData?.user;
 
-      if (token) localStorage.setItem("authToken", token);
+      if (token) {
+        localStorage.setItem("authToken", token);
+        if (authenticateSession && userData) {
+          authenticateSession(token, userData);
+        }
+      }
 
       setSuccess("✓ OTP verified successfully!");
 

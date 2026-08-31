@@ -175,10 +175,9 @@ export const AuthProvider = ({ children }) => {
         const status = err?.response?.status;
         setUser(null);
         setIsAuthenticated(false);
-        localStorage.removeItem("authToken");
-        localStorage.removeItem("userRole");
         if (status === 401 || status === 403) {
-          // Silent on load for guest users
+          localStorage.removeItem("authToken");
+          localStorage.removeItem("userRole");
           setAuthError(null);
         } else {
           console.error("Auth init failed:", err);

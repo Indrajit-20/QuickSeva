@@ -56,6 +56,7 @@ import SellerOrders from "./pages/seller/SellerOrders";
 import SellerPackages from "./pages/seller/SellerPackages";
 import SellerWallet from "./pages/seller/SellerWallet";
 import SellerLeads from "./pages/seller/SellerLeads";
+import SellerSocialInbox from "./pages/seller/SellerSocialInbox";
 import SellerPublicProfile from "./pages/SellerPublicProfile";
 
 import ContractorRoute from "./components/ContractorRoute";
@@ -110,6 +111,7 @@ function AppRoutes() {
   const isSellerRoute =
     location.pathname === "/seller" ||
     location.pathname.startsWith("/seller/dashboard") ||
+    location.pathname.startsWith("/seller/social-inbox") ||
     location.pathname.startsWith("/seller/profile") ||
     location.pathname.startsWith("/seller/services") ||
     location.pathname.startsWith("/seller/orders") ||
@@ -181,6 +183,7 @@ function AppRoutes() {
               element={<Navigate to="/seller/dashboard" replace />}
             />
             <Route path="dashboard" element={<SellerDashboard />} />
+            <Route path="social-inbox" element={<SellerSocialInbox />} />
             <Route path="profile" element={<SellerProfile />} />
             <Route path="services" element={<SellerServices />} />
             <Route path="dashboard/leads" element={<SellerLeads />} />

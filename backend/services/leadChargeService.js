@@ -21,10 +21,10 @@ async function chargeSellerForLead(sellerId, buyerId, serviceId, source) {
     }
     const sellerUserId = sellers[0].user_id;
 
-    // 2) Prevent duplicate charge by checking existing lead record with lock
+    // 2) Prevent duplicate charge by checking existing lead record for this buyer -> seller
     const [existingRows] = await conn.query(
-      "SELECT id FROM lead_charges WHERE buyer_id = ? AND seller_id = ? AND service_id = ? LIMIT 1 FOR UPDATE",
-      [buyerId, sellerId, serviceId]
+      "SELECT id FROM lead_charges WHERE buyer_id = ? AND seller_id = ? LIMIT 1 FOR UPDATE",
+      [buyerId, sellerId]
     );
 
     if (existingRows.length > 0) {

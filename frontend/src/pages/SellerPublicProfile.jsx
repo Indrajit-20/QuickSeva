@@ -193,10 +193,12 @@ export default function SellerPublicProfile() {
           sellerRes?.data?.data?.seller ||
           sellerRes?.data?.seller ||
           null;
+        const phoneNum = rawSeller?.phone || rawSeller?.user_phone || "";
         // Normalize backend shape → legacy keys used by existing JSX.
         const s = rawSeller
           ? {
             ...rawSeller,
+            phone: phoneNum,
             name: rawSeller.business_name || rawSeller.name || "Seller",
             service:
               rawSeller.category_name ||
@@ -289,11 +291,8 @@ export default function SellerPublicProfile() {
       .catch(() => {});
   }, [seller?.lat, seller?.lng, seller?.serviceMode]);
 
-  // Check if lead has already been charged whenever selectedService, seller or auth status changes.
-  // This ensures that refreshing the page retains access if already paid.
-  const firstServiceId = services[0]?.id;
-  const selectedServiceId = selectedService?.id;
-
+  // Check if lead has already been charged per seller whenever seller or auth status changes.
+  // Once unlocked for this seller, access is retained across all services of this seller.
   useEffect(() => {
     if (!seller?.id || !isAuthenticated) {
       setShowContact(false);
@@ -303,13 +302,9 @@ export default function SellerPublicProfile() {
     let active = true;
     (async () => {
       try {
-        const targetServiceId = selectedServiceId || firstServiceId;
-        if (!targetServiceId) return;
-
         const res = await apiClient.get(`/leads/check`, {
           params: {
             sellerId: seller.id,
-            serviceId: targetServiceId,
           },
         });
         if (active) {
@@ -318,7 +313,7 @@ export default function SellerPublicProfile() {
             setContactError("");
             const unmaskedPhone = res?.data?.data?.phone || res?.data?.phone;
             if (unmaskedPhone) {
-              setSeller((prev) => (prev?.phone === unmaskedPhone ? prev : { ...prev, phone: unmaskedPhone }));
+              setSeller((prev) => (prev ? { ...prev, phone: unmaskedPhone } : prev));
             }
           } else {
             setShowContact(false);
@@ -334,7 +329,7 @@ export default function SellerPublicProfile() {
     return () => {
       active = false;
     };
-  }, [selectedServiceId, seller?.id, isAuthenticated, firstServiceId]);
+  }, [seller?.id, isAuthenticated]);
 
   if (sellerLoading) {
     return <SellerProfileSkeleton />;

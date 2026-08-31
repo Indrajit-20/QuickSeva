@@ -30,6 +30,7 @@ const policyRoutes = require("./routes/policyRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const contractorRoutes = require("./routes/contractorRoutes");
+const socialLeadRoutes = require("./routes/socialLeadRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -125,6 +126,7 @@ app.use("/api", leadRoutes);
 app.use("/api/policies", policyRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/contractor", contractorRoutes);
+app.use("/api/seller/social-inbox", socialLeadRoutes);
 
 // ── Error Handling ────────────────────────────────────────────────────────────
 app.use(notFound);
