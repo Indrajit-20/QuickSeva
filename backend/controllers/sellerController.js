@@ -463,7 +463,7 @@ exports.registerSeller = async (req, res) => {
       );
       if (existingEmailRows?.length) {
         await conn.rollback();
-        return errorRes(res, "Email already registered", 409);
+        return errorRes(res, "This email address is already registered. Please use a different email or leave it empty.", 400);
       }
     }
 

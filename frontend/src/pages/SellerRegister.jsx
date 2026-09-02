@@ -305,10 +305,22 @@ const SellerRegister = () => {
     }
   };
 
-  const handleBlur = (e) => {
-    const { name } = e.target;
+  const handleBlur = async (e) => {
+    const { name, value } = e.target;
     setTouched((prev) => ({ ...prev, [name]: true }));
     validateForm(false, false);
+
+    if (name === "email" && value && value.trim() && !validateEmail(value)) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/auth/check-email?email=${encodeURIComponent(value.trim())}`);
+        const data = await res.json();
+        if (data?.data?.available === false) {
+          setErrors((prev) => ({ ...prev, email: data.data.message }));
+        }
+      } catch (err) {
+        // ignore network error
+      }
+    }
   };
 
   // Step 1 Submission: Requests OTP
@@ -326,12 +338,13 @@ const SellerRegister = () => {
 
     setIsLoading(true);
     try {
-      // First, check duplicate mobile or email via API endpoint or let auth do it
+      // Check duplicate mobile or email via send-otp backend endpoint
       const res = await fetch(`${API_BASE_URL}/auth/send-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           identifier: formData.mobileNumber,
+          email: formData.email,
           type: "seller-register",
         }),
       });
@@ -343,7 +356,12 @@ const SellerRegister = () => {
       startResendTimer();
       setStep(2);
     } catch (err) {
-      setApiError(err.message || "Onboarding initialization failed.");
+      const msg = err.message || "Onboarding initialization failed.";
+      setApiError(msg);
+      if (msg.toLowerCase().includes("email")) {
+        setErrors((prev) => ({ ...prev, email: msg }));
+        setTouched((prev) => ({ ...prev, email: true }));
+      }
       formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     } finally {
       setIsLoading(false);
@@ -360,6 +378,7 @@ const SellerRegister = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           identifier: formData.mobileNumber,
+          email: formData.email,
           type: "seller-register",
         }),
       });

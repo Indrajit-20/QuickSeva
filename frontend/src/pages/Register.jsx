@@ -184,10 +184,22 @@ const Register = () => {
     if (touched[name]) runFieldValidation(name, sanitized);
   };
 
-  const handleBlur = (e) => {
-    const { name } = e.target;
+  const handleBlur = async (e) => {
+    const { name, value } = e.target;
     setTouched((prev) => ({ ...prev, [name]: true }));
-    runFieldValidation(name, formData[name]);
+    const isValid = runFieldValidation(name, formData[name]);
+
+    if (name === "email" && isValid && value && value.trim()) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/auth/check-email?email=${encodeURIComponent(value.trim())}`);
+        const data = await res.json();
+        if (data?.data?.available === false) {
+          setErrors((prev) => ({ ...prev, email: data.data.message }));
+        }
+      } catch (err) {
+        // ignore network error
+      }
+    }
   };
 
   const handleTermsChange = (e) => {
@@ -231,6 +243,7 @@ const Register = () => {
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({
           identifier: formData.mobileNumber,
+          email:      formData.email,
           type:       "register",
         }),
       });
@@ -242,7 +255,12 @@ const Register = () => {
       startResendTimer();   // begin 60-second cooldown
       setStep(2);
     } catch (err) {
-      setServerError(err.message || "Something went wrong. Please try again.");
+      const msg = err.message || "Something went wrong. Please try again.";
+      setServerError(msg);
+      if (msg.toLowerCase().includes("email")) {
+        setErrors((prev) => ({ ...prev, email: msg }));
+        setTouched((prev) => ({ ...prev, email: true }));
+      }
     } finally {
       setIsLoading(false);
     }
@@ -260,6 +278,7 @@ const Register = () => {
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({
           identifier: formData.mobileNumber,
+          email:      formData.email,
           type:       "register",
         }),
       });

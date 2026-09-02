@@ -401,6 +401,14 @@ exports.sendOTP = async (req, res) => {
         const roleName = existing.role === "buyer" ? "customer" : existing.role === "seller" ? "seller" : existing.role;
         return errorRes(res, `Mobile number is already registered as a ${roleName}. Please login.`, 400);
       }
+
+      const rawEmail = req.body?.email;
+      if (rawEmail && typeof rawEmail === "string" && rawEmail.trim() !== "") {
+        const existingEmail = await UserModel.findByEmail(rawEmail.trim());
+        if (existingEmail) {
+          return errorRes(res, "This email address is already registered. Please use a different email or leave it empty.", 400);
+        }
+      }
     }
 
     if (type === "seller-register") {
@@ -411,6 +419,14 @@ exports.sendOTP = async (req, res) => {
           ? "Please use a different number or log in." 
           : "Please login.";
         return errorRes(res, `Mobile number is already registered as a ${roleName}. ${suggestion}`, 400);
+      }
+
+      const rawEmail = req.body?.email;
+      if (rawEmail && typeof rawEmail === "string" && rawEmail.trim() !== "") {
+        const existingEmail = await UserModel.findByEmail(rawEmail.trim());
+        if (existingEmail) {
+          return errorRes(res, "This email address is already registered. Please use a different email or leave it empty.", 400);
+        }
       }
     }
 
@@ -524,10 +540,10 @@ exports.verifyOTP = async (req, res) => {
       if (!password) return errorRes(res, "password is required", 400);
 
       // Email duplication check
-      if (email) {
-        const existingEmail = await UserModel.findByEmail(email);
+      if (email && typeof email === "string" && email.trim() !== "") {
+        const existingEmail = await UserModel.findByEmail(email.trim());
         if (existingEmail) {
-          return errorRes(res, "Email is already registered", 400);
+          return errorRes(res, "This email address is already registered. Please use a different email or leave it empty.", 400);
         }
       }
 
@@ -606,10 +622,10 @@ exports.verifyOTP = async (req, res) => {
       if (!name) return errorRes(res, "Seller name is required", 400);
 
       // Email duplication check
-      if (email) {
-        const existingEmail = await UserModel.findByEmail(email);
+      if (email && typeof email === "string" && email.trim() !== "") {
+        const existingEmail = await UserModel.findByEmail(email.trim());
         if (existingEmail) {
-          return errorRes(res, "Email is already registered", 400);
+          return errorRes(res, "This email address is already registered. Please use a different email or leave it empty.", 400);
         }
       }
 
@@ -825,3 +841,25 @@ exports.logout = async (req, res) => {
 };
 
 exports.verifyWith2Factor = verifyWith2Factor;
+
+// Check if email already exists in system (used for real-time validation on Step 1)
+exports.checkEmail = async (req, res) => {
+  try {
+    const rawEmail = req.query?.email || req.body?.email;
+    if (!rawEmail || typeof rawEmail !== "string" || rawEmail.trim() === "") {
+      return successRes(res, { available: true });
+    }
+    const trimmedEmail = rawEmail.trim();
+    const existing = await UserModel.findByEmail(trimmedEmail);
+    if (existing) {
+      return successRes(res, {
+        available: false,
+        message: "This email address is already registered. Please use a different email or leave it empty.",
+      });
+    }
+    return successRes(res, { available: true });
+  } catch (err) {
+    console.error("checkEmail error:", err);
+    return errorRes(res, "Failed to check email");
+  }
+};

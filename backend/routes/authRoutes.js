@@ -12,6 +12,7 @@ const {
   adminLogin,
   getCaptcha,
   logout,
+  checkEmail,
 } = require("../controllers/authController");
 
 const { protect } = require("../middleware/authMiddleware");
@@ -20,8 +21,9 @@ const { protect } = require("../middleware/authMiddleware");
 // Direct register (used internally / admin seeding — NOT the normal user flow)
 router.post("/register",        register);
 
-// Math Captcha
+// Math Captcha & Email availability pre-check
 router.get("/captcha",          getCaptcha);
+router.get("/check-email",      checkEmail);
 
 // OTP-based authentication — used by both Register.jsx and Login.jsx
 // Register flow : send-otp { type:"register" } → verify-otp { type:"register", name, email }
