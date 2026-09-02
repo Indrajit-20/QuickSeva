@@ -12,6 +12,8 @@ import {
   BookOpen,
   Briefcase,
   PhoneCall,
+  HardHat,
+  Info,
   ChevronDown,
   Check,
   ChevronUp,
@@ -21,7 +23,7 @@ import { LANGUAGES, TRANSLATIONS } from '../data/chatbotTranslations';
 import { processChatbotMessage } from '../utils/chatbotEngine';
 import { useAuth } from '../context/AuthContext';
 
-const INITIAL_OPTIONS_COUNT = 2;
+const INITIAL_OPTIONS_COUNT = 3;
 
 export default function ChatbotWidget() {
   const navigate = useNavigate();
@@ -73,6 +75,8 @@ export default function ChatbotWidget() {
       case 'Wallet': return <Wallet className="w-4 h-4 text-amber-600" />;
       case 'BookOpen': return <BookOpen className="w-4 h-4 text-indigo-600" />;
       case 'Briefcase': return <Briefcase className="w-4 h-4 text-blue-600" />;
+      case 'HardHat': return <HardHat className="w-4 h-4 text-orange-600" />;
+      case 'Info': return <Info className="w-4 h-4 text-cyan-600" />;
       case 'PhoneCall': return <PhoneCall className="w-4 h-4 text-rose-600" />;
       default: return <Sparkles className="w-4 h-4 text-indigo-500" />;
     }
@@ -146,7 +150,20 @@ export default function ChatbotWidget() {
     if (!optionId) setInput('');
     setIsTyping(true);
 
-    const result = await processChatbotMessage({ message: queryText, optionId, language, user });
+    const recentMessages = messages
+      .slice(-6)
+      .map((msg) => ({
+        role: msg.sender === 'bot' ? 'assistant' : 'user',
+        text: msg.text
+      }));
+
+    const result = await processChatbotMessage({
+      message: queryText,
+      optionId,
+      language,
+      user,
+      history: recentMessages
+    });
     setIsTyping(false);
 
     setMessages((prev) => [

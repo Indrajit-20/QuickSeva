@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { handleChatbotQuery } = require("../controllers/chatbotController");
+const { handleChatbotQuery, handleChatbotHealth } = require("../controllers/chatbotController");
 const { verifyToken } = require("../utils/jwtUtils");
 
 // Optional auth middleware (attaches req.user if valid token provided, but doesn't block guests)
@@ -23,5 +23,9 @@ const optionalAuth = (req, res, next) => {
 // @route   POST /api/chatbot/query
 // @desc    Process chatbot query
 router.post("/query", optionalAuth, handleChatbotQuery);
+
+// @route   GET /api/chatbot/health
+// @desc    Check chatbot AI/database configuration without exposing secrets
+router.get("/health", handleChatbotHealth);
 
 module.exports = router;

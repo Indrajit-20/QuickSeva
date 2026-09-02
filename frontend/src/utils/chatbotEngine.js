@@ -1,20 +1,135 @@
 import axios from 'axios';
-import { TRANSLATIONS, KEYWORD_RULES } from '../data/chatbotTranslations';
+import {
+  TRANSLATIONS,
+  KEYWORD_RULES,
+  OUT_OF_SCOPE_KEYWORDS,
+  SCOPE_OVERRIDE_KEYWORDS
+} from '../data/chatbotTranslations';
+import { API_BASE_URL } from '../config/api';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const SUPPORT_INTENT_KEYWORDS = [
+  'order', 'booking', 'book', 'status', 'track', 'reply', 'response',
+  'provider', 'seller', 'show', 'visible', 'not showing', 'not coming',
+  'nathi', 'nahi', 'nai', 'na aave', 'avto', 'avato', 'aavto', 'aavato',
+  'batav', 'batave', 'dekhatu', 'dekhat', 'jawab', 'javab', 'madad',
+  'ઓર્ડર', 'બુકિંગ', 'જવાબ', 'નથી', 'આવતો', 'આવતું', 'બતાવતું',
+  'दिख', 'नहीं', 'आया', 'जवाब', 'बुकिंग', 'ऑर्डर'
+];
 
 /**
- * Smart Local Keyword Matcher
+ * Check if the user's message is clearly out-of-scope (not QuickSeva-related).
+ * Returns true if the message is off-topic and should get a polite decline.
+ */
+function isOutOfScope(normalizedInput) {
+  // First check if ANY QuickSeva-related override keyword is present
+  // If so, it's NOT out of scope (e.g., "how to become contractor" contains QuickSeva concepts)
+  const hasQuickSevaContext = SCOPE_OVERRIDE_KEYWORDS.some((kw) =>
+    normalizedInput.includes(kw.toLowerCase())
+  );
+  if (hasQuickSevaContext) return false;
+
+  // Check for out-of-scope keywords
+  const offTopicMatches = OUT_OF_SCOPE_KEYWORDS.filter((kw) =>
+    normalizedInput.includes(kw.toLowerCase())
+  );
+
+  // Require at least 1 off-topic keyword match to trigger decline
+  return offTopicMatches.length > 0;
+}
+
+function hasSupportIntent(normalizedInput) {
+  return SUPPORT_INTENT_KEYWORDS.some((kw) => normalizedInput.includes(kw.toLowerCase()));
+}
+
+function buildSupportIntentFallback(message, language) {
+  const normalized = (message || '').trim().toLowerCase();
+  const looksLikeOrderIssue = ['order', 'booking', 'book', 'status', 'track', 'ઓર્ડર', 'બુકિંગ', 'ऑर्डर', 'बुकिंग']
+    .some((kw) => normalized.includes(kw));
+
+  if (!looksLikeOrderIssue && !hasSupportIntent(normalized)) return null;
+
+  if (language === 'gu') {
+    return `હું સમજી શકું છું. જો ઓર્ડર દેખાતો નથી અથવા પ્રોવાઇડરનો જવાબ નથી આવતો, તો પહેલા **[My Bookings](/my-bookings)** માં સ્ટેટસ ચેક કરો.\n\n• **Pending** હોય તો પ્રોવાઇડર હજુ accept કરવાનું બાકી છે.\n• ઓર્ડર દેખાતો ન હોય તો login થયેલો નંબર/એકાઉન્ટ સાચું છે કે નહીં ચેક કરો.\n• Booking ID હોય તો અહીં મોકલો, હું તેને ચેક કરવાનો પ્રયત્ન કરીશ.\n\nતાત્કાલિક મદદ માટે support@quickseva.com અથવા +91 98765 43210 પર સંપર્ક કરો.`;
+  }
+
+  if (language === 'hi') {
+    return `मैं समझ रहा हूँ। अगर ऑर्डर दिखाई नहीं दे रहा या प्रोवाइडर का जवाब नहीं आ रहा, तो पहले **[My Bookings](/my-bookings)** में स्टेटस देखें।\n\n• **Pending** है तो प्रोवाइडर ने अभी accept नहीं किया है।\n• ऑर्डर नहीं दिख रहा हो तो सही login नंबर/अकाउंट चेक करें।\n• Booking ID हो तो यहाँ भेजें, मैं चेक करने की कोशिश करूँगा।\n\nतुरंत मदद के लिए support@quickseva.com या +91 98765 43210 पर संपर्क करें।`;
+  }
+
+  return `I understand. If your order is not showing or the provider has not replied, please first check **[My Bookings](/my-bookings)**.\n\n• If it is **Pending**, the provider has not accepted yet.\n• If no order is visible, confirm you are logged in with the same account/phone used for booking.\n• If you have a Booking ID, send it here and I will try to check it.\n\nFor urgent help, contact support@quickseva.com or +91 98765 43210.`;
+}
+
+/**
+ * Smart Local Keyword Matcher with Specificity Scoring.
+ * 
+ * Instead of returning the FIRST matching rule, this scores ALL rules
+ * and returns the response from the BEST (most specific) match.
+ * 
+ * Scoring:
+ * - Each matched keyword adds points equal to the keyword's word count
+ *   (longer phrases = more specific = higher score)
+ * - The rule's `priority` field acts as a tiebreaker multiplier
+ * - Must have at least 1 keyword match to qualify
  */
 export function findLocalResponse(userInput, language = 'en') {
   if (!userInput) return null;
   const normalized = userInput.trim().toLowerCase();
 
+  // 1. Out-of-scope check FIRST — before any keyword matching
+  if (isOutOfScope(normalized)) {
+    const langDict = TRANSLATIONS[language] || TRANSLATIONS.en;
+    return langDict.responses.out_of_scope || langDict.responses.fallback;
+  }
+
+  // Extract clean word tokens from user input
+  const inputTokens = normalized
+    .replace(/[^a-z0-9\u0A80-\u0AFF\u0900-\u097F\s]/g, '')
+    .split(/\s+/)
+    .filter((w) => w.length > 1);
+
+  // 2. Score all keyword rules for specificity & token overlap
+  let bestMatch = null;
+  let bestScore = 0;
+
   for (const rule of KEYWORD_RULES) {
-    const isMatch = rule.keywords.some((kw) => normalized.includes(kw.toLowerCase()));
-    if (isMatch) {
-      return rule.responses[language] || rule.responses.en;
+    let ruleScore = 0;
+    let matchCount = 0;
+
+    for (const kw of rule.keywords) {
+      const kwLower = kw.toLowerCase();
+      
+      // Exact substring match
+      if (normalized.includes(kwLower)) {
+        matchCount++;
+        const wordCount = kw.trim().split(/\s+/).length;
+        ruleScore += wordCount * 3; // Exact phrase match gets high score
+      } else {
+        // Token set match for scrambled phrases (e.g. "quickseva is what about tell me")
+        const kwTokens = kwLower.split(/\s+/).filter((w) => w.length > 2);
+        if (kwTokens.length >= 2) {
+          const matchingTokens = kwTokens.filter((t) => inputTokens.includes(t));
+          if (matchingTokens.length >= 2) {
+            matchCount++;
+            ruleScore += matchingTokens.length * 2;
+          }
+        }
+      }
     }
+
+    if (matchCount === 0) continue;
+
+    // Apply rule priority as a multiplier
+    const priority = rule.priority || 5;
+    const finalScore = ruleScore * priority;
+
+    if (finalScore > bestScore) {
+      bestScore = finalScore;
+      bestMatch = rule;
+    }
+  }
+
+  if (bestMatch && bestScore >= 6) {
+    return bestMatch.responses[language] || bestMatch.responses.en;
   }
 
   return null;
@@ -23,7 +138,7 @@ export function findLocalResponse(userInput, language = 'en') {
 /**
  * Core Chatbot Query Processor
  */
-export async function processChatbotMessage({ message, optionId, language = 'en', user = null }) {
+export async function processChatbotMessage({ message, optionId, language = 'en', user = null, history = [] }) {
   // 1. If user clicked a predefined option button
   if (optionId) {
     const langDict = TRANSLATIONS[language] || TRANSLATIONS.en;
@@ -43,13 +158,10 @@ export async function processChatbotMessage({ message, optionId, language = 'en'
     return { text: responseText, type: 'bot', source: 'option' };
   }
 
-  // 2. Try Smart Local Keyword Match
+  // 2. Try Smart Local Keyword Match (with specificity scoring + out-of-scope detection)
   const localAnswer = findLocalResponse(message, language);
-  if (localAnswer) {
-    return { text: localAnswer, type: 'bot', source: 'local_rule' };
-  }
-
-  // 3. Optional Backend Call (Gemini AI / DB Context)
+  // 3. Backend Call (Gemini AI / DB Context) — only for QuickSeva-related questions
+  //    that didn't match any local keyword rule
   try {
     const token = localStorage.getItem('token');
     const res = await axios.post(
@@ -58,11 +170,12 @@ export async function processChatbotMessage({ message, optionId, language = 'en'
         message,
         language,
         userName: user?.name || null,
-        userId: user?.id || null
+        userId: user?.id || null,
+        history
       },
       {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
-        timeout: 8000
+        timeout: 10000
       }
     );
 
@@ -73,7 +186,17 @@ export async function processChatbotMessage({ message, optionId, language = 'en'
     console.warn('Backend chatbot endpoint fallback to local response:', err.message);
   }
 
-  // 4. Default Trilingual Fallback
+  if (localAnswer) {
+    return { text: localAnswer, type: 'bot', source: 'local_rule' };
+  }
+
+  // 4. Use a conversational support fallback for QuickSeva support intents.
+  const supportFallback = buildSupportIntentFallback(message, language);
+  if (supportFallback) {
+    return { text: supportFallback, type: 'bot', source: 'support_intent_fallback' };
+  }
+
+  // 5. Default Trilingual Fallback
   const fallbackDict = TRANSLATIONS[language] || TRANSLATIONS.en;
   return {
     text: fallbackDict.responses.fallback,
