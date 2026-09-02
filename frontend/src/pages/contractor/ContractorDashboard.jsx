@@ -298,6 +298,33 @@ export default function ContractorDashboard() {
                 </div>
               </div>
             </div>
+
+            {/* Social Inbox CRM Banner Card */}
+            <div
+              onClick={() => navigate("/contractor/social-inbox")}
+              className="mt-4 bg-gradient-to-r from-amber-600 via-amber-700 to-slate-900 text-white rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-md cursor-pointer hover:shadow-lg transition group"
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-xl bg-white/10 backdrop-blur-xs flex items-center justify-center border border-white/20 shrink-0">
+                  <Sparkles className="text-amber-300 animate-pulse" size={24} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-black tracking-tight">Social Lead Manager</h3>
+                    <span className="bg-amber-400 text-amber-950 text-[10px] font-black uppercase px-2 py-0.5 rounded-full shadow-2xs">
+                      Meta & CRM
+                    </span>
+                  </div>
+                  <p className="text-xs text-amber-100/90 mt-0.5">
+                    Manage Instagram DMs, Facebook Page Inquiries, and Meta Ads leads directly inside your Contractor Portal.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 px-4 py-2 bg-white text-amber-950 font-black text-xs rounded-xl shadow-xs group-hover:bg-amber-100 transition shrink-0">
+                <span>Open Social Inbox</span>
+                <ArrowRight size={14} />
+              </div>
+            </div>
           </div>
 
           {/* 2-Column Overview Section: Recent Leads & Active Listings */}

@@ -64,7 +64,10 @@ const authorize = (...roles) => {
 // Only sellers
 const sellerOnly = authorize("seller", "admin");
 
+// Sellers, contractors or admins
+const contractorOrSeller = authorize("seller", "contractor", "admin");
+
 // Only admins
 const adminOnly = authorize("admin");
 
-module.exports = { protect, authorize, sellerOnly, adminOnly };
+module.exports = { protect, authorize, sellerOnly, contractorOrSeller, adminOnly };

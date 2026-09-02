@@ -23,7 +23,9 @@ import {
   Briefcase,
   SlidersHorizontal,
   X,
-  Bot
+  Bot,
+  Building2,
+  HardHat
 } from "lucide-react";
 import { socialInboxApi } from "../../api/socialInboxApi";
 import { useAuth } from "../../context/AuthContext";
@@ -32,21 +34,21 @@ import { useSocket } from "../../context/SocketContext";
 const PLATFORM_CONFIG = {
   quickseva: {
     label: "QuickSeva",
-    badgeBg: "bg-sky-100 text-sky-700 border-sky-200",
-    color: "#0284c7",
+    badgeBg: "bg-amber-100 text-amber-900 border-amber-300",
+    color: "#d97706",
     icon: ShieldCheck,
-    tag: "🔵 QuickSeva Direct"
+    tag: "🟠 QuickSeva Direct"
   },
   instagram: {
     label: "Instagram",
-    badgeBg: "bg-rose-100 text-rose-700 border-rose-200",
+    badgeBg: "bg-rose-100 text-rose-800 border-rose-200",
     color: "#e1306c",
     icon: Sparkles,
     tag: "🔴 Instagram DM"
   },
   facebook: {
     label: "Facebook",
-    badgeBg: "bg-indigo-100 text-indigo-700 border-indigo-200",
+    badgeBg: "bg-indigo-100 text-indigo-800 border-indigo-200",
     color: "#1877f2",
     icon: MessageSquare,
     tag: "🟣 Facebook Page"
@@ -56,13 +58,13 @@ const PLATFORM_CONFIG = {
 const STATUS_CONFIG = {
   new: { label: "New Lead", bg: "bg-red-500 text-white shadow-red-200" },
   contacted: { label: "Contacted", bg: "bg-amber-500 text-white shadow-amber-200" },
-  interested: { label: "Interested", bg: "bg-blue-500 text-white shadow-blue-200" },
-  quoted: { label: "Quoted", bg: "bg-purple-500 text-white shadow-purple-200" },
-  converted: { label: "Converted / Booked", bg: "bg-emerald-600 text-white shadow-emerald-200" },
+  interested: { label: "Interested", bg: "bg-blue-600 text-white shadow-blue-200" },
+  quoted: { label: "Quoted", bg: "bg-purple-600 text-white shadow-purple-200" },
+  converted: { label: "Converted / Site Booked", bg: "bg-emerald-600 text-white shadow-emerald-200" },
   lost: { label: "Lost", bg: "bg-slate-400 text-white shadow-slate-100" }
 };
 
-export default function SellerSocialInbox() {
+export default function ContractorSocialInbox() {
   const { user } = useAuth();
   const { socket } = useSocket();
 
@@ -116,7 +118,7 @@ export default function SellerSocialInbox() {
         selectConversation(convList[0].id);
       }
     } catch (err) {
-      console.error("Error loading social inbox data:", err);
+      console.error("Error loading contractor social inbox data:", err);
     } finally {
       setLoadingConvs(false);
     }
@@ -273,10 +275,10 @@ export default function SellerSocialInbox() {
     }
   };
 
-  // Convert to QuickSeva Booking
+  // Convert to QuickSeva Booking / Site Project
   const handleConvertToBooking = async () => {
     if (!selectedConv || converting) return;
-    if (!window.confirm(`Convert lead "${selectedConv.customer_name}" into a direct QuickSeva Booking?`)) return;
+    if (!window.confirm(`Convert lead "${selectedConv.customer_name}" into a confirmed Contractor Site Project?`)) return;
 
     try {
       setConverting(true);
@@ -286,7 +288,7 @@ export default function SellerSocialInbox() {
         setConversations(prev =>
           prev.map(c => (c.id === selectedConv.id ? { ...c, status: "converted" } : c))
         );
-        showBanner("🎉 Lead successfully converted into a QuickSeva Booking!");
+        showBanner("🎉 Lead successfully converted into a confirmed Contractor Site Project!");
         socialInboxApi.getStats().then(s => s?.stats && setStats(s.stats));
       }
     } catch (err) {
@@ -338,49 +340,49 @@ export default function SellerSocialInbox() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-80px)] bg-slate-50 font-sans text-slate-800">
+    <div className="flex flex-col h-[calc(100vh-100px)] bg-slate-50 font-sans text-slate-800 rounded-2xl overflow-hidden border border-slate-200 shadow-sm">
       {/* ── Top Header & Stats Bar ── */}
       <div className="bg-white border-b border-slate-200 px-6 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 shrink-0 shadow-xs">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-              <Sparkles className="text-sky-500 fill-sky-100" size={22} />
-              Social Lead Manager
+            <h1 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+              <HardHat className="text-amber-600 fill-amber-100" size={24} />
+              Contractor Social Inbox
             </h1>
-            <span className="bg-sky-50 text-sky-700 text-xs font-semibold px-2.5 py-1 rounded-full border border-sky-200 flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-sky-500 animate-pulse"></span>
-              Unified CRM
+            <span className="bg-amber-50 text-amber-800 text-xs font-bold px-2.5 py-1 rounded-full border border-amber-200 flex items-center gap-1.5 shadow-2xs">
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+              Contractor CRM
             </span>
           </div>
-          <p className="text-xs text-slate-500 mt-1">
-            Centralized Lead Inbox for Instagram, Facebook Pages, Meta Ads & QuickSeva Direct
+          <p className="text-xs font-medium text-slate-500 mt-1">
+            Centralized Lead Inbox for Instagram, Facebook Pages, Meta Lead Ads & QuickSeva Direct Site Inquiries
           </p>
         </div>
 
         {/* Quick Stats Pills & Connect Button */}
         <div className="flex items-center gap-3 overflow-x-auto no-scrollbar pb-1 md:pb-0">
           <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200">
-            <div className="px-3 py-1 bg-white rounded-lg border border-slate-100 shadow-xs text-center">
-              <div className="text-xs text-slate-400 font-medium">Total</div>
-              <div className="text-sm font-black text-slate-800">{stats?.total || 0}</div>
+            <div className="px-3 py-1 bg-white rounded-lg border border-slate-100 shadow-2xs text-center">
+              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total</div>
+              <div className="text-sm font-black text-slate-900">{stats?.total || 0}</div>
             </div>
             <div className="px-3 py-1 bg-rose-50 rounded-lg border border-rose-100 text-center">
-              <div className="text-xs text-rose-500 font-semibold">New</div>
+              <div className="text-[10px] text-rose-600 font-bold uppercase tracking-wider">New</div>
               <div className="text-sm font-black text-rose-700">{stats?.new || 0}</div>
             </div>
             <div className="px-3 py-1 bg-amber-50 rounded-lg border border-amber-100 text-center">
-              <div className="text-xs text-amber-600 font-semibold">Contacted</div>
-              <div className="text-sm font-black text-amber-800">{stats?.contacted || 0}</div>
+              <div className="text-[10px] text-amber-700 font-bold uppercase tracking-wider">Contacted</div>
+              <div className="text-sm font-black text-amber-900">{stats?.contacted || 0}</div>
             </div>
             <div className="px-3 py-1 bg-emerald-50 rounded-lg border border-emerald-100 text-center">
-              <div className="text-xs text-emerald-600 font-semibold">Converted</div>
-              <div className="text-sm font-black text-emerald-800">{stats?.converted || 0}</div>
+              <div className="text-[10px] text-emerald-700 font-bold uppercase tracking-wider">Converted Sites</div>
+              <div className="text-sm font-black text-emerald-900">{stats?.converted || 0}</div>
             </div>
           </div>
 
           <button
             onClick={() => setShowAccountsModal(true)}
-            className="flex items-center gap-2 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-sm transition shrink-0"
+            className="flex items-center gap-2 px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-xs active:scale-95 transition shrink-0 cursor-pointer"
           >
             <SlidersHorizontal size={14} />
             Connect Channels
@@ -389,9 +391,9 @@ export default function SellerSocialInbox() {
       </div>
 
       {notificationMsg && (
-        <div className="bg-emerald-600 text-white px-6 py-2 text-xs font-semibold flex items-center justify-between shadow-inner">
+        <div className="bg-emerald-600 text-white px-6 py-2 text-xs font-bold flex items-center justify-between shadow-inner">
           <span>{notificationMsg}</span>
-          <button onClick={() => setNotificationMsg(null)}><X size={14} /></button>
+          <button onClick={() => setNotificationMsg(null)} className="cursor-pointer"><X size={14} /></button>
         </div>
       )}
 
@@ -402,16 +404,16 @@ export default function SellerSocialInbox() {
         <div className="w-full md:w-80 lg:w-96 border-r border-slate-200 bg-white flex flex-col shrink-0">
           
           {/* Platform Filters */}
-          <div className="p-3 border-b border-slate-100 space-y-3">
-            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+          <div className="p-3 border-b border-slate-100 space-y-3 bg-slate-50/50">
+            <div className="flex items-center gap-1 bg-slate-200/70 p-1 rounded-xl">
               {["all", "quickseva", "instagram", "facebook"].map((p) => (
                 <button
                   key={p}
                   onClick={() => setPlatformFilter(p)}
-                  className={`flex-1 py-1.5 text-xs font-bold rounded-lg capitalize transition ${
+                  className={`flex-1 py-1.5 text-xs font-bold rounded-lg capitalize transition cursor-pointer ${
                     platformFilter === p
-                      ? "bg-white text-slate-900 shadow-xs"
-                      : "text-slate-500 hover:text-slate-900"
+                      ? "bg-white text-amber-700 shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
                   }`}
                 >
                   {p}
@@ -425,10 +427,10 @@ export default function SellerSocialInbox() {
                 <button
                   key={st}
                   onClick={() => setStatusFilter(st)}
-                  className={`px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap border capitalize transition ${
+                  className={`px-2.5 py-1 rounded-full text-[11px] font-bold whitespace-nowrap border capitalize transition cursor-pointer ${
                     statusFilter === st
-                      ? "bg-slate-900 text-white border-slate-900"
-                      : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
+                      ? "bg-amber-600 text-white border-amber-600 shadow-2xs"
+                      : "bg-white text-slate-600 border-slate-200 hover:bg-slate-100"
                   }`}
                 >
                   {st}
@@ -441,10 +443,10 @@ export default function SellerSocialInbox() {
               <Search size={14} className="absolute left-3 top-2.5 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search by customer, phone, service..."
+                placeholder="Search by customer, phone, trade interest..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 focus:bg-white"
+                className="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
               />
             </div>
           </div>
@@ -453,12 +455,12 @@ export default function SellerSocialInbox() {
           <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
             {loadingConvs ? (
               <div className="p-8 text-center text-slate-400 text-xs flex flex-col items-center gap-2">
-                <RefreshCw size={18} className="animate-spin text-sky-500" />
-                Loading social leads...
+                <RefreshCw size={18} className="animate-spin text-amber-600" />
+                Loading contractor leads...
               </div>
             ) : conversations.length === 0 ? (
               <div className="p-8 text-center text-slate-400 text-xs">
-                No leads match your current filter.
+                No contractor leads match your current filter.
               </div>
             ) : (
               conversations.map((conv) => {
@@ -470,8 +472,8 @@ export default function SellerSocialInbox() {
                   <div
                     key={conv.id}
                     onClick={() => selectConversation(conv.id)}
-                    className={`p-3.5 cursor-pointer transition flex items-start gap-3 hover:bg-slate-50 relative ${
-                      isSelected ? "bg-sky-50/60 border-l-4 border-sky-500" : ""
+                    className={`p-3.5 cursor-pointer transition flex items-start gap-3 hover:bg-amber-50/40 relative ${
+                      isSelected ? "bg-amber-50/70 border-l-4 border-amber-600 shadow-2xs" : ""
                     }`}
                   >
                     <div className="relative shrink-0">
@@ -493,13 +495,13 @@ export default function SellerSocialInbox() {
                         <h4 className="text-xs font-bold text-slate-900 truncate">
                           {conv.customer_name}
                         </h4>
-                        <span className="text-[10px] text-slate-400 whitespace-nowrap">
+                        <span className="text-[10px] text-slate-400 whitespace-nowrap font-medium">
                           {conv.last_message_at ? new Date(conv.last_message_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                         </span>
                       </div>
 
-                      <div className="text-[11px] text-sky-700 font-semibold truncate mt-0.5">
-                        {conv.service_interest || "General Inquiry"}
+                      <div className="text-[11px] text-amber-700 font-extrabold truncate mt-0.5">
+                        {conv.service_interest || "Site Work Inquiry"}
                       </div>
 
                       <p className="text-xs text-slate-500 truncate mt-1">
@@ -511,7 +513,7 @@ export default function SellerSocialInbox() {
                           {statusMeta.label}
                         </span>
                         {conv.unread_count > 0 && (
-                          <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full animate-pulse">
+                          <span className="bg-rose-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full animate-pulse">
                             {conv.unread_count} new
                           </span>
                         )}
@@ -529,7 +531,7 @@ export default function SellerSocialInbox() {
           {selectedConv ? (
             <>
               {/* Active Conversation Header */}
-              <div className="px-6 py-3 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+              <div className="px-6 py-3 border-b border-slate-200 flex items-center justify-between bg-slate-50/70">
                 <div className="flex items-center gap-3">
                   <img
                     src={selectedConv.customer_avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150"}
@@ -544,11 +546,11 @@ export default function SellerSocialInbox() {
                       </span>
                     </div>
                     <div className="text-xs text-slate-500 flex items-center gap-2 mt-0.5">
-                      <span>Service: <strong className="text-slate-800">{selectedConv.service_interest}</strong></span>
+                      <span>Requirement: <strong className="text-slate-800">{selectedConv.service_interest}</strong></span>
                       {selectedConv.customer_phone && (
                         <>
                           <span>•</span>
-                          <a href={`tel:${selectedConv.customer_phone}`} className="text-sky-600 hover:underline flex items-center gap-1 font-semibold">
+                          <a href={`tel:${selectedConv.customer_phone}`} className="text-amber-700 hover:underline flex items-center gap-1 font-bold">
                             <Phone size={12} /> {selectedConv.customer_phone}
                           </a>
                         </>
@@ -562,22 +564,22 @@ export default function SellerSocialInbox() {
                   <select
                     value={selectedConv.status}
                     onChange={(e) => handleStatusChange(e.target.value)}
-                    className="text-xs font-semibold px-3 py-1.5 bg-white border border-slate-200 rounded-xl shadow-xs focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    className="text-xs font-bold px-3 py-1.5 bg-white border border-slate-200 rounded-xl shadow-2xs focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer"
                   >
                     <option value="new">🔴 New Lead</option>
                     <option value="contacted">🟡 Contacted</option>
                     <option value="interested">🔵 Interested</option>
                     <option value="quoted">🟣 Quoted</option>
-                    <option value="converted">🟢 Converted / Booked</option>
+                    <option value="converted">🟢 Converted / Site Booked</option>
                     <option value="lost">⚪ Lost</option>
                   </select>
                 </div>
               </div>
 
               {/* Messages Feed */}
-              <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-slate-50/30">
+              <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-slate-50/40">
                 {loadingDetail ? (
-                  <div className="text-center text-xs text-slate-400 py-8">Loading timeline...</div>
+                  <div className="text-center text-xs text-slate-400 py-8">Loading conversation history...</div>
                 ) : messages.length === 0 ? (
                   <div className="text-center text-xs text-slate-400 py-8">No message history available.</div>
                 ) : (
@@ -588,7 +590,7 @@ export default function SellerSocialInbox() {
                     if (isSystem) {
                       return (
                         <div key={m.id} className="flex justify-center my-2">
-                          <div className="bg-amber-50 border border-amber-200 text-amber-800 text-xs px-4 py-2 rounded-xl flex items-center gap-2 max-w-md shadow-xs">
+                          <div className="bg-amber-50 border border-amber-200 text-amber-900 text-xs px-4 py-2 rounded-xl flex items-center gap-2 max-w-md shadow-2xs font-medium">
                             <Bot size={16} className="text-amber-600 shrink-0" />
                             <div>{m.message}</div>
                           </div>
@@ -601,13 +603,13 @@ export default function SellerSocialInbox() {
                         key={m.id}
                         className={`flex flex-col ${isSeller ? "items-end" : "items-start"}`}
                       >
-                        <div className="text-[10px] text-slate-400 mb-1 px-1">
-                          {m.sender_name || (isSeller ? "You" : selectedConv.customer_name)} • {new Date(m.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        <div className="text-[10px] text-slate-400 mb-1 px-1 font-medium">
+                          {m.sender_name || (isSeller ? "You (Contractor)" : selectedConv.customer_name)} • {new Date(m.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </div>
                         <div
-                          className={`max-w-md px-4 py-2.5 rounded-2xl text-xs leading-relaxed shadow-xs ${
+                          className={`max-w-md px-4 py-2.5 rounded-2xl text-xs leading-relaxed shadow-2xs font-medium ${
                             isSeller
-                              ? "bg-sky-600 text-white rounded-tr-none"
+                              ? "bg-amber-600 text-white rounded-tr-none font-semibold"
                               : "bg-white text-slate-800 border border-slate-200 rounded-tl-none"
                           }`}
                         >
@@ -620,26 +622,32 @@ export default function SellerSocialInbox() {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Quick Reply Suggestions */}
-              <div className="px-6 py-2 bg-white border-t border-slate-100 flex items-center gap-2 overflow-x-auto no-scrollbar">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider shrink-0">Quick Replies:</span>
+              {/* Quick Reply Suggestions for Contractor */}
+              <div className="px-6 py-2.5 bg-white border-t border-slate-100 flex items-center gap-2 overflow-x-auto no-scrollbar">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider shrink-0">Trade Quick Replies:</span>
                 <button
-                  onClick={() => sendQuickReply("Hi! Thank you for reaching out to QuickSeva. When would you prefer us to visit?")}
-                  className="px-2.5 py-1 bg-slate-100 hover:bg-sky-50 text-slate-600 hover:text-sky-700 border border-slate-200 rounded-lg text-xs font-medium whitespace-nowrap transition"
+                  onClick={() => sendQuickReply("Hello! We can schedule a site visit and measurement inspection. When suits you best?")}
+                  className="px-3 py-1 bg-slate-100 hover:bg-amber-50 text-slate-700 hover:text-amber-800 border border-slate-200 rounded-lg text-xs font-bold whitespace-nowrap transition cursor-pointer"
                 >
-                  "When to visit?"
+                  "📅 Site Visit Schedule"
                 </button>
                 <button
-                  onClick={() => sendQuickReply("Hello! Our inspection fee is ₹199. Would you like to confirm the booking?")}
-                  className="px-2.5 py-1 bg-slate-100 hover:bg-sky-50 text-slate-600 hover:text-sky-700 border border-slate-200 rounded-lg text-xs font-medium whitespace-nowrap transition"
+                  onClick={() => sendQuickReply("Hi! Our rate per sq. ft. depends on material specifications and site area. Shall we send an estimate?")}
+                  className="px-3 py-1 bg-slate-100 hover:bg-amber-50 text-slate-700 hover:text-amber-800 border border-slate-200 rounded-lg text-xs font-bold whitespace-nowrap transition cursor-pointer"
                 >
-                  "Inspection fee details"
+                  "📐 Rate Estimate per Sq. Ft."
                 </button>
                 <button
-                  onClick={() => sendQuickReply("Sure! We can reach your location within 45 minutes.")}
-                  className="px-2.5 py-1 bg-slate-100 hover:bg-sky-50 text-slate-600 hover:text-sky-700 border border-slate-200 rounded-lg text-xs font-medium whitespace-nowrap transition"
+                  onClick={() => sendQuickReply("Hello! We provide experienced shuttering, painting, and civil labor teams with complete supervision.")}
+                  className="px-3 py-1 bg-slate-100 hover:bg-amber-50 text-slate-700 hover:text-amber-800 border border-slate-200 rounded-lg text-xs font-bold whitespace-nowrap transition cursor-pointer"
                 >
-                  "45 min arrival"
+                  "👷 Labor Team Availability"
+                </button>
+                <button
+                  onClick={() => sendQuickReply("Sure! We can prepare a formal project contract with milestone payments. Please share full site location.")}
+                  className="px-3 py-1 bg-slate-100 hover:bg-amber-50 text-slate-700 hover:text-amber-800 border border-slate-200 rounded-lg text-xs font-bold whitespace-nowrap transition cursor-pointer"
+                >
+                  "📄 Contract Agreement Draft"
                 </button>
               </div>
 
@@ -650,12 +658,12 @@ export default function SellerSocialInbox() {
                   placeholder={`Reply to ${selectedConv.customer_name} via ${selectedConv.platform}...`}
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
-                  className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 focus:bg-white"
+                  className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white font-medium"
                 />
                 <button
                   type="submit"
                   disabled={sendingReply || !replyText.trim()}
-                  className="px-4 py-2.5 bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition"
+                  className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-xs active:scale-95 transition cursor-pointer"
                 >
                   <Send size={14} />
                   Send
@@ -664,10 +672,10 @@ export default function SellerSocialInbox() {
             </>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-slate-400">
-              <MessageSquare size={48} className="text-slate-200 mb-3" />
+              <MessageSquare size={48} className="text-slate-300 mb-3" />
               <h3 className="text-sm font-bold text-slate-700">Select a lead conversation</h3>
               <p className="text-xs text-slate-400 max-w-sm mt-1">
-                Choose any lead from the left list to view messaging history, manage lead status, add notes, or convert to a booking.
+                Choose any site inquiry lead from the left feed to view messaging history, manage lead status, add notes, or convert to a confirmed site project.
               </p>
             </div>
           )}
@@ -678,20 +686,20 @@ export default function SellerSocialInbox() {
           <div className="w-80 lg:w-84 bg-slate-50 p-5 overflow-y-auto border-l border-slate-200 shrink-0 space-y-5">
             
             {/* Customer Summary Card */}
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
-              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider text-slate-400">
-                Customer & Lead Details
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
+              <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">
+                Client & Site Details
               </h3>
 
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-xs">
                   <User size={14} className="text-slate-400 shrink-0" />
-                  <span className="font-bold text-slate-800">{selectedConv.customer_name}</span>
+                  <span className="font-bold text-slate-900">{selectedConv.customer_name}</span>
                 </div>
                 {selectedConv.customer_phone && (
                   <div className="flex items-center gap-2 text-xs">
                     <Phone size={14} className="text-slate-400 shrink-0" />
-                    <a href={`tel:${selectedConv.customer_phone}`} className="text-sky-600 hover:underline font-medium">
+                    <a href={`tel:${selectedConv.customer_phone}`} className="text-amber-700 hover:underline font-bold">
                       {selectedConv.customer_phone}
                     </a>
                   </div>
@@ -705,59 +713,59 @@ export default function SellerSocialInbox() {
                 {selectedConv.city && (
                   <div className="flex items-center gap-2 text-xs">
                     <MapPin size={14} className="text-slate-400 shrink-0" />
-                    <span className="text-slate-600">{selectedConv.city}</span>
+                    <span className="text-slate-700 font-medium">{selectedConv.city}</span>
                   </div>
                 )}
               </div>
 
               <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-                <span className="text-slate-400">Lead Value:</span>
-                <span className="font-black text-slate-900">₹{selectedConv.estimated_value || '1,500.00'}</span>
+                <span className="text-slate-400 font-medium">Estimated Project Value:</span>
+                <span className="font-black text-slate-900">₹{selectedConv.estimated_value || '15,000.00'}</span>
               </div>
             </div>
 
-            {/* Convert to QuickSeva Booking Button */}
-            <div className="bg-gradient-to-br from-emerald-600 to-teal-700 text-white p-4 rounded-2xl shadow-sm space-y-2">
+            {/* Convert to QuickSeva Booking / Site Project Button */}
+            <div className="bg-gradient-to-br from-amber-600 via-amber-700 to-amber-800 text-white p-4 rounded-2xl shadow-sm space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-emerald-200">Action</span>
-                <Sparkles size={16} className="text-emerald-200" />
+                <span className="text-[10px] font-black uppercase tracking-wider text-amber-200">Contractor Action</span>
+                <Sparkles size={16} className="text-amber-200" />
               </div>
-              <h4 className="text-sm font-black">Convert Lead to Booking</h4>
-              <p className="text-[11px] text-emerald-100">
-                Transform this social inquiry directly into a QuickSeva marketplace order.
+              <h4 className="text-sm font-black">Convert Lead to Site Project</h4>
+              <p className="text-[11px] text-amber-100">
+                Transform this social inquiry directly into an active QuickSeva Contractor site project.
               </p>
               <button
                 onClick={handleConvertToBooking}
                 disabled={converting || selectedConv.status === "converted"}
-                className={`w-full mt-2 py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition ${
+                className={`w-full mt-2 py-2.5 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition cursor-pointer ${
                   selectedConv.status === "converted"
                     ? "bg-white/20 text-white cursor-not-allowed"
-                    : "bg-white text-emerald-800 hover:bg-emerald-50 shadow-xs"
+                    : "bg-white text-amber-900 hover:bg-amber-50 shadow-xs"
                 }`}
               >
                 <CheckCircle2 size={16} />
-                {selectedConv.status === "converted" ? "Already Converted" : "Convert Now"}
+                {selectedConv.status === "converted" ? "Already Converted ✓" : "Convert Now"}
               </button>
             </div>
 
-            {/* Seller Notes Section */}
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
-              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider text-slate-400 flex items-center justify-between">
-                <span>Internal Seller Notes</span>
+            {/* Contractor Notes Section */}
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
+              <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                <span>Internal Site Notes</span>
                 <FileText size={14} />
               </h3>
 
               <form onSubmit={handleAddNote} className="space-y-2">
                 <textarea
-                  placeholder="Add private note (e.g. Customer requested quote by tomorrow)..."
+                  placeholder="Add private note (e.g. Site measurement done, quote of ₹22k sent)..."
                   value={newNoteText}
                   onChange={(e) => setNewNoteText(e.target.value)}
-                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 resize-none h-16"
+                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none h-18 font-medium"
                 />
                 <button
                   type="submit"
                   disabled={addingNote || !newNoteText.trim()}
-                  className="w-full py-1.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white rounded-lg text-xs font-semibold transition"
+                  className="w-full py-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition cursor-pointer shadow-xs"
                 >
                   Save Note
                 </button>
@@ -769,7 +777,7 @@ export default function SellerSocialInbox() {
                 ) : (
                   notes.map((n) => (
                     <div key={n.id} className="pt-2 text-xs">
-                      <p className="text-slate-700 leading-snug">{n.note_text}</p>
+                      <p className="text-slate-700 leading-snug font-medium">{n.note_text}</p>
                       <div className="text-[10px] text-slate-400 mt-1">
                         {new Date(n.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
                       </div>
@@ -780,16 +788,16 @@ export default function SellerSocialInbox() {
             </div>
 
             {/* Activity Logs */}
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
-              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider text-slate-400">
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
+              <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">
                 Activity History
               </h3>
               <div className="space-y-2 text-xs">
                 {logs.map((log) => (
                   <div key={log.id} className="flex items-start gap-2 text-[11px] text-slate-600">
-                    <div className="w-1.5 h-1.5 rounded-full bg-sky-500 mt-1 shrink-0" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1 shrink-0" />
                     <div>
-                      <div>{log.description}</div>
+                      <div className="font-medium">{log.description}</div>
                       <div className="text-[9px] text-slate-400">
                         {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </div>
@@ -806,19 +814,19 @@ export default function SellerSocialInbox() {
       {/* ── META / SOCIAL ACCOUNTS MODAL ── */}
       {showAccountsModal && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 space-y-5 shadow-2xl">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 space-y-5 shadow-2xl border border-slate-100">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <SlidersHorizontal size={18} className="text-sky-600" />
-                Connect Social Channels
+                <SlidersHorizontal size={18} className="text-amber-600" />
+                Connect Contractor Social Channels
               </h3>
-              <button onClick={() => setShowAccountsModal(false)} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => setShowAccountsModal(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
                 <X size={18} />
               </button>
             </div>
 
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Connect your official Meta Business App accounts to sync Instagram Direct Messages, Facebook Page messages, and Facebook Lead Ads directly into QuickSeva.
+            <p className="text-xs text-slate-500 leading-relaxed font-medium">
+              Connect your official Meta Business App accounts to sync Instagram Direct Messages, Facebook Page inquiries, and Meta Lead Ads directly into your QuickSeva Contractor CRM.
             </p>
 
             <div className="space-y-3">
@@ -827,13 +835,13 @@ export default function SellerSocialInbox() {
                 <div className="flex items-center gap-3">
                   <Sparkles size={24} className="text-rose-600" />
                   <div>
-                    <h4 className="text-xs font-bold text-slate-900">Instagram Business Account</h4>
-                    <p className="text-[11px] text-slate-500">Sync DMs & Customer Inquiries</p>
+                    <h4 className="text-xs font-bold text-slate-900">Instagram Business Profile</h4>
+                    <p className="text-[11px] text-slate-500">Sync Direct Messages & Inquiries</p>
                   </div>
                 </div>
                 <button
                   onClick={() => handleConnectChannel("instagram")}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
                     accounts.find(a => a.platform === "instagram")?.is_connected
                       ? "bg-emerald-100 text-emerald-800"
                       : "bg-slate-900 text-white hover:bg-slate-800"
@@ -849,12 +857,12 @@ export default function SellerSocialInbox() {
                   <MessageSquare size={24} className="text-indigo-600" />
                   <div>
                     <h4 className="text-xs font-bold text-slate-900">Facebook Page & Lead Ads</h4>
-                    <p className="text-[11px] text-slate-500">Sync Messenger & Lead Ads</p>
+                    <p className="text-[11px] text-slate-500">Sync Messenger & Site Lead Forms</p>
                   </div>
                 </div>
                 <button
                   onClick={() => handleConnectChannel("facebook")}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
                     accounts.find(a => a.platform === "facebook")?.is_connected
                       ? "bg-emerald-100 text-emerald-800"
                       : "bg-slate-900 text-white hover:bg-slate-800"
@@ -863,26 +871,12 @@ export default function SellerSocialInbox() {
                   {accounts.find(a => a.platform === "facebook")?.is_connected ? "Connected ✓" : "Connect via Meta"}
                 </button>
               </div>
-
-              {/* QuickSeva */}
-              <div className="p-4 rounded-xl border border-slate-200 flex items-center justify-between bg-sky-50/30">
-                <div className="flex items-center gap-3">
-                  <ShieldCheck size={24} className="text-sky-600" />
-                  <div>
-                    <h4 className="text-xs font-bold text-slate-900">QuickSeva Marketplace</h4>
-                    <p className="text-[11px] text-slate-500">Direct Customer Inquiries</p>
-                  </div>
-                </div>
-                <span className="px-3 py-1 rounded-lg text-xs font-bold bg-emerald-100 text-emerald-800">
-                  Active ✓
-                </span>
-              </div>
             </div>
 
             <div className="pt-3 border-t border-slate-100 flex justify-end">
               <button
                 onClick={() => setShowAccountsModal(false)}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl"
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition cursor-pointer"
               >
                 Close
               </button>

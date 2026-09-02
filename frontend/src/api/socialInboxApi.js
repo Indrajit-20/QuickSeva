@@ -48,5 +48,10 @@ export const socialInboxApi = {
   toggleAccount: async (platform) => {
     const res = await apiClient.post("/seller/social-inbox/accounts/toggle", { platform });
     return res?.data;
+  },
+
+  getMetaAuthUrl: async (platform = "instagram") => {
+    const res = await apiClient.get("/seller/social-inbox/meta/connect", { params: { platform } });
+    return res?.data;
   }
 };

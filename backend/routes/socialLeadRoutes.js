@@ -1,10 +1,18 @@
 const express = require("express");
 const router = express.Router();
 const socialLeadController = require("../controllers/socialLeadController");
-const { protect, sellerOnly } = require("../middleware/authMiddleware");
+const { protect, contractorOrSeller } = require("../middleware/authMiddleware");
 
-// All routes require seller authentication
-router.use(protect, sellerOnly);
+// ── Public Meta Webhooks & OAuth Callback Endpoints ──
+router.get("/meta/callback", socialLeadController.handleMetaCallback);
+router.get("/meta/webhook", socialLeadController.verifyMetaWebhook);
+router.post("/meta/webhook", socialLeadController.receiveMetaWebhook);
+
+// ── Protected Routes (Require seller or contractor auth) ──
+router.use(protect, contractorOrSeller);
+
+// Meta Connect Initiator
+router.get("/meta/connect", socialLeadController.initiateMetaAuth);
 
 // Stats & Overview
 router.get("/stats", socialLeadController.getStats);

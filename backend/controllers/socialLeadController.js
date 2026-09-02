@@ -2,10 +2,21 @@ const { pool } = require("../config/db");
 const { successRes, errorRes } = require("../utils/helpers");
 const metaProviderService = require("../services/metaProviderService");
 
-// Helper to get seller_id from logged-in user_id
+// Helper to get seller_id from logged-in user_id (creates one if user is a contractor/seller without a record)
 async function getSellerIdFromUser(userId) {
   const [rows] = await pool.query("SELECT id FROM sellers WHERE user_id = ?", [userId]);
-  return rows.length ? rows[0].id : null;
+  if (rows.length) return rows[0].id;
+
+  const [userRows] = await pool.query("SELECT name, company_name, phone FROM users WHERE id = ?", [userId]);
+  if (userRows.length) {
+    const bizName = userRows[0].company_name || userRows[0].name || "Contractor Business";
+    const [res] = await pool.query(
+      "INSERT INTO sellers (user_id, business_name, phone, is_verified) VALUES (?, ?, ?, 1)",
+      [userId, bizName, userRows[0].phone || null]
+    );
+    return res.insertId;
+  }
+  return null;
 }
 
 // 1. Get Summary Stats
@@ -414,5 +425,120 @@ exports.toggleSocialAccount = async (req, res) => {
   } catch (err) {
     console.error("Error in toggleSocialAccount:", err);
     return errorRes(res, "Failed to toggle social account connection", 500);
+  }
+};
+
+// 10. Initiate Meta OAuth Flow
+exports.initiateMetaAuth = async (req, res) => {
+  try {
+    const sellerId = await getSellerIdFromUser(req.user.id);
+    if (!sellerId) return errorRes(res, "Seller profile not found", 404);
+
+    const { platform = "instagram" } = req.query;
+    const url = metaProviderService.getMetaOAuthUrl(platform, sellerId);
+    return successRes(res, "Meta OAuth URL generated", { url });
+  } catch (err) {
+    console.error("Error in initiateMetaAuth:", err);
+    return errorRes(res, "Failed to initiate Meta auth", 500);
+  }
+};
+
+// 11. Meta OAuth Callback Handler
+exports.handleMetaCallback = async (req, res) => {
+  try {
+    const { code, state, error, error_description } = req.query;
+
+    if (error) {
+      return res.status(400).send(`<h3>Meta Authorization Error</h3><p>${error_description || error}</p>`);
+    }
+
+    const tokenData = await metaProviderService.exchangeCodeForToken(code, state);
+
+    if (tokenData && tokenData.seller_id) {
+      const platform = tokenData.platform || "instagram";
+      const sellerId = tokenData.seller_id;
+      const token = tokenData.access_token;
+
+      // Upsert into social_accounts
+      const [accs] = await pool.query(
+        "SELECT id FROM social_accounts WHERE seller_id = ? AND platform = ?",
+        [sellerId, platform]
+      );
+
+      if (accs.length) {
+        await pool.query(
+          "UPDATE social_accounts SET access_token = ?, is_connected = 1 WHERE id = ?",
+          [token, accs[0].id]
+        );
+      } else {
+        await pool.query(
+          "INSERT INTO social_accounts (seller_id, platform, platform_account_id, account_name, access_token, is_connected) VALUES (?, ?, ?, ?, ?, 1)",
+          [sellerId, platform, `${platform}_official`, `${platform.toUpperCase()} Account`, token]
+        );
+      }
+
+      // Close OAuth popup window cleanly
+      return res.send(`
+        <html>
+          <body>
+            <h2>Successfully Connected ${platform.toUpperCase()} Channel!</h2>
+            <script>
+              if (window.opener) {
+                window.opener.postMessage({ type: 'META_AUTH_SUCCESS', platform: '${platform}' }, '*');
+                window.close();
+              } else {
+                window.location.href = '/seller/social-inbox';
+              }
+            </script>
+          </body>
+        </html>
+      `);
+    }
+
+    return res.status(400).send("Invalid OAuth callback parameters.");
+  } catch (err) {
+    console.error("Error in handleMetaCallback:", err);
+    return res.status(500).send(`<h3>Authentication Failed</h3><p>${err.message}</p>`);
+  }
+};
+
+// 12. Verify Meta Webhook (GET Challenge)
+exports.verifyMetaWebhook = (req, res) => {
+  try {
+    const mode = req.query["hub.mode"];
+    const token = req.query["hub.verify_token"];
+    const challenge = req.query["hub.challenge"];
+
+    const verifyToken = process.env.META_WEBHOOK_VERIFY_TOKEN || "quickseva_social_crm_secret";
+
+    if (mode && token) {
+      if (mode === "subscribe" && token === verifyToken) {
+        console.log("Meta Webhook Verified Successfully!");
+        return res.status(200).send(challenge);
+      } else {
+        return res.sendStatus(403);
+      }
+    }
+
+    return res.status(400).send("Missing verification parameters");
+  } catch (err) {
+    console.error("Error verifying Meta Webhook:", err);
+    return res.sendStatus(500);
+  }
+};
+
+// 13. Receive Live Meta Webhook Events (POST Event Receiver)
+exports.receiveMetaWebhook = async (req, res) => {
+  try {
+    const body = req.body;
+
+    // Acknowledge Meta immediately to avoid timeouts
+    res.status(200).send("EVENT_RECEIVED");
+
+    // Asynchronously process incoming message / lead payload
+    const { getIO } = require("../utils/socketService");
+    metaProviderService.handleWebhookPayload(body, getIO);
+  } catch (err) {
+    console.error("Error handling Meta Webhook Event:", err);
   }
 };
