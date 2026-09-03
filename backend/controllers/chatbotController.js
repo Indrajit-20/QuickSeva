@@ -2,8 +2,14 @@ const axios = require("axios");
 const { pool } = require("../config/db");
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Support Contact Constants — change here and it updates everywhere
+// ─────────────────────────────────────────────────────────────────────────────
+const SUPPORT_EMAIL = "support@quickseva.com";
+const SUPPORT_PHONE = "+91 98765 43210"; // TODO: Replace with real number before production
+const SUPPORT_HOURS = "Mon-Sat, 9 AM - 7 PM";
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Out-of-scope detection keywords (server-side backup)
-// If the frontend didn't catch it, the backend will catch it here
 // ─────────────────────────────────────────────────────────────────────────────
 const OFF_TOPIC_KEYWORDS = [
   'html', 'css', 'javascript', 'python', 'java', 'react', 'angular', 'vue',
@@ -47,7 +53,6 @@ function isOffTopic(normalizedInput) {
     normalizedInput.includes(kw)
   );
   if (hasQuickSevaContext) return false;
-
   return OFF_TOPIC_KEYWORDS.some((kw) => normalizedInput.includes(kw));
 }
 
@@ -58,24 +63,21 @@ function hasOrderIntent(normalizedInput) {
 function buildOrderGuidanceReply(language, reason = "generic") {
   if (language === "gu") {
     if (reason === "no_orders") {
-      return `હું સમજી શકું છું. આ એકાઉન્ટમાં હાલ કોઈ ઓર્ડર મળ્યો નથી.\n\n• તમે બુકિંગ કરેલું એ જ ફોન/ઈમેલથી login છો કે નહીં ચેક કરો.\n• **[My Bookings](/my-bookings)** પેજ refresh કરીને જુઓ.\n• Booking ID હોય તો અહીં મોકલો, હું ફરી ચેક કરીશ.\n\nતાત્કાલિક મદદ માટે support@quickseva.com અથવા +91 98765 43210 પર સંપર્ક કરો.`;
+      return `હું સમજી શકું છું. આ એકાઉન્ટમાં હાલ કોઈ ઓર્ડર મળ્યો નથી.\n\n• તમે બુકિંગ કરેલું એ જ ફોન/ઈમેલથી login છો કે નહીં ચેક કરો.\n• **[My Bookings](/my-bookings)** પેજ refresh કરીને જુઓ.\n• Booking ID હોય તો અહીં મોકલો, હું ફરી ચેક કરીશ.\n\nતાત્કાલિક મદદ માટે ${SUPPORT_EMAIL} અથવા ${SUPPORT_PHONE} પર સંપર્ક કરો.`;
     }
-
     return `હું સમજી શકું છું. જો ઓર્ડર દેખાતો નથી અથવા પ્રોવાઇડરનો જવાબ નથી આવતો, તો પહેલા **[My Bookings](/my-bookings)** માં સ્ટેટસ ચેક કરો.\n\n• **Pending** હોય તો પ્રોવાઇડરે હજી accept કરવાનું બાકી છે.\n• ઓર્ડર દેખાતો ન હોય તો સાચા ફોન/ઈમેલથી login થયેલા છો કે નહીં ચેક કરો.\n• Booking ID હોય તો અહીં મોકલો, હું ચેક કરીશ.`;
   }
 
   if (language === "hi") {
     if (reason === "no_orders") {
-      return `मैं समझ रहा हूँ। इस अकाउंट में अभी कोई ऑर्डर नहीं मिला।\n\n• जिस फोन/ईमेल से बुकिंग की थी उसी से login हैं या नहीं चेक करें।\n• **[My Bookings](/my-bookings)** पेज refresh करके देखें।\n• Booking ID हो तो यहाँ भेजें, मैं फिर चेक करूँगा।\n\nतुरंत मदद के लिए support@quickseva.com या +91 98765 43210 पर संपर्क करें।`;
+      return `मैं समझ रहा हूँ। इस अकाउंट में अभी कोई ऑर्डर नहीं मिला।\n\n• जिस फोन/ईमेल से बुकिंग की थी उसी से login हैं या नहीं चेक करें।\n• **[My Bookings](/my-bookings)** पेज refresh करके देखें।\n• Booking ID हो तो यहाँ भेजें, मैं फिर चेक करूँगा।\n\nतुरंत मदद के लिए ${SUPPORT_EMAIL} या ${SUPPORT_PHONE} पर संपर्क करें।`;
     }
-
     return `मैं समझ रहा हूँ। अगर ऑर्डर नहीं दिख रहा या प्रोवाइडर का जवाब नहीं आ रहा, तो पहले **[My Bookings](/my-bookings)** में स्टेटस देखें।\n\n• **Pending** है तो प्रोवाइडर ने अभी accept नहीं किया है।\n• ऑर्डर नहीं दिख रहा हो तो सही फोन/ईमेल से login हैं या नहीं चेक करें।\n• Booking ID हो तो यहाँ भेजें, मैं चेक करूँगा।`;
   }
 
   if (reason === "no_orders") {
-    return `I understand. I could not find any orders for this account right now.\n\n• Make sure you are logged in with the same phone/email used for booking.\n• Refresh **[My Bookings](/my-bookings)** and check again.\n• If you have a Booking ID, send it here and I will check again.\n\nFor urgent help, contact support@quickseva.com or +91 98765 43210.`;
+    return `I understand. I could not find any orders for this account right now.\n\n• Make sure you are logged in with the same phone/email used for booking.\n• Refresh **[My Bookings](/my-bookings)** and check again.\n• If you have a Booking ID, send it here and I will check again.\n\nFor urgent help, contact ${SUPPORT_EMAIL} or ${SUPPORT_PHONE}.`;
   }
-
   return `I understand. If your order is not showing or the provider has not replied, please first check **[My Bookings](/my-bookings)**.\n\n• If it is **Pending**, the provider has not accepted it yet.\n• If no order is visible, confirm you are logged in with the same phone/email used for booking.\n• If you have a Booking ID, send it here and I will check it.`;
 }
 
@@ -84,7 +86,7 @@ function buildOrderGuidanceReply(language, reason = "generic") {
 // @access  Public (Optional auth token)
 exports.handleChatbotQuery = async (req, res) => {
   try {
-    const { message, language = "en", userId = null, userName = null, history = [] } = req.body;
+    const { message, language = "en", history = [] } = req.body;
 
     if (!message || typeof message !== "string" || !message.trim()) {
       return res.status(400).json({
@@ -93,12 +95,23 @@ exports.handleChatbotQuery = async (req, res) => {
       });
     }
 
+    // BUG FIX #3: Validate message length to prevent abuse
+    if (message.trim().length > 1000) {
+      return res.status(400).json({
+        success: false,
+        message: "Message is too long. Please keep it under 1000 characters.",
+      });
+    }
+
     const cleanInput = message.trim();
     const normalizedInput = cleanInput.toLowerCase();
-    const activeUserId = req.user?.id || userId;
+
+    // BUG FIX #5 (SECURITY): Only use the authenticated user's ID from JWT.
+    // NEVER fall back to a user-supplied userId from req.body — that would allow
+    // any anonymous user to query another user's orders/wallet by guessing IDs.
+    const activeUserId = req.user?.id || null;
 
     // ── 0. Out-of-scope Pre-check ────────────────────────────────────────────
-    // Detect clearly unrelated questions and respond politely without wasting API calls
     if (isOffTopic(normalizedInput)) {
       let outOfScopeReply = "";
       if (language === "gu") {
@@ -106,7 +119,7 @@ exports.handleChatbotQuery = async (req, res) => {
       } else if (language === "hi") {
         outOfScopeReply = `🤖 मैं क्विकसेवा का कस्टमर सपोर्ट असिस्टेंट हूँ। मैं केवल हमारे प्लेटफ़ॉर्म से संबंधित प्रश्नों में मदद कर सकता हूँ — जैसे सेवाएं बुक करना, ऑर्डर ट्रैक करना, वॉलेट, सेलर/ठेकेदार रजिस्ट्रेशन।\n\nये पूछ सकते हैं:\n  • 📦 बुकिंग स्थिति\n  • 🛠️ उपलब्ध सेवाएं\n  • 💼 सेलर या ठेकेदार बनें\n  • 💰 वॉलेट और भुगतान`;
       } else {
-        outOfScopeReply = `🤖 I'm QuickSeva's customer support assistant. I can only help with questions about our platform — like booking services, tracking orders, wallet & payments, seller/contractor registration, and our service categories.\n\nI'm not able to answer general knowledge or unrelated questions, but I'm happy to help with anything QuickSeva-related! 😊\n\nTry asking about:\n  • 📦 Booking or order status\n  • 🛠️ Available services\n  • 💼 Becoming a seller or contractor\n  • 💰 Wallet & payments`;
+        outOfScopeReply = `🤖 I'm QuickSeva's customer support assistant. I can only help with questions about our platform — like booking services, tracking orders, wallet & payments, seller/contractor registration.\n\nTry asking about:\n  • 📦 Booking or order status\n  • 🛠️ Available services\n  • 💼 Becoming a seller or contractor\n  • 💰 Wallet & payments`;
       }
 
       return res.json({
@@ -116,8 +129,10 @@ exports.handleChatbotQuery = async (req, res) => {
       });
     }
 
-    // Detect Booking ID formats (e.g. QS-20260826-LAAA, BK-1024, or string starting with QS- or BK-)
-    const bookingIdMatch = cleanInput.match(/(QS-[\w-]+|BK-\d+|\b\d{4,}\b)/i);
+    // BUG FIX #4: Tightened Booking ID regex.
+    // Only match QS- and BK- prefixed codes. The old pattern (\b\d{4,}\b) was
+    // matching phone numbers, OTPs, and amounts as booking IDs.
+    const bookingIdMatch = cleanInput.match(/\b(QS-[\w-]+|BK-\d+)\b/i);
     const searchedCode = bookingIdMatch ? bookingIdMatch[0] : null;
     const isOrderIntent = hasOrderIntent(normalizedInput);
 
@@ -132,7 +147,6 @@ exports.handleChatbotQuery = async (req, res) => {
         let params = [];
 
         if (searchedCode) {
-          // Extract numeric ID if searching BK-123
           const numericId = searchedCode.replace(/\D/g, "");
           sql += ` WHERE o.order_number LIKE ? OR o.id = ? LIMIT 1`;
           params = [`%${searchedCode}%`, numericId || 0];
@@ -148,8 +162,6 @@ exports.handleChatbotQuery = async (req, res) => {
             const order = orders[0];
             const orderNum = order.order_number || `#BK-${order.id}`;
             const statusStr = order.status ? order.status.toUpperCase() : "PENDING";
-            const sellerInfo = order.seller_name ? ` (${order.seller_name})` : "";
-            const priceInfo = order.total_amount ? ` (Amount: ₹${order.total_amount})` : "";
 
             let reply = "";
             if (language === "gu") {
@@ -160,11 +172,8 @@ exports.handleChatbotQuery = async (req, res) => {
               reply = `📦 **Booking Details (${orderNum})**\n• Status: **${statusStr}**\n• Provider: ${order.seller_name || "Assigned Provider"}\n• Amount: ₹${order.total_amount || 0}\n\nView details under **[My Bookings](/my-bookings)**.`;
             }
 
-            return res.json({
-              success: true,
-              reply,
-              source: "database",
-            });
+            return res.json({ success: true, reply, source: "database" });
+
           } else if (searchedCode) {
             let notFoundReply = "";
             if (language === "gu") {
@@ -174,12 +183,8 @@ exports.handleChatbotQuery = async (req, res) => {
             } else {
               notFoundReply = `❌ Booking ID **${searchedCode}** was not found. Please verify your code under **[My Bookings](/my-bookings)**.`;
             }
+            return res.json({ success: true, reply: notFoundReply, source: "database" });
 
-            return res.json({
-              success: true,
-              reply: notFoundReply,
-              source: "database",
-            });
           } else if (isOrderIntent && activeUserId) {
             return res.json({
               success: true,
@@ -221,11 +226,7 @@ exports.handleChatbotQuery = async (req, res) => {
             balanceReply = `💰 Your current **QuickSeva Wallet** balance is **₹${balance}**. Manage funds in **[Profile](/profile)**.`;
           }
 
-          return res.json({
-            success: true,
-            reply: balanceReply,
-            source: "database",
-          });
+          return res.json({ success: true, reply: balanceReply, source: "database" });
         }
       } catch (dbErr) {
         console.warn("Chatbot DB wallet query failed:", dbErr.message);
@@ -239,7 +240,7 @@ exports.handleChatbotQuery = async (req, res) => {
         const langName = language === "gu" ? "Gujarati" : language === "hi" ? "Hindi" : "English";
         const recentHistory = Array.isArray(history)
           ? history
-              .slice(-6)
+              .slice(-16)
               .filter((item) => item && typeof item.text === "string")
               .map((item) => ({
                 role: item.role === "assistant" ? "assistant" : "user",
@@ -250,142 +251,67 @@ exports.handleChatbotQuery = async (req, res) => {
           ? recentHistory.map((item) => `${item.role}: ${item.text}`).join("\n")
           : "No previous messages.";
 
-        // ── Comprehensive QuickSeva System Context ─────────────────────────────
-        // This is the FULL knowledge base that Gemini uses to answer accurately.
-        // It covers EVERY aspect of the QuickSeva platform so the AI never
-        // makes up information or gives irrelevant answers.
-        // ───────────────────────────────────────────────────────────────────────
         const QUICKSEVA_CONTEXT = `
 You are QuickSeva Customer Support Assistant — a helpful, friendly, and professional support bot for QuickSeva, a hyper-local service marketplace in Gujarat, India.
 
 === CRITICAL RULES (MUST FOLLOW) ===
 1. You ONLY answer questions related to QuickSeva platform, its services, features, users, bookings, payments, sellers, contractors, and operations.
-2. If a user asks about ANYTHING not related to QuickSeva (e.g., programming languages, general knowledge, recipes, sports, weather, news, other apps/websites, exam help, coding questions, etc.), you MUST politely decline with: "I'm QuickSeva's customer support assistant. I can only help with our platform's services, bookings, wallet, seller/contractor registration, and related features. Please ask me something about QuickSeva!"
-3. NEVER make up features, services, or information that is not mentioned in this context.
-4. NEVER answer general knowledge questions, no matter how they are phrased.
-5. If you're unsure whether a question is QuickSeva-related, politely redirect the user to ask about QuickSeva services.
-6. ALWAYS reply strictly in ${langName} language (do not mix languages).
-7. Keep responses concise and helpful (max 100 words).
-8. When relevant, include markdown links like [Services](/services) or [My Bookings](/my-bookings).
-9. Be empathetic and professional.
-10. Users may type Gujarati/Hindi in English letters (for example: "order nathi avato", "reply nathi avto", "booking nahi dikh raha"). Understand that as normal support language and answer naturally.
-11. For complaints, do not repeat a welcome/menu answer. Acknowledge the issue, give the likely reason, tell the next step, and ask for Booking ID only if needed.
+2. If a user asks about ANYTHING not related to QuickSeva, politely decline: "I'm QuickSeva's customer support assistant. I can only help with our platform's services, bookings, wallet, seller/contractor registration, and related features."
+3. NEVER make up features, services, or information not in this context.
+4. NEVER answer general knowledge questions.
+5. ALWAYS reply strictly in ${langName} language (do not mix languages).
+6. Keep responses concise and helpful (max 100 words).
+7. When relevant, include markdown links like [Services](/services) or [My Bookings](/my-bookings).
+8. Be empathetic and professional.
+9. Users may type Gujarati/Hindi in English letters (e.g., "order nathi avato"). Understand that as normal support language.
+10. For complaints, acknowledge the issue, give the likely reason, tell the next step.
 
 === ABOUT QUICKSEVA ===
-QuickSeva is a hyper-local service marketplace that connects customers with verified, background-checked local service providers in Gujarat, India. The platform operates via a website (quickseva.com) and supports English, Hindi, and Gujarati languages.
+QuickSeva is a hyper-local service marketplace connecting customers with verified local service providers in Gujarat, India.
 
 === SERVICES OFFERED ===
-• Plumbing — leaks, pipe repair, tap installation, drainage (from ₹199)
-• Electrician — wiring, fan fitting, switch/MCB repair, socket installation (from ₹199)
-• AC Service & Repair — gas refill, deep servicing, installation (from ₹499)
-• Home Cleaning — deep clean, bathroom, kitchen, sofa cleaning
-• Carpentry — furniture repair, door/window fitting, woodwork
-• Home Painting — interior & exterior painting
-• Pest Control — cockroach, termite, rodent, mosquito treatment
-• Appliance Repair — washing machine, fridge, geyser, oven, microwave
-Pricing starts from ₹199 and varies by service type and provider.
+• Plumbing — from ₹199
+• Electrician — from ₹199
+• AC Service & Repair — from ₹499
+• Home Cleaning
+• Carpentry
+• Home Painting
+• Pest Control
+• Appliance Repair
 
-=== USER ROLES & ACCOUNTS ===
-QuickSeva has 4 types of users:
-1. **Buyer (Customer)** — Browse services, book providers, track orders, manage wallet
-2. **Seller (Service Provider)** — Individual professionals (plumber, electrician, etc.) who list services and receive direct bookings
-3. **Contractor** — Handles large-scale projects (construction, renovation, commercial work). Receives project leads. Has company profile, trade specialization, and city of operation.
-4. **Admin** — Platform management, user verification, dispute resolution
+=== USER ROLES ===
+1. Buyer — Browse, book, track, manage wallet
+2. Seller — List services, receive bookings, manage earnings
+3. Contractor — Large projects, receives leads, WhatsApp notifications
+4. Admin — Platform management
 
-=== HOW TO BECOME A SELLER/PROVIDER ===
-1. Go to /become-seller page
-2. Fill business name, select service category, add bio & experience
-3. Account is created and user role changes to "seller"
-4. Seller features:
-   - Set working hours (e.g., 9 AM - 7 PM)
-   - Configure slot capacity (how many jobs per day)
-   - Set slot duration (minutes per booking)
-   - Account type: Individual or Business
-   - Manage service area and radius
-   - View and accept incoming orders
-   - Track earnings and wallet balance
-   - Respond to reviews
-Benefits: Zero listing fee, direct bookings, wallet-based instant payment, work in own area
-
-=== HOW TO BECOME A CONTRACTOR ===
-1. Go to /become-contractor page
-2. Provide: Name, Phone, Company Name (optional), Trade Specialization, City
-3. Trade specializations available: Civil, Electrical, Plumbing, Interior Design, General Construction, HVAC, Roofing, etc.
-4. Account gets verified (is_verified_contractor flag)
-5. Existing logged-in users can upgrade their account to contractor
-6. New users can register directly as a contractor with name, phone, and password
-Benefits: Direct project leads, verified contractor badge, WhatsApp notifications for new leads, lead-based system
-
-=== BOOKING PROCESS (FOR CUSTOMERS) ===
-1. Browse services at /services or search nearby providers on the map
-2. Select a category and view provider profiles (rating, reviews, pricing)
-3. Choose a date & time slot
-4. Confirm booking via QuickSeva Wallet or UPI
-5. Provider receives notification and accepts/declines the booking
-6. Track booking status in /my-bookings
+=== BOOKING PROCESS ===
+1. Browse at /services or map
+2. Select provider, date & time slot
+3. Confirm via QuickSeva Wallet or UPI
+4. Track at /my-bookings
 
 === BOOKING STATUSES ===
 Pending → Accepted → In Progress → Completed / Cancelled
-- Pending: Waiting for provider to accept
-- Accepted: Provider confirmed, will arrive at scheduled time
-- In Progress: Work is currently being done
-- Completed: Service successfully finished
-- Cancelled: Booking was cancelled by customer or provider
 
-=== WALLET & PAYMENT SYSTEM ===
-- QuickSeva Wallet: In-app wallet for payments
-- Add money via: UPI, Debit Card, Credit Card
-- No extra charges on wallet top-ups
-- Payments for bookings deducted from wallet
-- Refunds credited back to wallet (not original payment method)
-- Wallet balance viewable in /profile
+=== WALLET & PAYMENT ===
+- Add via UPI, Debit/Credit Card at /profile
+- No extra charges on top-ups
+- Refunds go to wallet
 
-=== REFUND & CANCELLATION POLICY ===
-- Cancelled BEFORE provider accepts → 100% refund to wallet, instantly
-- Cancelled AFTER provider accepts but BEFORE work starts → Partial refund, subject to platform review
-- Cancelled AFTER work has started → NO refund (work in progress)
-- Disputed orders → Contact support with booking ID for manual review
-- All refunds go to QuickSeva Wallet
+=== REFUND POLICY ===
+- Cancelled before provider accepts → 100% refund instantly
+- Cancelled after accepted but before work starts → Partial refund (platform review)
+- Cancelled after work started → No refund
+- Disputed orders → Contact support with booking ID
 
-=== LEAD SYSTEM ===
-- When customers need services, leads are generated
-- Sellers/contractors in the area receive lead notifications
-- Lead types: Service Leads (regular bookings), Social Leads (from marketing), Project Leads (for contractors)
-- Lead charges may apply based on service category
-- Contractors receive leads based on their city and trade specialization
+=== KEY PAGES ===
+- /services, /my-bookings, /profile, /become-seller, /become-contractor, /seller/dashboard, /login
 
-=== LOGIN & AUTHENTICATION ===
-- OTP-based login (no passwords needed for buyers)
-- Enter phone number or email on /login page
-- Receive OTP via SMS/email and verify
-- Contractors may register with phone + password
-- Sellers register through /become-seller with their service details
-
-=== KEY PAGES & URLS ===
-- Services: /services
-- My Bookings: /my-bookings
-- Profile & Wallet: /profile
-- Seller Registration: /become-seller
-- Contractor Registration: /become-contractor
-- Seller Dashboard: /seller/dashboard
-- Login: /login
-
-=== CONTACT & SUPPORT ===
-- Email: support@quickseva.com
-- Phone: +91 98765 43210 (Mon-Sat, 9 AM - 7 PM)
+=== CONTACT ===
+- Email: ${SUPPORT_EMAIL}
+- Phone: ${SUPPORT_PHONE} (${SUPPORT_HOURS})
 - Office: Ahmedabad, Gujarat, India
-- Response Time: Within 24 hours on email, immediate on call
-
-=== WHAT YOU CANNOT HELP WITH ===
-- Programming questions (HTML, Python, JavaScript, etc.)
-- General knowledge (history, geography, science, math)
-- Entertainment (movies, music, games, sports, jokes)
-- Other platforms (Amazon, Flipkart, Zomato, Uber, etc.)
-- Weather, news, stock market
-- Academic questions (exams, assignments, college admissions)
-- Travel bookings (flights, trains, hotels)
-- Social media help
-If asked about ANY of these topics, politely decline and redirect to QuickSeva-related topics.
 `;
 
         const prompt = `${QUICKSEVA_CONTEXT}
@@ -405,32 +331,25 @@ Reply in ${langName}:`;
 
         const aiText = geminiRes.data?.candidates?.[0]?.content?.parts?.[0]?.text;
         if (aiText) {
-          return res.json({
-            success: true,
-            reply: aiText.trim(),
-            source: "gemini_ai",
-          });
+          return res.json({ success: true, reply: aiText.trim(), source: "gemini_ai" });
         }
       } catch (geminiErr) {
         console.warn("Gemini API call fallback to local:", geminiErr.message);
       }
     }
 
-    // 4. Default Fallback with direct support contacts
+    // 4. Default Fallback
     let fallbackText = "";
     if (language === "gu") {
-      fallbackText = `🤖 તમારા પ્રશ્નનો સીધો જવાબ મળ્યો નથી. આપ કસ્ટમર કેર સંપર્ક કરી શકો છો:\n\n📧 **ઈમેલ**: support@quickseva.com\n📱 **ફોન**: +91 98765 43210 (સોમ-શનિ, 9 AM - 7 PM)\n\n**અથવા વિકલ્પ પસંદ કરો:**\n  • 📦 ઓર્ડર ટ્રેકિંગ\n  • 💰 વોલેટ અને રીફંડ\n  • 🛠️ સેવાઓ (પ્લમ્બર, ઇલેક્ટ્રિશિયન, AC)\n  • 💼 સેલર કે ઠેકેદાર રજીસ્ટ્રેશન`;
+      fallbackText = `🤖 તમારા પ્રશ્નનો સીધો જવાબ મળ્યો નથી. આપ કસ્ટમર કેર સંપર્ક કરી શકો છો:\n\n📧 **ઈમેલ**: ${SUPPORT_EMAIL}\n📱 **ફોન**: ${SUPPORT_PHONE} (${SUPPORT_HOURS})\n\n**અથવા વિકલ્પ પસંદ કરો:**\n  • 📦 ઓર્ડર ટ્રેકિંગ\n  • 💰 વોલેટ અને રીફંડ\n  • 🛠️ સેવાઓ (પ્લમ્બર, ઇલેક્ટ્રિશિયન, AC)\n  • 💼 સેલર કે ઠેકેદાર રજીસ્ટ્રેશન`;
     } else if (language === "hi") {
-      fallbackText = `🤖 आपके प्रश्न का सीधा उत्तर नहीं मिला। आप हमसे संपर्क कर सकते हैं:\n\n📧 **ईमेल**: support@quickseva.com\n📱 **हेल्पलाइन**: +91 98765 43210 (सोम-शनि, सुबह 9 - शाम 7)\n\n**या नीचे दिया गया विकल्प चुनें:**\n  • 📦 बुकिंग स्थिति\n  • 💰 वॉलेट और रिफंड\n  • 🛠️ सेवाएं (प्लंबर, इलेक्ट्रीशियन, AC)\n  • 💼 सेलर/ठेकेदार रजिस्ट्रेशन`;
+      fallbackText = `🤖 आपके प्रश्न का सीधा उत्तर नहीं मिला। आप हमसे संपर्क कर सकते हैं:\n\n📧 **ईमेल**: ${SUPPORT_EMAIL}\n📱 **हेल्पलाइन**: ${SUPPORT_PHONE} (${SUPPORT_HOURS})\n\n**या नीचे दिया गया विकल्प चुनें:**\n  • 📦 बुकिंग स्थिति\n  • 💰 वॉलेट और रिफंड\n  • 🛠️ सेवाएं\n  • 💼 सेलर/ठेकेदार रजिस्ट्रेशन`;
     } else {
-      fallbackText = `🤖 I couldn't find an exact match for your question. Here is how you can get help:\n\n📧 **Email Support**: support@quickseva.com\n📱 **Helpline**: +91 98765 43210 (Mon-Sat, 9 AM - 7 PM)\n\n**Or select a topic below:**\n  • 📦 Track bookings & order status\n  • 💰 Wallet, balance & refund policy\n  • 🛠️ Home services (Plumber, Electrician, AC Repair, Cleaning)\n  • 💼 Register as a Service Provider or Contractor\n  • ℹ️ Learn about QuickSeva platform`;
+      fallbackText = `🤖 I couldn't find an exact match for your question. Here is how you can get help:\n\n📧 **Email**: ${SUPPORT_EMAIL}\n📱 **Helpline**: ${SUPPORT_PHONE} (${SUPPORT_HOURS})\n\n**Or select a topic below:**\n  • 📦 Track bookings & order status\n  • 💰 Wallet, balance & refund policy\n  • 🛠️ Home services\n  • 💼 Register as a Provider or Contractor`;
     }
 
-    return res.json({
-      success: true,
-      reply: fallbackText,
-      source: "local_fallback",
-    });
+    return res.json({ success: true, reply: fallbackText, source: "local_fallback" });
+
   } catch (error) {
     console.error("Chatbot controller error:", error);
     return res.status(500).json({
