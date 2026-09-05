@@ -1,11 +1,30 @@
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
-require("dotenv").config({
-  path: process.env.NODE_ENV === "production"
-    ? ".env.production"
-    : (process.env.USE_RAILWAY === "true" ? ".env.railway" : ".env.local"),
-});
+const fs = require("fs");
+
+// Dynamic dotenv loader for Local, VPS, or Railway environments
+const candidateEnvFiles = [
+  process.env.NODE_ENV === "production" ? ".env.production" : null,
+  process.env.USE_RAILWAY === "true" ? ".env.railway" : null,
+  ".env.local",
+  ".env",
+  ".env.production",
+  ".env.railway"
+].filter(Boolean);
+
+let envLoaded = false;
+for (const envFile of candidateEnvFiles) {
+  const fullPath = path.resolve(__dirname, envFile);
+  if (fs.existsSync(fullPath)) {
+    require("dotenv").config({ path: fullPath });
+    envLoaded = true;
+    break;
+  }
+}
+if (!envLoaded) {
+  require("dotenv").config();
+}
 
 const { connectDB } = require("./config/db");
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");

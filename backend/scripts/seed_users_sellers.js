@@ -319,6 +319,8 @@ async function run() {
 
       const [existing] = await pool.query("SELECT id FROM users WHERE phone = ? OR email = ?", [phone, email]);
       if (existing.length > 0) continue;
+
+      const [userRes] = await pool.query(
         `INSERT INTO users (name, email, phone, gender, dob, password, role, address, city, state, pincode, lat, lng, is_verified, is_active)
          VALUES (?, ?, ?, ?, ?, ?, 'buyer', ?, 'Ahmedabad', 'Gujarat', '380001', ?, ?, 1, 1)`,
         [

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Send,
   Globe,
@@ -55,7 +55,9 @@ function getInitials(user) {
 
 export default function ChatbotWidget() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
+  const widgetRef = useRef(null);
 
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -170,6 +172,18 @@ export default function ChatbotWidget() {
     }
   }, [isOpen, isMinimized]);
 
+  // ─── Toggle body class when chatbot is open/closed (hides mobile bottom navbar) ───
+  useEffect(() => {
+    if (isOpen) {
+      document.body.classList.add('chatbot-open');
+    } else {
+      document.body.classList.remove('chatbot-open');
+    }
+    return () => {
+      document.body.classList.remove('chatbot-open');
+    };
+  }, [isOpen]);
+
   // ─── Open animation ──────────────────────────────────────────────────────
   const openChat = () => {
     setIsOpen(true);
@@ -182,6 +196,43 @@ export default function ChatbotWidget() {
   const closeChat = () => {
     setIsOpen(false);
   };
+
+  // Auto-close chatbot on page route/query navigation
+  useEffect(() => {
+    if (isOpen) {
+      setIsOpen(false);
+    }
+  }, [location.pathname, location.search]);
+
+  // Auto-close chatbot when clicking outside or clicking any link/button
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleOutsideClick = (e) => {
+      if (widgetRef.current && !widgetRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    const handleLinkOrBtnClick = (e) => {
+      const target = e.target;
+      if (!target) return;
+      const clickable = target.closest('a, button, .bottom-nav-item, [role="button"]');
+      if (clickable && widgetRef.current && !widgetRef.current.contains(clickable)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('touchstart', handleOutsideClick);
+    document.addEventListener('click', handleLinkOrBtnClick, true);
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('touchstart', handleOutsideClick);
+      document.removeEventListener('click', handleLinkOrBtnClick, true);
+    };
+  }, [isOpen]);
 
   const minimizeChat = () => {
     setIsMinimized(true);
@@ -256,10 +307,28 @@ export default function ChatbotWidget() {
   const handleCopyMessage = (msgId, text) => {
     // Strip markdown for clean copy
     const plain = text.replace(/\*\*([^*]+)\*\*/g, '$1').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
-    navigator.clipboard.writeText(plain).then(() => {
-      setCopiedMsgId(msgId);
-      setTimeout(() => setCopiedMsgId(null), 2000);
-    });
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(plain).then(() => {
+        setCopiedMsgId(msgId);
+        setTimeout(() => setCopiedMsgId(null), 2000);
+      });
+    } else {
+      try {
+        const textArea = document.createElement("textarea");
+        textArea.value = plain;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        setCopiedMsgId(msgId);
+        setTimeout(() => setCopiedMsgId(null), 2000);
+      } catch (err) {
+        console.warn("Copy fallback failed:", err);
+      }
+    }
   };
 
   // ─── Feedback ─────────────────────────────────────────────────────────────
@@ -413,30 +482,39 @@ export default function ChatbotWidget() {
   const isNearLimit = charCount < 100;
 
   return (
-    <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 font-sans">
-
-      {/* ── Floating Toggle Button ── */}
-      {!isOpen && (
-        <button
-          onClick={openChat}
-          className="flex items-center gap-2.5 px-5 py-3 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-full shadow-lg shadow-indigo-600/30 hover:scale-105 active:scale-95 transition-all duration-200 relative"
-          aria-label="Open Chatbot"
-        >
-          {/* Unread badge */}
-          {unreadCount > 0 && (
-            <span className="absolute -top-2 -right-2 min-w-[20px] h-5 px-1.5 bg-rose-500 text-white text-[11px] font-bold rounded-full flex items-center justify-center shadow-md animate-bounce">
-              {unreadCount > 9 ? '9+' : unreadCount}
-            </span>
-          )}
-          <div className="relative">
-            <Bot className="w-5 h-5 text-white" />
-            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 border-2 border-indigo-600 rounded-full animate-pulse" />
-          </div>
-          <span className="font-semibold text-sm">
-            {currentDict.onlineStatus?.split('•')[1]?.trim() || 'Support'}
-          </span>
-        </button>
+    <>
+      {/* Mobile Backdrop Overlay when Chatbot is Open */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-[9998] sm:hidden animate-fade-in cursor-pointer"
+          onClick={closeChat}
+          aria-hidden="true"
+        />
       )}
+      <div ref={widgetRef} className="fixed bottom-[72px] right-3 sm:bottom-6 sm:right-6 z-[9999] font-sans">
+
+        {/* ── Floating Toggle Button ── */}
+        {!isOpen && (
+          <button
+            onClick={openChat}
+            className="flex items-center gap-2 px-3.5 py-2.5 sm:px-4.5 sm:py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-full shadow-lg shadow-indigo-600/30 hover:scale-105 active:scale-95 transition-all duration-200 relative cursor-pointer"
+            aria-label="Open Chatbot"
+          >
+            {/* Unread badge */}
+            {unreadCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-4.5 px-1 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-md animate-bounce">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+            <div className="relative shrink-0">
+              <Bot className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-white" />
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 sm:w-2.5 sm:h-2.5 bg-emerald-400 border-2 border-indigo-600 rounded-full animate-pulse" />
+            </div>
+            <span className="font-bold text-xs sm:text-sm whitespace-nowrap">
+              Support
+            </span>
+          </button>
+        )}
 
       {/* ── Expanded Chat Dialog ── */}
       {isOpen && (
@@ -800,7 +878,8 @@ export default function ChatbotWidget() {
               </div>
             </>
         </div>
-      )}
-    </div>
+        )}
+      </div>
+    </>
   );
 }

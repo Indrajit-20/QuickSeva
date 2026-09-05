@@ -240,12 +240,12 @@ exports.handleChatbotQuery = async (req, res) => {
         const langName = language === "gu" ? "Gujarati" : language === "hi" ? "Hindi" : "English";
         const recentHistory = Array.isArray(history)
           ? history
-              .slice(-16)
-              .filter((item) => item && typeof item.text === "string")
-              .map((item) => ({
-                role: item.role === "assistant" ? "assistant" : "user",
-                text: item.text.slice(0, 500),
-              }))
+            .slice(-16)
+            .filter((item) => item && typeof item.text === "string")
+            .map((item) => ({
+              role: item.role === "assistant" ? "assistant" : "user",
+              text: item.text.slice(0, 500),
+            }))
           : [];
         const conversationContext = recentHistory.length
           ? recentHistory.map((item) => `${item.role}: ${item.text}`).join("\n")

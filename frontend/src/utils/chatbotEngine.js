@@ -1,4 +1,5 @@
 import axios from 'axios';
+import apiClient from '../api/axiosConfig';
 import {
   TRANSLATIONS,
   KEYWORD_RULES,
@@ -162,37 +163,30 @@ export async function processChatbotMessage({ message, optionId, language = 'en'
     return { text: responseText, type: 'bot', source: 'option' };
   }
 
-  // 2. Try Smart Local Keyword Match FIRST (no API call needed for these)
-  const localAnswer = findLocalResponse(message, language);
-  if (localAnswer) {
-    const text = typeof localAnswer === 'string' ? localAnswer : localAnswer.text;
-    const showOptions = typeof localAnswer === 'object' ? Boolean(localAnswer.showOptions) : false;
-    return { text, type: 'bot', source: 'local_rule', showOptions };
-  }
-
-  // 3. Backend Call (Gemini AI / DB Context) — only for questions without a local answer
+  // 2. Backend Call (Gemini AI / DB Context) — send typed messages straight to backend AI
   try {
-    const token = localStorage.getItem('token');
-    const res = await axios.post(
-      `${API_BASE_URL}/chatbot/query`,
-      {
-        message,
-        language,
-        userName: user?.name || null,
-        userId: user?.id || null,
-        history
-      },
-      {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-        timeout: 12000
-      }
-    );
+    const token = localStorage.getItem("authToken") || localStorage.getItem("token");
+    const res = await apiClient.post("/chatbot/query", {
+      message,
+      language,
+      userName: user?.name || null,
+      userId: user?.id || null,
+      history
+    });
 
     if (res.data && res.data.reply) {
-      return { text: res.data.reply, type: 'bot', source: res.data.source || 'ai' };
+      return { text: res.data.reply, type: "bot", source: res.data.source || "ai" };
     }
   } catch (err) {
-    console.warn('Backend chatbot endpoint failed, using local fallback:', err.message);
+    console.warn("Backend chatbot endpoint failed, using local fallback:", err.message);
+  }
+
+  // 3. Optional Local Keyword Matcher Fallback if Backend AI is offline
+  const localAnswer = findLocalResponse(message, language);
+  if (localAnswer) {
+    const text = typeof localAnswer === "string" ? localAnswer : localAnswer.text;
+    const showOptions = typeof localAnswer === "object" ? Boolean(localAnswer.showOptions) : false;
+    return { text, type: "bot", source: "local_rule", showOptions };
   }
 
   // 4. Use a conversational support fallback for QuickSeva support intents.

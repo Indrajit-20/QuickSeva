@@ -2830,7 +2830,7 @@ export default function NearbyServices({
       <div className={`qs-grid-area-list w-full ${isMapFullScreen ? "hidden" : "block"}`}>
         <div
           key={`${searchCenter?.lat}-${searchCenter?.lng}-${search}-${nearby.length}`}
-          className={`qs-list pb-2 pr-3 ${showMap
+          className={`qs-list pb-24 sm:pb-4 pr-3 ${showMap
             ? "space-y-4 mt-4 lg:mt-0 lg:block lg:h-[520px] lg:space-y-5 lg:overflow-y-auto lg:overflow-x-hidden lg:pb-0 lg:snap-none"
             : "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-5 lg:max-h-[520px] lg:overflow-y-auto"
             }`}
