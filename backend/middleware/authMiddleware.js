@@ -6,17 +6,15 @@ const protect = async (req, res, next) => {
   try {
     let token;
 
-    // Check cookies first
-    if (req.cookies && req.cookies.authToken) {
-      token = req.cookies.authToken;
+    // Check Authorization header first (sent explicitly by client from localStorage)
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      token = authHeader.split(" ")[1];
     }
 
-    // Fallback to Authorization header
-    if (!token) {
-      const authHeader = req.headers.authorization;
-      if (authHeader && authHeader.startsWith("Bearer ")) {
-        token = authHeader.split(" ")[1];
-      }
+    // Fallback to cookies if no Authorization header provided
+    if (!token && req.cookies && req.cookies.authToken) {
+      token = req.cookies.authToken;
     }
 
     if (!token) {
@@ -66,7 +64,10 @@ const authorize = (...roles) => {
 // Only sellers
 const sellerOnly = authorize("seller", "admin");
 
+// Sellers, contractors or admins
+const contractorOrSeller = authorize("seller", "contractor", "admin");
+
 // Only admins
 const adminOnly = authorize("admin");
 
-module.exports = { protect, authorize, sellerOnly, adminOnly };
+module.exports = { protect, authorize, sellerOnly, contractorOrSeller, adminOnly };

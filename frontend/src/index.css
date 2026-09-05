@@ -1962,7 +1962,7 @@ img.qs-avatar {
 }
 
 .bottom-nav-spacer {
-  padding-bottom: 64px !important;
+  padding-bottom: calc(76px + env(safe-area-inset-bottom, 16px)) !important;
 }
 
 .bottom-nav-item {
@@ -2085,13 +2085,14 @@ img.qs-avatar {
   min-width: 0;
 }
 
-.bottom-nav-bar--hidden {
+.bottom-nav-bar--hidden,
+body.chatbot-open .bottom-nav-bar {
   transform: translate(-50%, 120%) !important;
-  pointer-events: none;
+  pointer-events: none !important;
 }
 
 .bottom-nav-spacer {
-  padding-bottom: calc(56px + env(safe-area-inset-bottom, 12px));
+  padding-bottom: calc(76px + env(safe-area-inset-bottom, 16px)) !important;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════

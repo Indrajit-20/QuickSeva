@@ -1,11 +1,30 @@
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
-require("dotenv").config({
-  path: process.env.NODE_ENV === "production"
-    ? ".env.production"
-    : (process.env.USE_RAILWAY === "true" ? ".env.railway" : ".env.local"),
-});
+const fs = require("fs");
+
+// Dynamic dotenv loader for Local, VPS, or Railway environments
+const candidateEnvFiles = [
+  process.env.NODE_ENV === "production" ? ".env.production" : null,
+  process.env.USE_RAILWAY === "true" ? ".env.railway" : null,
+  ".env.local",
+  ".env",
+  ".env.production",
+  ".env.railway"
+].filter(Boolean);
+
+let envLoaded = false;
+for (const envFile of candidateEnvFiles) {
+  const fullPath = path.resolve(__dirname, envFile);
+  if (fs.existsSync(fullPath)) {
+    require("dotenv").config({ path: fullPath });
+    envLoaded = true;
+    break;
+  }
+}
+if (!envLoaded) {
+  require("dotenv").config();
+}
 
 const { connectDB } = require("./config/db");
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
@@ -30,6 +49,8 @@ const policyRoutes = require("./routes/policyRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const contractorRoutes = require("./routes/contractorRoutes");
+const socialLeadRoutes = require("./routes/socialLeadRoutes");
+const chatbotRoutes = require("./routes/chatbotRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -125,6 +146,9 @@ app.use("/api", leadRoutes);
 app.use("/api/policies", policyRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/contractor", contractorRoutes);
+app.use("/api/seller/social-inbox", socialLeadRoutes);
+app.use("/api/contractor/social-inbox", socialLeadRoutes);
+app.use("/api/chatbot", chatbotRoutes);
 
 // ── Error Handling ────────────────────────────────────────────────────────────
 app.use(notFound);

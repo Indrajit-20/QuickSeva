@@ -12,6 +12,7 @@ import {
   Wallet,
   X,
   ChevronRight,
+  MessageSquare,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useSocket } from "../context/SocketContext";
@@ -30,6 +31,7 @@ const getImageUrl = (url) => {
 
 const navItems = [
   { label: "Dashboard", path: "/seller/dashboard", icon: LayoutDashboard },
+  { label: "Social Inbox", path: "/seller/social-inbox", icon: MessageSquare },
   { label: "Leads", path: "/seller/dashboard/leads", icon: Megaphone },
   { label: "Profile", path: "/seller/profile", icon: User },
   { label: "My Services", path: "/seller/services", icon: BriefcaseBusiness },

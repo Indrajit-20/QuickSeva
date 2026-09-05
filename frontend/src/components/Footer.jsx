@@ -2,6 +2,8 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { Mail, Heart } from "lucide-react";
 
+import Logo from "./Logo";
+
 const GithubIcon = (props) => (
   <svg
     viewBox="0 0 24 24"
@@ -38,17 +40,13 @@ const Footer = () => {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-slate-50 text-slate-600 border-t border-slate-200 pb-20 text-left relative overflow-hidden">
+    <footer className="bg-slate-50 text-slate-600 border-t border-slate-200 pb-24 sm:pb-12 text-left relative overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Footer Content Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-10">
           {/* Company Info */}
           <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <span className="text-xl font-black tracking-tight text-slate-800">
-                Quick<span className="text-indigo-600">Seva</span>
-              </span>
-            </div>
+            <Logo size="md" />
             <p className="text-slate-500 text-sm leading-relaxed font-semibold">
               A modern localized service solution. Find and book verified local service experts near you instantly.
             </p>

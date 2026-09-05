@@ -139,23 +139,9 @@ async function run() {
     } catch (err) {
       console.error("Failed to alter wallet_transactions.source:", err);
     }
-    console.log("Cleaning database tables...");
-    await pool.query("SET FOREIGN_KEY_CHECKS = 0");
-    await pool.query("TRUNCATE TABLE reviews");
-    await pool.query("TRUNCATE TABLE services");
-    await pool.query("TRUNCATE TABLE sellers");
-    await pool.query("TRUNCATE TABLE wallets");
-    await pool.query("TRUNCATE TABLE wallet_transactions");
-    await pool.query("TRUNCATE TABLE orders");
-    await pool.query("TRUNCATE TABLE notifications");
-    await pool.query("TRUNCATE TABLE otp_verifications");
-    await pool.query("TRUNCATE TABLE users");
-    await pool.query("TRUNCATE TABLE sub_services");
-    await pool.query("TRUNCATE TABLE seller_categories");
-    await pool.query("TRUNCATE TABLE categories");
-    await pool.query("SET FOREIGN_KEY_CHECKS = 1");
+    console.log("Ensuring categories and sub-services exist safely...");
 
-    // 5. Seed categories to match frontend SERVICE_FILTERS exactly
+    // 5. Seed categories to match frontend SERVICE_FILTERS safely
     console.log("Seeding categories...");
     const categories = [
       { name: "Cleaning", icon: "🧹", description: "Home and office cleaning services" },
@@ -170,11 +156,18 @@ async function run() {
 
     const categoryMap = {};
     for (let cat of categories) {
-      const [res] = await pool.query(
-        "INSERT INTO categories (name, icon, description) VALUES (?, ?, ?)",
-        [cat.name, cat.icon, cat.description]
-      );
-      categoryMap[cat.name] = res.insertId;
+      const [rows] = await pool.query("SELECT id FROM categories WHERE name = ?", [cat.name]);
+      let catId;
+      if (rows.length > 0) {
+        catId = rows[0].id;
+      } else {
+        const [res] = await pool.query(
+          "INSERT INTO categories (name, icon, description) VALUES (?, ?, ?)",
+          [cat.name, cat.icon, cat.description]
+        );
+        catId = res.insertId;
+      }
+      categoryMap[cat.name] = catId;
     }
 
     console.log("Seeding sub-services...");
@@ -230,10 +223,15 @@ async function run() {
 
     for (let sub of subServices) {
       const categoryId = categoryMap[sub.category];
-      await pool.query(
-        "INSERT INTO sub_services (category_id, name, description, default_price) VALUES (?, ?, ?, ?)",
-        [categoryId, sub.name, sub.description, sub.default_price]
-      );
+      if (categoryId) {
+        const [rows] = await pool.query("SELECT id FROM sub_services WHERE category_id = ? AND name = ?", [categoryId, sub.name]);
+        if (rows.length === 0) {
+          await pool.query(
+            "INSERT INTO sub_services (category_id, name, description, default_price) VALUES (?, ?, ?, ?)",
+            [categoryId, sub.name, sub.description, sub.default_price]
+          );
+        }
+      }
     }
 
     // 6. Generate 100 sellers from frontend logic
@@ -260,12 +258,8 @@ async function run() {
       { name: "Gotri", city: "Vadodara", state: "Gujarat", lat: 22.318, lng: 73.136 },
       { name: "Andheri West", city: "Mumbai", state: "Maharashtra", lat: 19.1363, lng: 72.8276 },
       { name: "Bandra West", city: "Mumbai", state: "Maharashtra", lat: 19.0544, lng: 72.8402 },
-      { name: "Borivali West", city: "Mumbai", state: "Maharashtra", lat: 19.2307, lng: 72.8567 },
+      { name: "Thane West", city: "Thane", state: "Maharashtra", lat: 19.2183, lng: 72.9781 },
       { name: "Kothrud", city: "Pune", state: "Maharashtra", lat: 18.5074, lng: 73.8077 },
-      { name: "Koregaon Park", city: "Pune", state: "Maharashtra", lat: 18.5362, lng: 73.8930 },
-      { name: "Indiranagar", city: "Bengaluru", state: "Karnataka", lat: 12.9719, lng: 77.6412 },
-      { name: "Koramangala", city: "Bengaluru", state: "Karnataka", lat: 12.9352, lng: 77.6244 },
-      { name: "Jayanagar", city: "Bengaluru", state: "Karnataka", lat: 12.9250, lng: 77.5897 },
       { name: "Connaught Place", city: "New Delhi", state: "Delhi NCR", lat: 28.6304, lng: 77.2177 },
       { name: "Saket", city: "New Delhi", state: "Delhi NCR", lat: 28.5244, lng: 77.2066 },
       { name: "Sector 62", city: "Noida", state: "Delhi NCR", lat: 28.6219, lng: 77.3639 },

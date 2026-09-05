@@ -101,7 +101,7 @@ const Home = () => {
   }, []);
 
   return (
-    <main className="min-h-screen flex flex-col" style={{ backgroundColor: "#f8fafc" }}>
+    <main className="min-h-screen flex flex-col bottom-nav-spacer" style={{ backgroundColor: "#f8fafc" }}>
 
       {/* ── Services Near You Section (light hero) ── */}
       <section className="mobile-map-section bg-white pt-4 pb-12 border-b border-slate-100 lg:pt-4 lg:pb-12 lg:border-b lg:border-slate-100">

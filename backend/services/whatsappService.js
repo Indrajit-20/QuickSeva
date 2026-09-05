@@ -131,7 +131,11 @@ function initWhatsAppWebClient() {
           '--disable-component-update',
           '--disable-default-apps',
           '--mute-audio',
-          '--no-zygote'
+          '--no-zygote',
+          '--js-flags=--max-old-space-size=256',
+          '--disable-background-timer-throttling',
+          '--disable-backgrounding-occluded-windows',
+          '--disable-renderer-backgrounding'
         ]
       }
     });

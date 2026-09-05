@@ -8,6 +8,7 @@ import {
   Menu,
   MessageSquare,
   PlusCircle,
+  Sparkles,
   User,
   Wallet,
   X,
@@ -19,6 +20,7 @@ import { getProfilePicUrl } from "../utils/imageUtils";
 
 const navItems = [
   { label: "Dashboard", path: "/contractor/dashboard", icon: LayoutDashboard },
+  { label: "Social Inbox", path: "/contractor/social-inbox", icon: Sparkles, badge: "CRM" },
   { label: "Profile & Trade Settings", path: "/contractor/profile", icon: User },
   { label: "Customer Leads", path: "/contractor/quotes", icon: MessageSquare },
   { label: "My Site Listings", path: "/contractor/posts", icon: Building2 },
@@ -75,6 +77,11 @@ function ContractorSidebar({ user, onLogout, onNavigate, onClose }) {
                 <Icon size={18} className={active ? "text-amber-600" : item.isExternal ? "text-amber-600" : "text-slate-400"} />
                 <span>{item.label}</span>
               </div>
+              {item.badge && (
+                <span className="text-[10px] font-black uppercase px-2 py-0.5 bg-amber-100 text-amber-800 rounded-md border border-amber-200">
+                  {item.badge}
+                </span>
+              )}
               {item.isExternal && (
                 <span className="text-[10px] font-black uppercase px-2 py-0.5 bg-white text-amber-700 rounded-md border border-amber-200 shadow-2xs">
                   Public ↗

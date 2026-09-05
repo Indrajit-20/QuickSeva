@@ -11,6 +11,7 @@ import { useEffect } from "react";
 import Navbar from "./components/Navbar";
 import BottomNavUser from "./components/BottomNavUser";
 import Footer from "./components/Footer";
+import ChatbotWidget from "./components/ChatbotWidget";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminLogin from "./pages/AdminLogin";
 import AdminLayout from "./layouts/AdminLayout";
@@ -56,6 +57,7 @@ import SellerOrders from "./pages/seller/SellerOrders";
 import SellerPackages from "./pages/seller/SellerPackages";
 import SellerWallet from "./pages/seller/SellerWallet";
 import SellerLeads from "./pages/seller/SellerLeads";
+import SellerSocialInbox from "./pages/seller/SellerSocialInbox";
 import SellerPublicProfile from "./pages/SellerPublicProfile";
 
 import ContractorRoute from "./components/ContractorRoute";
@@ -65,6 +67,7 @@ import ContractorPostDetail from "./pages/ContractorPostDetail";
 import CreateContractorPost from "./pages/contractor/CreateContractorPost";
 import ContractorDashboard from "./pages/contractor/ContractorDashboard";
 import ContractorProfile from "./pages/contractor/ContractorProfile";
+import ContractorSocialInbox from "./pages/contractor/ContractorSocialInbox";
 import ContractorRegister from "./pages/ContractorRegister";
 import ContractorPublicProfile from "./pages/ContractorPublicProfile";
 function SellerProtectedRoute() {
@@ -110,6 +113,7 @@ function AppRoutes() {
   const isSellerRoute =
     location.pathname === "/seller" ||
     location.pathname.startsWith("/seller/dashboard") ||
+    location.pathname.startsWith("/seller/social-inbox") ||
     location.pathname.startsWith("/seller/profile") ||
     location.pathname.startsWith("/seller/services") ||
     location.pathname.startsWith("/seller/orders") ||
@@ -165,6 +169,7 @@ function AppRoutes() {
           <Route path="/contractor" element={<ContractorLayout />}>
             <Route index element={<Navigate to="/contractor/dashboard" replace />} />
             <Route path="dashboard" element={<ContractorDashboard />} />
+            <Route path="social-inbox" element={<ContractorSocialInbox />} />
             <Route path="profile" element={<ContractorProfile />} />
             <Route path="create-post" element={<CreateContractorPost />} />
             <Route path="edit-post/:id" element={<CreateContractorPost />} />
@@ -181,6 +186,7 @@ function AppRoutes() {
               element={<Navigate to="/seller/dashboard" replace />}
             />
             <Route path="dashboard" element={<SellerDashboard />} />
+            <Route path="social-inbox" element={<SellerSocialInbox />} />
             <Route path="profile" element={<SellerProfile />} />
             <Route path="services" element={<SellerServices />} />
             <Route path="dashboard/leads" element={<SellerLeads />} />
@@ -229,6 +235,7 @@ function AppRoutes() {
 
       {!isAdminRoute && !isSellerRoute && !isContractorWorkspaceRoute && <Footer />}
       {!isAdminRoute && !isSellerRoute && !isContractorWorkspaceRoute && <BottomNavUser />}
+      {!isAdminRoute && <ChatbotWidget />}
     </>
   );
 }

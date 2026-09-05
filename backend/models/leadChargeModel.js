@@ -11,13 +11,13 @@ const LeadChargeModel = {
     return result.insertId;
   },
 
-  // Check if a lead charge already exists for this buyer->seller->service
-  existsFor: async ({ buyer_id, seller_id, service_id }) => {
+  // Check if a lead charge already exists for this buyer->seller
+  existsFor: async ({ buyer_id, seller_id }) => {
     const [rows] = await pool.query(
       `SELECT id FROM lead_charges
-       WHERE buyer_id = ? AND seller_id = ? AND service_id = ?
+       WHERE buyer_id = ? AND seller_id = ?
        LIMIT 1`,
-      [buyer_id, seller_id, service_id],
+      [buyer_id, seller_id],
     );
     return rows.length > 0 ? rows[0] : null;
   },
