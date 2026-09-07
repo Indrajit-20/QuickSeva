@@ -1,3 +1,4 @@
+import Fuse from 'fuse.js';
 import axios from 'axios';
 import apiClient from '../api/axiosConfig';
 import {
@@ -7,6 +8,29 @@ import {
   SCOPE_OVERRIDE_KEYWORDS
 } from '../data/chatbotTranslations';
 import { API_BASE_URL } from '../config/api';
+
+// ─────────────────────────────────────────────────────────────────
+// Fuse.js Index Setup for Typo-Tolerant Local Intent Matching
+// ─────────────────────────────────────────────────────────────────
+const FUSE_TARGETS = [];
+KEYWORD_RULES.forEach((rule, ruleIndex) => {
+  rule.keywords.forEach((kw) => {
+    FUSE_TARGETS.push({
+      keyword: kw,
+      ruleIndex,
+      priority: rule.priority || 5
+    });
+  });
+});
+
+const fuse = new Fuse(FUSE_TARGETS, {
+  keys: ['keyword'],
+  threshold: 0.38, // 0.0 = exact match, 1.0 = anything. 0.38 handles typos like 'plumbr', 'elctrician', 'cleanng'
+  distance: 100,
+  includeScore: true,
+  ignoreLocation: true,
+  minMatchCharLength: 3
+});
 
 const SUPPORT_INTENT_KEYWORDS = [
   'order', 'booking', 'book', 'status', 'track', 'reply', 'response',
@@ -55,16 +79,9 @@ function buildSupportIntentFallback(message, language) {
 }
 
 /**
- * Smart Local Keyword Matcher with Specificity Scoring.
+ * Smart Local Keyword Matcher with Specificity & Fuse.js Fuzzy Scoring.
  *
- * Instead of returning the FIRST matching rule, this scores ALL rules
- * and returns the response from the BEST (most specific) match.
- *
- * Scoring:
- * - Each matched keyword adds points equal to the keyword's word count
- *   (longer phrases = more specific = higher score)
- * - The rule's `priority` field acts as a tiebreaker multiplier
- * - Must have at least 1 keyword match to qualify
+ * Handles exact phrase matches, token overlaps, AND typos automatically using Fuse.js.
  */
 export function findLocalResponse(userInput, language = 'en') {
   if (!userInput) return null;
@@ -82,7 +99,7 @@ export function findLocalResponse(userInput, language = 'en') {
     .split(/\s+/)
     .filter((w) => w.length > 1);
 
-  // 2. Score all keyword rules for specificity & token overlap
+  // 2. Score all keyword rules for exact substring & token overlap
   let bestMatch = null;
   let bestScore = 0;
 
@@ -122,7 +139,41 @@ export function findLocalResponse(userInput, language = 'en') {
     }
   }
 
+  // High confidence exact/token match found
   if (bestMatch && bestScore >= 6) {
+    const text = bestMatch.responses[language] || bestMatch.responses.en;
+    return { text, showOptions: Boolean(bestMatch.showOptions) };
+  }
+
+  // 3. Fuse.js Fuzzy Fallback for Typos (e.g. 'plumbr', 'elctrician', 'ac repare')
+  const fuseResults = fuse.search(normalized);
+
+  // Also search individual word tokens if whole sentence didn't match directly
+  if (fuseResults.length === 0 && inputTokens.length > 0) {
+    for (const token of inputTokens) {
+      if (token.length < 3) continue;
+      const tokenFuseResults = fuse.search(token);
+      fuseResults.push(...tokenFuseResults);
+    }
+  }
+
+  if (fuseResults.length > 0) {
+    // Sort by Fuse score ascending (lower score = closer match)
+    fuseResults.sort((a, b) => (a.score || 1) - (b.score || 1));
+    const topResult = fuseResults[0];
+
+    // Threshold cutoff — only accept close fuzzy matches (score <= 0.38)
+    if (topResult && topResult.score <= 0.38) {
+      const targetRule = KEYWORD_RULES[topResult.item.ruleIndex];
+      if (targetRule) {
+        const text = targetRule.responses[language] || targetRule.responses.en;
+        return { text, showOptions: Boolean(targetRule.showOptions) };
+      }
+    }
+  }
+
+  // If score was mediocre, return bestMatch if we had any low score exact/token match
+  if (bestMatch && bestScore > 0) {
     const text = bestMatch.responses[language] || bestMatch.responses.en;
     return { text, showOptions: Boolean(bestMatch.showOptions) };
   }
