@@ -24,6 +24,8 @@ export default function AddFundsModal({
   const [processing, setProcessing] = useState(false);
   const [paidAmount, setPaidAmount] = useState(null);
   const [errorMsg, setErrorMsg] = useState("");
+  // Store payment ID for support recovery if verify fails
+  const capturedPaymentIdRef = React.useRef(null);
 
   // When modal opens for a new prefill, reset UI
   React.useEffect(() => {
@@ -88,6 +90,8 @@ export default function AddFundsModal({
           try {
             setProcessing(true);
             setErrorMsg("");
+            // Store payment ID immediately — so if verify crashes we can show it
+            capturedPaymentIdRef.current = response.razorpay_payment_id;
             // 4. Verify payment on backend
             const verifyRes = await verifyPaymentApi({
               razorpay_payment_id: response.razorpay_payment_id,
@@ -98,6 +102,7 @@ export default function AddFundsModal({
             });
 
             if (verifyRes && verifyRes.success) {
+              capturedPaymentIdRef.current = null;
               setPaidAmount(amount);
               setProcessing(false);
               setErrorMsg("");
@@ -114,7 +119,15 @@ export default function AddFundsModal({
             }
           } catch (err) {
             console.error("Verification error:", err);
-            setErrorMsg("Error verifying payment. If amount was deducted, please contact support.");
+            const payId = capturedPaymentIdRef.current;
+            const serverMsg = err?.response?.data?.message;
+            setErrorMsg(
+              serverMsg
+                ? serverMsg
+                : payId
+                ? `Error verifying payment. If amount was deducted, please contact support with Payment ID: ${payId}`
+                : "Error verifying payment. If amount was deducted, please contact support."
+            );
             setProcessing(false);
           }
         },

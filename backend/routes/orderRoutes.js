@@ -8,6 +8,7 @@ const {
   getOrderById,
   acceptOrder,
   startOrder,
+  undoStartOrder,
   completeOrder,
   cancelOrder,
   submitQuotation,
@@ -27,6 +28,7 @@ router.get("/seller", protect, sellerOnly, getSellerOrders);
 router.get("/:id", protect, getOrderById);
 router.patch("/:id/accept", protect, sellerOnly, acceptOrder);
 router.patch("/:id/start", protect, sellerOnly, startOrder);
+router.patch("/:id/undo-start", protect, sellerOnly, undoStartOrder);
 router.patch("/:id/complete", protect, sellerOnly, completeOrder);
 router.patch("/:id/cancel", protect, cancelOrder);
 router.patch("/:id/dispute", protect, disputeOrder);

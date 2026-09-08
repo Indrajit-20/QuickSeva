@@ -17,6 +17,8 @@ export const sellerOrdersApi = {
     apiClient.patch(`/orders/${orderId}/quotation`, payload),
   verifyStartCode: async (orderId, otp) =>
     apiClient.post(`/orders/${orderId}/verify-start-code`, { otp }),
+  undoStart: async (orderId) =>
+    apiClient.patch(`/orders/${orderId}/undo-start`),
 };
 
 export const buyerOrdersApi = {

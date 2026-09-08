@@ -540,6 +540,40 @@ exports.startOrder = async (req, res) => {
   }
 };
 
+// Undo start order (seller safety revert within 5 minutes)
+exports.undoStartOrder = async (req, res) => {
+  try {
+    const seller = await SellerModel.findByUserId(req.user.id);
+    const order = await OrderModel.findById(req.params.id);
+
+    if (!order || order.seller_id !== seller.id)
+      return errorRes(res, "Order not found", 404);
+    if (order.status !== "in_progress")
+      return errorRes(res, "Order is not currently in progress", 400);
+
+    // Safety check: Only allow undoing if started within the last 5 minutes
+    if (order.started_at) {
+      const diffMinutes = (Date.now() - new Date(order.started_at).getTime()) / (1000 * 60);
+      if (diffMinutes > 5) {
+        return errorRes(res, "Cannot undo start after 5 minutes of starting work", 400);
+      }
+    }
+
+    await OrderModel.updateStatus(req.params.id, "accepted", {
+      started_at: null,
+    });
+
+    emitToUser(order.buyer_id, "order_updated", { orderId: order.id, status: "accepted" });
+    emitToUser(req.user.id, "order_updated", { orderId: order.id, status: "accepted" });
+    emitToOrder(order.id, "order_updated", { orderId: order.id, status: "accepted" });
+
+    return successRes(res, null, "Order status reverted to Accepted");
+  } catch (err) {
+    console.error("Undo start order error:", err);
+    return errorRes(res, "Failed to undo start order");
+  }
+};
+
 // Complete order (seller)
 exports.completeOrder = async (req, res) => {
   try {

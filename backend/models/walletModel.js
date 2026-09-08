@@ -19,12 +19,19 @@ const WalletModel = {
     return rows[0] || null;
   },
 
-  // Credit wallet
+  // Credit wallet (auto-creates wallet row if missing — prevents 500 on first-time users)
   credit: async (user_id, amount, source, reference_id, description, externalConn = null) => {
     const conn = externalConn || await pool.getConnection();
     const shouldManageTx = !externalConn;
     try {
       if (shouldManageTx) await conn.beginTransaction();
+
+      // Ensure wallet row exists (upsert) — critical for first-time buyers
+      await conn.query(
+        `INSERT INTO wallets (user_id, balance) VALUES (?, 0.00)
+         ON DUPLICATE KEY UPDATE user_id = user_id`,
+        [user_id]
+      );
 
       await conn.query(
         `UPDATE wallets SET balance = balance + ? WHERE user_id = ?`,
@@ -32,14 +39,18 @@ const WalletModel = {
       );
 
       const [[wallet]] = await conn.query(
-        `SELECT balance FROM wallets WHERE user_id = ?`,
+        `SELECT id, balance FROM wallets WHERE user_id = ?`,
         [user_id]
       );
 
+      if (!wallet) {
+        throw new Error(`Wallet not found for user_id=${user_id} after upsert`);
+      }
+
       await conn.query(
         `INSERT INTO wallet_transactions (wallet_id, type, amount, balance_after, source, reference_id, description)
-         VALUES ((SELECT id FROM wallets WHERE user_id = ?), 'credit', ?, ?, ?, ?, ?)`,
-        [user_id, amount, wallet.balance, source, reference_id || null, description]
+         VALUES (?, 'credit', ?, ?, ?, ?, ?)`,
+        [wallet.id, amount, wallet.balance, source, reference_id || null, description]
       );
 
       if (shouldManageTx) await conn.commit();

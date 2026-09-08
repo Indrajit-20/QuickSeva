@@ -185,8 +185,16 @@ function SellerSidebar({ user, onLogout, onNavigate, pendingOrdersCount = 0, unr
 // Sound alert generator using browser Web Audio API
 const playChime = () => {
   try {
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtxClass) return;
+    const audioCtx = new AudioCtxClass();
+    if (!audioCtx || typeof audioCtx.currentTime !== "number") return;
+    if (audioCtx.state === "suspended") {
+      audioCtx.resume().catch(() => {});
+    }
+
     const playNote = (frequency, startTime, duration) => {
+      if (typeof startTime !== "number" || isNaN(startTime)) return;
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
       osc.type = "sine";
@@ -199,8 +207,9 @@ const playChime = () => {
       osc.stop(startTime + duration);
     };
     // Pleasant notification chime
-    playNote(523.25, audioCtx.currentTime, 0.2); // C5
-    playNote(783.99, audioCtx.currentTime + 0.15, 0.35); // G5
+    const now = audioCtx.currentTime;
+    playNote(523.25, now, 0.2); // C5
+    playNote(783.99, now + 0.15, 0.35); // G5
   } catch (err) {
     console.error("Audio chime playback failed:", err);
   }

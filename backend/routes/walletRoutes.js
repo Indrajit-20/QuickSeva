@@ -12,8 +12,9 @@ const {
   sellerOnly,
 } = require("../middleware/authMiddleware");
 
-router.get("/", protect, sellerOnly, getWallet);
-router.get("/transactions", protect, sellerOnly, getTransactions);
+// Any authenticated user can read their own wallet (buyers also purchase credits)
+router.get("/", protect, getWallet);
+router.get("/transactions", protect, getTransactions);
 router.post("/topup", protect, sellerOnly, topUpWallet);
 
 router.post("/admin/credit", protect, adminOnly, adminCreditWallet);

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import {
   Bell,
@@ -241,10 +242,42 @@ export default function NotificationBell({ className = "", isSeller = false, ali
     };
   }, [socket, user, isSeller, fetchNotifications]);
 
+  const popoverRef = useRef(null);
+  const [coords, setCoords] = useState(null);
+
+  const updateCoords = useCallback(() => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const isMobile = window.innerWidth < 640;
+    setCoords({
+      top: rect.bottom + 8,
+      left: rect.left,
+      right: rect.right,
+      isMobile,
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    updateCoords();
+
+    const handleScrollOrResize = () => updateCoords();
+    window.addEventListener("resize", handleScrollOrResize);
+    window.addEventListener("scroll", handleScrollOrResize, true);
+    return () => {
+      window.removeEventListener("resize", handleScrollOrResize);
+      window.removeEventListener("scroll", handleScrollOrResize, true);
+    };
+  }, [isOpen, updateCoords]);
+
   // Outside click close
   useEffect(() => {
     const handleOutsideClick = (e) => {
-      if (containerRef.current && !containerRef.current.contains(e.target)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target) &&
+        (!popoverRef.current || !popoverRef.current.contains(e.target))
+      ) {
         setIsOpen(false);
       }
     };
@@ -311,14 +344,6 @@ export default function NotificationBell({ className = "", isSeller = false, ali
 
   if (!user) return null;
 
-  // Determine desktop popover position class based on alignment prop
-  const positionClass =
-    align === "left"
-      ? "sm:left-0 sm:mt-2"
-      : align === "right"
-      ? "sm:right-0 sm:mt-2"
-      : "sm:right-0 sm:mt-2";
-
   return (
     <div className={`relative inline-block ${className}`} ref={containerRef}>
       {/* ── Bell Icon Button ── */}
@@ -339,144 +364,161 @@ export default function NotificationBell({ className = "", isSeller = false, ali
         )}
       </button>
 
-      {/* ── Mobile Dim Backdrop Overlay ── */}
-      {isOpen && (
-        <div
-          onClick={() => setIsOpen(false)}
-          className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-[99998] sm:hidden"
-        />
-      )}
+      {/* ── Dropdown Popover (Rendered via React Portal directly into body to avoid z-index and overflow clipping) ── */}
+      {isOpen &&
+        coords &&
+        createPortal(
+          <>
+            {/* Mobile Backdrop Overlay */}
+            <div
+              onClick={() => setIsOpen(false)}
+              className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-[999998] sm:hidden"
+            />
 
-      {/* ── Dropdown Popover (Mobile Responsive Fixed Sheet + Desktop Popover) ── */}
-      {isOpen && (
-        <div
-          className={`fixed inset-x-3 top-16 sm:inset-x-auto sm:top-auto sm:absolute ${positionClass} sm:w-96 max-w-[calc(100vw-1.5rem)] sm:max-w-[400px] rounded-2xl border border-slate-200 bg-white shadow-2xl z-[99999] overflow-hidden animate-fade-in`}
-          style={{ boxShadow: "0 25px 60px -12px rgba(15, 23, 42, 0.3)" }}
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/90 px-4 py-3">
-            <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50 text-blue-600 border border-blue-100">
-                <Sparkles className="h-4 w-4" />
-              </div>
-              <div>
-                <h3 className="text-sm font-extrabold text-slate-900 leading-tight">
-                  Notifications
-                </h3>
-                <p className="text-[10px] font-semibold text-slate-400">
-                  {isSeller ? "Seller alerts & updates" : "Order & account updates"}
-                </p>
-              </div>
-              {unreadCount > 0 && (
-                <span className="ml-1 rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-extrabold text-white">
-                  {unreadCount} new
-                </span>
-              )}
-            </div>
-
-            {unreadCount > 0 && (
-              <button
-                type="button"
-                onClick={handleMarkAllAsRead}
-                className="flex items-center gap-1 rounded-lg bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-blue-600 hover:bg-blue-100 transition active:scale-95 cursor-pointer"
-              >
-                <CheckCheck className="h-3.5 w-3.5" />
-                Mark all read
-              </button>
-            )}
-          </div>
-
-          {/* List Content */}
-          <div className="max-h-[60vh] sm:max-h-[420px] overflow-y-auto divide-y divide-slate-100 no-scrollbar">
-            {loading && notifications.length === 0 ? (
-              <div className="py-12 text-center text-xs font-semibold text-slate-400">
-                <div className="mx-auto mb-2.5 h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-                Loading notifications...
-              </div>
-            ) : notifications.length === 0 ? (
-              <div className="py-12 text-center px-4">
-                <div className="mx-auto mb-2.5 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
-                  <Bell className="h-6 w-6" />
+            <div
+              ref={popoverRef}
+              className="fixed rounded-2xl border border-slate-200 bg-white shadow-2xl z-[999999] overflow-hidden animate-fade-in w-[calc(100vw-1.5rem)] sm:w-96 sm:max-w-[400px]"
+              style={{
+                boxShadow: "0 25px 60px -12px rgba(15, 23, 42, 0.35)",
+                ...(coords.isMobile
+                  ? { top: "4rem", left: "0.75rem", right: "0.75rem" }
+                  : align === "left"
+                  ? {
+                      top: `${coords.top}px`,
+                      left: `${Math.max(16, Math.min(coords.left, window.innerWidth - 400))}px`,
+                    }
+                  : {
+                      top: `${coords.top}px`,
+                      left: `${Math.max(16, coords.right - 384)}px`,
+                    }),
+              }}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/90 px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50 text-blue-600 border border-blue-100">
+                    <Sparkles className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-extrabold text-slate-900 leading-tight">
+                      Notifications
+                    </h3>
+                    <p className="text-[10px] font-semibold text-slate-400">
+                      {isSeller ? "Seller alerts & updates" : "Order & account updates"}
+                    </p>
+                  </div>
+                  {unreadCount > 0 && (
+                    <span className="ml-1 rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-extrabold text-white">
+                      {unreadCount} new
+                    </span>
+                  )}
                 </div>
-                <p className="text-xs font-extrabold text-slate-700">All caught up!</p>
-                <p className="text-[11px] font-medium text-slate-400 mt-1">
-                  No notifications yet / कोई नई सूचना नहीं
-                </p>
-              </div>
-            ) : (
-              notifications.map((item) => {
-                const { icon: ItemIcon, bg, pillBg, tag } = getNotificationIcon(
-                  item.type,
-                  item.title
-                );
-                const isUnread = !item.is_read;
 
-                return (
-                  <div
-                    key={item.id}
-                    onClick={() => handleItemClick(item)}
-                    className={`group relative flex items-start gap-3.5 p-3.5 cursor-pointer transition-all ${
-                      isUnread
-                        ? "bg-blue-50/50 hover:bg-blue-50/80 border-l-4 border-l-blue-600"
-                        : "bg-white hover:bg-slate-50 border-l-4 border-l-transparent"
-                    }`}
+                {unreadCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleMarkAllAsRead}
+                    className="flex items-center gap-1 rounded-lg bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-blue-600 hover:bg-blue-100 transition active:scale-95 cursor-pointer"
                   >
-                    {/* Category Icon */}
-                    <div
-                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${bg} shadow-2xs mt-0.5`}
-                    >
-                      <ItemIcon className="h-5 w-5" />
-                    </div>
+                    <CheckCheck className="h-3.5 w-3.5" />
+                    Mark all read
+                  </button>
+                )}
+              </div>
 
-                    {/* Main Content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-1 mb-1">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <span className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold tracking-wider border shrink-0 ${pillBg}`}>
-                            {tag}
-                          </span>
-                          <p
-                            className={`text-xs font-bold truncate ${
-                              isUnread ? "text-slate-900" : "text-slate-700"
-                            }`}
-                          >
-                            {item.title || "Notification"}
+              {/* List Content */}
+              <div className="max-h-[60vh] sm:max-h-[420px] overflow-y-auto divide-y divide-slate-100 no-scrollbar">
+                {loading && notifications.length === 0 ? (
+                  <div className="py-12 text-center text-xs font-semibold text-slate-400">
+                    <div className="mx-auto mb-2.5 h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+                    Loading notifications...
+                  </div>
+                ) : notifications.length === 0 ? (
+                  <div className="py-12 text-center px-4">
+                    <div className="mx-auto mb-2.5 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+                      <Bell className="h-6 w-6" />
+                    </div>
+                    <p className="text-xs font-extrabold text-slate-700">All caught up!</p>
+                    <p className="text-[11px] font-medium text-slate-400 mt-1">
+                      No notifications yet / कोई नई सूचना नहीं
+                    </p>
+                  </div>
+                ) : (
+                  notifications.map((item) => {
+                    const { icon: ItemIcon, bg, pillBg, tag } = getNotificationIcon(
+                      item.type,
+                      item.title
+                    );
+                    const isUnread = !item.is_read;
+
+                    return (
+                      <div
+                        key={item.id}
+                        onClick={() => handleItemClick(item)}
+                        className={`group relative flex items-start gap-3.5 p-3.5 cursor-pointer transition-all ${
+                          isUnread
+                            ? "bg-blue-50/50 hover:bg-blue-50/80 border-l-4 border-l-blue-600"
+                            : "bg-white hover:bg-slate-50 border-l-4 border-l-transparent"
+                        }`}
+                      >
+                        {/* Category Icon */}
+                        <div
+                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${bg} shadow-2xs mt-0.5`}
+                        >
+                          <ItemIcon className="h-5 w-5" />
+                        </div>
+
+                        {/* Main Content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-1 mb-1">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold tracking-wider border shrink-0 ${pillBg}`}>
+                                {tag}
+                              </span>
+                              <p
+                                className={`text-xs font-bold truncate ${
+                                  isUnread ? "text-slate-900" : "text-slate-700"
+                                }`}
+                              >
+                                {item.title || "Notification"}
+                              </p>
+                            </div>
+                            <span className="flex items-center gap-0.5 text-[10px] font-semibold text-slate-400 shrink-0">
+                              <Clock size={10} />
+                              {formatTimeAgo(item.created_at)}
+                            </span>
+                          </div>
+
+                          <p className="text-[11.5px] font-medium text-slate-600 line-clamp-2 leading-relaxed">
+                            {item.message}
                           </p>
                         </div>
-                        <span className="flex items-center gap-0.5 text-[10px] font-semibold text-slate-400 shrink-0">
-                          <Clock size={10} />
-                          {formatTimeAgo(item.created_at)}
-                        </span>
+
+                        <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-slate-600 shrink-0 self-center transition-transform group-hover:translate-x-0.5" />
                       </div>
+                    );
+                  })
+                )}
+              </div>
 
-                      <p className="text-[11.5px] font-medium text-slate-600 line-clamp-2 leading-relaxed">
-                        {item.message}
-                      </p>
-                    </div>
-
-                    <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-slate-600 shrink-0 self-center transition-transform group-hover:translate-x-0.5" />
-                  </div>
-                );
-              })
-            )}
-          </div>
-
-          {/* Footer */}
-          <div className="border-t border-slate-100 bg-slate-50/80 px-4 py-2.5 flex items-center justify-between">
-            <span className="text-[11px] font-medium text-slate-400">
-              {notifications.length} total
-            </span>
-            <button
-              type="button"
-              onClick={() => setIsOpen(false)}
-              className="flex items-center gap-1 px-3 py-1 rounded-lg bg-slate-200/80 hover:bg-slate-200 text-slate-700 text-[11px] font-bold transition active:scale-95 cursor-pointer"
-            >
-              <X size={13} />
-              Close
-            </button>
-          </div>
-        </div>
-      )}
+              {/* Footer */}
+              <div className="border-t border-slate-100 bg-slate-50/80 px-4 py-2.5 flex items-center justify-between">
+                <span className="text-[11px] font-medium text-slate-400">
+                  {notifications.length} total
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsOpen(false)}
+                  className="flex items-center gap-1 px-3 py-1 rounded-lg bg-slate-200/80 hover:bg-slate-200 text-slate-700 text-[11px] font-bold transition active:scale-95 cursor-pointer"
+                >
+                  <X size={13} />
+                  Close
+                </button>
+              </div>
+            </div>
+          </>,
+          document.body
+        )}
 
       {/* ── Real-time Toast Alert Popup ── */}
       {toastAlert && (

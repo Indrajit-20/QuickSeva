@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, PlayCircle, XCircle, Download, FileText, Clock, ChevronDown, ChevronUp, Phone, MapPin } from "lucide-react";
 import { formatCurrency, statusClasses } from "./sellerData";
 import { sellerOrdersApi } from "../../api/orderApi";
@@ -23,6 +23,8 @@ export default function SellerOrders() {
   const [error, setError] = useState(null);
   const [busyId, setBusyId] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
+  const [undoCountdowns, setUndoCountdowns] = useState({});
+  const undoIntervalRef = useRef(null);
 
   const fetchSilently = async () => {
     try {
@@ -201,6 +203,39 @@ export default function SellerOrders() {
     activeTab === "all" ? orders : orders.filter(o => o.status === activeTab),
     [orders, activeTab]
   );
+
+  // Drive undo-start countdown based on order.started_at
+  useEffect(() => {
+    const tick = () => {
+      const now = Date.now();
+      setUndoCountdowns(() => {
+        const next = {};
+        orders.forEach(o => {
+          if (o.status === "in_progress" && o.started_at) {
+            const elapsed = (now - new Date(o.started_at).getTime()) / 1000;
+            const remaining = Math.max(0, 300 - elapsed); // 5 min = 300 s
+            if (remaining > 0) next[o.id] = Math.ceil(remaining);
+          }
+        });
+        return next;
+      });
+    };
+    tick();
+    undoIntervalRef.current = setInterval(tick, 1000);
+    return () => clearInterval(undoIntervalRef.current);
+  }, [orders]);
+
+  const runUndoStart = async (id) => {
+    setBusyId(id);
+    try {
+      await sellerOrdersApi.undoStart(id);
+      await fetchOrders();
+    } catch (e) {
+      alert(e?.response?.data?.message || "Could not undo start");
+    } finally {
+      setBusyId(null);
+    }
+  };
 
   const runAction = async (action, id) => {
     setBusyId(id);
@@ -597,43 +632,85 @@ export default function SellerOrders() {
                       </div>
                     )}
                     {order.status === "in_progress" && (!order.service_charge_amount || parseFloat(order.service_charge_amount) === 0) && (
-                      <div className="w-full flex items-center justify-end gap-2">
-                        <button
-                          type="button"
-                          disabled={busy || quotingOrderId === id}
-                          onClick={() => setQuotingOrderId(id)}
-                          className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-sm transition active:scale-95 cursor-pointer flex items-center gap-1"
-                        >
-                          ➕ Create Quote
-                        </button>
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => runAction("cancel", id)}
-                          className="px-3.5 py-1.5 bg-white border border-red-200 hover:bg-red-50 text-red-600 text-xs font-bold rounded-xl transition active:scale-95 cursor-pointer flex items-center gap-1"
-                        >
-                          <XCircle size={14} /> Cancel
-                        </button>
+                      <div className="w-full flex flex-col gap-2">
+                        {/* Undo Start countdown banner */}
+                        {undoCountdowns[id] > 0 && (
+                          <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                            <span className="text-xs text-amber-700 font-medium">
+                              ⏪ Accidentally started? You have{" "}
+                              <span className="font-bold">
+                                {Math.floor(undoCountdowns[id] / 60)}:{String(undoCountdowns[id] % 60).padStart(2, "0")}
+                              </span>{" "}to undo.
+                            </span>
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => runUndoStart(id)}
+                              className="ml-3 px-3 py-1 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-lg transition active:scale-95 cursor-pointer whitespace-nowrap"
+                            >
+                              Undo Start
+                            </button>
+                          </div>
+                        )}
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            disabled={busy || quotingOrderId === id}
+                            onClick={() => setQuotingOrderId(id)}
+                            className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-sm transition active:scale-95 cursor-pointer flex items-center gap-1"
+                          >
+                            ➕ Create Quote
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => runAction("cancel", id)}
+                            className="px-3.5 py-1.5 bg-white border border-red-200 hover:bg-red-50 text-red-600 text-xs font-bold rounded-xl transition active:scale-95 cursor-pointer flex items-center gap-1"
+                          >
+                            <XCircle size={14} /> Cancel
+                          </button>
+                        </div>
                       </div>
                     )}
                     {order.status === "in_progress" && order.service_charge_amount > 0 && (
-                      <div className="w-full flex items-center justify-end gap-2">
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => runAction("complete", id)}
-                          className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm transition active:scale-95 cursor-pointer flex items-center gap-1"
-                        >
-                          <CheckCircle2 size={14} /> Mark Complete
-                        </button>
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => runAction("cancel", id)}
-                          className="px-3.5 py-1.5 bg-white border border-red-200 hover:bg-red-50 text-red-600 text-xs font-bold rounded-xl transition active:scale-95 cursor-pointer flex items-center gap-1"
-                        >
-                          <XCircle size={14} /> Cancel
-                        </button>
+                      <div className="w-full flex flex-col gap-2">
+                        {/* Undo Start countdown banner */}
+                        {undoCountdowns[id] > 0 && (
+                          <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                            <span className="text-xs text-amber-700 font-medium">
+                              ⏪ Accidentally started? You have{" "}
+                              <span className="font-bold">
+                                {Math.floor(undoCountdowns[id] / 60)}:{String(undoCountdowns[id] % 60).padStart(2, "0")}
+                              </span>{" "}to undo.
+                            </span>
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => runUndoStart(id)}
+                              className="ml-3 px-3 py-1 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-lg transition active:scale-95 cursor-pointer whitespace-nowrap"
+                            >
+                              Undo Start
+                            </button>
+                          </div>
+                        )}
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => runAction("complete", id)}
+                            className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm transition active:scale-95 cursor-pointer flex items-center gap-1"
+                          >
+                            <CheckCircle2 size={14} /> Mark Complete
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => runAction("cancel", id)}
+                            className="px-3.5 py-1.5 bg-white border border-red-200 hover:bg-red-50 text-red-600 text-xs font-bold rounded-xl transition active:scale-95 cursor-pointer flex items-center gap-1"
+                          >
+                            <XCircle size={14} /> Cancel
+                          </button>
+                        </div>
                       </div>
                     )}
                     {order.status === "quoted" && (

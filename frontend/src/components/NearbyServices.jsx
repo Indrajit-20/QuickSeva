@@ -685,12 +685,9 @@ export default function NearbyServices({
 
   // ── NEW: Refine Results filters ──────────────────────────────────────────
   const [filterPrice, setFilterPrice] = useState("all");
-  const [filterDuration, setFilterDuration] = useState("all");
-  const [filterBooking, setFilterBooking] = useState("all");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [quickFilters, setQuickFilters] = useState({
-    nearest: false,
-    openNow: false,
+    availableToday: false,
     verified: false,
     rating45: false,
   });
@@ -702,62 +699,15 @@ export default function NearbyServices({
     { value: "1000-2000", label: "₹1k–₹2k" },
     { value: "2000+", label: "₹2k+" },
   ];
-  const DURATION_OPTIONS = [
-    { value: "all", label: "All" },
-    { value: "under1", label: "< 1 hr" },
-    { value: "1-2", label: "1–2 hrs" },
-    { value: "2-4", label: "2–4 hrs" },
-    { value: "4+", label: "4+ hrs" },
-  ];
-  const BOOKING_OPTIONS = [
-    { value: "all", label: "All" },
-    { value: "instant", label: "⚡ Instant" },
-    { value: "scheduled", label: "📅 Scheduled" },
-  ];
-
-  // ── Duration bucket helpers ──────────────────────────────────────────────
-  const parseDurationToMinutes = (str) => {
-    if (!str || typeof str !== "string") return null;
-    const t = str.trim().toLowerCase();
-    const hourMatch = t.match(/(\d+)\s*h/);
-    const minMatch = t.match(/(\d+)\s*m(?!o)/); // 'm' but not 'mo' (month)
-    const hours = hourMatch ? Number(hourMatch[1]) : 0;
-    const mins = minMatch ? Number(minMatch[1]) : 0;
-    if (!hourMatch && !minMatch) {
-      const range = t.match(/(\d+)\s*-\s*(\d+)/);
-      if (range)
-        return Math.round(((Number(range[1]) + Number(range[2])) * 60) / 2);
-      const single = t.match(/(\d+)\s*hours?/);
-      if (single) return Number(single[1]) * 60;
-      const bare = t.match(/^(\d+)$/);
-      if (bare) return Number(bare[1]) * 60;
-      return null;
-    }
-    return hours * 60 + mins;
-  };
-
-  const getDurationBucket = (str) => {
-    const mins = parseDurationToMinutes(str);
-    if (mins === null) return null;
-    if (mins < 60) return "under1";
-    if (mins <= 120) return "1-2";
-    if (mins <= 240) return "2-4";
-    return "4+";
-  };
 
   const activeFilterCount =
     (filterPrice !== "all" ? 1 : 0) +
-    (filterDuration !== "all" ? 1 : 0) +
-    (filterBooking !== "all" ? 1 : 0) +
     Object.values(quickFilters).filter(Boolean).length;
 
   const clearAllFilters = () => {
     setFilterPrice("all");
-    setFilterDuration("all");
-    setFilterBooking("all");
     setQuickFilters({
-      nearest: false,
-      openNow: false,
+      availableToday: false,
       verified: false,
       rating45: false,
     });
@@ -769,8 +719,7 @@ export default function NearbyServices({
   };
 
   const quickFilterItems = [
-    { key: "nearest", label: "Sort: Nearest", Icon: ArrowUpDown },
-    { key: "openNow", label: "Open now", Icon: Clock3 },
+    { key: "availableToday", label: "Available Today", Icon: Zap },
     { key: "verified", label: "Verified", Icon: BadgeCheck },
     { key: "rating45", label: "4.5+", Icon: Star },
   ];
@@ -797,8 +746,6 @@ export default function NearbyServices({
     filterAvailability,
     filterRating,
     filterPrice,
-    filterDuration,
-    filterBooking,
     quickFilters
   ]);
 
@@ -811,8 +758,6 @@ export default function NearbyServices({
     setTimeout(scrollToResults, 100);
   }, [
     filterPrice,
-    filterDuration,
-    filterBooking,
     filterServiceMode,
     quickFilters,
   ]);
@@ -1562,58 +1507,27 @@ export default function NearbyServices({
           return true;
         });
 
-    // ── NEW: duration bucket filter ──────────────────────────────────────
-    const filteredByDuration =
-      filterDuration === "all"
-        ? filteredByPrice
-        : filteredByPrice.filter((s) => {
-          const svcs = Array.isArray(s?.services) ? s.services : [];
-          if (!svcs.length) return true;
-          return svcs.some(
-            (svc) => getDurationBucket(svc?.duration) === filterDuration,
-          );
-        });
-
-    // ── NEW: booking type filter ─────────────────────────────────────────
-    // Uses service-level is_instant if available; falls back to seller.instantService
-    const filteredByBooking =
-      filterBooking === "all"
-        ? filteredByDuration
-        : filteredByDuration.filter((s) => {
-          const svcs = Array.isArray(s?.services) ? s.services : [];
-          const sellerInstant = Boolean(s?.instantService);
-
-          if (filterBooking === "instant") {
-            if (svcs.length > 0)
-              return svcs.some((svc) => Boolean(svc?.is_instant));
-            return sellerInstant;
-          }
-          if (filterBooking === "scheduled") {
-            if (svcs.length > 0) return svcs.every((svc) => !svc?.is_instant);
-            return !sellerInstant;
-          }
-          return true;
-        });
-
-    const filteredByQuick = filteredByBooking.filter((s) => {
+    const filteredByQuick = filteredByPrice.filter((s) => {
       const rating = Number(s?.rating || s?.avg_rating || 0);
-      const isOpen =
+      const isOnline =
         Boolean(s?.is_available) ||
         Boolean(s?.isAvailable) ||
         Boolean(s?.instantService);
       const isVerified =
         Boolean(s?.is_verified) ||
         Boolean(s?.isVerified) ||
-        Boolean(s?.verified);
+        Boolean(s?.verified) ||
+        Boolean(s?.is_approved) ||
+        Boolean(s?.status === "approved") ||
+        Boolean(s?.is_premium);
 
-      if (quickFilters.openNow && !isOpen) return false;
+      if (quickFilters.availableToday && !isOnline) return false;
       if (quickFilters.verified && !isVerified) return false;
       if (quickFilters.rating45 && rating < 4.5) return false;
       return true;
     });
 
     const sortedList = filteredByQuick.sort((a, b) => {
-      if (quickFilters.nearest) return a.distanceKm - b.distanceKm;
       const rankA = getSellerPackageRank(a);
       const rankB = getSellerPackageRank(b);
       if (rankA !== rankB) return rankB - rankA;
@@ -1641,8 +1555,6 @@ export default function NearbyServices({
     filterAvailability,
     filterRating,
     filterPrice,
-    filterDuration,
-    filterBooking,
     quickFilters,
   ]);
 
@@ -2373,11 +2285,14 @@ export default function NearbyServices({
               {/* Collapsible Refine Results filter options */}
               {filtersOpen && (
                 <div className="qs-refine-panel rounded-xl border p-4 mt-3 space-y-4">
-                  {/* Price Range */}
+                  {/* Starting Price */}
                   <div>
-                    <p className="mb-2 text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                      <span className="text-sm">💰</span> Price Range
-                    </p>
+                    <div className="mb-2 flex items-center justify-between">
+                      <p className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                        <span className="text-sm">🏷️</span> Starting Price
+                      </p>
+                      <span className="text-[10px] text-slate-400 font-medium">Filters providers by starting service price</span>
+                    </div>
                     <div className="flex flex-wrap gap-1.5">
                       {PRICE_OPTIONS.map((opt) => (
                         <button
@@ -2385,46 +2300,6 @@ export default function NearbyServices({
                           type="button"
                           onClick={() => setFilterPrice(opt.value)}
                           className={`qs-refine-option-btn rounded-lg px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${filterPrice === opt.value ? "active" : ""
-                            }`}
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Duration */}
-                  <div>
-                    <p className="mb-2 text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                      <span className="text-sm">⏱</span> Time to Complete
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {DURATION_OPTIONS.map((opt) => (
-                        <button
-                          key={opt.value}
-                          type="button"
-                          onClick={() => setFilterDuration(opt.value)}
-                          className={`qs-refine-option-btn rounded-lg px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${filterDuration === opt.value ? "active" : ""
-                            }`}
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Booking Type */}
-                  <div>
-                    <p className="mb-2 text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                      <span className="text-sm">📅</span> Booking Type
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {BOOKING_OPTIONS.map((opt) => (
-                        <button
-                          key={opt.value}
-                          type="button"
-                          onClick={() => setFilterBooking(opt.value)}
-                          className={`qs-refine-option-btn rounded-lg px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${filterBooking === opt.value ? "active" : ""
                             }`}
                         >
                           {opt.label}

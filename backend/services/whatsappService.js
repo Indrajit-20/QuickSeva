@@ -217,13 +217,13 @@ function initWhatsAppWebClient() {
 /**
  * Wait for client to be ready (up to maxWaitMs)
  */
-async function waitUntilReady(maxWaitMs = 10000) {
+async function waitUntilReady(maxWaitMs = 300) {
   if (isReady || (global.whatsappWebClient && global.whatsappWebClient.isReady)) return true;
   if (!client && !global.whatsappWebClient) return false;
   const start = Date.now();
   while (Date.now() - start < maxWaitMs) {
     if (isReady || (global.whatsappWebClient && global.whatsappWebClient.isReady)) return true;
-    await new Promise(resolve => setTimeout(resolve, 400));
+    await new Promise(resolve => setTimeout(resolve, 50));
   }
   return isReady || (global.whatsappWebClient && global.whatsappWebClient.isReady);
 }
@@ -241,8 +241,8 @@ async function sendWhatsAppNotification(phone, message) {
   const chatId = `${formatted}@c.us`;
   const activeClient = client || global.whatsappWebClient;
 
-  // Check if activeClient is ready or wait up to 10 seconds
-  const ready = isReady || (global.whatsappWebClient && global.whatsappWebClient.isReady) || await waitUntilReady(10000);
+  // Quick check if activeClient is ready (wait max 300ms, not 10,000ms)
+  const ready = isReady || (global.whatsappWebClient && global.whatsappWebClient.isReady) || await waitUntilReady(300);
 
   if (activeClient && ready) {
     try {

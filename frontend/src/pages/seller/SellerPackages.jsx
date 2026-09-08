@@ -393,11 +393,14 @@ export default function SellerPackages() {
             });
 
             if (verifyRes && verifyRes.success) {
-              const { premium: updatedPremium, walletBalance: newWalletBalance, transaction } = verifyRes.data;
+              const resData = verifyRes.data || {};
+              const updatedPremium = resData.premium || {};
+              const newWalletBalance = resData.walletBalance || 0;
+              const transaction = resData.transaction || {};
               
               const isPremiumActiveFlag = updatedPremium.is_premium === 1 || updatedPremium.is_premium === true;
               setPremium({
-                plan: updatedPremium.plan === "premium" ? "pro" : updatedPremium.plan,
+                plan: updatedPremium.plan === "premium" ? "pro" : updatedPremium.plan || selectedPlan.id,
                 expiresAt: updatedPremium.premium_expires_at,
                 isPremium: isPremiumActiveFlag
               });
@@ -406,7 +409,7 @@ export default function SellerPackages() {
               localStorage.setItem(
                 "sellerPremium",
                 JSON.stringify({
-                  plan: updatedPremium.plan === "premium" ? "pro" : updatedPremium.plan,
+                  plan: updatedPremium.plan === "premium" ? "pro" : updatedPremium.plan || selectedPlan.id,
                   expiresAt: updatedPremium.premium_expires_at,
                   isPremium: isPremiumActiveFlag,
                 })
@@ -416,20 +419,20 @@ export default function SellerPackages() {
               if (typeof updateUser === "function") {
                 updateUser({
                   is_premium: isPremiumActiveFlag ? 1 : 0,
-                  plan: updatedPremium.plan,
+                  plan: updatedPremium.plan || selectedPlan.id,
                   premium_expires_at: updatedPremium.premium_expires_at,
                 });
               }
 
-              // Add history entry
+              // Add history entry safely
               const historyEntry = {
-                receiptId: transaction.id || `QS-PKG-${Date.now()}`,
-                plan: updatedPremium.plan,
+                receiptId: transaction?.id || response?.razorpay_payment_id || `QS-PKG-${Date.now()}`,
+                plan: updatedPremium.plan || selectedPlan.id,
                 price: selectedPlan.price,
-                purchasedAt: transaction.created_at || new Date().toISOString(),
+                purchasedAt: transaction?.created_at || new Date().toISOString(),
                 expiresAt: updatedPremium.premium_expires_at,
-                type: purchasePreview.type,
-                walletTransactionId: transaction.id,
+                type: purchasePreview?.type || "new",
+                walletTransactionId: transaction?.id || response?.razorpay_payment_id || `TXN-${Date.now()}`,
                 balanceAfter: newWalletBalance,
               };
               setHistory(prev => [historyEntry, ...prev]);
@@ -445,7 +448,15 @@ export default function SellerPackages() {
             }
           } catch (err) {
             console.error("Verification error:", err);
-            setModalError("Error verifying payment. If amount was deducted, please contact support.");
+            const serverMsg = err?.response?.data?.message;
+            const payId = response?.razorpay_payment_id;
+            setModalError(
+              serverMsg
+                ? serverMsg
+                : payId
+                ? `Error verifying payment. If amount was deducted, please contact support with Payment ID: ${payId}`
+                : "Error verifying payment. If amount was deducted, please contact support."
+            );
           } finally {
             setProcessing(false);
           }
