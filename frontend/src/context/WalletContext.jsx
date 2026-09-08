@@ -12,7 +12,7 @@ export function WalletProvider({ children }) {
   const [loading, setLoading] = useState(false);
 
   const refreshWallet = useCallback(async () => {
-    if (!isAuthenticated || user?.role !== "seller") {
+    if (!isAuthenticated) {
       return;
     }
     setLoading(true);
@@ -94,6 +94,13 @@ export function WalletProvider({ children }) {
 
 export function useWallet() {
   const ctx = useContext(WalletContext);
-  if (!ctx) throw new Error("useWallet must be used within a WalletProvider");
-  return ctx;
+  return (
+    ctx || {
+      walletBalance: 0,
+      refreshWallet: () => {},
+      transactions: [],
+      addFundsToWallet: () => {},
+      loading: false,
+    }
+  );
 }

@@ -65,6 +65,11 @@ export const getPostApplications = async (id) => {
   return res.data;
 };
 
+export const unlockApplicationContact = async (id) => {
+  const res = await axiosInstance.post(`/contractor/applications/${id}/unlock-contact`);
+  return res.data;
+};
+
 export const getMyQuoteRequests = async () => {
   const res = await axiosInstance.get("/contractor/my-quote-requests");
   return res.data;

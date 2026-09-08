@@ -1,38 +1,35 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { Mail, Heart } from "lucide-react";
-
+import { 
+  Mail, 
+  Heart, 
+  ShieldCheck, 
+  CheckCircle2,
+  Briefcase,
+  Zap,
+  ExternalLink
+} from "lucide-react";
 import Logo from "./Logo";
 
-const GithubIcon = (props) => (
+const GithubIcon = ({ className = "w-4 h-4", ...props }) => (
   <svg
     viewBox="0 0 24 24"
-    width="15"
-    height="15"
-    stroke="currentColor"
-    strokeWidth="2.5"
-    fill="none"
-    strokeLinecap="round"
-    strokeLinejoin="round"
+    fill="currentColor"
+    className={className}
     {...props}
   >
-    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
+    <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
   </svg>
 );
 
-const TwitterIcon = (props) => (
+const TwitterIcon = ({ className = "w-4 h-4", ...props }) => (
   <svg
     viewBox="0 0 24 24"
-    width="15"
-    height="15"
-    stroke="currentColor"
-    strokeWidth="2.5"
-    fill="none"
-    strokeLinecap="round"
-    strokeLinejoin="round"
+    fill="currentColor"
+    className={className}
     {...props}
   >
-    <path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z" />
+    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
   </svg>
 );
 
@@ -40,61 +37,104 @@ const Footer = () => {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-slate-50 text-slate-600 border-t border-slate-200 pb-24 sm:pb-12 text-left relative overflow-hidden">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Footer Content Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-10">
-          {/* Company Info */}
-          <div className="space-y-4">
-            <Logo size="md" />
-            <p className="text-slate-500 text-sm leading-relaxed font-semibold">
-              A modern localized service solution. Find and book verified local service experts near you instantly.
+    <footer className="bg-white text-slate-600 border-t border-slate-200/80 pt-12 pb-28 sm:pb-12 text-left font-sans relative">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        {/* Footer Main Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 mb-10">
+          
+          {/* Brand Info (Spans 2 cols on LG) */}
+          <div className="lg:col-span-2 space-y-4">
+            <div className="flex items-center gap-3">
+              <Logo size="md" />
+            </div>
+            <p className="text-slate-500 text-xs sm:text-sm leading-relaxed font-normal max-w-md">
+              QuickSeva is a modern hyper-local service solution connecting verified local service experts, site contractors, and customers instantly.
             </p>
+
+            {/* Trust Badges */}
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 border border-slate-200 text-[11px] font-medium text-slate-700">
+                <ShieldCheck size={13} className="text-emerald-600" /> Verified Pros
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 border border-slate-200 text-[11px] font-medium text-slate-700">
+                <Zap size={13} className="text-amber-500" /> Instant Booking
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 border border-slate-200 text-[11px] font-medium text-slate-700">
+                <CheckCircle2 size={13} className="text-indigo-600" /> Safe Payments
+              </span>
+            </div>
           </div>
 
           {/* Quick Links */}
-          <div className="space-y-4">
-            <h4 className="text-slate-800 font-bold text-xs uppercase tracking-wider">
+          <div className="space-y-3">
+            <h4 className="text-slate-900 font-bold text-xs uppercase tracking-wider border-b border-slate-100 pb-2">
               Quick Links
             </h4>
-            <ul className="space-y-2.5 font-bold text-sm">
+            <ul className="space-y-2 text-xs sm:text-sm font-medium text-slate-600">
               <li>
-                <Link
-                  to="/"
-                  className="text-slate-500 hover:text-indigo-650 transition duration-200"
-                >
+                <Link to="/" className="hover:text-indigo-600 transition-colors duration-150">
                   Home
                 </Link>
               </li>
               <li>
-                <Link
-                  to="/login"
-                  className="text-slate-500 hover:text-indigo-650 transition duration-200"
-                >
+                <Link to="/contractor/feed" className="hover:text-indigo-600 transition-colors duration-150 flex items-center gap-1.5">
+                  <Briefcase size={13} className="text-amber-500" />
+                  <span>Site Job Board</span>
+                </Link>
+              </li>
+              <li>
+                <Link to="/login" className="hover:text-indigo-600 transition-colors duration-150">
                   Login
                 </Link>
               </li>
               <li>
-                <Link
-                  to="/register"
-                  className="text-slate-500 hover:text-indigo-650 transition duration-200"
-                >
+                <Link to="/register" className="hover:text-indigo-600 transition-colors duration-150">
                   Register
                 </Link>
               </li>
             </ul>
           </div>
 
-          {/* Contact & Social */}
-          <div className="space-y-4">
-            <h4 className="text-slate-800 font-bold text-xs uppercase tracking-wider">
+          {/* For Contractors */}
+          <div className="space-y-3">
+            <h4 className="text-slate-900 font-bold text-xs uppercase tracking-wider border-b border-slate-100 pb-2">
+              Contractors
+            </h4>
+            <ul className="space-y-2 text-xs sm:text-sm font-medium text-slate-600">
+              <li>
+                <Link to="/contractor/dashboard" className="hover:text-indigo-600 transition-colors duration-150">
+                  Contractor Portal
+                </Link>
+              </li>
+              <li>
+                <Link to="/contractor/posts/new" className="hover:text-indigo-600 transition-colors duration-150">
+                  Post Site Requirement
+                </Link>
+              </li>
+              <li>
+                <Link to="/contractor/wallet" className="hover:text-indigo-600 transition-colors duration-150">
+                  Wallet Balance
+                </Link>
+              </li>
+              <li>
+                <Link to="/seller/dashboard" className="hover:text-indigo-600 transition-colors duration-150">
+                  Seller Dashboard
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Connect */}
+          <div className="space-y-3">
+            <h4 className="text-slate-900 font-bold text-xs uppercase tracking-wider border-b border-slate-100 pb-2">
               Connect
             </h4>
-            <ul className="space-y-3 font-bold text-sm">
+            <ul className="space-y-2.5 text-xs sm:text-sm font-medium text-slate-600">
               <li>
                 <a
                   href="mailto:contact@quickseva.com"
-                  className="inline-flex items-center gap-2 text-slate-500 hover:text-indigo-650 transition duration-200"
+                  className="inline-flex items-center gap-2 text-slate-600 hover:text-indigo-600 transition-colors duration-150"
                 >
                   <Mail size={15} className="text-slate-400" />
                   <span>contact@quickseva.com</span>
@@ -102,55 +142,51 @@ const Footer = () => {
               </li>
               <li>
                 <a
-                  href="#"
-                  className="inline-flex items-center gap-2 text-slate-500 hover:text-indigo-650 transition duration-200"
+                  href="https://github.com/Indrajit-20/QuickSeva"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-slate-600 hover:text-indigo-600 transition-colors duration-150"
                 >
-                  <TwitterIcon className="text-slate-400" />
-                  <span>Twitter</span>
+                  <GithubIcon className="w-4 h-4 text-slate-400" />
+                  <span>GitHub</span>
                 </a>
               </li>
               <li>
                 <a
                   href="#"
-                  className="inline-flex items-center gap-2 text-slate-500 hover:text-indigo-650 transition duration-200"
+                  className="inline-flex items-center gap-2 text-slate-600 hover:text-indigo-600 transition-colors duration-150"
                 >
-                  <GithubIcon className="text-slate-400" />
-                  <span>GitHub</span>
+                  <TwitterIcon className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Twitter</span>
                 </a>
               </li>
             </ul>
           </div>
+
         </div>
 
         {/* Divider */}
-        <div className="border-t border-slate-200 mb-6"></div>
+        <div className="border-t border-slate-200/80 mb-6" />
 
         {/* Bottom Section */}
-        <div className="flex flex-col sm:flex-row justify-between items-center text-xs font-semibold text-slate-500 gap-4">
-          <p>
-            &copy; {currentYear} QuickSeva. Made with <Heart size={12} className="inline text-red-500 fill-red-500" />.
+        <div className="flex flex-col sm:flex-row justify-between items-center text-xs font-normal text-slate-500 gap-3">
+          <p className="flex items-center gap-1">
+            &copy; {currentYear} QuickSeva. Made with <Heart size={12} className="text-rose-500 fill-rose-500" /> in India.
           </p>
+
           <div className="flex space-x-6">
-            <Link
-              to="/privacy-policy"
-              className="text-slate-450 hover:text-indigo-650 transition duration-200"
-            >
+            <Link to="/privacy-policy" className="hover:text-slate-800 transition-colors">
               Privacy Policy
             </Link>
-            <Link
-              to="/terms-of-service"
-              className="text-slate-455 hover:text-indigo-650 transition duration-200"
-            >
+            <Link to="/terms-of-service" className="hover:text-slate-800 transition-colors">
               Terms of Service
             </Link>
-            <Link
-              to="/refund-policy"
-              className="text-slate-455 hover:text-indigo-650 transition duration-200"
-            >
+            <Link to="/refund-policy" className="hover:text-slate-800 transition-colors">
               Refund Policy
             </Link>
           </div>
         </div>
+
       </div>
     </footer>
   );

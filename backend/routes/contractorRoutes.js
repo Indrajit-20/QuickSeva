@@ -79,6 +79,9 @@ router.delete("/posts/:id", protect, ContractorController.deletePost);
 // Get applications for a contractor's post
 router.get("/posts/:id/applications", protect, ContractorController.getPostApplications);
 
+// Unlock applicant contact details (Costs 1 credit)
+router.post("/applications/:id/unlock-contact", protect, ContractorController.unlockApplicationContact);
+
 // Update application status (pending, contacted, hired, rejected)
 router.patch("/applications/:id/status", protect, ContractorController.updateApplicationStatus);
 

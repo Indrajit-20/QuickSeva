@@ -20,6 +20,7 @@ import { getProfilePicUrl } from "../utils/imageUtils";
 
 const navItems = [
   { label: "Dashboard", path: "/contractor/dashboard", icon: LayoutDashboard },
+  { label: "Lead Credits & Wallet", path: "/contractor/wallet", icon: Wallet },
   { label: "Social Inbox", path: "/contractor/social-inbox", icon: Sparkles, badge: "CRM" },
   { label: "Profile & Trade Settings", path: "/contractor/profile", icon: User },
   { label: "Customer Leads", path: "/contractor/quotes", icon: MessageSquare },

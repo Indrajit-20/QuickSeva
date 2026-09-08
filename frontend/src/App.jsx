@@ -68,6 +68,7 @@ import CreateContractorPost from "./pages/contractor/CreateContractorPost";
 import ContractorDashboard from "./pages/contractor/ContractorDashboard";
 import ContractorProfile from "./pages/contractor/ContractorProfile";
 import ContractorSocialInbox from "./pages/contractor/ContractorSocialInbox";
+import ContractorWallet from "./pages/contractor/ContractorWallet";
 import ContractorRegister from "./pages/ContractorRegister";
 import ContractorPublicProfile from "./pages/ContractorPublicProfile";
 function SellerProtectedRoute() {
@@ -175,6 +176,7 @@ function AppRoutes() {
             <Route path="edit-post/:id" element={<CreateContractorPost />} />
             <Route path="quotes" element={<ContractorDashboard />} />
             <Route path="posts" element={<ContractorDashboard />} />
+            <Route path="wallet" element={<ContractorWallet />} />
           </Route>
         </Route>
 

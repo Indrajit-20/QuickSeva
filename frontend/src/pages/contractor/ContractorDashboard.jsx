@@ -29,6 +29,9 @@ import {
   ShieldCheck,
   ArrowRight,
   TrendingUp,
+  Lock,
+  Unlock,
+  Wallet,
 } from "lucide-react";
 import {
   getMyPosts,
@@ -39,8 +42,11 @@ import {
   deleteContractorPost,
   updateQuoteStatus,
   updateApplicationStatus,
+  unlockApplicationContact,
 } from "../../api/contractorApi";
 import { useAuth } from "../../context/AuthContext";
+import { useWallet } from "../../context/WalletContext";
+import AddFundsModal from "../../components/AddFundsModal";
 import { getWhatsAppContractorToApplicantLink } from "../../utils/whatsappUtils";
 
 const TRADE_CATEGORIES = [
@@ -57,6 +63,9 @@ export default function ContractorDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const walletCtx = useWallet();
+  const walletBalance = walletCtx?.walletBalance || 0;
+  const refreshWallet = walletCtx?.refreshWallet;
 
   // Detect current view mode from route: 'dashboard', 'quotes', or 'posts'
   const getViewModeFromPath = (pathname) => {
@@ -81,6 +90,8 @@ export default function ContractorDashboard() {
   const [selectedPostApps, setSelectedPostApps] = useState(null);
   const [appsList, setAppsList] = useState([]);
   const [loadingApps, setLoadingApps] = useState(false);
+  const [unlockingId, setUnlockingId] = useState(null);
+  const [showAddFundsModal, setShowAddFundsModal] = useState(false);
 
   const selectedTrades = (() => {
     const raw = user?.trade_specialization || "";
@@ -167,10 +178,41 @@ export default function ContractorDashboard() {
     try {
       await updateApplicationStatus(appId, newStatus);
       setAppsList((prev) =>
-        prev.map((a) => (a.id === appId ? { ...a, status: newStatus } : a))
+        prev.map((app) => (app.id === appId ? { ...app, status: newStatus } : app))
       );
     } catch (err) {
+      console.error("Failed to update application status:", err);
       alert("Failed to update application status");
+    }
+  };
+
+  const handleUnlockContact = async (appId) => {
+    if (walletBalance < 1) {
+      setShowAddFundsModal(true);
+      return;
+    }
+    setUnlockingId(appId);
+    try {
+      const res = await unlockApplicationContact(appId);
+      const data = res?.data || res;
+      if (data?.is_unlocked) {
+        setAppsList((prev) =>
+          prev.map((a) =>
+            String(a.id) === String(appId)
+              ? { ...a, is_unlocked: true, applicant_phone: data.applicant_phone }
+              : a
+          )
+        );
+        if (refreshWallet) refreshWallet();
+      }
+    } catch (err) {
+      if (err?.response?.status === 402) {
+        setShowAddFundsModal(true);
+      } else {
+        alert(err?.response?.data?.message || "Failed to unlock contact details");
+      }
+    } finally {
+      setUnlockingId(null);
     }
   };
 
@@ -659,13 +701,25 @@ export default function ContractorDashboard() {
               </p>
             </div>
 
-            <button
-              onClick={() => navigate("/contractor/create-post")}
-              className="px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-black text-xs rounded-xl shadow-xs transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
-            >
-              <PlusCircle size={16} />
-              <span>Post Requirement</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowAddFundsModal(true)}
+                className="px-3.5 py-2.5 bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 font-extrabold text-xs rounded-xl shadow-xs transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+                title="View Balance / Add Credits"
+              >
+                <Wallet size={16} className="text-amber-700" />
+                <span>{walletBalance || 0} Credits</span>
+              </button>
+
+              <button
+                onClick={() => navigate("/contractor/create-post")}
+                className="px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-black text-xs rounded-xl shadow-xs transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+              >
+                <PlusCircle size={16} />
+                <span>Post Requirement</span>
+              </button>
+            </div>
           </div>
 
           {/* Status Filter Bar */}
@@ -829,17 +883,28 @@ export default function ContractorDashboard() {
                 <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest block mb-0.5">
                   Manpower Applications ({appsList.length})
                 </span>
-                <h3 className="text-base font-black text-white tracking-tight leading-snug truncate max-w-[320px]">
+                <h3 className="text-base font-black text-white tracking-tight leading-snug truncate max-w-[280px]">
                   {selectedPostApps.title}
                 </h3>
               </div>
-              <button
-                onClick={() => setSelectedPostApps(null)}
-                className="w-8 h-8 rounded-full bg-slate-900 border border-slate-700 hover:bg-rose-600 flex items-center justify-center text-white transition cursor-pointer shrink-0 shadow-md active:scale-95"
-                title="Close"
-              >
-                <X size={18} strokeWidth={2.5} />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddFundsModal(true)}
+                  className="px-2.5 py-1 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-bold flex items-center gap-1 hover:bg-amber-500/30 transition cursor-pointer"
+                  title="Wallet Credits / Top Up"
+                >
+                  <Wallet size={13} />
+                  <span>{walletBalance || 0} Cr</span>
+                </button>
+                <button
+                  onClick={() => setSelectedPostApps(null)}
+                  className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 hover:bg-rose-600 flex items-center justify-center text-white transition cursor-pointer shrink-0 shadow-md active:scale-95"
+                  title="Close"
+                >
+                  <X size={18} strokeWidth={2.5} />
+                </button>
+              </div>
             </div>
 
             {/* Modal Body */}
@@ -948,24 +1013,57 @@ export default function ContractorDashboard() {
                         </button>
                       </div>
 
-                      <div className="flex items-center gap-2 pt-2 border-t border-slate-200/80">
-                        <a
-                          href={`tel:${app.applicant_phone}`}
-                          className="flex-1 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-extrabold rounded-xl flex items-center justify-center gap-1.5 transition active:scale-95"
-                        >
-                          <Phone size={13} />
-                          <span>Call {app.applicant_phone}</span>
-                        </a>
-                        <a
-                          href={waLink}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="py-2 px-3.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl flex items-center justify-center gap-1.5 transition active:scale-95"
-                        >
-                          <MessageCircle size={13} />
-                          <span>WhatsApp</span>
-                        </a>
-                      </div>
+                      {app.is_unlocked ? (
+                        <div className="flex items-center gap-2 pt-2 border-t border-slate-200/80">
+                          <a
+                            href={`tel:${app.applicant_phone}`}
+                            className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-extrabold rounded-xl flex items-center justify-center gap-1.5 transition active:scale-95 shadow-xs"
+                          >
+                            <Phone size={13} />
+                            <span>Call {app.applicant_phone}</span>
+                          </a>
+                          <a
+                            href={waLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="py-2.5 px-3.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl flex items-center justify-center gap-1.5 transition active:scale-95 shadow-xs"
+                          >
+                            <MessageCircle size={13} />
+                            <span>WhatsApp</span>
+                          </a>
+                        </div>
+                      ) : (
+                        <div className="pt-2 border-t border-slate-200/80">
+                          <div className="flex items-center justify-between bg-amber-50/80 border border-amber-200/80 p-2.5 rounded-xl gap-2">
+                            <div className="flex items-center gap-2 overflow-hidden">
+                              <div className="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                                <Lock size={14} />
+                              </div>
+                              <div className="truncate">
+                                <span className="text-xs font-black text-slate-800 block truncate tracking-wider font-mono">
+                                  {app.applicant_phone}
+                                </span>
+                                <span className="text-[10px] text-amber-800 font-semibold block">
+                                  Unlock contact details for 1 credit (₹1)
+                                </span>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              disabled={unlockingId === app.id}
+                              onClick={() => handleUnlockContact(app.id)}
+                              className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-black rounded-lg shadow-xs transition active:scale-95 flex items-center gap-1 shrink-0 cursor-pointer disabled:opacity-50"
+                            >
+                              {unlockingId === app.id ? (
+                                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              ) : (
+                                <Unlock size={13} />
+                              )}
+                              <span>Unlock Contact</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })
@@ -974,6 +1072,18 @@ export default function ContractorDashboard() {
           </div>
         </div>
       )}
+
+      {/* Add Funds / Top Up Modal */}
+      <AddFundsModal
+        open={showAddFundsModal}
+        onClose={() => setShowAddFundsModal(false)}
+        prefillAmount={10}
+        continueButtonLabel="Back to Applications"
+        closeOnSuccess={true}
+        onSuccess={() => {
+          if (refreshWallet) refreshWallet();
+        }}
+      />
     </div>
   );
 }

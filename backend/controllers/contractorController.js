@@ -1,5 +1,6 @@
 const ContractorModel = require("../models/contractorModel");
 const UserModel = require("../models/userModel");
+const WalletModel = require("../models/walletModel");
 const whatsappService = require("../services/whatsappService");
 const { successRes, errorRes } = require("../utils/helpers");
 
@@ -341,11 +342,82 @@ const ContractorController = {
   getPostApplications: async (req, res) => {
     try {
       const { id } = req.params;
-      const applications = await ContractorModel.getApplicationsForPost(id);
+      const contractorUserId = req.user ? req.user.id : null;
+      const applications = await ContractorModel.getApplicationsForPost(id, contractorUserId);
       return successRes(res, { applications }, "Applications fetched successfully");
     } catch (err) {
       console.error("getPostApplications error:", err);
       return errorRes(res, "Failed to fetch applications", 500);
+    }
+  },
+
+  // Unlock Applicant Contact Details (Costs 1 credit / ₹1)
+  unlockApplicationContact: async (req, res) => {
+    try {
+      const contractorUserId = req.user.id;
+      const { id } = req.params; // application_id
+
+      const app = await ContractorModel.getApplicationById(id);
+      if (!app) {
+        return errorRes(res, "Application not found", 404);
+      }
+
+      // Check if already unlocked
+      const alreadyUnlocked = await ContractorModel.isContactUnlocked(contractorUserId, id);
+      if (alreadyUnlocked) {
+        return successRes(
+          res,
+          {
+            application_id: app.id,
+            applicant_phone: app.applicant_phone,
+            is_unlocked: true,
+            debited: 0,
+          },
+          "Contact details already unlocked"
+        );
+      }
+
+      // Check wallet balance
+      const wallet = await WalletModel.findByUserId(contractorUserId);
+      const balance = parseFloat(wallet?.balance || 0);
+
+      if (balance < 1.0) {
+        return errorRes(
+          res,
+          "Insufficient credits. Please top up your wallet to view contact details.",
+          402
+        );
+      }
+
+      // Debit 1 credit from wallet
+      await WalletModel.debit(
+        contractorUserId,
+        1.0,
+        "contractor_contact_unlock",
+        app.id,
+        `Unlocked contact for applicant ${app.applicant_name} (${app.workers_count} workers)`
+      );
+
+      // Record unlock in DB
+      await ContractorModel.recordContactUnlock(contractorUserId, app.id);
+
+      // Get updated balance
+      const updatedWallet = await WalletModel.findByUserId(contractorUserId);
+
+      return successRes(
+        res,
+        {
+          application_id: app.id,
+          applicant_phone: app.applicant_phone,
+          is_unlocked: true,
+          debited: 1.0,
+          new_balance: parseFloat(updatedWallet?.balance || 0),
+        },
+        "Contact unlocked successfully!"
+      );
+    } catch (err) {
+      console.error("unlockApplicationContact error:", err);
+      return errorRes(res, err.message || "Failed to unlock contact", 500);
     }
   },
 

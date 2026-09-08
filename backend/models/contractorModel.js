@@ -355,13 +355,64 @@ const ContractorModel = {
     }
   },
 
-  // Get applicants for a post
-  getApplicationsForPost: async (postId) => {
+  // Get applicants for a post with unlock status
+  getApplicationsForPost: async (postId, contractorUserId = null) => {
     const [rows] = await pool.query(
-      `SELECT * FROM contractor_applications WHERE post_id = ? ORDER BY created_at DESC`,
-      [postId]
+      `SELECT ca.*, 
+              IF(ccu.id IS NOT NULL, 1, 0) AS is_unlocked
+       FROM contractor_applications ca
+       LEFT JOIN contractor_contact_unlocks ccu 
+         ON ccu.application_id = ca.id AND ccu.contractor_id = ?
+       WHERE ca.post_id = ? 
+       ORDER BY ca.created_at DESC`,
+      [contractorUserId, postId]
     );
-    return rows;
+
+    return rows.map((app) => {
+      const isUnlocked = Boolean(app.is_unlocked);
+      let phone = app.applicant_phone || "";
+      if (!isUnlocked && phone) {
+        // Mask phone number: e.g. 8160977394 -> 81609*****
+        const clean = phone.replace(/\D/g, "");
+        if (clean.length >= 10) {
+          const visible = clean.slice(-10).slice(0, 5);
+          phone = `+91 ${visible}*****`;
+        } else {
+          phone = `${phone.slice(0, 3)}*****`;
+        }
+      }
+      return {
+        ...app,
+        is_unlocked: isUnlocked,
+        applicant_phone: phone,
+      };
+    });
+  },
+
+  // Get application by ID (raw)
+  getApplicationById: async (appId) => {
+    const [rows] = await pool.query(
+      `SELECT * FROM contractor_applications WHERE id = ?`,
+      [appId]
+    );
+    return rows[0] || null;
+  },
+
+  // Check if contact is unlocked for a contractor
+  isContactUnlocked: async (contractorUserId, applicationId) => {
+    const [rows] = await pool.query(
+      `SELECT id FROM contractor_contact_unlocks WHERE contractor_id = ? AND application_id = ?`,
+      [contractorUserId, applicationId]
+    );
+    return rows.length > 0;
+  },
+
+  // Record contact unlock
+  recordContactUnlock: async (contractorUserId, applicationId) => {
+    await pool.query(
+      `INSERT IGNORE INTO contractor_contact_unlocks (contractor_id, application_id) VALUES (?, ?)`,
+      [contractorUserId, applicationId]
+    );
   },
 
   // Update application status (pending, contacted, hired, rejected)
@@ -492,7 +543,7 @@ const ContractorModel = {
     const [rows] = await pool.query(
       `SELECT id, name, company_name, phone, phone AS whatsapp_phone, profile_pic, address, city, state, pincode, trade_specialization, bio, is_verified_contractor, verification_status, gstin, pan_number, license_number, created_at
        FROM users
-       WHERE id = ? AND (role = 'contractor' OR is_verified_contractor = 1 OR (trade_specialization IS NOT NULL AND trade_specialization != '')) AND is_active = 1`,
+       WHERE id = ? AND is_active = 1`,
       [contractorId]
     );
 
