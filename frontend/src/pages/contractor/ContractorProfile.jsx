@@ -27,6 +27,7 @@ import {
   submitContractorVerification,
 } from "../../api/contractorApi";
 import { API_BASE_URL } from "../../config/api";
+import SearchableCitySelect from "../../components/SearchableCitySelect";
 
 const getImageUrl = (url) => {
   if (!url) return "";
@@ -791,15 +792,11 @@ export default function ContractorProfile() {
                 <label className="block text-xs font-extrabold text-slate-700 mb-1">
                   Operating City *
                 </label>
-                <input
-                  type="text"
-                  required
+                <SearchableCitySelect
                   value={formData.city}
-                  onChange={(e) =>
-                    setFormData({ ...formData, city: e.target.value })
-                  }
-                  placeholder="e.g. Mumbai, Kalol, Ahmedabad"
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none focus:bg-white focus:border-amber-600 transition"
+                  onChange={(val) => setFormData({ ...formData, city: val })}
+                  placeholder="Search or type city (e.g. Kalol, Ahmedabad, Thane...)"
+                  required
                 />
               </div>
 

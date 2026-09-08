@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { Building2, CheckCircle2, ShieldCheck, ArrowRight, Briefcase, MapPin } from "lucide-react";
 import { registerContractor } from "../api/contractorApi";
 import { useAuth } from "../context/AuthContext";
+import SearchableCitySelect from "../components/SearchableCitySelect";
 
 export default function ContractorRegister() {
   const navigate = useNavigate();
@@ -137,22 +138,13 @@ export default function ContractorRegister() {
           </div>
 
           <div>
-            <label className="block text-[11px] font-bold text-slate-700 mb-1">Primary Operating City *</label>
-            <div className="flex items-center gap-2 px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus-within:bg-white focus-within:border-amber-600 transition">
-              <MapPin size={16} className="text-amber-600 shrink-0" />
-              <select
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                className="w-full bg-transparent text-xs font-bold text-slate-900 outline-none cursor-pointer"
-              >
-                <option value="Pune">Pune</option>
-                <option value="Mumbai">Mumbai</option>
-                <option value="Delhi">Delhi</option>
-                <option value="Bengaluru">Bengaluru</option>
-                <option value="Hyderabad">Hyderabad</option>
-                <option value="Thane">Thane</option>
-              </select>
-            </div>
+            <label className="block text-[11px] font-bold text-slate-700 mb-1">Primary Operating City / District *</label>
+            <SearchableCitySelect
+              value={city}
+              onChange={(val) => setCity(val)}
+              placeholder="Search or type city (e.g. Kalol, Ahmedabad, Thane, Pune...)"
+              required
+            />
           </div>
 
           <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 space-y-1.5 text-[11px] font-semibold text-amber-950">
