@@ -2,14 +2,14 @@ const axios = require("axios");
 const { pool } = require("../config/db");
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Support Contact Constants — change here and it updates everywhere
+// Support Contact Constants
 // ─────────────────────────────────────────────────────────────────────────────
 const SUPPORT_EMAIL = "support@quickseva.com";
-const SUPPORT_PHONE = "+91 98765 43210"; // TODO: Replace with real number before production
+const SUPPORT_PHONE = "+91 98765 43210";
 const SUPPORT_HOURS = "Mon-Sat, 9 AM - 7 PM";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Out-of-scope detection keywords (server-side backup)
+// Intent Detection Keywords
 // ─────────────────────────────────────────────────────────────────────────────
 const OFF_TOPIC_KEYWORDS = [
   'html', 'css', 'javascript', 'python', 'java', 'react', 'angular', 'vue',
@@ -36,18 +36,24 @@ const QUICKSEVA_CONTEXT_KEYWORDS = [
   'batave', 'dekhatu', 'jawab', 'javab'
 ];
 
-const ORDER_INTENT_KEYWORDS = [
-  'order', 'booking', 'status', 'track', 'reply', 'response',
-  'not showing', 'not coming', 'provider', 'seller',
-  'nathi', 'nahi', 'nai', 'avto', 'avato', 'aavto', 'aavato', 'batav',
-  'batave', 'dekhatu', 'dekhat', 'jawab', 'javab',
-  'ઓર્ડર', 'બુકિંગ', 'જવાબ', 'નથી', 'આવતો', 'આવતું', 'બતાવતું',
-  'ऑर्डर', 'बुकिंग', 'जवाब', 'नहीं', 'दिख'
+// EXPLICIT status checking phrases ONLY — do not put generic words like 'seller' or 'booking' here
+const EXPLICIT_STATUS_KEYWORDS = [
+  'track order', 'track booking', 'order status', 'booking status',
+  'where is my order', 'where is my booking', 'my order status', 'my booking status',
+  'check order status', 'check booking status', 'status of my order', 'status of my booking',
+  'ઓર્ડર સ્ટેટસ', 'બુકિંગ સ્ટેટસ', 'ઓર્ડર ટ્રેક', 'ઓર્ડર ક્યાં છે',
+  'ऑर्डर स्थिति', 'बुकिंग स्थिति', 'ऑर्डर ट्रैक', 'मेरा ऑर्डर कहाँ है'
 ];
 
-/**
- * Check if a message is clearly off-topic (not QuickSeva-related).
- */
+const COMPLAINT_KEYWORDS = [
+  'didn\'t visit', 'did not visit', 'not visit', 'not come', 'didn\'t come', 'did not come',
+  'nathi avya', 'nathi aavya', 'nathi avyo', 'nathi aavyo', 'nahi aaya', 'nahi aaye',
+  'ask pin', 'asked pin', 'asking pin', 'otp', 'pin maang', 'pin mang', 'pin maangyo',
+  'fake', 'cheat', 'fraud', 'done nothing', 'no work', 'kam nathi karyu', 'kaam nahi kiya',
+  'refund', 'complaint', 'problem', 'issue', 'wrong', 'why', 'su kaam', 'kyon', 'kyu',
+  'properly', 'answers not give', 'incorrect'
+];
+
 function isOffTopic(normalizedInput) {
   const hasQuickSevaContext = QUICKSEVA_CONTEXT_KEYWORDS.some((kw) =>
     normalizedInput.includes(kw)
@@ -56,8 +62,12 @@ function isOffTopic(normalizedInput) {
   return OFF_TOPIC_KEYWORDS.some((kw) => normalizedInput.includes(kw));
 }
 
-function hasOrderIntent(normalizedInput) {
-  return ORDER_INTENT_KEYWORDS.some((kw) => normalizedInput.includes(kw));
+function isExplicitStatusRequest(normalizedInput) {
+  return EXPLICIT_STATUS_KEYWORDS.some((kw) => normalizedInput.includes(kw));
+}
+
+function containsComplaintOrQuestion(normalizedInput) {
+  return COMPLAINT_KEYWORDS.some((kw) => normalizedInput.includes(kw));
 }
 
 function buildOrderGuidanceReply(language, reason = "generic") {
@@ -81,7 +91,7 @@ function buildOrderGuidanceReply(language, reason = "generic") {
   return `I understand. If your order is not showing or the provider has not replied, please first check **[My Bookings](/my-bookings)**.\n\n• If it is **Pending**, the provider has not accepted it yet.\n• If no order is visible, confirm you are logged in with the same phone/email used for booking.\n• If you have a Booking ID, send it here and I will check it.`;
 }
 
-// @desc    Process chatbot query with optional Gemini AI & Database integration
+// @desc    Process chatbot query with Gemini AI & Database integration
 // @route   POST /api/chatbot/query
 // @access  Public (Optional auth token)
 exports.handleChatbotQuery = async (req, res) => {
@@ -95,7 +105,6 @@ exports.handleChatbotQuery = async (req, res) => {
       });
     }
 
-    // BUG FIX #3: Validate message length to prevent abuse
     if (message.trim().length > 1000) {
       return res.status(400).json({
         success: false,
@@ -105,10 +114,6 @@ exports.handleChatbotQuery = async (req, res) => {
 
     const cleanInput = message.trim();
     const normalizedInput = cleanInput.toLowerCase();
-
-    // BUG FIX #5 (SECURITY): Only use the authenticated user's ID from JWT.
-    // NEVER fall back to a user-supplied userId from req.body — that would allow
-    // any anonymous user to query another user's orders/wallet by guessing IDs.
     const activeUserId = req.user?.id || null;
 
     // ── 0. Out-of-scope Pre-check ────────────────────────────────────────────
@@ -129,15 +134,14 @@ exports.handleChatbotQuery = async (req, res) => {
       });
     }
 
-    // BUG FIX #4: Tightened Booking ID regex.
-    // Only match QS- and BK- prefixed codes. The old pattern (\b\d{4,}\b) was
-    // matching phone numbers, OTPs, and amounts as booking IDs.
+    // Check for Booking ID pattern (e.g. QS-20260826-LAAA or BK-102)
     const bookingIdMatch = cleanInput.match(/\b(QS-[\w-]+|BK-\d+)\b/i);
     const searchedCode = bookingIdMatch ? bookingIdMatch[0] : null;
-    const isOrderIntent = hasOrderIntent(normalizedInput);
+    const isPureStatusRequest = isExplicitStatusRequest(normalizedInput);
+    const hasComplaint = containsComplaintOrQuestion(normalizedInput);
 
-    // 1. Order Status / Booking ID Lookup
-    if (searchedCode || isOrderIntent) {
+    // ── 1. Pure Booking Status Card Intercept (Only if NOT a complex complaint) ───
+    if ((searchedCode || isPureStatusRequest) && !hasComplaint) {
       try {
         let sql = `
           SELECT o.id, o.order_number, o.status, o.total_amount, o.created_at, s.business_name AS seller_name 
@@ -184,29 +188,14 @@ exports.handleChatbotQuery = async (req, res) => {
               notFoundReply = `❌ Booking ID **${searchedCode}** was not found. Please verify your code under **[My Bookings](/my-bookings)**.`;
             }
             return res.json({ success: true, reply: notFoundReply, source: "database" });
-
-          } else if (isOrderIntent && activeUserId) {
-            return res.json({
-              success: true,
-              reply: buildOrderGuidanceReply(language, "no_orders"),
-              source: "order_guidance",
-            });
           }
         }
       } catch (dbErr) {
         console.warn("Chatbot DB order lookup failed:", dbErr.message);
       }
-
-      if (isOrderIntent && !searchedCode) {
-        return res.json({
-          success: true,
-          reply: buildOrderGuidanceReply(language),
-          source: "order_guidance",
-        });
-      }
     }
 
-    // 2. Wallet Balance Query
+    // ── 2. Wallet Balance Query ──────────────────────────────────────────────
     if (activeUserId && (normalizedInput.includes("wallet") || normalizedInput.includes("balance") || normalizedInput.includes("વોલેટ") || normalizedInput.includes("બેલેન્સ"))) {
       try {
         const [users] = await pool.query(
@@ -233,20 +222,59 @@ exports.handleChatbotQuery = async (req, res) => {
       }
     }
 
-    // 3. Gemini AI Call with comprehensive QuickSeva knowledge base
+    // ── 3. Build Authenticated User Context for AI ─────────────────────────────
+    let userContextText = "";
+    if (activeUserId) {
+      try {
+        const [userOrders] = await pool.query(
+          `SELECT o.id, o.order_number, o.status, o.total_amount, o.created_at, 
+                  s.business_name AS seller_name, sv.name AS service_name
+           FROM orders o 
+           LEFT JOIN sellers s ON o.seller_id = s.id 
+           LEFT JOIN services sv ON o.service_id = sv.id
+           WHERE o.buyer_id = ? 
+           ORDER BY o.created_at DESC 
+           LIMIT 3`,
+          [activeUserId]
+        );
+
+        const [userRows] = await pool.query(
+          `SELECT wallet_balance, name FROM users WHERE id = ?`,
+          [activeUserId]
+        );
+        const balance = userRows[0]?.wallet_balance || 0;
+        const userName = userRows[0]?.name || "Customer";
+
+        userContextText += `\n=== LOGGED-IN USER CONTEXT ===\nCustomer Name: ${userName}\nWallet Balance: ₹${balance}\n`;
+        if (userOrders.length > 0) {
+          userContextText += `Recent Bookings:\n` + userOrders.map((o, i) =>
+            `${i + 1}. Booking ID: ${o.order_number || 'BK-' + o.id} | Status: ${o.status ? o.status.toUpperCase() : 'PENDING'} | Service: ${o.service_name || 'Service'} | Provider: ${o.seller_name || 'Assigned Provider'} | Amount: ₹${o.total_amount || 0}`
+          ).join("\n");
+        } else {
+          userContextText += `Recent Bookings: None\n`;
+        }
+      } catch (ctxErr) {
+        console.warn("Failed to fetch user context for AI prompt:", ctxErr.message);
+      }
+    }
+
+    // ── 4. Gemini AI Processing (Token-Optimized with Quota Guard) ────────────
     const geminiKey = process.env.GEMINI_API_KEY;
     if (geminiKey) {
       try {
         const langName = language === "gu" ? "Gujarati" : language === "hi" ? "Hindi" : "English";
+        
+        // Token Optimization: Limit history to last 8 turns and max 300 chars per message
         const recentHistory = Array.isArray(history)
           ? history
-            .slice(-16)
+            .slice(-8)
             .filter((item) => item && typeof item.text === "string")
             .map((item) => ({
               role: item.role === "assistant" ? "assistant" : "user",
-              text: item.text.slice(0, 500),
+              text: item.text.slice(0, 300),
             }))
           : [];
+
         const conversationContext = recentHistory.length
           ? recentHistory.map((item) => `${item.role}: ${item.text}`).join("\n")
           : "No previous messages.";
@@ -254,64 +282,31 @@ exports.handleChatbotQuery = async (req, res) => {
         const QUICKSEVA_CONTEXT = `
 You are QuickSeva Customer Support Assistant — a helpful, friendly, and professional support bot for QuickSeva, a hyper-local service marketplace in Gujarat, India.
 
+${userContextText}
+
 === CRITICAL RULES (MUST FOLLOW) ===
 1. You ONLY answer questions related to QuickSeva platform, its services, features, users, bookings, payments, sellers, contractors, and operations.
 2. If a user asks about ANYTHING not related to QuickSeva, politely decline: "I'm QuickSeva's customer support assistant. I can only help with our platform's services, bookings, wallet, seller/contractor registration, and related features."
-3. NEVER make up features, services, or information not in this context.
-4. NEVER answer general knowledge questions.
-5. ALWAYS reply strictly in ${langName} language (do not mix languages).
-6. Keep responses concise and helpful (max 100 words).
-7. When relevant, include markdown links like [Services](/services) or [My Bookings](/my-bookings).
-8. Be empathetic and professional.
-9. Users may type Gujarati/Hindi in English letters (e.g., "order nathi avato"). Understand that as normal support language.
-10. For complaints, acknowledge the issue, give the likely reason, tell the next step.
+3. NEVER make up features, services, or fake info not in this context.
+4. ALWAYS reply strictly in ${langName} language.
+5. Keep responses concise, clear, and helpful (max 100 words).
+6. When relevant, include markdown links like [Services](/services) or [My Bookings](/my-bookings).
+7. If user asks general feature questions (e.g. "can you find me seller and booking?"), explain how QuickSeva connects customers to local sellers clearly.
+8. If user complains that provider didn't visit home or asked for completion PIN/OTP before work is done:
+   - Warn user: "⚠️ NEVER share your completion PIN/OTP unless work is completely done and inspected by you."
+   - State that asking for PIN without doing work is against QuickSeva policy.
+   - Instruct user to contact support immediately at ${SUPPORT_EMAIL} or call ${SUPPORT_PHONE} with their Booking ID for investigation/refund.
+9. Refer to the user's specific Booking ID from recent context or conversation history. Never confuse order IDs.
+10. If user asks why answers were not proper previously, apologize politely and answer their question directly.
 
 === ABOUT QUICKSEVA ===
-QuickSeva is a hyper-local service marketplace connecting customers with verified local service providers in Gujarat, India.
-
-=== SERVICES OFFERED ===
-• Plumbing — from ₹199
-• Electrician — from ₹199
-• AC Service & Repair — from ₹499
-• Home Cleaning
-• Carpentry
-• Home Painting
-• Pest Control
-• Appliance Repair
-
-=== USER ROLES ===
-1. Buyer — Browse, book, track, manage wallet
-2. Seller — List services, receive bookings, manage earnings
-3. Contractor — Large projects, receives leads, WhatsApp notifications
-4. Admin — Platform management
-
-=== BOOKING PROCESS ===
-1. Browse at /services or map
-2. Select provider, date & time slot
-3. Confirm via QuickSeva Wallet or UPI
-4. Track at /my-bookings
-
-=== BOOKING STATUSES ===
-Pending → Accepted → In Progress → Completed / Cancelled
-
-=== WALLET & PAYMENT ===
-- Add via UPI, Debit/Credit Card at /profile
-- No extra charges on top-ups
-- Refunds go to wallet
-
-=== REFUND POLICY ===
-- Cancelled before provider accepts → 100% refund instantly
-- Cancelled after accepted but before work starts → Partial refund (platform review)
-- Cancelled after work started → No refund
-- Disputed orders → Contact support with booking ID
-
-=== KEY PAGES ===
-- /services, /my-bookings, /profile, /become-seller, /become-contractor, /seller/dashboard, /login
-
-=== CONTACT ===
-- Email: ${SUPPORT_EMAIL}
-- Phone: ${SUPPORT_PHONE} (${SUPPORT_HOURS})
-- Office: Ahmedabad, Gujarat, India
+QuickSeva is a hyper-local service marketplace in Gujarat, India.
+Services: Plumbing (₹199+), Electrician (₹199+), AC Service (₹499+), Cleaning, Carpentry, Painting, Pest Control, Appliance Repair.
+Roles: Buyer (book & track), Seller (offer services), Contractor (large projects, WhatsApp leads), Admin.
+Booking flow: Browse /services → select provider & slot → pay via Wallet/UPI → track at /my-bookings.
+Status flow: Pending → Accepted → In Progress → Completed / Cancelled.
+Refund policy: 100% refund before acceptance; review after acceptance; contact support for disputes.
+Support contact: Email: ${SUPPORT_EMAIL} | Phone: ${SUPPORT_PHONE} (${SUPPORT_HOURS})
 `;
 
         const prompt = `${QUICKSEVA_CONTEXT}
@@ -334,18 +329,28 @@ Reply in ${langName}:`;
           return res.json({ success: true, reply: aiText.trim(), source: "gemini_ai" });
         }
       } catch (geminiErr) {
-        console.warn("Gemini API call fallback to local:", geminiErr.message);
+        console.warn("Gemini API call fallback to local rule engine:", geminiErr.response?.data?.error?.message || geminiErr.message);
       }
     }
 
-    // 4. Default Fallback
+    // ── 5. Enhanced Local Fallback ──────────────────────────────────────────────
     let fallbackText = "";
-    if (language === "gu") {
-      fallbackText = `🤖 તમારા પ્રશ્નનો સીધો જવાબ મળ્યો નથી. આપ કસ્ટમર કેર સંપર્ક કરી શકો છો:\n\n📧 **ઈમેલ**: ${SUPPORT_EMAIL}\n📱 **ફોન**: ${SUPPORT_PHONE} (${SUPPORT_HOURS})\n\n**અથવા વિકલ્પ પસંદ કરો:**\n  • 📦 ઓર્ડર ટ્રેકિંગ\n  • 💰 વોલેટ અને રીફંડ\n  • 🛠️ સેવાઓ (પ્લમ્બર, ઇલેક્ટ્રિશિયન, AC)\n  • 💼 સેલર કે ઠેકેદાર રજીસ્ટ્રેશન`;
-    } else if (language === "hi") {
-      fallbackText = `🤖 आपके प्रश्न का सीधा उत्तर नहीं मिला। आप हमसे संपर्क कर सकते हैं:\n\n📧 **ईमेल**: ${SUPPORT_EMAIL}\n📱 **हेल्पलाइन**: ${SUPPORT_PHONE} (${SUPPORT_HOURS})\n\n**या नीचे दिया गया विकल्प चुनें:**\n  • 📦 बुकिंग स्थिति\n  • 💰 वॉलेट और रिफंड\n  • 🛠️ सेवाएं\n  • 💼 सेलर/ठेकेदार रजिस्ट्रेशन`;
+    if (hasComplaint) {
+      if (language === "gu") {
+        fallbackText = `⚠️ **મહત્વપૂર્ણ સુરક્ષા ગાઈડલાઈન:**\nજો કાર્યકરે કામ કર્યા વિના PIN/OTP માગ્યો હોય, તો PIN આપશો નહીં.\n\nકૃપા કરીને બુકિંગ વિગત સાથે અમારા સપોર્ટ નંબર **${SUPPORT_PHONE}** અથવા ઈમેલ **${SUPPORT_EMAIL}** પર તાત્કાલિક સંપર્ક કરો. અમે તપાસ કરીને મદદ કરીશું.`;
+      } else if (language === "hi") {
+        fallbackText = `⚠️ **महत्वपूर्ण सुरक्षा नियम:**\nअगर सेलर ने काम किए बिना PIN/OTP मांगा है, तो PIN बिल्कुल न दें।\n\nकृपया अपनी बुकिंग आईडी के साथ **${SUPPORT_EMAIL}** या **${SUPPORT_PHONE}** पर तुरंत संपर्क करें। हम इसकी जांच करेंगे।`;
+      } else {
+        fallbackText = `⚠️ **Important Security Warning:**\nDo NOT share your completion PIN/OTP if the provider did not visit or complete the work.\n\nPlease contact support immediately at **${SUPPORT_EMAIL}** or call **${SUPPORT_PHONE}** with your Booking ID so we can investigate and assist you.`;
+      }
     } else {
-      fallbackText = `🤖 I couldn't find an exact match for your question. Here is how you can get help:\n\n📧 **Email**: ${SUPPORT_EMAIL}\n📱 **Helpline**: ${SUPPORT_PHONE} (${SUPPORT_HOURS})\n\n**Or select a topic below:**\n  • 📦 Track bookings & order status\n  • 💰 Wallet, balance & refund policy\n  • 🛠️ Home services\n  • 💼 Register as a Provider or Contractor`;
+      if (language === "gu") {
+        fallbackText = `🤖 ક્વિકસેવામાં આપનું સ્વાગત છે! આપ કસ્ટમર કેર સંપર્ક કરી શકો છો:\n\n📧 **ઈમેલ**: ${SUPPORT_EMAIL}\n📱 **ફોન**: ${SUPPORT_PHONE} (${SUPPORT_HOURS})\n\n**અથવા વિકલ્પ પસંદ કરો:**\n  • 📦 ઓર્ડર ટ્રેકિંગ ([My Bookings](/my-bookings))\n  • 💰 વોલેટ અને રીફંડ\n  • 🛠️ સેવાઓ (પ્લમ્બર, ઇલેક્ટ્રિશિયન, AC)\n  • 💼 સેલર કે ઠેકેદાર રજીસ્ટ્રેશન`;
+      } else if (language === "hi") {
+        fallbackText = `🤖 क्विकसेवा में आपका स्वागत है! सहायता के लिए संपर्क करें:\n\n📧 **ईमेल**: ${SUPPORT_EMAIL}\n📱 **हेल्पलाइन**: ${SUPPORT_PHONE} (${SUPPORT_HOURS})\n\n**या विकल्प चुनें:**\n  • 📦 बुकिंग स्थिति ([My Bookings](/my-bookings))\n  • 💰 वॉलेट और रिफंड\n  • 🛠️ सेवाएं\n  • 💼 सेलर/ठेकेदार रजिस्ट्रेशन`;
+      } else {
+        fallbackText = `🤖 Welcome to QuickSeva! How we can help you:\n\n📧 **Email**: ${SUPPORT_EMAIL}\n📱 **Helpline**: ${SUPPORT_PHONE} (${SUPPORT_HOURS})\n\n**Or choose a topic:**\n  • 📦 Track bookings & order status ([My Bookings](/my-bookings))\n  • 💰 Wallet & refund policy\n  • 🛠️ Home services\n  • 💼 Register as Provider or Contractor`;
+      }
     }
 
     return res.json({ success: true, reply: fallbackText, source: "local_fallback" });
@@ -358,6 +363,7 @@ Reply in ${langName}:`;
     });
   }
 };
+
 
 exports.handleChatbotHealth = async (req, res) => {
   const geminiConfigured = Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim());

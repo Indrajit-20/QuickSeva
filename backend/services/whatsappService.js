@@ -132,7 +132,9 @@ function initWhatsAppWebClient() {
           '--disable-default-apps',
           '--mute-audio',
           '--no-zygote',
-          '--js-flags=--max-old-space-size=256',
+          '--single-process',
+          '--disable-site-isolation-trials',
+          '--js-flags=--max-old-space-size=128',
           '--disable-background-timer-throttling',
           '--disable-backgrounding-occluded-windows',
           '--disable-renderer-backgrounding'

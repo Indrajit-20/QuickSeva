@@ -1,5 +1,4 @@
 import Fuse from 'fuse.js';
-import axios from 'axios';
 import apiClient from '../api/axiosConfig';
 import {
   TRANSLATIONS,
@@ -7,7 +6,6 @@ import {
   OUT_OF_SCOPE_KEYWORDS,
   SCOPE_OVERRIDE_KEYWORDS
 } from '../data/chatbotTranslations';
-import { API_BASE_URL } from '../config/api';
 
 // ─────────────────────────────────────────────────────────────────
 // Fuse.js Index Setup for Typo-Tolerant Local Intent Matching
@@ -25,25 +23,26 @@ KEYWORD_RULES.forEach((rule, ruleIndex) => {
 
 const fuse = new Fuse(FUSE_TARGETS, {
   keys: ['keyword'],
-  threshold: 0.38, // 0.0 = exact match, 1.0 = anything. 0.38 handles typos like 'plumbr', 'elctrician', 'cleanng'
+  threshold: 0.38,
   distance: 100,
   includeScore: true,
   ignoreLocation: true,
   minMatchCharLength: 3
 });
 
-const SUPPORT_INTENT_KEYWORDS = [
-  'order', 'booking', 'book', 'status', 'track', 'reply', 'response',
-  'provider', 'seller', 'show', 'visible', 'not showing', 'not coming',
-  'nathi', 'nahi', 'nai', 'na aave', 'avto', 'avato', 'aavto', 'aavato',
-  'batav', 'batave', 'dekhatu', 'dekhat', 'jawab', 'javab', 'madad',
-  'ઓર્ડર', 'બુકિંગ', 'જવાબ', 'નથી', 'આવતો', 'આવતું', 'બતાવતું',
-  'दिख', 'नहीं', 'आया', 'जवाब', 'बुकिंग', 'ऑर्डर'
+const EXPLICIT_ORDER_PHRASES = [
+  'track order', 'track booking', 'order status', 'booking status',
+  'where is my order', 'where is my booking', 'my order status',
+  'ઓર્ડર સ્ટેટસ', 'બુકિંગ સ્ટેટસ', 'ऑर्डर स्थिति', 'बुकिंग स्थिति'
 ];
 
-/**
- * Check if the user's message is clearly out-of-scope (not QuickSeva-related).
- */
+const COMPLAINT_PHRASES = [
+  'didn\'t visit', 'did not visit', 'not visit', 'not come', 'didn\'t come',
+  'nathi avya', 'nathi aavya', 'nahi aaya', 'nahi aaye',
+  'ask pin', 'asked pin', 'asking pin', 'otp', 'pin maang', 'pin mang',
+  'fake', 'cheat', 'fraud', 'done nothing', 'no work', 'refund', 'complaint'
+];
+
 function isOutOfScope(normalizedInput) {
   const hasQuickSevaContext = SCOPE_OVERRIDE_KEYWORDS.some((kw) =>
     normalizedInput.includes(kw.toLowerCase())
@@ -56,50 +55,48 @@ function isOutOfScope(normalizedInput) {
   return offTopicMatches.length > 0;
 }
 
-function hasSupportIntent(normalizedInput) {
-  return SUPPORT_INTENT_KEYWORDS.some((kw) => normalizedInput.includes(kw.toLowerCase()));
-}
-
 function buildSupportIntentFallback(message, language) {
   const normalized = (message || '').trim().toLowerCase();
-  const looksLikeOrderIssue = ['order', 'booking', 'book', 'status', 'track', 'ઓર્ડર', 'બુકિંગ', 'ऑर्डर', 'बुकिंग']
-    .some((kw) => normalized.includes(kw));
+  const isComplaint = COMPLAINT_PHRASES.some((kw) => normalized.includes(kw));
+  const isExplicitOrderReq = EXPLICIT_ORDER_PHRASES.some((kw) => normalized.includes(kw));
 
-  if (!looksLikeOrderIssue && !hasSupportIntent(normalized)) return null;
+  if (isComplaint) {
+    if (language === 'gu') {
+      return `⚠️ **મહત્વપૂર્ણ સુરક્ષા ગાઈડલાઈન:**\nજો કાર્યકરે કામ કર્યા વિના PIN/OTP માગ્યો હોય, તો PIN આપશો નહીં.\n\nકૃપા કરીને બુકિંગ વિગત સાથે અમારા સપોર્ટ ઈમેલ **support@quickseva.com** અથવા ફોન **+91 98765 43210** પર સંપર્ક કરો. અમે ત્વરિત તપાસ કરીશું.`;
+    }
+    if (language === 'hi') {
+      return `⚠️ **महत्वपूर्ण सुरक्षा नियम:**\nअगर सेलर ने काम किए बिना PIN/OTP मांगा है, तो PIN बिल्कुल न दें।\n\nकृपया अपनी बुकिंग आईडी के साथ **support@quickseva.com** या **+91 98765 43210** पर तुरंत संपर्क करें। हम इसकी जांच करेंगे।`;
+    }
+    return `⚠️ **Important Security Warning:**\nDo NOT share your completion PIN/OTP if the provider did not visit or complete the work.\n\nPlease contact support immediately at **support@quickseva.com** or call **+91 98765 43210** with your Booking ID so we can investigate and process your resolution/refund.`;
+  }
+
+  if (!isExplicitOrderReq) return null;
 
   if (language === 'gu') {
-    return `હું સમજી શકું છું. જો ઓર્ડર દેખાતો નથી અથવા પ્રોવાઇડરનો જવાબ નથી આવતો, તો પહેલા **[My Bookings](/my-bookings)** માં સ્ટેટસ ચેક કરો.\n\n• **Pending** હોય તો પ્રોવાઇડર હજુ accept કરવાનું બાકી છે.\n• ઓર્ડર દેખાતો ન હોય તો login થયેલો નંબર/એકાઉન્ટ સાચું છે કે નહીં ચેક કરો.\n• Booking ID હોય તો અહીં મોકલો, હું તેને ચેક કરવાનો પ્રયત્ન કરીશ.\n\nતાત્કાલિક મદદ માટે support@quickseva.com અથવા +91 98765 43210 પર સંપર્ક કરો.`;
+    return `હું સમજી શકું છું. જો ઓર્ડર સ્ટેટસ જાણવું હોય, તો પહેલા **[My Bookings](/my-bookings)** માં સ્ટેટસ ચેક કરો.\n\n• **Pending** હોય તો પ્રોવાઇડર હજુ accept કરવાનું બાકી છે.\n• Booking ID હોય તો અહીં મોકલો (દા.ત. QS-20260826-LAAA), હું ચેક કરીશ.\n\nતાત્કાલિક મદદ માટે support@quickseva.com અથવા +91 98765 43210 પર સંપર્ક કરો.`;
   }
 
   if (language === 'hi') {
-    return `मैं समझ रहा हूँ। अगर ऑर्डर दिखाई नहीं दे रहा या प्रोवाइडर का जवाब नहीं आ रहा, तो पहले **[My Bookings](/my-bookings)** में स्टेटस देखें.\n\n• **Pending** है तो प्रोवाइडर ने अभी accept नहीं किया है।\n• ऑर्डर नहीं दिख रहा हो तो सही login नंबर/अकाउंट चेक करें।\n• Booking ID हो तो यहाँ भेजें, मैं चेक करने की कोशिश करूँगा।\n\nतुरंत मदद के लिए support@quickseva.com या +91 98765 43210 पर संपर्क करें।`;
+    return `मैं समझ रहा हूँ। अगर बुकिंग स्टेटस देखना है, तो पहले **[My Bookings](/my-bookings)** में स्टेटस देखें.\n\n• **Pending** है तो प्रोवाइडर ने अभी accept नहीं किया है।\n• Booking ID हो तो यहाँ भेजें (जैसे QS-20260826-LAAA), मैं चेक करने की कोशिश करूँगा।\n\nतुरंत मदद के लिए support@quickseva.com या +91 98765 43210 पर संपर्क करें।`;
   }
 
-  return `I understand. If your order is not showing or the provider has not replied, please first check **[My Bookings](/my-bookings)**.\n\n• If it is **Pending**, the provider has not accepted yet.\n• If no order is visible, confirm you are logged in with the same account/phone used for booking.\n• If you have a Booking ID, send it here and I will try to check it.\n\nFor urgent help, contact support@quickseva.com or +91 98765 43210.`;
+  return `I understand. To check your order status, please see **[My Bookings](/my-bookings)**.\n\n• If it is **Pending**, the provider has not accepted yet.\n• If you have a Booking ID (e.g. QS-20260826-LAAA), send it here and I will check it.\n\nFor urgent help, contact support@quickseva.com or +91 98765 43210.`;
 }
 
-/**
- * Smart Local Keyword Matcher with Specificity & Fuse.js Fuzzy Scoring.
- *
- * Handles exact phrase matches, token overlaps, AND typos automatically using Fuse.js.
- */
 export function findLocalResponse(userInput, language = 'en') {
   if (!userInput) return null;
   const normalized = userInput.trim().toLowerCase();
 
-  // 1. Out-of-scope check FIRST — before any keyword matching
   if (isOutOfScope(normalized)) {
     const langDict = TRANSLATIONS[language] || TRANSLATIONS.en;
     return langDict.responses.out_of_scope || langDict.responses.fallback;
   }
 
-  // Extract clean word tokens from user input
   const inputTokens = normalized
     .replace(/[^a-z0-9\u0A80-\u0AFF\u0900-\u097F\s]/g, '')
     .split(/\s+/)
     .filter((w) => w.length > 1);
 
-  // 2. Score all keyword rules for exact substring & token overlap
   let bestMatch = null;
   let bestScore = 0;
 
@@ -110,13 +107,11 @@ export function findLocalResponse(userInput, language = 'en') {
     for (const kw of rule.keywords) {
       const kwLower = kw.toLowerCase();
 
-      // Exact substring match
       if (normalized.includes(kwLower)) {
         matchCount++;
         const wordCount = kw.trim().split(/\s+/).length;
-        ruleScore += wordCount * 3; // Exact phrase match gets high score
+        ruleScore += wordCount * 3;
       } else {
-        // Token set match for scrambled phrases
         const kwTokens = kwLower.split(/\s+/).filter((w) => w.length > 2);
         if (kwTokens.length >= 2) {
           const matchingTokens = kwTokens.filter((t) => inputTokens.includes(t));
@@ -139,16 +134,13 @@ export function findLocalResponse(userInput, language = 'en') {
     }
   }
 
-  // High confidence exact/token match found
   if (bestMatch && bestScore >= 6) {
     const text = bestMatch.responses[language] || bestMatch.responses.en;
     return { text, showOptions: Boolean(bestMatch.showOptions) };
   }
 
-  // 3. Fuse.js Fuzzy Fallback for Typos (e.g. 'plumbr', 'elctrician', 'ac repare')
   const fuseResults = fuse.search(normalized);
 
-  // Also search individual word tokens if whole sentence didn't match directly
   if (fuseResults.length === 0 && inputTokens.length > 0) {
     for (const token of inputTokens) {
       if (token.length < 3) continue;
@@ -158,11 +150,9 @@ export function findLocalResponse(userInput, language = 'en') {
   }
 
   if (fuseResults.length > 0) {
-    // Sort by Fuse score ascending (lower score = closer match)
     fuseResults.sort((a, b) => (a.score || 1) - (b.score || 1));
     const topResult = fuseResults[0];
 
-    // Threshold cutoff — only accept close fuzzy matches (score <= 0.38)
     if (topResult && topResult.score <= 0.38) {
       const targetRule = KEYWORD_RULES[topResult.item.ruleIndex];
       if (targetRule) {
@@ -172,7 +162,6 @@ export function findLocalResponse(userInput, language = 'en') {
     }
   }
 
-  // If score was mediocre, return bestMatch if we had any low score exact/token match
   if (bestMatch && bestScore > 0) {
     const text = bestMatch.responses[language] || bestMatch.responses.en;
     return { text, showOptions: Boolean(bestMatch.showOptions) };
@@ -181,11 +170,7 @@ export function findLocalResponse(userInput, language = 'en') {
   return null;
 }
 
-/**
- * Core Chatbot Query Processor
- */
 export async function processChatbotMessage({ message, optionId, language = 'en', user = null, history = [] }) {
-  // 1. If user requested menu or clicked an option
   if (optionId === 'back_to_menu') {
     const langDict = TRANSLATIONS[language] || TRANSLATIONS.en;
     return {
@@ -200,7 +185,6 @@ export async function processChatbotMessage({ message, optionId, language = 'en'
     const langDict = TRANSLATIONS[language] || TRANSLATIONS.en;
     let responseText = langDict.responses[optionId] || langDict.responses.fallback;
 
-    // Personalize if user is logged in
     if (user?.name && optionId === 'track_booking') {
       const greetingPrefix =
         language === 'gu'
@@ -214,9 +198,7 @@ export async function processChatbotMessage({ message, optionId, language = 'en'
     return { text: responseText, type: 'bot', source: 'option' };
   }
 
-  // 2. Backend Call (Gemini AI / DB Context) — send typed messages straight to backend AI
   try {
-    const token = localStorage.getItem("authToken") || localStorage.getItem("token");
     const res = await apiClient.post("/chatbot/query", {
       message,
       language,
@@ -232,7 +214,6 @@ export async function processChatbotMessage({ message, optionId, language = 'en'
     console.warn("Backend chatbot endpoint failed, using local fallback:", err.message);
   }
 
-  // 3. Optional Local Keyword Matcher Fallback if Backend AI is offline
   const localAnswer = findLocalResponse(message, language);
   if (localAnswer) {
     const text = typeof localAnswer === "string" ? localAnswer : localAnswer.text;
@@ -240,13 +221,11 @@ export async function processChatbotMessage({ message, optionId, language = 'en'
     return { text, type: "bot", source: "local_rule", showOptions };
   }
 
-  // 4. Use a conversational support fallback for QuickSeva support intents.
   const supportFallback = buildSupportIntentFallback(message, language);
   if (supportFallback) {
     return { text: supportFallback, type: 'bot', source: 'support_intent_fallback' };
   }
 
-  // 5. Default Trilingual Fallback
   const fallbackDict = TRANSLATIONS[language] || TRANSLATIONS.en;
   return {
     text: fallbackDict.responses.fallback,
