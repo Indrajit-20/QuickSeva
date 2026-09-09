@@ -344,65 +344,56 @@ export default function ContractorFeed() {
             </div>
 
             {/* 2. Select State Dropdown */}
-            <div className="w-full md:w-44 flex items-center justify-between gap-1 px-2.5 py-1.5 sm:py-2 bg-white border border-slate-200 rounded-lg shadow-2xs focus-within:border-amber-500 transition">
-              <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                <Globe className="text-amber-600 shrink-0" size={14} />
-                <select
-                  value={stateFilter}
-                  onChange={(e) => handleStateChange(e.target.value)}
-                  className="w-full bg-transparent text-[11px] sm:text-xs font-bold text-slate-800 outline-none border-none focus:outline-none focus:ring-0 appearance-none shadow-none cursor-pointer truncate"
-                >
-                  <option value="All States">All States</option>
-                  {Object.keys(INDIAN_LOCATIONS_MASTER).map((st) => (
-                    <option key={st} value={st}>
-                      {st}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <ChevronDown size={13} className="text-slate-400 pointer-events-none shrink-0" />
+            <div className="w-full md:w-44 flex items-center gap-1.5 px-2.5 py-1.5 sm:py-2 bg-white border border-slate-200 rounded-lg shadow-2xs focus-within:border-amber-500 transition">
+              <Globe className="text-amber-600 shrink-0" size={14} />
+              <select
+                value={stateFilter}
+                onChange={(e) => handleStateChange(e.target.value)}
+                className="w-full bg-transparent text-[11px] sm:text-xs font-bold text-slate-800 outline-none border-none focus:outline-none focus:ring-0 appearance-none shadow-none cursor-pointer truncate"
+              >
+                <option value="All States">All States</option>
+                {Object.keys(INDIAN_LOCATIONS_MASTER).map((st) => (
+                  <option key={st} value={st}>
+                    {st}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* 3. Dynamic Select City Dropdown */}
-            <div className="w-full md:w-44 flex items-center justify-between gap-1 px-2.5 py-1.5 sm:py-2 bg-white border border-slate-200 rounded-lg shadow-2xs focus-within:border-amber-500 transition">
-              <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                <MapPin className="text-amber-600 shrink-0" size={14} />
-                <select
-                  value={cityFilter}
-                  onChange={(e) => setCityFilter(e.target.value)}
-                  className="w-full bg-transparent text-[11px] sm:text-xs font-bold text-slate-800 outline-none border-none focus:outline-none focus:ring-0 appearance-none shadow-none cursor-pointer truncate"
-                >
-                  {availableCities.map((ct) => (
-                    <option key={ct} value={ct}>
-                      {ct}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <ChevronDown size={13} className="text-slate-400 pointer-events-none shrink-0" />
+            <div className="w-full md:w-44 flex items-center gap-1.5 px-2.5 py-1.5 sm:py-2 bg-white border border-slate-200 rounded-lg shadow-2xs focus-within:border-amber-500 transition">
+              <MapPin className="text-amber-600 shrink-0" size={14} />
+              <select
+                value={cityFilter}
+                onChange={(e) => setCityFilter(e.target.value)}
+                className="w-full bg-transparent text-[11px] sm:text-xs font-bold text-slate-800 outline-none border-none focus:outline-none focus:ring-0 appearance-none shadow-none cursor-pointer truncate"
+              >
+                {availableCities.map((ct) => (
+                  <option key={ct} value={ct}>
+                    {ct}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* 4. Select Trade Dropdown */}
-            <div className="col-span-2 md:w-40 flex items-center justify-between gap-1 px-2.5 py-1.5 sm:py-2 bg-white border border-slate-200 rounded-lg shadow-2xs focus-within:border-amber-500 transition">
-              <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                <Filter className="text-slate-400 shrink-0" size={14} />
-                <select
-                  value={tradeFilter}
-                  onChange={(e) => setTradeFilter(e.target.value)}
-                  className="w-full bg-transparent text-[11px] sm:text-xs font-bold text-slate-800 outline-none border-none focus:outline-none focus:ring-0 appearance-none shadow-none cursor-pointer truncate"
-                >
-                  <option value="">All Trades</option>
-                  <option value="Painting">Painting</option>
-                  <option value="Mason">Civil & Masonry</option>
-                  <option value="Electrical">Electrical</option>
-                  <option value="Plumbing">Plumbing</option>
-                  <option value="Carpentry">Carpentry</option>
-                  <option value="Tile">Tile & Marble</option>
-                  <option value="Waterproofing">Waterproofing</option>
-                  <option value="HVAC">HVAC & AC</option>
-                </select>
-              </div>
-              <ChevronDown size={13} className="text-slate-400 pointer-events-none shrink-0" />
+            <div className="col-span-2 md:w-40 flex items-center gap-1.5 px-2.5 py-1.5 sm:py-2 bg-white border border-slate-200 rounded-lg shadow-2xs focus-within:border-amber-500 transition">
+              <Filter className="text-slate-400 shrink-0" size={14} />
+              <select
+                value={tradeFilter}
+                onChange={(e) => setTradeFilter(e.target.value)}
+                className="w-full bg-transparent text-[11px] sm:text-xs font-bold text-slate-800 outline-none border-none focus:outline-none focus:ring-0 appearance-none shadow-none cursor-pointer truncate"
+              >
+                <option value="">All Trades</option>
+                <option value="Painting">Painting</option>
+                <option value="Mason">Civil & Masonry</option>
+                <option value="Electrical">Electrical</option>
+                <option value="Plumbing">Plumbing</option>
+                <option value="Carpentry">Carpentry</option>
+                <option value="Tile">Tile & Marble</option>
+                <option value="Waterproofing">Waterproofing</option>
+                <option value="HVAC">HVAC & AC</option>
+              </select>
             </div>
 
           </div>

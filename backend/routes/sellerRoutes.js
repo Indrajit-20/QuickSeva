@@ -71,7 +71,7 @@ router.patch("/:id/verify", protect, adminOnly, verifySeller);
 // QuickSeva - Map Performance Feature
 router.get("/in-view", async (req, res) => {
   try {
-    const { minLat, maxLat, minLng, maxLng } = req.query;
+    const { minLat, maxLat, minLng, maxLng, centerLat: qCenterLat, centerLng: qCenterLng } = req.query;
 
     if (!minLat || !maxLat || !minLng || !maxLng) {
       return res.status(400).json({ error: "Missing bounding box query parameters" });
@@ -79,7 +79,16 @@ router.get("/in-view", async (req, res) => {
 
     const { pool } = require("../config/db");
 
-    // Query sellers within the bounding box with all details required by client layout
+    const pMinLat = parseFloat(minLat);
+    const pMaxLat = parseFloat(maxLat);
+    const pMinLng = parseFloat(minLng);
+    const pMaxLng = parseFloat(maxLng);
+
+    const centerLat = qCenterLat ? parseFloat(qCenterLat) : (pMinLat + pMaxLat) / 2;
+    const centerLng = qCenterLng ? parseFloat(qCenterLng) : (pMinLng + pMaxLng) / 2;
+
+    // High performance geospatial query with Haversine distance calculation
+    // Filters efficiently using index-friendly WHERE clause and sorts by proximity ASC
     const [sellers] = await pool.query(
       `SELECT s.id,
               s.id AS sellerId,
@@ -101,13 +110,28 @@ router.get("/in-view", async (req, res) => {
               s.is_available,
               s.is_available AS isAvailable,
               u.profile_pic,
-              u.profile_pic AS profilePhotoUrl
+              u.profile_pic AS profilePhotoUrl,
+              ROUND(
+                6371 * acos(
+                  LEAST(1.0, GREATEST(-1.0,
+                    cos(radians(?)) * cos(radians(COALESCE(s.latitude, u.lat))) *
+                    cos(radians(COALESCE(s.longitude, u.lng)) - radians(?)) +
+                    sin(radians(?)) * sin(radians(COALESCE(s.latitude, u.lat)))
+                  ))
+                ), 2
+              ) AS distance_km
        FROM sellers s
        JOIN users u ON s.user_id = u.id
        LEFT JOIN categories c ON s.category_id = c.id
-       HAVING lat BETWEEN ? AND ? AND lng BETWEEN ? AND ?
-       LIMIT 200`,
-      [parseFloat(minLat), parseFloat(maxLat), parseFloat(minLng), parseFloat(maxLng)]
+       WHERE (s.latitude BETWEEN ? AND ? OR (s.latitude IS NULL AND u.lat BETWEEN ? AND ?))
+         AND (s.longitude BETWEEN ? AND ? OR (s.longitude IS NULL AND u.lng BETWEEN ? AND ?))
+       ORDER BY distance_km ASC
+       LIMIT 50`,
+      [
+        centerLat, centerLng, centerLat,
+        pMinLat, pMaxLat, pMinLat, pMaxLat,
+        pMinLng, pMaxLng, pMinLng, pMaxLng
+      ]
     );
 
     if (sellers.length === 0) {

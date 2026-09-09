@@ -335,8 +335,9 @@ function MapRadiusController({ radiusKm, center }) {
       prevRadiusRef.current = radiusKm;
       prevCenterRef.current = center;
 
-      const bounds = L.latLng(center.lat, center.lng).toBounds(radiusKm * 1000);
-      map.fitBounds(bounds, { animate: true, duration: 0.8, maxZoom: 16 });
+      // Side length of bounding box surrounding a circle of radius R is 2 * R (diameter in meters)
+      const bounds = L.latLng(center.lat, center.lng).toBounds(radiusKm * 2000);
+      map.fitBounds(bounds, { animate: true, duration: 0.8, maxZoom: 16, padding: [30, 30] });
     }
   }, [radiusKm, center, map]);
 
@@ -728,8 +729,9 @@ export default function NearbyServices({
 
   const [radiusKm, setRadiusKm] = useState(() => {
     const urlVal = searchParams.get("radius");
-    if (urlVal !== null) return Number(urlVal);
-    return savedSearchState?.radiusKm !== undefined ? Number(savedSearchState.radiusKm) : 5;
+    if (urlVal !== null) return Math.min(10, Math.max(1, Number(urlVal)));
+    const saved = savedSearchState?.radiusKm !== undefined ? Number(savedSearchState.radiusKm) : 5;
+    return Math.min(10, Math.max(1, saved));
   });
 
   const [locationNotFoundMsg, setLocationNotFoundMsg] = useState("");
@@ -1098,7 +1100,7 @@ export default function NearbyServices({
     const q = searchParams.get("q") || "";
     const loc = searchParams.get("location") || "";
     const pin = searchParams.get("pincode") || "";
-    const rad = Number(searchParams.get("radius") || 5);
+    const rad = Math.min(10, Math.max(1, Number(searchParams.get("radius") || 5)));
     const selId = searchParams.get("selectedSellerId") ? Number(searchParams.get("selectedSellerId")) : null;
     const lat = searchParams.get("lat") ? Number(searchParams.get("lat")) : null;
     const lng = searchParams.get("lng") ? Number(searchParams.get("lng")) : null;
@@ -1155,8 +1157,10 @@ export default function NearbyServices({
         setApiLoading(true);
         setApiError("");
         try {
+          const cLat = searchCenter?.lat || buyerPos?.lat || (minLat + maxLat) / 2;
+          const cLng = searchCenter?.lng || buyerPos?.lng || (minLng + maxLng) / 2;
           const res = await fetch(
-            `${API_BASE_URL}/sellers/in-view?minLat=${minLat}&maxLat=${maxLat}&minLng=${minLng}&maxLng=${maxLng}`
+            `${API_BASE_URL}/sellers/in-view?minLat=${minLat}&maxLat=${maxLat}&minLng=${minLng}&maxLng=${maxLng}&centerLat=${cLat}&centerLng=${cLng}`
           );
           if (!res.ok) throw new Error("Failed to fetch sellers in view");
           const data = await res.json();
@@ -1216,19 +1220,15 @@ export default function NearbyServices({
   // Auto-zoom map camera when search radius expands so sellers in expanded area are fetched & displayed
   useEffect(() => {
     if (mapRef.current && buyerPos) {
-      let targetZoom = 13;
-      if (radiusKm >= 50) targetZoom = 8;
-      else if (radiusKm >= 35) targetZoom = 9;
-      else if (radiusKm >= 20) targetZoom = 11;
-      else if (radiusKm >= 10) targetZoom = 12;
-
       try {
-        mapRef.current.setView([buyerPos.lat, buyerPos.lng], targetZoom, { animate: true });
+        const centerPos = searchCenter || buyerPos;
+        const bounds = L.latLng(centerPos.lat, centerPos.lng).toBounds(radiusKm * 2000);
+        mapRef.current.fitBounds(bounds, { animate: true, padding: [30, 30], maxZoom: 16 });
       } catch (e) {
         console.warn("Map view auto-zoom warning:", e);
       }
     }
-  }, [radiusKm, buyerPos]);
+  }, [radiusKm, buyerPos, searchCenter]);
 
   const onMapReady = useCallback(async (map) => {
     setMapInitialized(true);
@@ -2220,17 +2220,17 @@ export default function NearbyServices({
                   <input
                     type="range"
                     min={1}
-                    max={50}
+                    max={10}
                     step={1}
                     value={radiusKm}
-                    onChange={(e) => setRadiusKm(parseInt(e.target.value || "5", 10))}
+                    onChange={(e) => setRadiusKm(Math.min(10, Math.max(1, parseInt(e.target.value || "5", 10))))}
                     className="qs-range flex-1"
                     style={{
-                      background: `linear-gradient(to right, var(--qs-primary, #2563eb) 0%, var(--qs-primary, #2563eb) ${((radiusKm - 1) / 49) * 100}%, #e2e8f0 ${((radiusKm - 1) / 49) * 100}%, #e2e8f0 100%)`,
+                      background: `linear-gradient(to right, var(--qs-primary, #2563eb) 0%, var(--qs-primary, #2563eb) ${((radiusKm - 1) / 9) * 100}%, #e2e8f0 ${((radiusKm - 1) / 9) * 100}%, #e2e8f0 100%)`,
                     }}
                   />
                   <span className="text-[10px] font-bold text-slate-500 bg-slate-100 rounded-full px-2 py-0.5 border border-slate-200/50">
-                    {radiusKm <= 5 ? "Nearby" : radiusKm <= 20 ? "Moderate" : "Far"}
+                    {radiusKm <= 3 ? "Hyper-Local" : radiusKm <= 6 ? "Nearby" : "Max Range (10km)"}
                   </span>
                 </div>
 
