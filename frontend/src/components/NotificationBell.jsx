@@ -17,21 +17,31 @@ import apiClient from "../api/axiosConfig";
 import { useSocket } from "../context/SocketContext";
 import { useAuth } from "../context/AuthContext";
 
+const parseUtcDate = (val) => {
+  if (!val) return null;
+  if (val instanceof Date) return val;
+  if (typeof val === "number") return new Date(val);
+  if (typeof val === "string") {
+    let s = val.trim();
+    if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}/.test(s) && !s.endsWith("Z") && !/[+-]\d{2}:?\d{2}$/.test(s)) {
+      s = s.replace(" ", "T") + "Z";
+    }
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) return d;
+    const fallback = new Date(val);
+    if (!isNaN(fallback.getTime())) return fallback;
+  }
+  return null;
+};
+
 const formatTimeAgo = (value) => {
   if (!value) return "Just now";
-  let time = new Date(value).getTime();
-  if (isNaN(time)) return "Just now";
+  const parsed = parseUtcDate(value);
+  if (!parsed) return "Just now";
+  const time = parsed.getTime();
   const now = Date.now();
   let diff = now - time;
-  if (diff < 0) {
-    const tzOffsetMs = new Date().getTimezoneOffset() * 60000;
-    const adjustedTime = time + tzOffsetMs;
-    if (now - adjustedTime >= 0) {
-      diff = now - adjustedTime;
-    } else {
-      diff = 0;
-    }
-  }
+  if (diff <= 0) return "Just now";
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return "Just now";
   if (mins < 60) return `${mins}m ago`;
