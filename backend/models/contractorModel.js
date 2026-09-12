@@ -355,20 +355,126 @@ const ContractorModel = {
     }
   },
 
+  // Ensure all contractor tables exist
+  ensureContractorTables: async () => {
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS contractor_posts (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          contractor_id INT NULL,
+          post_type ENUM('demand_workers', 'supply_workers') DEFAULT 'demand_workers',
+          title VARCHAR(255) NOT NULL,
+          company_name VARCHAR(255) NULL,
+          contact_name VARCHAR(150) NOT NULL,
+          contact_phone VARCHAR(20) NOT NULL,
+          whatsapp_phone VARCHAR(20) NULL,
+          site_address TEXT NOT NULL,
+          city VARCHAR(100) NOT NULL,
+          state VARCHAR(100) NULL,
+          pincode VARCHAR(10) NULL,
+          lat DECIMAL(10, 7) NULL,
+          lng DECIMAL(10, 7) NULL,
+          start_date DATE NOT NULL,
+          end_date DATE NOT NULL,
+          amenities JSON NULL,
+          description TEXT NULL,
+          status ENUM('active', 'closed', 'expired') DEFAULT 'active',
+          is_featured TINYINT(1) DEFAULT 0,
+          views_count INT DEFAULT 0,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+      `);
+
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS contractor_post_requirements (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          post_id INT NOT NULL,
+          role_title VARCHAR(150) NOT NULL,
+          quantity INT NOT NULL DEFAULT 1,
+          wage_amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+          wage_type ENUM('per_day', 'per_hour', 'per_month', 'fixed') DEFAULT 'per_day',
+          skills_required TEXT NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+      `);
+
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS contractor_applications (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          post_id INT NOT NULL,
+          applicant_name VARCHAR(150) NOT NULL,
+          applicant_phone VARCHAR(20) NOT NULL,
+          applicant_type ENUM('individual', 'group_leader', 'agency') DEFAULT 'agency',
+          workers_count INT NOT NULL DEFAULT 1,
+          notes TEXT NULL,
+          status ENUM('pending', 'contacted', 'hired', 'rejected') DEFAULT 'pending',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+      `);
+
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS contractor_contact_unlocks (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          contractor_id INT NOT NULL,
+          application_id INT NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE KEY uk_contractor_application (contractor_id, application_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+      `);
+    } catch (err) {
+      console.error("ensureContractorTables error:", err.message);
+    }
+  },
+
   // Get applicants for a post with unlock status
   getApplicationsForPost: async (postId, contractorUserId = null) => {
-    const [rows] = await pool.query(
-      `SELECT ca.*, 
-              IF(ccu.id IS NOT NULL, 1, 0) AS is_unlocked
-       FROM contractor_applications ca
-       LEFT JOIN contractor_contact_unlocks ccu 
-         ON ccu.application_id = ca.id AND ccu.contractor_id = ?
-       WHERE ca.post_id = ? 
-       ORDER BY ca.created_at DESC`,
-      [contractorUserId, postId]
-    );
+    let rows;
+    try {
+      const [res] = await pool.query(
+        `SELECT ca.*, 
+                IF(ccu.id IS NOT NULL, 1, 0) AS is_unlocked
+         FROM contractor_applications ca
+         LEFT JOIN contractor_contact_unlocks ccu 
+           ON ccu.application_id = ca.id AND ccu.contractor_id = ?
+         WHERE ca.post_id = ? 
+         ORDER BY ca.created_at DESC`,
+        [contractorUserId, postId]
+      );
+      rows = res;
+    } catch (err) {
+      console.warn("getApplicationsForPost query error, attempting auto table creation & retry:", err.message);
+      await ContractorModel.ensureContractorTables();
+      try {
+        const [res] = await pool.query(
+          `SELECT ca.*, 
+                  IF(ccu.id IS NOT NULL, 1, 0) AS is_unlocked
+           FROM contractor_applications ca
+           LEFT JOIN contractor_contact_unlocks ccu 
+             ON ccu.application_id = ca.id AND ccu.contractor_id = ?
+           WHERE ca.post_id = ? 
+           ORDER BY ca.created_at DESC`,
+          [contractorUserId, postId]
+        );
+        rows = res;
+      } catch (fallbackErr) {
+        console.error("Fallback query for getApplicationsForPost:", fallbackErr.message);
+        try {
+          const [res] = await pool.query(
+            `SELECT ca.*, 0 AS is_unlocked
+             FROM contractor_applications ca
+             WHERE ca.post_id = ? 
+             ORDER BY ca.created_at DESC`,
+            [postId]
+          );
+          rows = res;
+        } catch (finalErr) {
+          console.error("Final query failed for getApplicationsForPost:", finalErr.message);
+          rows = [];
+        }
+      }
+    }
 
-    return rows.map((app) => {
+    return (rows || []).map((app) => {
       const isUnlocked = Boolean(app.is_unlocked);
       let phone = app.applicant_phone || "";
       if (!isUnlocked && phone) {
@@ -391,28 +497,54 @@ const ContractorModel = {
 
   // Get application by ID (raw)
   getApplicationById: async (appId) => {
-    const [rows] = await pool.query(
-      `SELECT * FROM contractor_applications WHERE id = ?`,
-      [appId]
-    );
-    return rows[0] || null;
+    try {
+      const [rows] = await pool.query(
+        `SELECT * FROM contractor_applications WHERE id = ?`,
+        [appId]
+      );
+      return rows[0] || null;
+    } catch (err) {
+      console.error("getApplicationById error:", err.message);
+      return null;
+    }
   },
 
   // Check if contact is unlocked for a contractor
   isContactUnlocked: async (contractorUserId, applicationId) => {
-    const [rows] = await pool.query(
-      `SELECT id FROM contractor_contact_unlocks WHERE contractor_id = ? AND application_id = ?`,
-      [contractorUserId, applicationId]
-    );
-    return rows.length > 0;
+    try {
+      const [rows] = await pool.query(
+        `SELECT id FROM contractor_contact_unlocks WHERE contractor_id = ? AND application_id = ?`,
+        [contractorUserId, applicationId]
+      );
+      return rows.length > 0;
+    } catch (err) {
+      await ContractorModel.ensureContractorTables();
+      try {
+        const [rows] = await pool.query(
+          `SELECT id FROM contractor_contact_unlocks WHERE contractor_id = ? AND application_id = ?`,
+          [contractorUserId, applicationId]
+        );
+        return rows.length > 0;
+      } catch (retryErr) {
+        return false;
+      }
+    }
   },
 
   // Record contact unlock
   recordContactUnlock: async (contractorUserId, applicationId) => {
-    await pool.query(
-      `INSERT IGNORE INTO contractor_contact_unlocks (contractor_id, application_id) VALUES (?, ?)`,
-      [contractorUserId, applicationId]
-    );
+    try {
+      await pool.query(
+        `INSERT IGNORE INTO contractor_contact_unlocks (contractor_id, application_id) VALUES (?, ?)`,
+        [contractorUserId, applicationId]
+      );
+    } catch (err) {
+      await ContractorModel.ensureContractorTables();
+      await pool.query(
+        `INSERT IGNORE INTO contractor_contact_unlocks (contractor_id, application_id) VALUES (?, ?)`,
+        [contractorUserId, applicationId]
+      );
+    }
   },
 
   // Update application status (pending, contacted, hired, rejected)

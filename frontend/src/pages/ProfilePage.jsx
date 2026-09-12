@@ -95,7 +95,7 @@ export default function ProfilePage() {
     return "Today";
   }, [user?.created_at]);
 
-  const getImageUrl = (url) => {
+  const getImageUrlLocal = (url) => {
     if (!url) return "";
     if (url.startsWith("http")) return url;
     const base = apiClient.defaults.baseURL ? apiClient.defaults.baseURL.replace("/api", "") : "http://localhost:5000";

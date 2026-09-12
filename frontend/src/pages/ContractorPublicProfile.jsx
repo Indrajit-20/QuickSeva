@@ -25,15 +25,7 @@ import { getContractorPublicProfile, createQuoteRequest } from "../api/contracto
 import ContractorQuoteModal from "../components/ContractorQuoteModal";
 import { useAuth } from "../context/AuthContext";
 import { getWhatsAppCustomerToContractorLink } from "../utils/whatsappUtils";
-
-const getImageUrl = (url) => {
-  if (!url) return "";
-  if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) {
-    return url;
-  }
-  const cleanPath = url.startsWith("/") ? url : `/${url}`;
-  return `http://localhost:5000${cleanPath}`;
-};
+import { getImageUrl } from "../utils/imageUtils";
 
 export default function ContractorPublicProfile() {
   const { id } = useParams();

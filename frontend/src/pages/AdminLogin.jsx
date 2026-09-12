@@ -237,29 +237,8 @@ const AdminLogin = () => {
           </button>
         </form>
 
-        {/* Divider */}
-        <div className="my-6 flex items-center">
-          <div className="flex-1 border-t border-slate-200"></div>
-          <p className="px-4 text-slate-400 text-xs font-bold uppercase tracking-wider">Testing Credentials</p>
-          <div className="flex-1 border-t border-slate-200"></div>
-        </div>
-
-        {/* Test Credentials Info */}
-        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-6 text-left">
-          <p className="text-slate-700 text-xs font-bold uppercase tracking-wider mb-2">
-            📋 Use these to test:
-          </p>
-          <p className="text-slate-600 text-xs font-semibold">
-            Username: <span className="font-mono text-slate-900 bg-white border border-slate-200 px-1 rounded">admin</span>
-          </p>
-          <p className="text-slate-600 text-xs font-semibold mt-1.5">
-            Password:{" "}
-            <span className="font-mono text-slate-900 bg-white border border-slate-200 px-1 rounded">Admin@123</span>
-          </p>
-        </div>
-
         {/* Footer Links */}
-        <div className="text-center space-y-3">
+        <div className="mt-6 pt-6 border-t border-slate-200 text-center space-y-3">
           <p className="text-slate-500 text-sm font-semibold">
             Not an admin?{" "}
             <button
