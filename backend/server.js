@@ -57,11 +57,16 @@ const PORT = process.env.PORT || 5000;
 
 // ── Connect DB ───────────────────────────────────────────────────────────────
 const { ensureLeadTables } = require("./controllers/leadController");
+const ContractorModel = require("./models/contractorModel");
 const { ensureStoredProcedures } = require("./utils/storedProcedures");
 connectDB().then(async () => {
   try {
     await ensureLeadTables();
     logger.info("✅ Lead tables verified/created");
+    if (ContractorModel.ensureContractorTables) {
+      await ContractorModel.ensureContractorTables();
+      logger.info("✅ Contractor tables verified/created");
+    }
     await ensureStoredProcedures();
   } catch (err) {
     logger.error("❌ Failed to ensure database initial tables/procedures:", err);
@@ -111,8 +116,8 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(requestLogger);
 
 // Serve uploaded files statically

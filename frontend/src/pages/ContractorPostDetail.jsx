@@ -23,15 +23,7 @@ import {
 } from "lucide-react";
 import { getContractorPostById, createApplication } from "../api/contractorApi";
 import { useAuth } from "../context/AuthContext";
-
-const getImageUrl = (url) => {
-  if (!url) return "";
-  if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) {
-    return url;
-  }
-  const cleanPath = url.startsWith("/") ? url : `/${url}`;
-  return `http://localhost:5000${cleanPath}`;
-};
+import { getImageUrl } from "../utils/imageUtils";
 
 export default function ContractorPostDetail() {
   const { id } = useParams();

@@ -24,6 +24,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import apiClient from "../api/axiosConfig";
+import { getImageUrl } from "../utils/imageUtils";
 
 // ── Inline Toast ─────────────────────────────────────────────────────────────
 const Toast = ({ toasts }) => (
@@ -211,14 +212,7 @@ const AdminSellers = () => {
     }
   };
 
-  const getDocUrl = (path) => {
-    if (!path) return "#";
-    if (path.startsWith("http")) return path;
-    const base = apiClient.defaults.baseURL
-      ? apiClient.defaults.baseURL.replace("/api", "")
-      : "http://localhost:5000";
-    return `${base}${path}`;
-  };
+  const getDocUrl = (path) => getImageUrl(path || "");
 
   const handleOpenDetails = (seller) => { setSelectedSeller(seller); setShowDetailModal(true); };
 

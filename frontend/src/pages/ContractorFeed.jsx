@@ -22,6 +22,7 @@ import {
 import { getContractorPosts, getContractorsDirectory } from "../api/contractorApi";
 import { useAuth } from "../context/AuthContext";
 import { INDIAN_LOCATIONS_MASTER } from "../data/indiaLocationsData";
+import { getImageUrl } from "../utils/imageUtils";
 
 // Helper: Relative time ago string
 const timeAgo = (dateStr) => {
@@ -53,16 +54,6 @@ const formatShortDate = (dateStr) => {
   } catch {
     return dateStr;
   }
-};
-
-// Helper: Format image URL
-const getImageUrl = (url) => {
-  if (!url) return "";
-  if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) {
-    return url;
-  }
-  const cleanPath = url.startsWith("/") ? url : `/${url}`;
-  return `http://localhost:5000${cleanPath}`;
 };
 
 // Helper: Smart Avatar

@@ -17,6 +17,8 @@ import {
   Edit3,
   X,
   ExternalLink,
+  Plus,
+  FileText,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { updateUserProfile } from "../../api/authService";
@@ -26,15 +28,8 @@ import {
   deleteContractorWorkImage,
   submitContractorVerification,
 } from "../../api/contractorApi";
-import { API_BASE_URL } from "../../config/api";
 import SearchableCitySelect from "../../components/SearchableCitySelect";
-
-const getImageUrl = (url) => {
-  if (!url) return "";
-  if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) return url;
-  const cleanPath = url.startsWith("/") ? url : `/${url}`;
-  return `http://localhost:5000${cleanPath}`;
-};
+import { getImageUrl } from "../../utils/imageUtils";
 
 const AVAILABLE_TRADES = [
   { id: "Painting", label: "Painting & Decorating", icon: "🎨" },
@@ -54,6 +49,7 @@ export default function ContractorProfile() {
 
   // Profile View vs Edit Mode State
   const [isEditing, setIsEditing] = useState(false);
+  const [verifyOpen, setVerifyOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     name: user?.name || "",
@@ -90,6 +86,7 @@ export default function ContractorProfile() {
   // Work Portfolio Photos State
   const [workImages, setWorkImages] = useState([]);
   const [uploadingWorkPics, setUploadingWorkPics] = useState(false);
+  const [lightboxIdx, setLightboxIdx] = useState(null);
 
   useEffect(() => {
     if (user) {
@@ -257,7 +254,8 @@ export default function ContractorProfile() {
       if (res?.data?.user) {
         setSaveSuccess(true);
         if (refreshAuth) await refreshAuth();
-        setIsEditing(false); // Switch back to clean display view
+        setIsEditing(false);
+        setSelectedFile(null);
         setTimeout(() => setSaveSuccess(false), 4000);
       }
     } catch (err) {
@@ -270,18 +268,56 @@ export default function ContractorProfile() {
 
   const getInitial = (name) => (name?.trim()?.[0] || "C").toUpperCase();
 
-  const getProfilePicUrl = (url) => {
-    if (!url) return null;
-    if (url.startsWith("blob:") || url.startsWith("http://") || url.startsWith("https://")) {
-      return url;
-    }
-    const backendHost = API_BASE_URL.replace(/\/api\/?$/, "");
-    const cleanPath = url.startsWith("/") ? url : `/${url}`;
-    return `${backendHost}${cleanPath}`;
-  };
+  const isVerified = user?.verification_status === "verified" || user?.is_verified_contractor === 1;
+  const isPending = user?.verification_status === "pending";
+  const isRejected = user?.verification_status === "rejected";
+
+  const verificationStatusBadge = isVerified
+    ? { label: "✓ Verified Contractor", cls: "bg-emerald-100 text-emerald-800 border-emerald-300" }
+    : isPending
+    ? { label: "⏳ Pending Review", cls: "bg-amber-100 text-amber-800 border-amber-300" }
+    : isRejected
+    ? { label: "❌ Rejected", cls: "bg-rose-100 text-rose-800 border-rose-300" }
+    : { label: "Unverified", cls: "bg-slate-100 text-slate-600 border-slate-300" };
 
   return (
-    <div className="max-w-5xl mx-auto py-3 px-3 sm:px-6 font-sans text-slate-800 pb-24">
+    <div className="max-w-5xl mx-auto py-3 px-3 sm:px-6 font-sans text-slate-800 pb-28">
+      {/* Lightbox */}
+      {lightboxIdx !== null && workImages[lightboxIdx] && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setLightboxIdx(null)}
+        >
+          <button
+            className="absolute top-4 right-4 text-white bg-black/50 rounded-full p-2 hover:bg-black/80 cursor-pointer"
+            onClick={() => setLightboxIdx(null)}
+          >
+            <X size={22} />
+          </button>
+          <img
+            src={getImageUrl(workImages[lightboxIdx].image_url)}
+            alt="Work"
+            className="max-h-[85vh] max-w-full rounded-2xl shadow-2xl object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-3">
+            {workImages.length > 1 && (
+              <>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setLightboxIdx((i) => (i - 1 + workImages.length) % workImages.length); }}
+                  className="bg-white/20 hover:bg-white/40 text-white font-bold px-4 py-2 rounded-full text-sm cursor-pointer"
+                >← Prev</button>
+                <span className="text-white/60 text-xs self-center">{lightboxIdx + 1} / {workImages.length}</span>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setLightboxIdx((i) => (i + 1) % workImages.length); }}
+                  className="bg-white/20 hover:bg-white/40 text-white font-bold px-4 py-2 rounded-full text-sm cursor-pointer"
+                >Next →</button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Notifications */}
       {saveSuccess && (
         <div className="mb-3 p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl flex items-center gap-2 text-xs font-bold shadow-xs">
@@ -305,7 +341,7 @@ export default function ContractorProfile() {
             <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-amber-500 text-white font-black text-2xl shadow-md overflow-hidden flex items-center justify-center relative border-2 border-slate-100">
               {previewPic ? (
                 <img
-                  src={getProfilePicUrl(previewPic)}
+                  src={getImageUrl(previewPic)}
                   alt="Contractor Logo"
                   className="w-full h-full object-cover"
                   onError={(e) => {
@@ -346,11 +382,9 @@ export default function ContractorProfile() {
               <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 text-[9px] font-black uppercase tracking-wider border border-amber-200">
                 Verified Contractor Profile
               </span>
-              {user?.is_verified_contractor === 1 && (
-                <span className="flex items-center gap-0.5 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-[9px] font-extrabold border border-emerald-200">
-                  <ShieldCheck size={10} /> Verified
-                </span>
-              )}
+              <span className={`px-2 py-0.5 rounded-md text-[9px] font-extrabold border ${verificationStatusBadge.cls}`}>
+                {verificationStatusBadge.label}
+              </span>
             </div>
 
             <h1 className="text-sm sm:text-base font-black text-slate-900 tracking-tight leading-snug">
@@ -394,7 +428,7 @@ export default function ContractorProfile() {
               <div className="flex flex-col gap-1.5">
                 <button
                   type="button"
-                  onClick={() => { setIsEditing(false); setErrorMsg(null); }}
+                  onClick={() => { setIsEditing(false); setErrorMsg(null); setSelectedFile(null); setPreviewPic(user?.profile_pic || ""); }}
                   className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[10px] rounded-xl transition cursor-pointer"
                 >
                   Cancel
@@ -424,13 +458,13 @@ export default function ContractorProfile() {
 
       {/* ── MODE 1: CLEAN PROFILE DISPLAY VIEW (DEFAULT) ── */}
       {!isEditing ? (
-        <div className="space-y-6">
+        <div className="space-y-5">
           {/* Card 1: Business & Contact Information */}
           <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200/80 shadow-xs space-y-3">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <h2 className="text-xs sm:text-sm font-black text-slate-900 flex items-center gap-2">
                 <Building2 size={16} className="text-amber-600" />
-                Business & Contact Overview
+                Business &amp; Contact Overview
               </h2>
               <button
                 type="button"
@@ -443,35 +477,19 @@ export default function ContractorProfile() {
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-              <div className="p-2.5 bg-slate-50/80 rounded-xl border border-slate-100">
-                <span className="text-[10px] font-bold text-slate-400 block mb-0.5">Contact Person</span>
-                <span className="text-xs font-black text-slate-900">{formData.name || "Not provided"}</span>
-              </div>
-
-              <div className="p-2.5 bg-slate-50/80 rounded-xl border border-slate-100">
-                <span className="text-[10px] font-bold text-slate-400 block mb-0.5">Company Name</span>
-                <span className="text-xs font-black text-slate-900">{formData.company_name || "Not provided"}</span>
-              </div>
-
-              <div className="p-2.5 bg-slate-50/80 rounded-xl border border-slate-100">
-                <span className="text-[10px] font-bold text-slate-400 block mb-0.5">Mobile Number</span>
-                <span className="text-xs font-black text-slate-900">{formData.phone || "Not provided"}</span>
-              </div>
-
-              <div className="p-2.5 bg-slate-50/80 rounded-xl border border-slate-100">
-                <span className="text-[10px] font-bold text-slate-400 block mb-0.5">Operating City</span>
-                <span className="text-xs font-black text-slate-900">{formData.city || "Not provided"}</span>
-              </div>
-
-              <div className="p-2.5 bg-slate-50/80 rounded-xl border border-slate-100">
-                <span className="text-[10px] font-bold text-slate-400 block mb-0.5">Pincode</span>
-                <span className="text-xs font-black text-slate-900">{formData.pincode || "Not provided"}</span>
-              </div>
-
-              <div className="p-2.5 bg-slate-50/80 rounded-xl border border-slate-100">
-                <span className="text-[10px] font-bold text-slate-400 block mb-0.5">Site Address</span>
-                <span className="text-xs font-black text-slate-900">{formData.address || "Not provided"}</span>
-              </div>
+              {[
+                { label: "Contact Person", val: formData.name },
+                { label: "Company Name", val: formData.company_name },
+                { label: "Mobile Number", val: formData.phone },
+                { label: "Operating City", val: formData.city },
+                { label: "Pincode", val: formData.pincode },
+                { label: "Site Address", val: formData.address },
+              ].map(({ label, val }) => (
+                <div key={label} className="p-2.5 bg-slate-50/80 rounded-xl border border-slate-100">
+                  <span className="text-[10px] font-bold text-slate-400 block mb-0.5">{label}</span>
+                  <span className="text-xs font-black text-slate-900">{val || "Not provided"}</span>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -508,14 +526,21 @@ export default function ContractorProfile() {
           <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200/80 shadow-xs space-y-2">
             <h2 className="text-xs sm:text-sm font-black text-slate-900 flex items-center gap-2 pb-2 border-b border-slate-100">
               <Sparkles size={16} className="text-amber-600" />
-              Business Overview & Experience
+              Business Overview &amp; Experience
             </h2>
-            <p className="text-xs font-medium text-slate-700 leading-relaxed whitespace-pre-line">
-              {formData.bio || "No business description added yet. Click Edit above to add your experience, team capacity, and service details."}
-            </p>
+            {formData.bio ? (
+              <p className="text-xs font-medium text-slate-700 leading-relaxed whitespace-pre-line">{formData.bio}</p>
+            ) : (
+              <div className="flex flex-col items-start gap-2">
+                <p className="text-xs font-semibold text-slate-500">No business description added yet.</p>
+                <button onClick={() => setIsEditing(true)} className="text-xs font-bold text-amber-600 hover:underline flex items-center gap-1 cursor-pointer">
+                  <Edit3 size={12} /> Add Overview
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* Card 4: Work Site Portfolio Gallery */}
+          {/* Card 4: Work Portfolio Gallery (Read-Only Showcase) */}
           <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200/80 shadow-xs space-y-3">
             <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-slate-100">
               <div>
@@ -524,213 +549,236 @@ export default function ContractorProfile() {
                   Work Portfolio ({workImages.length})
                 </h2>
                 <p className="text-[10px] font-medium text-slate-500 mt-0.5">
-                  Photos shown to customers on the public hub.
+                  Photos shown to clients on the public hub.
                 </p>
               </div>
 
-              <label className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-black rounded-xl shadow-xs transition cursor-pointer flex items-center gap-1 active:scale-95">
-                <Upload size={12} />
-                <span>{uploadingWorkPics ? "Uploading..." : "Add Work Photos"}</span>
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  className="hidden"
-                  disabled={uploadingWorkPics}
-                  onChange={async (e) => {
-                    const files = e.target.files;
-                    if (!files || files.length === 0) return;
-                    setUploadingWorkPics(true);
-                    try {
-                      const fd = new FormData();
-                      Array.from(files).forEach((f) => fd.append("images", f));
-                      await uploadContractorWorkImages(fd);
-                      await fetchWorkImages();
-                    } catch (err) {
-                      alert("Failed to upload work images. Please try again.");
-                    } finally {
-                      setUploadingWorkPics(false);
-                    }
-                  }}
-                />
-              </label>
+              <button
+                type="button"
+                onClick={() => setIsEditing(true)}
+                className="text-[10px] font-bold text-amber-600 hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <Edit3 size={11} />
+                <span>Manage Photos in Edit Mode</span>
+              </button>
             </div>
 
             {workImages && workImages.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-                {workImages.map((img) => (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 pt-1">
+                {workImages.map((img, idx) => (
                   <div
                     key={img.id}
-                    className="relative aspect-4/3 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 group shadow-xs"
+                    className="relative aspect-video rounded-xl overflow-hidden bg-slate-100 border border-slate-200 group shadow-xs cursor-pointer"
+                    onClick={() => setLightboxIdx(idx)}
                   >
                     <img
                       src={getImageUrl(img.image_url)}
-                      alt="Work Site"
-                      className="w-full h-full object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        if (window.confirm("Remove this project photo?")) {
-                          try {
-                            await deleteContractorWorkImage(img.id);
-                            setWorkImages((prev) => prev.filter((i) => i.id !== img.id));
-                          } catch (err) {
-                            alert("Failed to delete photo.");
-                          }
-                        }
+                      alt={img.title || "Work Site"}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.style.display = "none";
+                        e.target.parentNode.classList.add("bg-slate-200");
                       }}
-                      className="absolute top-2 right-2 p-1.5 bg-rose-600 text-white rounded-lg opacity-0 group-hover:opacity-100 transition shadow-md cursor-pointer hover:bg-rose-700 active:scale-90"
-                      title="Delete photo"
-                    >
-                      <Trash2 size={13} />
-                    </button>
+                    />
+                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+                      <span className="text-[10px] font-extrabold text-white bg-black/60 px-2.5 py-1 rounded-full flex items-center gap-1">
+                        👁️ View Photo
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="p-6 bg-slate-50 rounded-2xl border border-dashed border-slate-300 text-center">
-                <p className="text-xs font-semibold text-slate-500">
-                  No work site photos uploaded yet. Click <strong>Add Work Photos</strong> above to showcase your completed projects to potential clients!
+              <div className="p-6 bg-slate-50/80 rounded-2xl border border-dashed border-slate-200 text-center space-y-2">
+                <ImageIcon size={28} className="text-slate-300 mx-auto" />
+                <p className="text-xs font-bold text-slate-600">No work portfolio photos added yet</p>
+                <p className="text-[10px] font-medium text-slate-400">
+                  Showcase your completed projects and sites to attract more clients!
                 </p>
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(true)}
+                  className="mt-2 px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-extrabold rounded-xl shadow-xs transition active:scale-95 inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Edit3 size={12} />
+                  <span>Edit Profile &amp; Upload Photos</span>
+                </button>
               </div>
             )}
           </div>
 
-          {/* Section 4: Contractor License & GST Verification */}
-          <div className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200/80 shadow-xs space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div>
-                <h2 className="text-sm sm:text-base font-black text-slate-900 flex items-center gap-2">
-                  <ShieldCheck size={20} className="text-amber-600" />
-                  <span>Contractor Verification & Trust Credentials</span>
-                </h2>
-                <p className="text-xs text-slate-500 font-medium mt-0.5">
-                  Submit GST, PAN, or Trade License to get verified and boost client trust
-                </p>
-              </div>
-              <span
-                className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider border ${
-                  user?.verification_status === "verified" || user?.is_verified_contractor === 1
-                    ? "bg-emerald-100 text-emerald-800 border-emerald-300"
-                    : user?.verification_status === "pending"
-                    ? "bg-amber-100 text-amber-800 border-amber-300"
-                    : user?.verification_status === "rejected"
-                    ? "bg-rose-100 text-rose-800 border-rose-300"
-                    : "bg-slate-100 text-slate-700 border-slate-300"
-                }`}
-              >
-                {user?.verification_status === "verified" || user?.is_verified_contractor === 1
-                  ? "✓ Verified Contractor"
-                  : user?.verification_status === "pending"
-                  ? "⏳ Pending Admin Review"
-                  : user?.verification_status === "rejected"
-                  ? "❌ Verification Rejected"
-                  : "Unverified"}
-              </span>
-            </div>
-
-            {user?.verification_status === "rejected" && (
-              <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl space-y-1">
-                <div className="flex items-center gap-1.5 text-xs font-black text-rose-800">
-                  <span>❌ Action Required: Verification Rejected</span>
+          {/* Card 5: Verification Status — Smart Display */}
+          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+            <div className="p-4 sm:p-6">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck size={18} className="text-amber-600" />
+                  <div>
+                    <h2 className="text-xs sm:text-sm font-black text-slate-900">Contractor Verification</h2>
+                    <p className="text-[10px] text-slate-500 font-medium mt-0.5">GST, PAN, Trade License</p>
+                  </div>
                 </div>
-                <p className="text-xs font-semibold text-rose-700">
-                  <strong>Admin Rejection Reason:</strong> "{user?.verification_notes || "Please check your document upload and credentials."}"
-                </p>
-                <p className="text-[11px] text-slate-500 font-medium pt-1">
-                  Please correct your GSTIN / PAN / License number or re-upload a clear document file below to resubmit for approval.
-                </p>
-              </div>
-            )}
-
-            {verificationMsg && (
-              <div
-                className={`p-3 rounded-2xl text-xs font-bold ${
-                  verificationMsg.type === "success"
-                    ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
-                    : "bg-rose-50 text-rose-800 border border-rose-200"
-                }`}
-              >
-                {verificationMsg.text}
-              </div>
-            )}
-
-            <form onSubmit={handleVerifySubmit} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs font-extrabold text-slate-700 mb-1">
-                    GSTIN Number (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={verificationForm.gstin}
-                    onChange={(e) => setVerificationForm({ ...verificationForm, gstin: e.target.value })}
-                    placeholder="e.g. 24AAAAA0000A1Z5"
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none focus:bg-white focus:border-amber-600 transition"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-extrabold text-slate-700 mb-1">
-                    PAN Card Number
-                  </label>
-                  <input
-                    type="text"
-                    value={verificationForm.pan_number}
-                    onChange={(e) => setVerificationForm({ ...verificationForm, pan_number: e.target.value })}
-                    placeholder="e.g. ABCDE1234F"
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none focus:bg-white focus:border-amber-600 transition"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-extrabold text-slate-700 mb-1">
-                    Trade / Labor License No.
-                  </label>
-                  <input
-                    type="text"
-                    value={verificationForm.license_number}
-                    onChange={(e) => setVerificationForm({ ...verificationForm, license_number: e.target.value })}
-                    placeholder="e.g. LIC/2026/99812"
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none focus:bg-white focus:border-amber-600 transition"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-extrabold text-slate-700 mb-1">
-                  Upload License / ID Proof Document (JPEG, PNG, WEBP)
-                </label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setVerificationDoc(e.target.files?.[0] || null)}
-                    className="text-xs font-semibold text-slate-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-amber-100 file:text-amber-900 hover:file:bg-amber-200 cursor-pointer"
-                  />
-                  {user?.verification_doc_url && (
+                <div className="flex items-center gap-2">
+                  <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider border ${verificationStatusBadge.cls}`}>
+                    {verificationStatusBadge.label}
+                  </span>
+                  {!isVerified && (
+                    <button
+                      type="button"
+                      onClick={() => setVerifyOpen(!verifyOpen)}
+                      className="text-[10px] font-bold text-amber-600 hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      {verifyOpen ? <X size={11} /> : <Edit3 size={11} />}
+                      {verifyOpen ? "Close" : isPending ? "Update" : "Submit"}
+                    </button>
+                  )}
+                  {isVerified && user?.verification_doc_url && (
                     <a
                       href={getImageUrl(user.verification_doc_url)}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-xs font-bold text-amber-700 underline flex items-center gap-1 shrink-0"
+                      className="text-[10px] font-bold text-amber-600 hover:underline flex items-center gap-1"
                     >
-                      <ExternalLink size={12} />
-                      View Uploaded Doc
+                      <ExternalLink size={11} /> View Doc
                     </a>
                   )}
                 </div>
               </div>
 
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  disabled={submittingVerification}
-                  className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-extrabold rounded-xl shadow-xs transition cursor-pointer active:scale-95 disabled:opacity-50"
-                >
-                  {submittingVerification ? "Submitting Application..." : "Submit Verification Proof →"}
-                </button>
+              {/* Verified — show submitted info */}
+              {isVerified && (
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {user?.gstin && (
+                    <div className="p-2.5 bg-emerald-50 rounded-xl border border-emerald-100">
+                      <span className="text-[10px] font-bold text-emerald-600 block mb-0.5">GSTIN</span>
+                      <span className="text-xs font-black text-slate-900">{user.gstin}</span>
+                    </div>
+                  )}
+                  {user?.pan_number && (
+                    <div className="p-2.5 bg-emerald-50 rounded-xl border border-emerald-100">
+                      <span className="text-[10px] font-bold text-emerald-600 block mb-0.5">PAN Number</span>
+                      <span className="text-xs font-black text-slate-900">{user.pan_number}</span>
+                    </div>
+                  )}
+                  {user?.license_number && (
+                    <div className="p-2.5 bg-emerald-50 rounded-xl border border-emerald-100">
+                      <span className="text-[10px] font-bold text-emerald-600 block mb-0.5">License No.</span>
+                      <span className="text-xs font-black text-slate-900">{user.license_number}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Pending — show what was submitted */}
+              {isPending && (
+                <div className="mt-3 p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs font-semibold text-amber-800">
+                  ⏳ Your verification is under admin review. You'll be notified once approved.
+                </div>
+              )}
+
+              {/* Rejected — reason */}
+              {isRejected && (
+                <div className="mt-3 p-3.5 bg-rose-50 border border-rose-200 rounded-xl space-y-1">
+                  <div className="text-xs font-black text-rose-800">❌ Verification Rejected</div>
+                  <p className="text-xs font-semibold text-rose-700">
+                    Reason: "{user?.verification_notes || "Please re-upload a valid document."}"
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Expandable Verification Form */}
+            {verifyOpen && !isVerified && (
+              <div className="border-t border-slate-100 p-4 sm:p-6 bg-slate-50/50">
+                {verificationMsg && (
+                  <div className={`mb-4 p-3 rounded-xl text-xs font-bold ${
+                    verificationMsg.type === "success"
+                      ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                      : "bg-rose-50 text-rose-800 border border-rose-200"
+                  }`}>
+                    {verificationMsg.text}
+                  </div>
+                )}
+
+                <form onSubmit={handleVerifySubmit} className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-extrabold text-slate-700 mb-1">GSTIN (Optional)</label>
+                      <input
+                        type="text"
+                        value={verificationForm.gstin}
+                        onChange={(e) => setVerificationForm({ ...verificationForm, gstin: e.target.value })}
+                        placeholder="e.g. 24AAAAA0000A1Z5"
+                        className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none focus:border-amber-600 transition"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-extrabold text-slate-700 mb-1">PAN Card Number</label>
+                      <input
+                        type="text"
+                        value={verificationForm.pan_number}
+                        onChange={(e) => setVerificationForm({ ...verificationForm, pan_number: e.target.value })}
+                        placeholder="e.g. ABCDE1234F"
+                        className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none focus:border-amber-600 transition"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-extrabold text-slate-700 mb-1">Trade / Labor License No.</label>
+                      <input
+                        type="text"
+                        value={verificationForm.license_number}
+                        onChange={(e) => setVerificationForm({ ...verificationForm, license_number: e.target.value })}
+                        placeholder="e.g. LIC/2026/99812"
+                        className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none focus:border-amber-600 transition"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-extrabold text-slate-700 mb-2">Upload ID / License Proof (JPEG, PNG, WEBP)</label>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <label className="cursor-pointer flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl hover:border-amber-400 hover:bg-amber-50 transition">
+                        <FileText size={14} className="text-amber-600" />
+                        <span className="text-xs font-bold text-slate-700">
+                          {verificationDoc ? verificationDoc.name : "Choose File"}
+                        </span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => setVerificationDoc(e.target.files?.[0] || null)}
+                        />
+                      </label>
+                      {user?.verification_doc_url && (
+                        <a
+                          href={getImageUrl(user.verification_doc_url)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs font-bold text-amber-700 underline flex items-center gap-1"
+                        >
+                          <ExternalLink size={12} /> View Previous Doc
+                        </a>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end pt-1">
+                    <button
+                      type="submit"
+                      disabled={submittingVerification}
+                      className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-extrabold rounded-xl shadow-xs transition cursor-pointer active:scale-95 disabled:opacity-50 flex items-center gap-2"
+                    >
+                      {submittingVerification ? (
+                        <><div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" /><span>Submitting...</span></>
+                      ) : (
+                        <><ShieldCheck size={14} /><span>Submit Verification Proof</span></>
+                      )}
+                    </button>
+                  </div>
+                </form>
               </div>
-            </form>
+            )}
           </div>
         </div>
       ) : (
@@ -740,45 +788,35 @@ export default function ContractorProfile() {
           <div className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200/80 shadow-xs">
             <h2 className="text-sm sm:text-base font-black text-slate-900 flex items-center gap-2 mb-4 pb-3 border-b border-slate-100">
               <Building2 size={18} className="text-amber-600" />
-              Edit Business & Contact Details
+              Edit Business &amp; Contact Details
             </h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
               <div>
-                <label className="block text-xs font-extrabold text-slate-700 mb-1">
-                  Full Name / Contact Person *
-                </label>
+                <label className="block text-xs font-extrabold text-slate-700 mb-1">Full Name / Contact Person *</label>
                 <input
                   type="text"
                   required
                   value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="e.g. Rajesh Sharma"
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none focus:bg-white focus:border-amber-600 transition"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-extrabold text-slate-700 mb-1">
-                  Company / Business Name
-                </label>
+                <label className="block text-xs font-extrabold text-slate-700 mb-1">Company / Business Name</label>
                 <input
                   type="text"
                   value={formData.company_name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, company_name: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
                   placeholder="e.g. Sharma Painting Contractor"
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none focus:bg-white focus:border-amber-600 transition"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-extrabold text-slate-700 mb-1">
-                  Primary Mobile Number
-                </label>
+                <label className="block text-xs font-extrabold text-slate-700 mb-1">Primary Mobile Number</label>
                 <input
                   type="tel"
                   disabled
@@ -789,9 +827,7 @@ export default function ContractorProfile() {
               </div>
 
               <div>
-                <label className="block text-xs font-extrabold text-slate-700 mb-1">
-                  Operating City *
-                </label>
+                <label className="block text-xs font-extrabold text-slate-700 mb-1">Operating City *</label>
                 <SearchableCitySelect
                   value={formData.city}
                   onChange={(val) => setFormData({ ...formData, city: val })}
@@ -801,30 +837,22 @@ export default function ContractorProfile() {
               </div>
 
               <div>
-                <label className="block text-xs font-extrabold text-slate-700 mb-1">
-                  Postal Pincode
-                </label>
+                <label className="block text-xs font-extrabold text-slate-700 mb-1">Postal Pincode</label>
                 <input
                   type="text"
                   value={formData.pincode}
-                  onChange={(e) =>
-                    setFormData({ ...formData, pincode: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
                   placeholder="e.g. 400053"
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none focus:bg-white focus:border-amber-600 transition"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-extrabold text-slate-700 mb-1">
-                  Site / Office Address
-                </label>
+                <label className="block text-xs font-extrabold text-slate-700 mb-1">Site / Office Address</label>
                 <input
                   type="text"
                   value={formData.address}
-                  onChange={(e) =>
-                    setFormData({ ...formData, address: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                   placeholder="e.g. Andheri West, Mumbai, Maharashtra"
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none focus:bg-white focus:border-amber-600 transition"
                 />
@@ -857,9 +885,7 @@ export default function ContractorProfile() {
                       <span>{trade.icon}</span>
                       <span>{trade.label}</span>
                     </span>
-                    {isSelected && (
-                      <Check size={14} className="text-amber-600 shrink-0" />
-                    )}
+                    {isSelected && <Check size={14} className="text-amber-600 shrink-0" />}
                   </button>
                 );
               })}
@@ -870,7 +896,7 @@ export default function ContractorProfile() {
           <div className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200/80 shadow-xs">
             <h2 className="text-sm sm:text-base font-black text-slate-900 flex items-center gap-2 mb-3">
               <Sparkles size={18} className="text-amber-600" />
-              Business Overview & Experience
+              Business Overview &amp; Experience
             </h2>
 
             <textarea
@@ -882,11 +908,154 @@ export default function ContractorProfile() {
             />
           </div>
 
+          {/* Section 4: Work Portfolio Upload & Management (Edit Mode) */}
+          <div className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200/80 shadow-xs space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 flex-wrap gap-2">
+              <div>
+                <h2 className="text-sm sm:text-base font-black text-slate-900 flex items-center gap-2">
+                  <ImageIcon size={18} className="text-amber-600" />
+                  Work Portfolio Management ({workImages.length})
+                </h2>
+                <p className="text-xs font-medium text-slate-500 mt-0.5">
+                  Upload photos of completed project sites or remove old photos.
+                </p>
+              </div>
+              <label className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-black rounded-xl shadow-xs transition cursor-pointer flex items-center gap-1.5 active:scale-95">
+                {uploadingWorkPics ? (
+                  <><div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /><span>Uploading...</span></>
+                ) : (
+                  <><Upload size={14} /><span>Upload New Photos</span></>
+                )}
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  className="hidden"
+                  disabled={uploadingWorkPics}
+                  onChange={async (e) => {
+                    const files = e.target.files;
+                    if (!files || files.length === 0) return;
+                    setUploadingWorkPics(true);
+                    try {
+                      const fd = new FormData();
+                      Array.from(files).forEach((f) => fd.append("images", f));
+                      await uploadContractorWorkImages(fd);
+                      await fetchWorkImages();
+                    } catch (err) {
+                      alert("Failed to upload work images.");
+                    } finally {
+                      setUploadingWorkPics(false);
+                      e.target.value = "";
+                    }
+                  }}
+                />
+              </label>
+            </div>
+
+            {workImages.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3.5">
+                {workImages.map((img) => (
+                  <div key={img.id} className="relative aspect-video rounded-xl overflow-hidden bg-slate-100 border border-slate-200 group shadow-xs">
+                    <img
+                      src={getImageUrl(img.image_url)}
+                      alt={img.title || "Work Site"}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.style.display = "none";
+                        e.target.parentNode.classList.add("bg-slate-200");
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-start justify-end p-2">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (window.confirm("Remove this project photo?")) {
+                            try {
+                              await deleteContractorWorkImage(img.id);
+                              setWorkImages((prev) => prev.filter((i) => i.id !== img.id));
+                            } catch (err) {
+                              alert("Failed to delete photo.");
+                            }
+                          }
+                        }}
+                        className="p-1.5 bg-rose-600 text-white rounded-lg transition shadow-md cursor-pointer hover:bg-rose-700 active:scale-90 flex items-center gap-1 text-[10px] font-bold"
+                        title="Delete photo"
+                      >
+                        <Trash2 size={13} />
+                        <span>Delete</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {/* Tile to add more photo */}
+                <label className="aspect-video rounded-xl overflow-hidden bg-slate-50 border-2 border-dashed border-slate-300 flex flex-col items-center justify-center cursor-pointer hover:bg-amber-50 hover:border-amber-400 transition group">
+                  <Plus size={22} className="text-slate-400 group-hover:text-amber-600 mb-1 transition" />
+                  <span className="text-xs font-extrabold text-slate-500 group-hover:text-amber-700">Add Photo</span>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    className="hidden"
+                    disabled={uploadingWorkPics}
+                    onChange={async (e) => {
+                      const files = e.target.files;
+                      if (!files || files.length === 0) return;
+                      setUploadingWorkPics(true);
+                      try {
+                        const fd = new FormData();
+                        Array.from(files).forEach((f) => fd.append("images", f));
+                        await uploadContractorWorkImages(fd);
+                        await fetchWorkImages();
+                      } catch (err) {
+                        alert("Failed to upload work images.");
+                      } finally {
+                        setUploadingWorkPics(false);
+                        e.target.value = "";
+                      }
+                    }}
+                  />
+                </label>
+              </div>
+            ) : (
+              <label className="block cursor-pointer">
+                <div className="p-8 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-300 text-center hover:bg-amber-50 hover:border-amber-400 transition">
+                  <Upload size={32} className="text-amber-600 mx-auto mb-2 opacity-80" />
+                  <p className="text-xs font-black text-slate-700 mb-1">Click or drag images here to upload portfolio photos</p>
+                  <p className="text-[10px] font-medium text-slate-400">PNG, JPG, WEBP formats supported</p>
+                </div>
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  className="hidden"
+                  disabled={uploadingWorkPics}
+                  onChange={async (e) => {
+                    const files = e.target.files;
+                    if (!files || files.length === 0) return;
+                    setUploadingWorkPics(true);
+                    try {
+                      const fd = new FormData();
+                      Array.from(files).forEach((f) => fd.append("images", f));
+                      await uploadContractorWorkImages(fd);
+                      await fetchWorkImages();
+                    } catch (err) {
+                      alert("Failed to upload work images.");
+                    } finally {
+                      setUploadingWorkPics(false);
+                      e.target.value = "";
+                    }
+                  }}
+                />
+              </label>
+            )}
+          </div>
+
           {/* Bottom Action Bar */}
           <div className="flex items-center justify-end gap-3 pt-2">
             <button
               type="button"
-              onClick={() => setIsEditing(false)}
+              onClick={() => { setIsEditing(false); setSelectedFile(null); setPreviewPic(user?.profile_pic || ""); }}
               className="px-5 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl transition cursor-pointer"
             >
               Cancel
@@ -900,10 +1069,7 @@ export default function ContractorProfile() {
               {saving ? (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
-                <>
-                  <Save size={16} />
-                  <span>Save Profile Settings</span>
-                </>
+                <><Save size={16} /><span>Save Profile Settings</span></>
               )}
             </button>
           </div>

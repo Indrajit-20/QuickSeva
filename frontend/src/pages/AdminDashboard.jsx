@@ -28,6 +28,7 @@ import {
   updateAdminQuoteRequestStatus,
   getAdminContractorAnalytics,
 } from "../api/contractorApi";
+import { getImageUrl } from "../utils/imageUtils";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -745,11 +746,7 @@ const AdminDashboard = () => {
                             type="button"
                             onClick={() => {
                               setDocZoomLevel(1);
-                              setDocPreviewUrl(
-                                item.verification_doc_url.startsWith("http")
-                                  ? item.verification_doc_url
-                                  : `http://localhost:5000${item.verification_doc_url}`
-                              );
+                              setDocPreviewUrl(getImageUrl(item.verification_doc_url));
                             }}
                             className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-extrabold rounded-xl border border-blue-200 transition cursor-pointer flex items-center gap-1.5"
                           >

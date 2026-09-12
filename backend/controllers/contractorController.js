@@ -19,7 +19,8 @@ const ContractorController = {
           company_name: company_name || req.user.company_name || null,
           trade_specialization: trade_specialization || null,
           city: city || req.user.city || null,
-          is_verified_contractor: 1,
+          is_verified_contractor: 0,
+          verification_status: "unverified",
         });
 
         const updatedUser = await UserModel.findById(userId);
@@ -49,7 +50,8 @@ const ContractorController = {
           company_name: company_name || null,
           trade_specialization: trade_specialization || null,
           city: city || null,
-          is_verified_contractor: 1,
+          is_verified_contractor: 0,
+          verification_status: "unverified",
         });
 
         const { generateToken } = require("../utils/jwtUtils");

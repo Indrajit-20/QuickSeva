@@ -23,7 +23,7 @@ const fileFilter = (req, file, cb) => {
   else cb(new Error("Only JPEG, PNG, and WEBP images are allowed"));
 };
 
-const maxSize = parseInt(process.env.MAX_FILE_SIZE) || 5 * 1024 * 1024; // 5MB
+const maxSize = parseInt(process.env.MAX_FILE_SIZE) || 25 * 1024 * 1024; // 25MB
 
 const uploadProfile   = multer({ storage: createStorage("profiles"),  fileFilter, limits: { fileSize: maxSize } });
 const uploadService   = multer({ storage: createStorage("services"),  fileFilter, limits: { fileSize: maxSize } });
