@@ -52,76 +52,153 @@ exports.getStats = async (req, res) => {
   }
 };
 
-// Get list of users with wallet balances
+// Helper: Build user filter conditions
+const buildUserFilterQuery = (queryObj) => {
+  const { is_active, role, search, startDate, endDate } = queryObj;
+  const conditions = [];
+  const params = [];
+
+  if (is_active !== undefined && is_active !== "" && is_active !== "all") {
+    conditions.push("u.is_active = ?");
+    params.push(parseInt(is_active, 10));
+  }
+
+  if (role && role !== "all") {
+    conditions.push("u.role = ?");
+    params.push(role);
+  }
+
+  if (search && search.trim()) {
+    conditions.push("(u.name LIKE ? OR u.phone LIKE ? OR u.email LIKE ?)");
+    const term = `%${search.trim()}%`;
+    params.push(term, term, term);
+  }
+
+  if (startDate) {
+    conditions.push("u.created_at >= ?");
+    params.push(`${startDate} 00:00:00`);
+  }
+
+  if (endDate) {
+    conditions.push("u.created_at <= ?");
+    params.push(`${endDate} 23:59:59`);
+  }
+
+  const whereClause = conditions.length ? " WHERE " + conditions.join(" AND ") : "";
+  return { whereClause, params };
+};
+
+// Get list of users with wallet balances (Paginated & Filtered)
 exports.getUsers = async (req, res) => {
   try {
-    const { is_active, search } = req.query;
-    let query = `
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(500, Math.max(1, parseInt(req.query.limit, 10) || 15));
+    const offset = (page - 1) * limit;
+
+    const { whereClause, params } = buildUserFilterQuery(req.query);
+
+    // Get total matching users for pagination
+    const countSql = `SELECT COUNT(*) AS total FROM users u ${whereClause}`;
+    const [[{ total }]] = await pool.query(countSql, params);
+
+    // Fetch paginated user rows with explicit numeric limit & offset
+    const dataSql = `
       SELECT u.id, u.name, u.email, u.phone, u.role, u.is_active, u.created_at, IFNULL(w.balance, 0.00) AS wallet_balance
       FROM users u
       LEFT JOIN wallets w ON u.id = w.user_id
+      ${whereClause}
+      ORDER BY u.created_at DESC
+      LIMIT ${limit} OFFSET ${offset}
     `;
-    const params = [];
-    const conditions = [];
 
-    if (is_active !== undefined) {
-      conditions.push("u.is_active = ?");
-      params.push(parseInt(is_active));
-    }
+    const [users] = await pool.query(dataSql, params);
 
-    if (search) {
-      conditions.push("(u.name LIKE ? OR u.phone LIKE ? OR u.email LIKE ?)");
-      const term = `%${search}%`;
-      params.push(term, term, term);
-    }
+    const totalPages = Math.ceil(total / limit) || 1;
 
-    if (conditions.length) {
-      query += " WHERE " + conditions.join(" AND ");
-    }
-
-    query += " ORDER BY u.created_at DESC";
-
-    const [users] = await pool.query(query, params);
-    return successRes(res, { users });
+    return successRes(res, {
+      users,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages,
+      },
+    });
   } catch (err) {
     console.error("Admin getUsers error:", err);
     return errorRes(res, "Failed to fetch users list");
   }
 };
 
-// Get list of sellers with detailed profile and verification files
+// Get list of sellers with detailed profile and verification files (Paginated & Filtered)
 exports.getSellers = async (req, res) => {
   try {
-    const { is_verified, search } = req.query;
-    let query = `
-      SELECT s.id, s.business_name, s.avg_rating, s.total_orders, s.is_verified, s.is_available, s.documents, s.gst_number, s.seller_type,
-             u.id as user_id, u.name, u.email, u.phone, u.city, u.state, u.address, u.pincode, u.is_active,
-             c.name AS category_name
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(200, Math.max(1, parseInt(req.query.limit, 10) || 20));
+    const offset = (page - 1) * limit;
+    const { is_verified, is_active, search, category_id, startDate, endDate } = req.query;
+
+    const conditions = [];
+    const params = [];
+
+    if (is_verified !== undefined && is_verified !== "") {
+      conditions.push("s.is_verified = ?");
+      params.push(parseInt(is_verified, 10));
+    }
+
+    if (is_active !== undefined && is_active !== "") {
+      conditions.push("u.is_active = ?");
+      params.push(parseInt(is_active, 10));
+    }
+
+    if (search && search.trim()) {
+      conditions.push("(s.business_name LIKE ? OR u.name LIKE ? OR u.phone LIKE ? OR u.email LIKE ?)");
+      const term = `%${search.trim()}%`;
+      params.push(term, term, term, term);
+    }
+
+    if (category_id) {
+      conditions.push("s.category_id = ?");
+      params.push(parseInt(category_id, 10));
+    }
+
+    if (startDate) {
+      conditions.push("s.created_at >= ?");
+      params.push(`${startDate} 00:00:00`);
+    }
+
+    if (endDate) {
+      conditions.push("s.created_at <= ?");
+      params.push(`${endDate} 23:59:59`);
+    }
+
+    const whereClause = conditions.length ? " WHERE " + conditions.join(" AND ") : "";
+
+    // Count total matching sellers
+    const countSql = `
+      SELECT COUNT(*) AS total
+      FROM sellers s
+      JOIN users u ON s.user_id = u.id
+      ${whereClause}
+    `;
+    const [[{ total }]] = await pool.query(countSql, params);
+
+    // Fetch paginated results
+    const dataSql = `
+      SELECT s.id, s.business_name, s.avg_rating, s.total_orders, s.total_reviews,
+             s.is_verified, s.is_available, s.documents, s.gst_number, s.seller_type,
+             s.plan, s.created_at AS seller_since,
+             u.id as user_id, u.name, u.email, u.phone, u.city, u.state,
+             u.address, u.pincode, u.is_active,
+             c.name AS category_name, c.id AS category_id
       FROM sellers s
       JOIN users u ON s.user_id = u.id
       LEFT JOIN categories c ON s.category_id = c.id
+      ${whereClause}
+      ORDER BY s.created_at DESC
+      LIMIT ${limit} OFFSET ${offset}
     `;
-    const params = [];
-    const conditions = [];
-
-    if (is_verified !== undefined) {
-      conditions.push("s.is_verified = ?");
-      params.push(parseInt(is_verified));
-    }
-
-    if (search) {
-      conditions.push("(s.business_name LIKE ? OR u.name LIKE ? OR u.phone LIKE ?)");
-      const term = `%${search}%`;
-      params.push(term, term, term);
-    }
-
-    if (conditions.length) {
-      query += " WHERE " + conditions.join(" AND ");
-    }
-
-    query += " ORDER BY s.created_at DESC";
-
-    const [sellers] = await pool.query(query, params);
+    const [sellers] = await pool.query(dataSql, params);
 
     // Parse documents JSON
     const parsedSellers = sellers.map((seller) => {
@@ -134,31 +211,97 @@ exports.getSellers = async (req, res) => {
       return { ...seller, documents: docs };
     });
 
-    return successRes(res, { sellers: parsedSellers });
+    const totalPages = Math.ceil(total / limit) || 1;
+
+    return successRes(res, {
+      sellers: parsedSellers,
+      pagination: { total, page, limit, totalPages },
+    });
   } catch (err) {
     console.error("Admin getSellers error:", err);
     return errorRes(res, "Failed to fetch sellers list");
   }
 };
 
+
 // Get disputed bookings
 exports.getDisputes = async (req, res) => {
   try {
-    const [disputes] = await pool.query(
-      `SELECT o.id, o.order_number, o.status, o.total_amount, o.platform_fee, o.payment_method, o.payment_status,
-              o.notes, o.cancel_reason, o.created_at, o.updated_at,
-              u.name AS buyer_name, u.phone AS buyer_phone, u.id AS buyer_id,
-              s.business_name, s.id AS seller_id, su.name AS seller_name, su.phone AS seller_phone, su.id AS seller_user_id,
-              sv.title AS service_title
-       FROM orders o
-       JOIN users u ON o.buyer_id = u.id
-       JOIN sellers s ON o.seller_id = s.id
-       JOIN users su ON s.user_id = su.id
-       LEFT JOIN services sv ON o.service_id = sv.id
-       WHERE o.status = 'disputed'
-       ORDER BY o.updated_at DESC`
-    );
-    return successRes(res, { disputes });
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(200, Math.max(1, parseInt(req.query.limit, 10) || 20));
+    const offset = (page - 1) * limit;
+
+    const { status, search, startDate, endDate } = req.query;
+
+    const conditions = [];
+    const params = [];
+
+    // Filter by status: default to 'disputed' if status is missing or empty, unless explicitly 'all'
+    if (status && status !== "all") {
+      if (status === "resolved") {
+        conditions.push("o.status IN ('cancelled', 'completed')");
+      } else {
+        conditions.push("o.status = ?");
+        params.push(status);
+      }
+    } else if (!status) {
+      conditions.push("o.status = 'disputed'");
+    }
+
+    if (search && search.trim()) {
+      conditions.push("(o.order_number LIKE ? OR u.name LIKE ? OR su.name LIKE ? OR s.business_name LIKE ? OR sv.title LIKE ?)");
+      const term = `%${search.trim()}%`;
+      params.push(term, term, term, term, term);
+    }
+
+    if (startDate) {
+      conditions.push("o.created_at >= ?");
+      params.push(`${startDate} 00:00:00`);
+    }
+
+    if (endDate) {
+      conditions.push("o.created_at <= ?");
+      params.push(`${endDate} 23:59:59`);
+    }
+
+    const whereClause = conditions.length ? " WHERE " + conditions.join(" AND ") : "";
+
+    // Count matching disputes
+    const countSql = `
+      SELECT COUNT(*) AS total
+      FROM orders o
+      JOIN users u ON o.buyer_id = u.id
+      JOIN sellers s ON o.seller_id = s.id
+      JOIN users su ON s.user_id = su.id
+      LEFT JOIN services sv ON o.service_id = sv.id
+      ${whereClause}
+    `;
+    const [[{ total }]] = await pool.query(countSql, params);
+
+    // Fetch paginated results
+    const dataSql = `
+      SELECT o.id, o.order_number, o.status, o.total_amount, o.platform_fee, o.payment_method, o.payment_status,
+             o.notes, o.cancel_reason, o.created_at, o.updated_at,
+             u.name AS buyer_name, u.phone AS buyer_phone, u.id AS buyer_id,
+             s.business_name, s.id AS seller_id, su.name AS seller_name, su.phone AS seller_phone, su.id AS seller_user_id,
+             sv.title AS service_title
+      FROM orders o
+      JOIN users u ON o.buyer_id = u.id
+      JOIN sellers s ON o.seller_id = s.id
+      JOIN users su ON s.user_id = su.id
+      LEFT JOIN services sv ON o.service_id = sv.id
+      ${whereClause}
+      ORDER BY o.updated_at DESC
+      LIMIT ${limit} OFFSET ${offset}
+    `;
+    const [disputes] = await pool.query(dataSql, params);
+
+    const totalPages = Math.ceil(total / limit) || 1;
+
+    return successRes(res, {
+      disputes,
+      pagination: { total, page, limit, totalPages },
+    });
   } catch (err) {
     console.error("Admin getDisputes error:", err);
     return errorRes(res, "Failed to fetch disputed orders");
@@ -317,14 +460,18 @@ const convertToCSV = (headers, rows) => {
   return "\uFEFF" + [headerRow, ...dataRows].join("\n");
 };
 
-// Export Users CSV
+// Export Users CSV (Filtered or All)
 exports.exportUsersCSV = async (req, res) => {
   try {
+    const { whereClause, params } = buildUserFilterQuery(req.query);
+
     const [users] = await pool.query(
       `SELECT u.id, u.name, u.email, u.phone, u.role, u.is_active, u.created_at, IFNULL(w.balance, 0.00) AS wallet_balance
        FROM users u
        LEFT JOIN wallets w ON u.id = w.user_id
-       ORDER BY u.created_at DESC`
+       ${whereClause}
+       ORDER BY u.created_at DESC`,
+      params
     );
 
     const headers = [
@@ -356,17 +503,57 @@ exports.exportUsersCSV = async (req, res) => {
   }
 };
 
-// Export Sellers CSV
+// Export Sellers CSV (with same filters as getSellers)
 exports.exportSellersCSV = async (req, res) => {
   try {
+    const { is_verified, is_active, search, category_id, startDate, endDate } = req.query;
+
+    const conditions = [];
+    const params = [];
+
+    if (is_verified !== undefined && is_verified !== "") {
+      conditions.push("s.is_verified = ?");
+      params.push(parseInt(is_verified, 10));
+    }
+
+    if (is_active !== undefined && is_active !== "") {
+      conditions.push("u.is_active = ?");
+      params.push(parseInt(is_active, 10));
+    }
+
+    if (search && search.trim()) {
+      conditions.push("(s.business_name LIKE ? OR u.name LIKE ? OR u.phone LIKE ? OR u.email LIKE ?)");
+      const term = `%${search.trim()}%`;
+      params.push(term, term, term, term);
+    }
+
+    if (category_id) {
+      conditions.push("s.category_id = ?");
+      params.push(parseInt(category_id, 10));
+    }
+
+    if (startDate) {
+      conditions.push("s.created_at >= ?");
+      params.push(`${startDate} 00:00:00`);
+    }
+
+    if (endDate) {
+      conditions.push("s.created_at <= ?");
+      params.push(`${endDate} 23:59:59`);
+    }
+
+    const whereClause = conditions.length ? " WHERE " + conditions.join(" AND ") : "";
+
     const [sellers] = await pool.query(
       `SELECT s.id, s.business_name, u.name AS owner_name, u.email, u.phone,
               c.name AS category_name, s.avg_rating, s.total_reviews,
-              s.is_verified, s.is_available, s.plan, s.created_at
+              s.is_verified, s.is_available, s.plan, u.is_active, s.created_at
        FROM sellers s
        JOIN users u ON s.user_id = u.id
        LEFT JOIN categories c ON s.category_id = c.id
-       ORDER BY s.created_at DESC`
+       ${whereClause}
+       ORDER BY s.created_at DESC`,
+      params
     );
 
     const headers = [
@@ -379,6 +566,7 @@ exports.exportSellersCSV = async (req, res) => {
       { label: "Average Rating", key: "avg_rating" },
       { label: "Total Reviews", key: "total_reviews" },
       { label: "Verification Status", key: "is_verified" },
+      { label: "Account Status", key: "account_status" },
       { label: "Subscription Plan", key: "plan" },
       { label: "Joined Date", key: "created_at" },
     ];
@@ -388,6 +576,7 @@ exports.exportSellersCSV = async (req, res) => {
       category_name: s.category_name || "Uncategorized",
       avg_rating: parseFloat(s.avg_rating || 0).toFixed(1),
       is_verified: s.is_verified ? "Verified" : "Pending",
+      account_status: s.is_active ? "Active" : "Suspended",
       plan: s.plan ? s.plan.toUpperCase() : "FREE",
       created_at: new Date(s.created_at).toLocaleString("en-IN"),
     }));
@@ -402,6 +591,107 @@ exports.exportSellersCSV = async (req, res) => {
     return errorRes(res, "Failed to export sellers report");
   }
 };
+
+
+// Export Disputes CSV
+exports.exportDisputesCSV = async (req, res) => {
+  try {
+    const { status, search, startDate, endDate } = req.query;
+
+    const conditions = [];
+    const params = [];
+
+    if (status && status !== "all") {
+      if (status === "resolved") {
+        conditions.push("o.status IN ('cancelled', 'completed')");
+      } else {
+        conditions.push("o.status = ?");
+        params.push(status);
+      }
+    } else if (!status) {
+      conditions.push("o.status = 'disputed'");
+    }
+
+    if (search && search.trim()) {
+      conditions.push("(o.order_number LIKE ? OR u.name LIKE ? OR su.name LIKE ? OR s.business_name LIKE ? OR sv.title LIKE ?)");
+      const term = `%${search.trim()}%`;
+      params.push(term, term, term, term, term);
+    }
+
+    if (startDate) {
+      conditions.push("o.created_at >= ?");
+      params.push(`${startDate} 00:00:00`);
+    }
+
+    if (endDate) {
+      conditions.push("o.created_at <= ?");
+      params.push(`${endDate} 23:59:59`);
+    }
+
+    const whereClause = conditions.length ? " WHERE " + conditions.join(" AND ") : "";
+
+    const [disputes] = await pool.query(
+      `SELECT o.id, o.order_number, o.status, o.total_amount, o.platform_fee, o.payment_method, o.payment_status,
+              o.notes, o.cancel_reason, o.created_at, o.updated_at,
+              u.name AS buyer_name, u.phone AS buyer_phone,
+              s.business_name, su.name AS seller_name, su.phone AS seller_phone,
+              sv.title AS service_title
+       FROM orders o
+       JOIN users u ON o.buyer_id = u.id
+       JOIN sellers s ON o.seller_id = s.id
+       JOIN users su ON s.user_id = su.id
+       LEFT JOIN services sv ON o.service_id = sv.id
+       ${whereClause}
+       ORDER BY o.updated_at DESC`,
+      params
+    );
+
+    const headers = [
+      { label: "Dispute ID", key: "id" },
+      { label: "Order Number", key: "order_number" },
+      { label: "Status", key: "status" },
+      { label: "Payment Status", key: "payment_status" },
+      { label: "Payment Method", key: "payment_method" },
+      { label: "Total Amount (₹)", key: "total_amount" },
+      { label: "Platform Fee (₹)", key: "platform_fee" },
+      { label: "Net Payout (₹)", key: "net_payout" },
+      { label: "Buyer Name", key: "buyer_name" },
+      { label: "Buyer Phone", key: "buyer_phone" },
+      { label: "Business Name", key: "business_name" },
+      { label: "Seller Contact", key: "seller_name" },
+      { label: "Seller Phone", key: "seller_phone" },
+      { label: "Service Title", key: "service_title" },
+      { label: "Dispute Reason", key: "dispute_reason" },
+      { label: "Booked Date", key: "created_at" },
+      { label: "Last Updated", key: "updated_at" },
+    ];
+
+    const formattedRows = disputes.map((d) => {
+      const totalAmt = parseFloat(d.total_amount || 0);
+      const platFee = parseFloat(d.platform_fee || 0);
+      return {
+        ...d,
+        total_amount: totalAmt.toFixed(2),
+        platform_fee: platFee.toFixed(2),
+        net_payout: (totalAmt - platFee).toFixed(2),
+        service_title: d.service_title || "Custom Service Job",
+        dispute_reason: d.cancel_reason || d.notes || "N/A",
+        created_at: new Date(d.created_at).toLocaleString("en-IN"),
+        updated_at: new Date(d.updated_at).toLocaleString("en-IN"),
+      };
+    });
+
+    const csvData = convertToCSV(headers, formattedRows);
+
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", 'attachment; filename="QuickSeva_Disputes_Report.csv"');
+    return res.status(200).send(csvData);
+  } catch (err) {
+    console.error("Export disputes error:", err);
+    return errorRes(res, "Failed to export disputes report");
+  }
+};
+
 
 // Export Bookings CSV
 exports.exportBookingsCSV = async (req, res) => {

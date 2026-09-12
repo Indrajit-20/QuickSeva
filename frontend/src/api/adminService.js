@@ -16,8 +16,8 @@ export const adminService = {
     return res.data;
   },
 
-  getDisputes: async () => {
-    const res = await apiClient.get("/admin/disputes");
+  getDisputes: async (params) => {
+    const res = await apiClient.get("/admin/disputes", { params });
     return res.data;
   },
 
@@ -68,16 +68,46 @@ export const adminService = {
     window.URL.revokeObjectURL(url);
   },
 
-  exportUsersCSV: async () => {
-    return adminService.downloadExport("/admin/export/users", "QuickSeva_Users_Report.csv");
+  exportUsersCSV: async (params) => {
+    let endpoint = "/admin/export/users";
+    if (params) {
+      const cleanParams = Object.fromEntries(
+        Object.entries(params).filter(([_, v]) => v !== undefined && v !== "" && v !== null)
+      );
+      const queryString = new URLSearchParams(cleanParams).toString();
+      if (queryString) {
+        endpoint += `?${queryString}`;
+      }
+    }
+    return adminService.downloadExport(endpoint, "QuickSeva_Users_Report.csv");
   },
 
-  exportSellersCSV: async () => {
-    return adminService.downloadExport("/admin/export/sellers", "QuickSeva_Sellers_Report.csv");
+  exportSellersCSV: async (params) => {
+    let endpoint = "/admin/export/sellers";
+    if (params) {
+      const cleanParams = Object.fromEntries(
+        Object.entries(params).filter(([_, v]) => v !== undefined && v !== "" && v !== null)
+      );
+      const queryString = new URLSearchParams(cleanParams).toString();
+      if (queryString) endpoint += `?${queryString}`;
+    }
+    return adminService.downloadExport(endpoint, "QuickSeva_Sellers_Report.csv");
   },
 
   exportBookingsCSV: async () => {
     return adminService.downloadExport("/admin/export/bookings", "QuickSeva_Bookings_Report.csv");
+  },
+
+  exportDisputesCSV: async (params) => {
+    let endpoint = "/admin/export/disputes";
+    if (params) {
+      const cleanParams = Object.fromEntries(
+        Object.entries(params).filter(([_, v]) => v !== undefined && v !== "" && v !== null)
+      );
+      const queryString = new URLSearchParams(cleanParams).toString();
+      if (queryString) endpoint += `?${queryString}`;
+    }
+    return adminService.downloadExport(endpoint, "QuickSeva_Disputes_Report.csv");
   },
 
   bulkImportServices: async (items) => {

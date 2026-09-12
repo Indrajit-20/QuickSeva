@@ -13,6 +13,7 @@ const {
   exportUsersCSV,
   exportSellersCSV,
   exportBookingsCSV,
+  exportDisputesCSV,
   bulkImportServices,
   sendBulkWhatsApp,
   getContractorVerifications,
@@ -47,6 +48,7 @@ router.get("/contractor-analytics", getAdminContractorAnalytics);
 router.get("/export/users", exportUsersCSV);
 router.get("/export/sellers", exportSellersCSV);
 router.get("/export/bookings", exportBookingsCSV);
+router.get("/export/disputes", exportDisputesCSV);
 
 // Bulk Import & WhatsApp Broadcasts
 router.post("/import/services", bulkImportServices);
