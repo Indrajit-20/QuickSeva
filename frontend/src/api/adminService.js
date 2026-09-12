@@ -16,8 +16,38 @@ export const adminService = {
     return res.data;
   },
 
+  getBookings: async (params) => {
+    const res = await apiClient.get("/admin/bookings", { params });
+    return res.data;
+  },
+
   getDisputes: async (params) => {
     const res = await apiClient.get("/admin/disputes", { params });
+    return res.data;
+  },
+
+  getPayments: async (params) => {
+    const res = await apiClient.get("/admin/payments", { params });
+    return res.data;
+  },
+
+  getReviews: async (params) => {
+    const res = await apiClient.get("/admin/reviews", { params });
+    return res.data;
+  },
+
+  deleteReview: async (id) => {
+    const res = await apiClient.delete(`/admin/reviews/${id}`);
+    return res.data;
+  },
+
+  getLeads: async (params) => {
+    const res = await apiClient.get("/admin/leads", { params });
+    return res.data;
+  },
+
+  updateLeadStatus: async (id, status) => {
+    const res = await apiClient.patch(`/admin/leads/${id}/status`, { status });
     return res.data;
   },
 
@@ -94,8 +124,16 @@ export const adminService = {
     return adminService.downloadExport(endpoint, "QuickSeva_Sellers_Report.csv");
   },
 
-  exportBookingsCSV: async () => {
-    return adminService.downloadExport("/admin/export/bookings", "QuickSeva_Bookings_Report.csv");
+  exportBookingsCSV: async (params) => {
+    let endpoint = "/admin/export/bookings";
+    if (params) {
+      const cleanParams = Object.fromEntries(
+        Object.entries(params).filter(([_, v]) => v !== undefined && v !== "" && v !== null)
+      );
+      const queryString = new URLSearchParams(cleanParams).toString();
+      if (queryString) endpoint += `?${queryString}`;
+    }
+    return adminService.downloadExport(endpoint, "QuickSeva_Bookings_Report.csv");
   },
 
   exportDisputesCSV: async (params) => {
@@ -108,6 +146,42 @@ export const adminService = {
       if (queryString) endpoint += `?${queryString}`;
     }
     return adminService.downloadExport(endpoint, "QuickSeva_Disputes_Report.csv");
+  },
+
+  exportPaymentsCSV: async (params) => {
+    let endpoint = "/admin/export/payments";
+    if (params) {
+      const cleanParams = Object.fromEntries(
+        Object.entries(params).filter(([_, v]) => v !== undefined && v !== "" && v !== null)
+      );
+      const queryString = new URLSearchParams(cleanParams).toString();
+      if (queryString) endpoint += `?${queryString}`;
+    }
+    return adminService.downloadExport(endpoint, "QuickSeva_Wallet_Transactions_Report.csv");
+  },
+
+  exportReviewsCSV: async (params) => {
+    let endpoint = "/admin/export/reviews";
+    if (params) {
+      const cleanParams = Object.fromEntries(
+        Object.entries(params).filter(([_, v]) => v !== undefined && v !== "" && v !== null)
+      );
+      const queryString = new URLSearchParams(cleanParams).toString();
+      if (queryString) endpoint += `?${queryString}`;
+    }
+    return adminService.downloadExport(endpoint, "QuickSeva_Reviews_Report.csv");
+  },
+
+  exportLeadsCSV: async (params) => {
+    let endpoint = "/admin/export/leads";
+    if (params) {
+      const cleanParams = Object.fromEntries(
+        Object.entries(params).filter(([_, v]) => v !== undefined && v !== "" && v !== null)
+      );
+      const queryString = new URLSearchParams(cleanParams).toString();
+      if (queryString) endpoint += `?${queryString}`;
+    }
+    return adminService.downloadExport(endpoint, "QuickSeva_Buyer_Leads_Report.csv");
   },
 
   bulkImportServices: async (items) => {

@@ -91,18 +91,22 @@ const AdminDashboard = () => {
     }
   };
 
-  const fetchAdminPosts = async () => {
-    setLoadingAdminPosts(true);
+  const fetchAdminPosts = async (showLoading = true) => {
+    if (showLoading) setLoadingAdminPosts(true);
     try {
       const res = await getAdminContractorPosts({
         status: adminPostsTab,
         search: adminPostsSearch,
       });
-      setAdminPosts(res?.data?.posts || []);
+      const fetchedPosts = (res?.data?.posts || []).map((post) => ({
+        ...post,
+        is_featured: (Number(post.is_featured?.[0] ?? post.is_featured) === 1 || post.is_featured === true || post.is_featured === "1") ? 1 : 0,
+      }));
+      setAdminPosts(fetchedPosts);
     } catch (err) {
       console.error("Failed to fetch admin contractor posts:", err);
     } finally {
-      setLoadingAdminPosts(false);
+      if (showLoading) setLoadingAdminPosts(false);
     }
   };
 
@@ -131,11 +135,28 @@ const AdminDashboard = () => {
   };
 
   const handlePostAction = async (id, action) => {
+    setAdminPosts((prevPosts) =>
+      prevPosts
+        .map((p) => {
+          if (p.id !== id) return p;
+          if (action === "toggle_featured") {
+            return { ...p, is_featured: p.is_featured === 1 ? 0 : 1 };
+          } else if (action === "close") {
+            return { ...p, status: "closed" };
+          } else if (action === "reopen") {
+            return { ...p, status: "active" };
+          }
+          return p;
+        })
+        .filter((p) => (action === "delete" ? p.id !== id : true))
+    );
+
     try {
       await updateAdminContractorPostStatus(id, action);
-      fetchAdminPosts();
+      fetchAdminPosts(false);
     } catch (err) {
       alert("Failed to update post status");
+      fetchAdminPosts(false);
     }
   };
 

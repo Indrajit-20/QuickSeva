@@ -5,6 +5,7 @@ const {
   getStats,
   getUsers,
   getSellers,
+  getBookings,
   getDisputes,
   resolveDispute,
   getCategories,
@@ -14,6 +15,14 @@ const {
   exportSellersCSV,
   exportBookingsCSV,
   exportDisputesCSV,
+  getPayments,
+  exportPaymentsCSV,
+  getReviews,
+  deleteReview,
+  exportReviewsCSV,
+  getLeads,
+  updateLeadStatus,
+  exportLeadsCSV,
   bulkImportServices,
   sendBulkWhatsApp,
   getContractorVerifications,
@@ -31,9 +40,10 @@ router.use(protect, adminOnly);
 // Stats & Dashboard
 router.get("/stats", getStats);
 
-// Users and Sellers Management
+// Users, Sellers, and Bookings Management
 router.get("/users", getUsers);
 router.get("/sellers", getSellers);
+router.get("/bookings", getBookings);
 
 // Contractor Verifications & Posts Moderation Management
 router.get("/contractor-verifications", getContractorVerifications);
@@ -49,6 +59,14 @@ router.get("/export/users", exportUsersCSV);
 router.get("/export/sellers", exportSellersCSV);
 router.get("/export/bookings", exportBookingsCSV);
 router.get("/export/disputes", exportDisputesCSV);
+router.get("/export/payments", exportPaymentsCSV);
+router.get("/export/reviews", exportReviewsCSV);
+router.get("/export/leads", exportLeadsCSV);
+router.get("/payments", getPayments);
+router.get("/reviews", getReviews);
+router.delete("/reviews/:id", deleteReview);
+router.get("/leads", getLeads);
+router.patch("/leads/:id/status", updateLeadStatus);
 
 // Bulk Import & WhatsApp Broadcasts
 router.post("/import/services", bulkImportServices);

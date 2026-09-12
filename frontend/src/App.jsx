@@ -21,6 +21,10 @@ import AdminContractors from "./pages/AdminContractors";
 import AdminDisputes from "./pages/AdminDisputes";
 import AdminCategories from "./pages/AdminCategories";
 import AdminPolicies from "./pages/AdminPolicies";
+import AdminBookings from "./pages/AdminBookings";
+import AdminPayments from "./pages/AdminPayments";
+import AdminReviews from "./pages/AdminReviews";
+import AdminLeads from "./pages/AdminLeads";
 import AdminPlaceholder from "./pages/AdminPlaceholder";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
@@ -213,13 +217,12 @@ function AppRoutes() {
             <Route path="contractors" element={<AdminContractors />} />
             <Route path="disputes" element={<AdminDisputes />} />
             <Route path="categories" element={<AdminCategories />} />
-            {/* Placeholders */}
-            <Route path="bookings" element={<AdminPlaceholder />} />
-            <Route path="leads" element={<AdminPlaceholder />} />
+            <Route path="bookings" element={<AdminBookings />} />
+            <Route path="leads" element={<AdminLeads />} />
             <Route path="services" element={<AdminPlaceholder />} />
             <Route path="services/approvals" element={<AdminPlaceholder />} />
-            <Route path="payments" element={<AdminPlaceholder />} />
-            <Route path="reviews" element={<AdminPlaceholder />} />
+            <Route path="payments" element={<AdminPayments />} />
+            <Route path="reviews" element={<AdminReviews />} />
             <Route path="notifications" element={<AdminPlaceholder />} />
             <Route path="support" element={<AdminPlaceholder />} />
             <Route path="reports" element={<AdminPlaceholder />} />

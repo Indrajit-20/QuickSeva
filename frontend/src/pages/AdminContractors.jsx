@@ -10,7 +10,44 @@ import {
   Clock,
   XCircle,
   ExternalLink,
+  Info,
 } from "lucide-react";
+
+/* ─────────────────────────────────────────────────
+   Inline Toast System
+───────────────────────────────────────────────── */
+const useToast = () => {
+  const [toasts, setToasts] = useState([]);
+  const show = (message, type = "success") => {
+    const id = Date.now() + Math.random();
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3500);
+  };
+  return { toasts, show };
+};
+
+const Toast = ({ toasts }) => {
+  if (!toasts.length) return null;
+  return (
+    <div className="fixed bottom-6 right-6 z-[9999] flex flex-col gap-2 pointer-events-none">
+      {toasts.map((t) => (
+        <div
+          key={t.id}
+          className={`flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-xl text-white text-xs font-bold animate-fade-in pointer-events-auto transition-all duration-300 ${
+            t.type === "success"
+              ? "bg-emerald-600"
+              : t.type === "error"
+              ? "bg-red-600"
+              : "bg-blue-600"
+          }`}
+        >
+          {t.type === "success" ? <CheckCircle size={14} /> : t.type === "error" ? <XCircle size={14} /> : <Info size={14} />}
+          <span>{t.message}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
 import {
   getAdminContractorVerifications,
   reviewAdminContractorVerification,
@@ -22,6 +59,7 @@ import {
 } from "../api/contractorApi";
 
 const AdminContractors = () => {
+  const { toasts, show: showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get("tab") || "verifications";
 
@@ -71,18 +109,22 @@ const AdminContractors = () => {
     }
   };
 
-  const fetchPosts = async () => {
-    setLoadingPosts(true);
+  const fetchPosts = async (showLoading = true) => {
+    if (showLoading) setLoadingPosts(true);
     try {
       const res = await getAdminContractorPosts({
         status: postsStatusFilter,
         search: postsSearch,
       });
-      setPosts(res?.data?.posts || []);
+      const fetchedPosts = (res?.data?.posts || []).map((post) => ({
+        ...post,
+        is_featured: (Number(post.is_featured?.[0] ?? post.is_featured) === 1 || post.is_featured === true || post.is_featured === "1") ? 1 : 0,
+      }));
+      setPosts(fetchedPosts);
     } catch (err) {
       console.error("Failed to fetch posts:", err);
     } finally {
-      setLoadingPosts(false);
+      if (showLoading) setLoadingPosts(false);
     }
   };
 
@@ -118,34 +160,62 @@ const AdminContractors = () => {
       if (action === "reject") setSubmittingRejection(true);
       await reviewAdminContractorVerification(id, action, notes);
       setRejectionModalItem(null);
+      showToast(`Verification ${action === "approve" ? "approved" : "rejected"} successfully.`, "success");
       fetchVerifications();
     } catch (err) {
-      alert("Failed to update verification status");
+      showToast("Failed to update verification status", "error");
     } finally {
       setSubmittingRejection(false);
     }
   };
 
   const handlePostAction = async (id, action) => {
+    // Optimistic UI update so the action responds immediately
+    setPosts((prevPosts) =>
+      prevPosts
+        .map((p) => {
+          if (p.id !== id) return p;
+          if (action === "toggle_featured") {
+            const nextFeat = p.is_featured === 1 ? 0 : 1;
+            return { ...p, is_featured: nextFeat };
+          } else if (action === "close") {
+            return { ...p, status: "closed" };
+          } else if (action === "reopen") {
+            return { ...p, status: "active" };
+          }
+          return p;
+        })
+        .filter((p) => (action === "delete" ? p.id !== id : true))
+    );
+
     try {
-      await updateAdminContractorPostStatus(id, action);
-      fetchPosts();
+      const res = await updateAdminContractorPostStatus(id, action);
+      const actionLabel =
+        action === "toggle_featured"
+          ? (res?.data?.is_featured ? "featured" : "unfeatured")
+          : `${action}d`;
+      showToast(`Post ${actionLabel} successfully.`, "success");
+      fetchPosts(false);
     } catch (err) {
-      alert("Failed to update post status");
+      showToast("Failed to update post status", "error");
+      fetchPosts(false);
     }
   };
 
   const handleQuoteStatusChange = async (id, status) => {
     try {
       await updateAdminQuoteRequestStatus(id, status);
+      showToast(`Quote request status changed to ${status}.`, "success");
       fetchQuoteRequests();
     } catch (err) {
-      alert("Failed to update quote request status");
+      showToast("Failed to update quote request status", "error");
     }
   };
 
   return (
-    <div className="space-y-6 text-left">
+    <>
+      <Toast toasts={toasts} />
+      <div className="space-y-6 text-left">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-xs">
         <div>
@@ -822,7 +892,8 @@ const AdminContractors = () => {
         </div>
       )}
     </div>
-  );
+  </>
+);
 };
 
 export default AdminContractors;

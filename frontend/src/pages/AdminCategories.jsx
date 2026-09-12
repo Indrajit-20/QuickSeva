@@ -9,11 +9,50 @@ import {
   UploadCloud,
   FileSpreadsheet,
   Download,
-  CheckCircle2,
   AlertTriangle,
+  Info,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 
+/* ─────────────────────────────────────────────────
+   Inline Toast System
+───────────────────────────────────────────────── */
+const useToast = () => {
+  const [toasts, setToasts] = useState([]);
+  const show = (message, type = "success") => {
+    const id = Date.now() + Math.random();
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3500);
+  };
+  return { toasts, show };
+};
+
+const Toast = ({ toasts }) => {
+  if (!toasts.length) return null;
+  return (
+    <div className="fixed bottom-6 right-6 z-[9999] flex flex-col gap-2 pointer-events-none">
+      {toasts.map((t) => (
+        <div
+          key={t.id}
+          className={`flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-xl text-white text-xs font-bold animate-fade-in pointer-events-auto transition-all duration-300 ${
+            t.type === "success"
+              ? "bg-emerald-600"
+              : t.type === "error"
+              ? "bg-red-600"
+              : "bg-blue-600"
+          }`}
+        >
+          {t.type === "success" ? <CheckCircle size={14} /> : t.type === "error" ? <XCircle size={14} /> : <Info size={14} />}
+          <span>{t.message}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 const AdminCategories = () => {
+  const { toasts, show: showToast } = useToast();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -62,10 +101,11 @@ const AdminCategories = () => {
         setCategories((prev) =>
           prev.map((c) => (c.id === cat.id ? { ...c, is_active: c.is_active ? 0 : 1 } : c))
         );
+        showToast(`Category "${cat.name}" ${cat.is_active ? "disabled" : "enabled"}.`, "success");
       }
     } catch (err) {
       console.error(err);
-      alert("Failed to toggle category active status.");
+      showToast("Failed to toggle category active status.", "error");
     }
   };
 
@@ -172,7 +212,7 @@ const AdminCategories = () => {
   const handleExecuteImport = async () => {
     const itemsToImport = parsedRows.length > 0 ? parsedRows : parseCSVToJSON(rawCSVText);
     if (itemsToImport.length === 0) {
-      alert("No valid service rows found in CSV.");
+      showToast("No valid service rows found in CSV.", "error");
       return;
     }
 
@@ -181,10 +221,11 @@ const AdminCategories = () => {
     try {
       const res = await adminService.bulkImportServices(itemsToImport);
       setImportResult(res.data || res);
+      showToast("Bulk service import processed successfully!", "success");
       fetchCategories();
     } catch (err) {
       console.error(err);
-      alert(err?.response?.data?.message || "Failed to perform bulk import.");
+      showToast(err?.response?.data?.message || "Failed to perform bulk import.", "error");
     } finally {
       setImportLoading(false);
     }
@@ -194,9 +235,10 @@ const AdminCategories = () => {
     try {
       setExportingBookings(true);
       await adminService.exportBookingsCSV();
+      showToast("Bookings CSV exported successfully!", "success");
     } catch (err) {
       console.error(err);
-      alert("Failed to export bookings report.");
+      showToast("Failed to export bookings report.", "error");
     } finally {
       setExportingBookings(false);
     }
@@ -206,7 +248,9 @@ const AdminCategories = () => {
     "w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 text-xs font-semibold shadow-xs";
 
   return (
-    <div className="space-y-6 text-left">
+    <>
+      <Toast toasts={toasts} />
+      <div className="space-y-6 text-left">
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-slate-800 tracking-tight">
@@ -571,7 +615,8 @@ const AdminCategories = () => {
         </div>
       )}
     </div>
-  );
+  </>
+);
 };
 
 export default AdminCategories;
